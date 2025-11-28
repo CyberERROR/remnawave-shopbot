@@ -271,6 +271,11 @@ docker-compose down
 docker-compose up -d
 ```
 
+Очистить логи:
+```bash
+truncate -s 0 /var/lib/docker/containers/*/*-json.log
+```
+
 Если нужен полный перезапуск с пересборкой образов
 ```bash
 docker-compose down && docker-compose up -d --build
