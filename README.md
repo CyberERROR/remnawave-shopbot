@@ -1,0 +1,1 @@
+# remnawave-shopbot
