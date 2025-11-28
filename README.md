@@ -8,23 +8,23 @@
     <a href="#-%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C-%D1%80%D0%B0%D0%B7%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D1%83">Поддержать проект</a>
   </p>
   <p align="center">
-    <a href="https://github.com/tweopi/remnawave-shopbot/releases" target="_blank">
-      <img alt="release" src="https://img.shields.io/github/v/release/tweopi/remnawave-shopbot?label=release&style=flat-square">
+    <a href="https://github.com/CyberERROR/remnawave-shopbot/releases" target="_blank">
+      <img alt="release" src="https://img.shields.io/github/v/release/CyberERROR/remnawave-shopbot?label=release&style=flat-square">
     </a>
-    <a href="https://github.com/tweopi/remnawave-shopbot/releases" target="_blank">
-      <img alt="downloads" src="https://img.shields.io/github/downloads/tweopi/remnawave-shopbot/total?label=downloads&style=flat-square">
+    <a href="https://github.com/CyberERROR/remnawave-shopbot/releases" target="_blank">
+      <img alt="downloads" src="https://img.shields.io/github/downloads/CyberERROR/remnawave-shopbot/total?label=downloads&style=flat-square">
     </a>
-    <a href="https://github.com/tweopi/remnawave-shopbot/blob/main/LICENSE" target="_blank">
-      <img alt="license" src="https://img.shields.io/github/license/tweopi/remnawave-shopbot?label=license&style=flat-square">
+    <a href="https://github.com/CyberERROR/remnawave-shopbot/blob/main/LICENSE" target="_blank">
+      <img alt="license" src="https://img.shields.io/github/license/CyberERROR/remnawave-shopbot?label=license&style=flat-square">
     </a>
-    <a href="https://github.com/tweopi/remnawave-shopbot/commits" target="_blank">
-      <img alt="last-commit" src="https://img.shields.io/github/last-commit/tweopi/remnawave-shopbot?label=last%20commit&style=flat-square">
+    <a href="https://github.com/CyberERROR/remnawave-shopbot/commits" target="_blank">
+      <img alt="last-commit" src="https://img.shields.io/github/last-commit/CyberERROR/remnawave-shopbot?label=last%20commit&style=flat-square">
     </a>
-    <a href="https://github.com/tweopi/remnawave-shopbot/issues" target="_blank">
-      <img alt="issues" src="https://img.shields.io/github/issues/tweopi/remnawave-shopbot?label=issues&style=flat-square">
+    <a href="https://github.com/CyberERROR/remnawave-shopbot/issues" target="_blank">
+      <img alt="issues" src="https://img.shields.io/github/issues/CyberERROR/remnawave-shopbot?label=issues&style=flat-square">
     </a>
-    <a href="https://github.com/tweopi/remnawave-shopbot/stargazers" target="_blank">
-      <img alt="stars" src="https://img.shields.io/github/stars/tweopi/remnawave-shopbot?label=stars&style=flat-square">
+    <a href="https://github.com/CyberERROR/remnawave-shopbot/stargazers" target="_blank">
+      <img alt="stars" src="https://img.shields.io/github/stars/CyberERROR/remnawave-shopbot?label=stars&style=flat-square">
     </a>
     <a href="https://www.python.org/downloads/" target="_blank">
       <img alt="python" src="https://img.shields.io/badge/python-%E2%89%A53.10-blue?style=flat-square">
@@ -263,7 +263,7 @@ docker-compose up -d
 
 **Обновить до последней версии:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/tweopi/remnawave-shopbot/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash
 
 docker-compose down && docker-compose up -d --build
 ```
@@ -271,7 +271,7 @@ docker-compose down && docker-compose up -d --build
 ---
 
 ## 🙌 Баги и предложения
-Нашли баг или есть идея? Создайте Issue или пришлите Pull Request. Также можно связаться: [@tweopi](https://t.me/tweopi)
+Нашли баг или есть идея? Создайте Issue или пришлите Pull Request. Также можно связаться: [@CyberERROR](https://t.me/CyberERROR)
 
 ## 💎 Поддержать разработку
 **СБП/Карта РФ:** [Нажать чтобы поддержать](https://yookassa.ru/my/i/aJiSmSUeUie5/l)
