@@ -1,0 +1,1820 @@
+{% extends "base.html" %}
+{% block title %}Конструктор кнопок{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Конструктор кнопок</h2>
+      <div class="text-secondary">Интерактивное создание и настройка кнопок для бота</div>
+    </div>
+  </div>
+  <div class="hr-text"></div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Конструктор кнопок</h3>
+        <div class="card-actions">
+          <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="add-button-btn">
+              <i class="ti ti-plus"></i> Добавить кнопку
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="save-layout-btn">
+              <i class="ti ti-device-floppy"></i> Сохранить
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm" id="preview-btn">
+              <i class="ti ti-eye"></i> Предпросмотр
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Тип меню:</label>
+          <div class="soft-select" data-target="menu-type-select">
+            <select class="form-select" id="menu-type-select">
+              <option value="main_menu">Главное меню</option>
+              <option value="admin_menu">Админ меню</option>
+              <option value="profile_menu">Меню профиля</option>
+              <option value="support_menu">Меню поддержки</option>
+            </select>
+            <div class="soft-select-toggle" id="menu-type-select_toggle">
+              Главное меню
+            </div>
+            <div class="soft-select-menu" id="menu-type-select_menu">
+              
+            </div>
+          </div>
+        </div>
+        
+        <div class="button-grid" id="button-grid">
+          
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-12 col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Свойства кнопки</h3>
+      </div>
+      <div class="card-body">
+        <form id="button-properties-form">
+          <div class="mb-3">
+            <label class="form-label">ID кнопки:</label>
+            <input type="text" class="form-control" id="button-id" placeholder="Уникальный ID">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Текст кнопки:</label>
+            <input type="text" class="form-control" id="button-text" placeholder="Текст кнопки">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Тип действия:</label>
+            <div class="soft-select" data-target="action-type">
+              <select class="form-select" id="action-type">
+                <option value="callback">Callback (внутреннее действие)</option>
+                <option value="url">URL (внешняя ссылка)</option>
+              </select>
+              <div class="soft-select-toggle" id="action-type_toggle">
+                Callback (внутреннее действие)
+              </div>
+              <div class="soft-select-menu" id="action-type_menu">
+                
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3" id="callback-data-group">
+            <label class="form-label">Callback Data:</label>
+            <input type="text" class="form-control" id="callback-data" placeholder="callback_data">
+          </div>
+          
+          <div class="mb-3 d-none" id="url-group">
+            <label class="form-label">URL:</label>
+            <input type="url" class="form-control" id="button-url" placeholder="https://example.com">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Позиция в сетке:</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small">Строка:</label>
+                <input type="number" class="form-control" id="row-position" min="0" value="0">
+              </div>
+              <div class="col-6">
+                <label class="form-label small">Колонка:</label>
+                <input type="number" class="form-control" id="column-position" min="0" value="0">
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Ширина кнопки:</label>
+            <select class="form-select" id="button-width">
+              <option value="1">1 колонка (обычная)</option>
+              <option value="2">2 колонки (широкая)</option>
+              <option value="3">3 колонки (очень широкая)</option>
+            </select>
+            <div class="form-text">Ширина кнопки относительно других кнопок в строке</div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Порядок сортировки:</label>
+            <input type="number" class="form-control" id="sort-order" min="0" value="0">
+          </div>
+          
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="is-active" checked>
+              <label class="form-check-label" for="is-active">Активна</label>
+            </div>
+          </div>
+          
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            <button type="button" class="btn btn-outline-danger" id="delete-button-btn" style="display: none;">
+              <i class="ti ti-trash"></i> Удалить кнопку
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <div class="card mt-3">
+      <div class="card-header">
+        <h3 class="card-title">Предпросмотр</h3>
+        <div class="card-actions">
+          <button type="button" class="btn btn-outline-info btn-sm" id="refresh-preview-btn" title="Обновить предпросмотр">
+            <i class="ti ti-refresh"></i>
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-preview-btn" title="Очистить предпросмотр">
+            <i class="ti ti-x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="preview-area">
+          <p class="text-muted">Нажмите "Предпросмотр" для просмотра кнопок</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="add-button-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Добавить новую кнопку</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="add-button-form">
+          <div class="mb-3">
+            <label class="form-label">ID кнопки:</label>
+            <input type="text" class="form-control" id="new-button-id" placeholder="Уникальный ID" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Текст кнопки:</label>
+            <input type="text" class="form-control" id="new-button-text" placeholder="Текст кнопки" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Тип действия:</label>
+            <div class="soft-select" data-target="new-action-type">
+              <select class="form-select" id="new-action-type">
+                <option value="callback">Callback (внутреннее действие)</option>
+                <option value="url">URL (внешняя ссылка)</option>
+              </select>
+              <div class="soft-select-toggle" id="new-action-type_toggle">
+                Callback (внутреннее действие)
+              </div>
+              <div class="soft-select-menu" id="new-action-type_menu">
+                
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3" id="new-callback-data-group">
+            <label class="form-label">Callback Data:</label>
+            <input type="text" class="form-control" id="new-callback-data" placeholder="callback_data">
+          </div>
+          
+          <div class="mb-3 d-none" id="new-url-group">
+            <label class="form-label">URL:</label>
+            <input type="url" class="form-control" id="new-button-url" placeholder="https://example.com">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Ширина кнопки:</label>
+            <select class="form-select" id="new-button-width">
+              <option value="1">1 колонка (обычная)</option>
+              <option value="2">2 колонки (широкая)</option>
+              <option value="3">3 колонки (очень широкая)</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="confirm-add-button">Добавить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, 1fr);
+  gap: 10px;
+  min-height: 400px;
+  padding: 20px;
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+/* Классы для различных ширин кнопок */
+.button-item.width-1 {
+  grid-column: span 1;
+}
+
+.button-item.width-2 {
+  grid-column: span 2;
+}
+
+.button-item.width-3 {
+  grid-column: span 2; /* Максимум 2 колонки в сетке 2x5 */
+}
+
+.button-item {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 12px;
+  cursor: move;
+  position: relative;
+  transition: all 0.2s ease;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.button-item:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
+
+.button-item.selected {
+  border-color: #007bff;
+  background-color: #e3f2fd;
+}
+
+.button-item .button-text {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.button-item .button-id {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.button-item .button-width-indicator {
+  font-size: 0.7rem;
+  color: #007bff;
+  background: rgba(0, 123, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.button-item .button-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.button-item:hover .button-actions {
+  opacity: 1;
+}
+
+.button-item .btn-sm {
+  padding: 2px 6px;
+  font-size: 0.7rem;
+}
+
+.drag-placeholder {
+  background-color: #e3f2fd;
+  border: 2px dashed #007bff;
+  border-radius: 6px;
+  min-height: 60px;
+}
+
+.sortable-ghost {
+  opacity: 0.4;
+}
+
+.sortable-chosen {
+  transform: rotate(5deg);
+}
+
+.preview-button {
+  display: inline-block;
+  background: #007bff;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  margin: 2px;
+  font-size: 0.9rem;
+}
+
+.preview-button:hover {
+  background: #0056b3;
+  color: white;
+  text-decoration: none;
+}
+
+/* Тёмный фон для всего конструктора */
+body {
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+  color: #f0f6fc;
+}
+
+.card {
+  background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+  border: 1px solid #30363d;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.card-header {
+  background: linear-gradient(135deg, #30363d 0%, #21262d 100%);
+  border-bottom: 1px solid #30363d;
+  color: #f0f6fc;
+}
+
+.card-title {
+  color: #f0f6fc;
+  font-weight: 600;
+}
+
+.form-label {
+  color: #f0f6fc;
+  font-weight: 500;
+}
+
+.form-control, .form-select {
+  background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+}
+
+.form-control:focus, .form-select:focus {
+  background: linear-gradient(135deg, #30363d 0%, #21262d 100%);
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 0.2rem rgba(88, 166, 255, 0.25);
+  color: #f0f6fc;
+}
+
+.form-control::placeholder {
+  color: #7d8590;
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  border: 1px solid #238636;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2ea043 0%, #238636 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.btn-outline-primary {
+  color: #58a6ff;
+  border: 1px solid #58a6ff;
+  background: transparent;
+}
+
+.btn-outline-primary:hover {
+  background: #58a6ff;
+  color: #0d1117;
+  transform: translateY(-1px);
+}
+
+.btn-outline-secondary {
+  color: #7d8590;
+  border: 1px solid #7d8590;
+  background: transparent;
+}
+
+.btn-outline-secondary:hover {
+  background: #7d8590;
+  color: #0d1117;
+}
+
+.btn-outline-danger {
+  color: #f85149;
+  border: 1px solid #f85149;
+  background: transparent;
+}
+
+.btn-outline-danger:hover {
+  background: #f85149;
+  color: #0d1117;
+}
+
+.btn-outline-info {
+  color: #79c0ff;
+  border: 1px solid #79c0ff;
+  background: transparent;
+}
+
+.btn-outline-info:hover {
+  background: #79c0ff;
+  color: #0d1117;
+}
+
+.text-muted {
+  color: #7d8590 !important;
+}
+
+.text-secondary {
+  color: #8b949e !important;
+}
+
+/* Сетка кнопок с тёмным фоном */
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, 1fr);
+  gap: 10px;
+  min-height: 400px;
+  padding: 20px;
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  border: 2px dashed #30363d;
+  border-radius: 8px;
+}
+
+/* Классы для различных ширин кнопок в тёмной теме */
+.button-item.width-1 {
+  grid-column: span 1;
+}
+
+.button-item.width-2 {
+  grid-column: span 2;
+}
+
+.button-item.width-3 {
+  grid-column: span 2; /* Максимум 2 колонки в сетке 2x5 */
+}
+
+.button-item {
+  background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.button-item:hover {
+  border-color: #58a6ff;
+  box-shadow: 0 4px 12px rgba(88, 166, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.button-item.selected {
+  border-color: #58a6ff;
+  background: linear-gradient(135deg, #1c2128 0%, #0d1117 100%);
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.3);
+}
+
+.button-item .button-text {
+  color: #f0f6fc;
+  font-weight: 600;
+}
+
+.button-item .button-id {
+  color: #7d8590;
+}
+
+.button-item .button-width-indicator {
+  font-size: 0.7rem;
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* Telegram-style preview */
+.telegram-preview {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 400px;
+  margin: 0 auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
+}
+
+.telegram-header {
+  margin-bottom: 16px;
+}
+
+.telegram-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.telegram-subtitle {
+  font-size: 14px;
+  color: #8e8e93;
+}
+
+.telegram-button-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.telegram-button-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.telegram-button {
+  background: linear-gradient(135deg, #3a3a3c 0%, #2c2c2e 100%);
+  border: 1px solid #4a4a4c;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  flex-grow: 0;
+  flex-basis: auto;
+}
+
+.telegram-button:hover {
+  background: linear-gradient(135deg, #4a4a4c 0%, #3a3a3c 100%);
+  border-color: #5a5a5c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.telegram-button:active {
+  transform: translateY(0);
+  background: linear-gradient(135deg, #2a2a2c 0%, #1a1a1c 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.telegram-button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.telegram-button-text {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.telegram-button-url {
+  font-size: 12px;
+  opacity: 0.8;
+  color: #4fc3f7;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.telegram-button-width {
+  font-size: 10px;
+  opacity: 0.8;
+  background: rgba(79, 195, 247, 0.2);
+  color: #4fc3f7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  border: 1px solid rgba(79, 195, 247, 0.3);
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .telegram-preview {
+    max-width: 100%;
+    margin: 0;
+    padding: 12px;
+  }
+  
+  .telegram-button {
+    padding: 10px 12px;
+    min-height: 40px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  }
+  
+  .telegram-button-text {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  
+  .telegram-button-width {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+}
+
+/* Дополнительные стили для лучшей видимости */
+.telegram-preview {
+  position: relative;
+  overflow: hidden;
+}
+
+.telegram-preview::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.telegram-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.telegram-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.telegram-button:hover::before {
+  left: 100%;
+}
+
+/* Модальные окна с тёмным фоном */
+.modal-content {
+  background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+  border: 1px solid #30363d;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #30363d 0%, #21262d 100%);
+  border-bottom: 1px solid #30363d;
+  color: #f0f6fc;
+}
+
+.modal-title {
+  color: #f0f6fc;
+  font-weight: 600;
+}
+
+.modal-body {
+  color: #f0f6fc;
+}
+
+.modal-footer {
+  background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+  border-top: 1px solid #30363d;
+}
+
+/* Заголовок страницы */
+.page-title {
+  color: #f0f6fc;
+  font-weight: 700;
+}
+
+/* Уведомления */
+.alert {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.alert-success {
+  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  color: #f0f6fc;
+  border-left: 4px solid #2ea043;
+}
+
+.alert-danger {
+  background: linear-gradient(135deg, #da3633 0%, #f85149 100%);
+  color: #f0f6fc;
+  border-left: 4px solid #f85149;
+}
+
+/* Спиннер загрузки */
+.spinner-border-sm {
+  color: #58a6ff;
+}
+
+/* Дополнительные стили для лучшей видимости */
+.page-header {
+  background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #30363d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.hr-text {
+  border-top: 1px solid #30363d;
+  margin: 20px 0;
+}
+
+/* Анимации для тёмной темы */
+@keyframes fadeInDark {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: fadeInDark 0.3s ease-out;
+}
+
+/* Улучшенные тени для тёмной темы */
+.card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+class ButtonConstructor {
+  constructor() {
+    this.currentMenuType = 'main_menu';
+    this.selectedButton = null;
+    this.buttons = [];
+    this.isPreviewLoading = false;
+    this.init();
+  }
+
+  init() {
+    this.bindEvents();
+    this.loadButtons();
+    this.disableLogoutButton();
+    this.initSoftSelect();
+  }
+
+  initSoftSelect() {
+    const wrap = document.querySelector('.soft-select[data-target="menu-type-select"]');
+    const selectEl = document.getElementById('menu-type-select');
+    if (!wrap || !selectEl) return;
+    
+    const toggleEl = document.getElementById('menu-type-select_toggle');
+    const menuEl = document.getElementById('menu-type-select_menu');
+    if (!toggleEl || !menuEl) return;
+
+    function build() {
+      menuEl.innerHTML = '';
+      const opts = Array.from(selectEl.options || []);
+      
+      opts.forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
+        item.dataset.value = opt.value;
+        item.textContent = opt.textContent || '';
+        item.addEventListener('click', () => {
+          selectEl.value = opt.value;
+          // active visual
+          menuEl.querySelectorAll('.soft-select-item').forEach(n => n.classList.remove('is-active'));
+          item.classList.add('is-active');
+          // update toggle text
+          toggleEl.textContent = opt.textContent || '';
+          closeMenu();
+          // fire change
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        menuEl.appendChild(item);
+      });
+      
+      const active = opts.find(o => o.selected) || opts[0];
+      toggleEl.textContent = active ? (active.textContent || '') : '';
+    }
+
+    function placeMenu() {
+      const r = toggleEl.getBoundingClientRect();
+      menuEl.style.position = 'fixed';
+      menuEl.style.left = `${Math.round(r.left)}px`;
+      menuEl.style.top = `${Math.round(r.bottom + 6)}px`;
+      menuEl.style.width = `${Math.round(r.width)}px`;
+      menuEl.style.zIndex = '1065';
+    }
+
+    function openMenu() {
+      if (menuEl.parentElement !== document.body) document.body.appendChild(menuEl);
+      placeMenu();
+      wrap.classList.add('open');
+      menuEl.style.display = 'block';
+      window.addEventListener('scroll', placeMenu, true);
+      window.addEventListener('resize', placeMenu, true);
+    }
+
+    function closeMenu() {
+      wrap.classList.remove('open');
+      menuEl.style.display = 'none';
+      if (menuEl.parentElement === document.body) wrap.appendChild(menuEl);
+      window.removeEventListener('scroll', placeMenu, true);
+      window.removeEventListener('resize', placeMenu, true);
+    }
+
+    toggleEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (wrap.classList.contains('open')) closeMenu(); else openMenu();
+    });
+    
+    document.addEventListener('click', (e) => { 
+      if (!wrap.contains(e.target)) closeMenu(); 
+    });
+    
+    document.addEventListener('keydown', (e) => { 
+      if (e.key === 'Escape') closeMenu(); 
+    });
+
+    // Rebuild on external changes
+    selectEl.addEventListener('change', build);
+    build();
+  }
+
+  initModalSoftSelect() {
+    const wrap = document.querySelector('.soft-select[data-target="new-action-type"]');
+    const selectEl = document.getElementById('new-action-type');
+    if (!wrap || !selectEl) return;
+    
+    const toggleEl = document.getElementById('new-action-type_toggle');
+    const menuEl = document.getElementById('new-action-type_menu');
+    if (!toggleEl || !menuEl) return;
+
+    function build() {
+      menuEl.innerHTML = '';
+      const opts = Array.from(selectEl.options || []);
+      
+      opts.forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
+        item.dataset.value = opt.value;
+        item.textContent = opt.textContent || '';
+        item.addEventListener('click', () => {
+          selectEl.value = opt.value;
+          // active visual
+          menuEl.querySelectorAll('.soft-select-item').forEach(n => n.classList.remove('is-active'));
+          item.classList.add('is-active');
+          // update toggle text
+          toggleEl.textContent = opt.textContent || '';
+          closeMenu();
+          // fire change
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        menuEl.appendChild(item);
+      });
+      
+      const active = opts.find(o => o.selected) || opts[0];
+      toggleEl.textContent = active ? (active.textContent || '') : '';
+    }
+
+    function placeMenu() {
+      const r = toggleEl.getBoundingClientRect();
+      menuEl.style.position = 'fixed';
+      menuEl.style.left = `${Math.round(r.left)}px`;
+      menuEl.style.top = `${Math.round(r.bottom + 6)}px`;
+      menuEl.style.width = `${Math.round(r.width)}px`;
+      menuEl.style.zIndex = '1065';
+    }
+
+    function openMenu() {
+      if (menuEl.parentElement !== document.body) document.body.appendChild(menuEl);
+      placeMenu();
+      wrap.classList.add('open');
+      menuEl.style.display = 'block';
+      window.addEventListener('scroll', placeMenu, true);
+      window.addEventListener('resize', placeMenu, true);
+    }
+
+    function closeMenu() {
+      wrap.classList.remove('open');
+      menuEl.style.display = 'none';
+      if (menuEl.parentElement === document.body) wrap.appendChild(menuEl);
+      window.removeEventListener('scroll', placeMenu, true);
+      window.removeEventListener('resize', placeMenu, true);
+    }
+
+    toggleEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (wrap.classList.contains('open')) closeMenu(); else openMenu();
+    });
+    
+    document.addEventListener('click', (e) => { 
+      if (!wrap.contains(e.target)) closeMenu(); 
+    });
+    
+    document.addEventListener('keydown', (e) => { 
+      if (e.key === 'Escape') closeMenu(); 
+    });
+
+    // Rebuild on external changes
+    selectEl.addEventListener('change', build);
+    build();
+  }
+
+  initEditSoftSelect() {
+    const wrap = document.querySelector('.soft-select[data-target="action-type"]');
+    const selectEl = document.getElementById('action-type');
+    if (!wrap || !selectEl) return;
+    
+    const toggleEl = document.getElementById('action-type_toggle');
+    const menuEl = document.getElementById('action-type_menu');
+    if (!toggleEl || !menuEl) return;
+
+    function build() {
+      menuEl.innerHTML = '';
+      const opts = Array.from(selectEl.options || []);
+      
+      opts.forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
+        item.dataset.value = opt.value;
+        item.textContent = opt.textContent || '';
+        item.addEventListener('click', () => {
+          selectEl.value = opt.value;
+          // active visual
+          menuEl.querySelectorAll('.soft-select-item').forEach(n => n.classList.remove('is-active'));
+          item.classList.add('is-active');
+          // update toggle text
+          toggleEl.textContent = opt.textContent || '';
+          closeMenu();
+          // fire change
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        menuEl.appendChild(item);
+      });
+      
+      const active = opts.find(o => o.selected) || opts[0];
+      toggleEl.textContent = active ? (active.textContent || '') : '';
+    }
+
+    function placeMenu() {
+      const r = toggleEl.getBoundingClientRect();
+      menuEl.style.position = 'fixed';
+      menuEl.style.left = `${Math.round(r.left)}px`;
+      menuEl.style.top = `${Math.round(r.bottom + 6)}px`;
+      menuEl.style.width = `${Math.round(r.width)}px`;
+      menuEl.style.zIndex = '1065';
+    }
+
+    function openMenu() {
+      if (menuEl.parentElement !== document.body) document.body.appendChild(menuEl);
+      placeMenu();
+      wrap.classList.add('open');
+      menuEl.style.display = 'block';
+      window.addEventListener('scroll', placeMenu, true);
+      window.addEventListener('resize', placeMenu, true);
+    }
+
+    function closeMenu() {
+      wrap.classList.remove('open');
+      menuEl.style.display = 'none';
+      if (menuEl.parentElement === document.body) wrap.appendChild(menuEl);
+      window.removeEventListener('scroll', placeMenu, true);
+      window.removeEventListener('resize', placeMenu, true);
+    }
+
+    toggleEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (wrap.classList.contains('open')) closeMenu(); else openMenu();
+    });
+    
+    document.addEventListener('click', (e) => { 
+      if (!wrap.contains(e.target)) closeMenu(); 
+    });
+    
+    document.addEventListener('keydown', (e) => { 
+      if (e.key === 'Escape') closeMenu(); 
+    });
+
+    // Rebuild on external changes
+    selectEl.addEventListener('change', build);
+    build();
+  }
+
+  bindEvents() {
+    // Меню тип
+    document.getElementById('menu-type-select').addEventListener('change', (e) => {
+      this.currentMenuType = e.target.value;
+      this.loadButtons();
+      // НЕ обновляем предпросмотр автоматически при смене меню
+      // Пользователь сам нажмет кнопку предпросмотра
+    });
+
+    // Добавить кнопку
+    document.getElementById('add-button-btn').addEventListener('click', () => {
+      this.showAddButtonModal();
+    });
+
+    // Сохранить
+    document.getElementById('save-layout-btn').addEventListener('click', () => {
+      this.saveLayout();
+    });
+
+    // Предпросмотр
+    document.getElementById('preview-btn').addEventListener('click', () => {
+      this.showPreview();
+    });
+
+    // Обновление предпросмотра
+    document.getElementById('refresh-preview-btn').addEventListener('click', () => {
+      this.showPreview();
+    });
+
+    // Очистка предпросмотра
+    document.getElementById('clear-preview-btn').addEventListener('click', () => {
+      this.clearPreview();
+    });
+
+    // Форма свойств кнопки
+    document.getElementById('button-properties-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.saveButtonProperties();
+    });
+
+    // Тип действия
+    document.getElementById('action-type').addEventListener('change', (e) => {
+      this.toggleActionFields(e.target.value);
+    });
+
+    // Ширина кнопки - обновляем в реальном времени
+    document.getElementById('button-width').addEventListener('change', (e) => {
+      this.updateButtonWidthPreview(parseInt(e.target.value));
+    });
+
+    // Удалить кнопку
+    document.getElementById('delete-button-btn').addEventListener('click', () => {
+      this.deleteButton();
+    });
+
+    // Модальное окно добавления
+    document.getElementById('new-action-type').addEventListener('change', (e) => {
+      this.toggleNewActionFields(e.target.value);
+    });
+
+    document.getElementById('confirm-add-button').addEventListener('click', () => {
+      this.addNewButton();
+    });
+  }
+
+  async loadButtons() {
+    try {
+      const response = await fetch(`/api/button-configs/${this.currentMenuType}`, {
+        headers: {
+          'X-CSRFToken': this.getCSRFToken()
+        }
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        this.buttons = result.data;
+        this.renderButtons();
+        // НЕ обновляем предпросмотр автоматически
+      } else {
+        console.error('Error loading buttons:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading buttons:', error);
+    }
+  }
+
+  getCSRFToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    return token ? token.getAttribute('content') : '';
+  }
+
+  renderButtons() {
+    const grid = document.getElementById('button-grid');
+    grid.innerHTML = '';
+
+    if (this.buttons.length === 0) {
+      grid.innerHTML = '<p class="text-muted text-center">Нет кнопок. Нажмите "Добавить кнопку" для создания.</p>';
+      return;
+    }
+
+    // Сортируем кнопки по позиции для сетки 2x5
+    const sortedButtons = [...this.buttons].sort((a, b) => {
+      if (a.row_position !== b.row_position) return a.row_position - b.row_position;
+      if (a.column_position !== b.column_position) return a.column_position - b.column_position;
+      return a.sort_order - b.sort_order;
+    });
+
+    sortedButtons.forEach(button => {
+      const buttonElement = this.createButtonElement(button);
+      grid.appendChild(buttonElement);
+    });
+
+    // Инициализируем Sortable
+    new Sortable(grid, {
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd: (evt) => {
+        this.updateButtonPositions();
+      }
+    });
+  }
+
+  createButtonElement(button) {
+    const div = document.createElement('div');
+    div.className = 'button-item';
+    div.dataset.buttonId = button.id;
+    
+    // Добавляем класс ширины
+    const buttonWidth = button.button_width || 1;
+    div.classList.add(`width-${buttonWidth}`);
+    
+    div.innerHTML = `
+      <div class="button-text">${button.text}</div>
+      <div class="button-id">${button.button_id}</div>
+      <div class="button-width-indicator">${buttonWidth}×</div>
+      <div class="button-actions">
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="buttonConstructor.editButton(${button.id})">
+          <i class="ti ti-edit"></i>
+        </button>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="buttonConstructor.deleteButton(${button.id})">
+          <i class="ti ti-trash"></i>
+        </button>
+      </div>
+    `;
+
+    div.addEventListener('click', (e) => {
+      if (!e.target.closest('.button-actions')) {
+        this.selectButton(button.id);
+      }
+    });
+
+    return div;
+  }
+
+  selectButton(buttonId) {
+    console.log('selectButton called with ID:', buttonId);
+    
+    // Убираем выделение с других кнопок
+    document.querySelectorAll('.button-item').forEach(item => {
+      item.classList.remove('selected');
+    });
+
+    // Выделяем выбранную кнопку
+    const buttonElement = document.querySelector(`[data-button-id="${buttonId}"]`);
+    if (buttonElement) {
+      buttonElement.classList.add('selected');
+    }
+
+    this.selectedButton = this.buttons.find(b => b.id === buttonId);
+    console.log('Selected button:', this.selectedButton);
+    
+    if (this.selectedButton) {
+      this.loadButtonProperties();
+    } else {
+      console.error('Button not found with ID:', buttonId);
+    }
+  }
+
+  loadButtonProperties() {
+    console.log('loadButtonProperties called, selectedButton:', this.selectedButton);
+    
+    if (!this.selectedButton) {
+      console.error('No selected button to load properties');
+      return;
+    }
+
+    console.log('Loading properties for button:', this.selectedButton.button_id);
+
+    document.getElementById('button-id').value = this.selectedButton.button_id;
+    document.getElementById('button-text').value = this.selectedButton.text;
+    document.getElementById('action-type').value = this.selectedButton.url ? 'url' : 'callback';
+    document.getElementById('callback-data').value = this.selectedButton.callback_data || '';
+    document.getElementById('button-url').value = this.selectedButton.url || '';
+    document.getElementById('row-position').value = this.selectedButton.row_position;
+    document.getElementById('column-position').value = this.selectedButton.column_position;
+    document.getElementById('button-width').value = this.selectedButton.button_width || 1;
+    document.getElementById('sort-order').value = this.selectedButton.sort_order;
+    document.getElementById('is-active').checked = this.selectedButton.is_active === 1;
+
+    this.toggleActionFields(this.selectedButton.url ? 'url' : 'callback');
+    document.getElementById('delete-button-btn').style.display = 'block';
+    
+    // Инициализируем soft-select для формы редактирования
+    this.initEditSoftSelect();
+    
+    console.log('Button properties loaded successfully');
+  }
+
+  toggleActionFields(actionType) {
+    const callbackGroup = document.getElementById('callback-data-group');
+    const urlGroup = document.getElementById('url-group');
+
+    if (actionType === 'callback') {
+      callbackGroup.classList.remove('d-none');
+      urlGroup.classList.add('d-none');
+    } else {
+      callbackGroup.classList.add('d-none');
+      urlGroup.classList.remove('d-none');
+    }
+  }
+
+  toggleNewActionFields(actionType) {
+    const callbackGroup = document.getElementById('new-callback-data-group');
+    const urlGroup = document.getElementById('new-url-group');
+
+    if (actionType === 'callback') {
+      callbackGroup.classList.remove('d-none');
+      urlGroup.classList.add('d-none');
+    } else {
+      callbackGroup.classList.add('d-none');
+      urlGroup.classList.remove('d-none');
+    }
+  }
+
+  updateButtonWidthPreview(newWidth) {
+    if (!this.selectedButton) return;
+    
+    // Находим элемент кнопки в сетке
+    const buttonElement = document.querySelector(`[data-button-id="${this.selectedButton.id}"]`);
+    if (!buttonElement) return;
+    
+    // Убираем старые классы ширины
+    buttonElement.classList.remove('width-1', 'width-2', 'width-3');
+    
+    // Добавляем новый класс ширины
+    buttonElement.classList.add(`width-${newWidth}`);
+    
+    // Обновляем данные кнопки в массиве
+    this.selectedButton.button_width = newWidth;
+    
+    // Обновляем индикатор ширины
+    const widthIndicator = buttonElement.querySelector('.button-width-indicator');
+    if (widthIndicator) {
+      widthIndicator.textContent = `${newWidth}×`;
+    }
+    
+    console.log(`Updated button width preview: ${newWidth}`);
+  }
+
+  async saveButtonProperties() {
+    console.log('saveButtonProperties called, selectedButton:', this.selectedButton);
+    
+    if (!this.selectedButton) {
+      console.error('No button selected');
+      this.showNotification('Выберите кнопку для редактирования', 'error');
+      return;
+    }
+
+    const data = {
+      text: document.getElementById('button-text').value,
+      callback_data: document.getElementById('action-type').value === 'callback' ? 
+        document.getElementById('callback-data').value : null,
+      url: document.getElementById('action-type').value === 'url' ? 
+        document.getElementById('button-url').value : null,
+      row_position: parseInt(document.getElementById('row-position').value),
+      column_position: parseInt(document.getElementById('column-position').value),
+      button_width: parseInt(document.getElementById('button-width').value),
+      sort_order: parseInt(document.getElementById('sort-order').value),
+      is_active: document.getElementById('is-active').checked
+    };
+
+    console.log('Saving button data:', data);
+
+    try {
+      const response = await fetch(`/api/button-configs/${this.selectedButton.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': this.getCSRFToken()
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+      console.log('Save button response:', result);
+      
+      if (result.success) {
+        // Обновляем кнопку в массиве
+        const buttonIndex = this.buttons.findIndex(b => b.id === this.selectedButton.id);
+        if (buttonIndex !== -1) {
+          this.buttons[buttonIndex] = { ...this.buttons[buttonIndex], ...data };
+        }
+        
+        this.loadButtons();
+        this.showNotification('Кнопка обновлена', 'success');
+      } else {
+        console.error('Save button failed:', result.error);
+        this.showNotification('Ошибка обновления: ' + result.error, 'error');
+      }
+    } catch (error) {
+      console.error('Save button error:', error);
+      this.showNotification('Ошибка: ' + error.message, 'error');
+    }
+  }
+
+  showAddButtonModal() {
+    // Очищаем форму
+    document.getElementById('add-button-form').reset();
+    document.getElementById('new-action-type').value = 'callback';
+    this.toggleNewActionFields('callback');
+    
+    // Инициализируем soft-select для модального окна
+    this.initModalSoftSelect();
+    
+    // Показываем модальное окно
+    const modal = new bootstrap.Modal(document.getElementById('add-button-modal'));
+    modal.show();
+  }
+
+  async addNewButton() {
+    const data = {
+      menu_type: this.currentMenuType,
+      button_id: document.getElementById('new-button-id').value,
+      text: document.getElementById('new-button-text').value,
+      callback_data: document.getElementById('new-action-type').value === 'callback' ? 
+        document.getElementById('new-callback-data').value : null,
+      url: document.getElementById('new-action-type').value === 'url' ? 
+        document.getElementById('new-button-url').value : null,
+      row_position: 0,
+      column_position: 0,
+      button_width: parseInt(document.getElementById('new-button-width').value)
+    };
+
+    try {
+      const response = await fetch('/api/button-configs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': this.getCSRFToken()
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        // Закрываем модальное окно
+        const modal = bootstrap.Modal.getInstance(document.getElementById('add-button-modal'));
+        modal.hide();
+        
+        this.loadButtons();
+        this.showNotification('Кнопка добавлена', 'success');
+      } else {
+        this.showNotification('Ошибка добавления: ' + result.error, 'error');
+      }
+    } catch (error) {
+      this.showNotification('Ошибка: ' + error.message, 'error');
+    }
+  }
+
+  async deleteButton(buttonId) {
+    if (!confirm('Вы уверены, что хотите удалить эту кнопку?')) return;
+
+    try {
+      const response = await fetch(`/api/button-configs/${buttonId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRFToken': this.getCSRFToken()
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        this.loadButtons();
+        this.selectedButton = null;
+        document.getElementById('button-properties-form').reset();
+        document.getElementById('delete-button-btn').style.display = 'none';
+        this.showNotification('Кнопка удалена', 'success');
+      } else {
+        this.showNotification('Ошибка удаления: ' + result.error, 'error');
+      }
+    } catch (error) {
+      this.showNotification('Ошибка: ' + error.message, 'error');
+    }
+  }
+
+  updateButtonPositions() {
+    const grid = document.getElementById('button-grid');
+    const buttonElements = grid.querySelectorAll('.button-item');
+    
+    console.log('Updating button positions...');
+    console.log('Found', buttonElements.length, 'buttons');
+    
+    // Группируем кнопки по строкам с учетом их ширины
+    const rows = [];
+    let currentRow = [];
+    let currentRowWidth = 0;
+    
+    Array.from(buttonElements).forEach((element, index) => {
+      const buttonId = element.dataset.buttonId;
+      const button = this.buttons.find(b => b.id == buttonId);
+      
+      if (!button) {
+        console.error('Button not found for ID:', buttonId);
+        return;
+      }
+      
+      // Получаем актуальную ширину кнопки из CSS классов
+      let buttonWidth = 1; // по умолчанию
+      if (element.classList.contains('width-1')) {
+        buttonWidth = 1;
+      } else if (element.classList.contains('width-2')) {
+        buttonWidth = 2;
+      } else if (element.classList.contains('width-3')) {
+        buttonWidth = 3;
+      } else {
+        // Fallback к данным кнопки
+        buttonWidth = button.button_width || 1;
+      }
+      
+      // Обновляем данные кнопки в массиве, чтобы они соответствовали DOM
+      button.button_width = buttonWidth;
+      
+      // Если кнопка не помещается в текущую строку, начинаем новую
+      // Для кнопок шириной 3 (очень широких) они всегда занимают всю строку
+      if (buttonWidth === 3 || currentRowWidth + buttonWidth > 2) {
+        if (currentRow.length > 0) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentRowWidth = 0;
+      }
+      
+      currentRow.push({
+        element,
+        button,
+        width: buttonWidth
+      });
+      currentRowWidth += buttonWidth;
+    });
+    
+    // Добавляем последнюю строку
+    if (currentRow.length > 0) {
+      rows.push(currentRow);
+    }
+    
+    // Обновляем позиции кнопок
+    const buttonOrders = [];
+    rows.forEach((row, rowIndex) => {
+      let columnIndex = 0;
+      row.forEach(({ button, width }) => {
+        const orderData = {
+          button_id: button.button_id,
+          sort_order: buttonOrders.length,
+          row_position: rowIndex,
+          column_position: columnIndex,
+          button_width: width
+        };
+        
+        buttonOrders.push(orderData);
+        columnIndex += width;
+        
+        console.log(`Button ${button.button_id}: sort=${orderData.sort_order}, row=${orderData.row_position}, col=${orderData.column_position}, width=${orderData.button_width}`);
+      });
+    });
+
+    console.log('Sending button orders:', buttonOrders);
+    this.saveButtonOrders(buttonOrders);
+    
+    // Обновляем CSS классы ширины в DOM после пересчета позиций
+    this.updateButtonWidthClasses();
+  }
+
+  updateButtonWidthClasses() {
+    // Обновляем CSS классы ширины для всех кнопок в DOM
+    this.buttons.forEach(button => {
+      const buttonElement = document.querySelector(`[data-button-id="${button.id}"]`);
+      if (buttonElement) {
+        // Убираем все классы ширины
+        buttonElement.classList.remove('width-1', 'width-2', 'width-3');
+        
+        // Добавляем правильный класс ширины
+        const width = button.button_width || 1;
+        buttonElement.classList.add(`width-${width}`);
+        
+        // Обновляем индикатор ширины
+        const widthIndicator = buttonElement.querySelector('.button-width-indicator');
+        if (widthIndicator) {
+          widthIndicator.textContent = `${width}×`;
+        }
+      }
+    });
+  }
+
+  async saveButtonOrders(buttonOrders) {
+    try {
+      console.log('Saving button orders for', this.currentMenuType, ':', buttonOrders);
+      
+      const response = await fetch(`/api/button-configs/${this.currentMenuType}/reorder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': this.getCSRFToken()
+        },
+        body: JSON.stringify({ button_orders: buttonOrders })
+      });
+
+      const result = await response.json();
+      console.log('Reorder response:', result);
+      
+      if (result.success) {
+        this.showNotification('Порядок кнопок сохранен', 'success');
+        // Перезагружаем кнопки после изменения порядка
+        await this.loadButtons();
+      } else {
+        this.showNotification('Ошибка сохранения порядка: ' + result.error, 'error');
+      }
+    } catch (error) {
+      console.error('Error saving button orders:', error);
+      this.showNotification('Ошибка: ' + error.message, 'error');
+    }
+  }
+
+  async saveLayout() {
+    await this.loadButtons();
+    this.showNotification('Макет сохранен', 'success');
+  }
+
+  showPreview() {
+    // Предотвращаем множественные вызовы
+    if (this.isPreviewLoading) {
+      return;
+    }
+    
+    this.isPreviewLoading = true;
+    const previewArea = document.getElementById('preview-area');
+    
+    // Полностью очищаем область предпросмотра
+    previewArea.innerHTML = '';
+    
+    // Показываем индикатор загрузки
+    previewArea.innerHTML = `
+      <div class="text-center">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+          <span class="visually-hidden">Загрузка...</span>
+        </div>
+        <p class="text-muted mt-2">Создание предпросмотра...</p>
+      </div>
+    `;
+
+    // Небольшая задержка для плавности
+    setTimeout(() => {
+      // Еще раз очищаем область
+      previewArea.innerHTML = '';
+      
+      if (this.buttons.length === 0) {
+        previewArea.innerHTML = '<p class="text-muted">Нет кнопок для предпросмотра</p>';
+        this.isPreviewLoading = false;
+        return;
+      }
+
+    // Определяем заголовок в зависимости от типа меню
+    const menuTitles = {
+      'main_menu': { title: '🏠 Главное меню', subtitle: 'Выберите действие:' },
+      'admin_menu': { title: '⚙️ Админ панель', subtitle: 'Административные функции:' },
+      'profile_menu': { title: '👤 Мой профиль', subtitle: 'Управление профилем:' },
+      'support_menu': { title: '🆘 Поддержка', subtitle: 'Система поддержки:' }
+    };
+    
+    const menuInfo = menuTitles[this.currentMenuType] || menuTitles['main_menu'];
+
+    // Создаем контейнер для предпросмотра в стиле Telegram
+    const telegramPreview = document.createElement('div');
+    telegramPreview.className = 'telegram-preview';
+    telegramPreview.innerHTML = `
+      <div class="telegram-header">
+        <div class="telegram-title">${menuInfo.title}</div>
+        <div class="telegram-subtitle">${menuInfo.subtitle}</div>
+      </div>
+    `;
+
+    // Группируем кнопки по строкам
+    const rows = {};
+    this.buttons.forEach(button => {
+      const rowPos = button.row_position || 0;
+      if (!rows[rowPos]) {
+        rows[rowPos] = [];
+      }
+      rows[rowPos].push(button);
+    });
+
+     // Создаем кнопки в стиле Telegram с сеткой 2x5
+     const buttonGrid = document.createElement('div');
+     buttonGrid.className = 'telegram-button-grid';
+
+     // Сортируем строки по позиции
+     const sortedRows = Object.keys(rows).sort((a, b) => parseInt(a) - parseInt(b));
+     
+     sortedRows.forEach(rowPos => {
+       const rowButtons = rows[rowPos].sort((a, b) => (a.column_position || 0) - (b.column_position || 0));
+       
+       const row = document.createElement('div');
+       row.className = 'telegram-button-row';
+       
+       rowButtons.forEach(button => {
+         const buttonElement = document.createElement('div');
+         const buttonWidth = button.button_width || 1;
+         buttonElement.className = 'telegram-button';
+         
+         // Для сетки 2x5: обычные кнопки занимают 1 колонку, широкие - 2
+         if (buttonWidth === 1) {
+           buttonElement.style.flex = '1';
+           buttonElement.style.minWidth = '0';
+         } else if (buttonWidth === 2) {
+           buttonElement.style.flex = '2';
+           buttonElement.style.minWidth = '0';
+         } else if (buttonWidth === 3) {
+           buttonElement.style.flex = '2'; // Максимум 2 колонки в сетке 2x5
+           buttonElement.style.minWidth = '0';
+         } else {
+           buttonElement.style.flex = Math.min(buttonWidth, 2).toString();
+           buttonElement.style.minWidth = '0';
+         }
+         
+         buttonElement.style.minWidth = '0'; // Позволяет кнопке сжиматься
+         
+         buttonElement.innerHTML = `
+           <div class="telegram-button-content">
+             <span class="telegram-button-text">${button.text}</span>
+             ${button.url ? '<span class="telegram-button-url">🔗</span>' : ''}
+             ${buttonWidth > 1 ? `<span class="telegram-button-width">${buttonWidth}×</span>` : ''}
+           </div>
+         `;
+         
+         // Добавляем обработчик клика
+         buttonElement.addEventListener('click', () => {
+           if (button.url) {
+             // Для URL кнопок показываем, что откроется ссылка
+             const confirmOpen = confirm(`Открыть ссылку?\n\nURL: ${button.url}`);
+             if (confirmOpen) {
+               window.open(button.url, '_blank');
+             }
+           } else {
+             // Для callback кнопок показываем, что произойдет
+             const callbackInfo = this.getCallbackDescription(button.callback_data);
+             alert(`Действие кнопки:\n\n${callbackInfo}\n\nCallback: ${button.callback_data || 'Не указан'}`);
+           }
+         });
+         
+         row.appendChild(buttonElement);
+       });
+       
+       buttonGrid.appendChild(row);
+     });
+
+    telegramPreview.appendChild(buttonGrid);
+    previewArea.appendChild(telegramPreview);
+    
+    // Сбрасываем флаг загрузки
+    this.isPreviewLoading = false;
+    }, 300); // Задержка для плавности анимации
+  }
+
+  clearPreview() {
+    const previewArea = document.getElementById('preview-area');
+    previewArea.innerHTML = '<p class="text-muted">Предпросмотр очищен</p>';
+    this.isPreviewLoading = false;
+  }
+
+  disableLogoutButton() {
+    // Деактивируем кнопку "Выйти" на странице конструктора
+    const logoutButton = document.querySelector('form[action*="logout"] button[type="submit"]');
+    if (logoutButton) {
+      logoutButton.disabled = true;
+      logoutButton.title = 'Кнопка деактивирована на странице конструктора';
+      logoutButton.style.opacity = '0.5';
+      logoutButton.style.cursor = 'not-allowed';
+    }
+  }
+
+  getCallbackDescription(callbackData) {
+    if (!callbackData) return 'Не указан callback';
+    
+    const descriptions = {
+      'main_menu': '🏠 Вернуться в главное меню',
+      'profile': '👤 Открыть профиль пользователя',
+      'my_keys': '🔑 Показать мои ключи',
+      'buy_key': '🛒 Купить новый ключ',
+      'top_up_balance': '💳 Пополнить баланс',
+      'referral_program': '🤝 Реферальная программа',
+      'support': '🆘 Система поддержки',
+      'about': 'ℹ️ Информация о проекте',
+      'speed_test': '⚡ Тест скорости',
+      'how_to_use': '❓ Как использовать',
+      'admin_panel': '⚙️ Админ панель',
+      'admin_users': '👥 Управление пользователями',
+      'admin_keys': '🔑 Управление ключами',
+      'admin_settings': '⚙️ Настройки системы',
+      'admin_stats': '📊 Статистика',
+      'admin_backup': '💾 Резервное копирование',
+      'admin_logs': '📝 Логи системы',
+      'back_to_menu': '⬅️ Назад в меню',
+      'delete_key': '🗑️ Удалить ключ',
+      'activate_key': '✅ Активировать ключ',
+      'deactivate_key': '❌ Деактивировать ключ',
+      'support_new_ticket': '📝 Создать новое обращение',
+      'support_my_tickets': '📋 Мои обращения',
+      'support_external': '🌐 Внешняя поддержка'
+    };
+    
+    // Ищем точное совпадение
+    if (descriptions[callbackData]) {
+      return descriptions[callbackData];
+    }
+    
+    // Ищем по началу строки
+    for (const [key, desc] of Object.entries(descriptions)) {
+      if (callbackData.startsWith(key)) {
+        return desc;
+      }
+    }
+    
+    // Если не найдено, возвращаем callback как есть
+    return `Callback: ${callbackData}`;
+  }
+
+  showNotification(message, type) {
+    // Простое уведомление
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 3000);
+  }
+}
+
+// Инициализируем конструктор кнопок
+let buttonConstructor;
+document.addEventListener('DOMContentLoaded', () => {
+  buttonConstructor = new ButtonConstructor();
+});
+</script>
+{% endblock %}

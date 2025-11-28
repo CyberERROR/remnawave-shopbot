@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Поддержка — Панель{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Поддержка</h2>
+      <div class="text-secondary">Список обращений и их статусы</div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <div class="btn-list">
+        <a class="btn {% if not filter_status %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page') }}">
+          Все ({{ all_count }})
+        </a>
+        <a class="btn {% if filter_status == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='open') }}">
+          Открытые ({{ open_count }})
+        </a>
+        <a class="btn {% if filter_status == 'closed' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='closed') }}">
+          Закрытые ({{ closed_count }})
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if tickets %}
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-vcenter">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Пользователь</th>
+            <th>Тема</th>
+            <th>Статус</th>
+            <th>Обновлен</th>
+            <th class="w-1">Действия</th>
+          </tr>
+        </thead>
+        <tbody id="support-tbody"
+               data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
+               data-fetch-interval="10000">
+          {% include 'partials/support_table.html' %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="d-flex align-items-center justify-content-between mt-2">
+      <div class="text-secondary">Стр. {{ current_page }} из {{ total_pages }}</div>
+      <ul class="pagination m-0">
+        <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">Назад</a>
+        </li>
+        <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">Вперед</a>
+        </li>
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+  <p class="text-secondary">Обращений пока нет.</p>
+{% endif %}
+
+{% endblock %}

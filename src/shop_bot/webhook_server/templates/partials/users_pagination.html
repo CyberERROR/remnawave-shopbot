@@ -1,0 +1,14 @@
+{% set cp = current_page or 1 %}
+{% set tp = total_pages or 1 %}
+{% set query = q or '' %}
+<li class="page-item {% if cp <= 1 %}disabled{% endif %}">
+  <a class="page-link" href="{{ url_for('users_page', page=(cp-1 if cp>1 else 1), q=query) }}" aria-label="Previous">«</a>
+</li>
+{% for p in range(1, tp + 1) %}
+<li class="page-item {% if p == cp %}active{% endif %}">
+  <a class="page-link" href="{{ url_for('users_page', page=p, q=query) }}">{{ p }}</a>
+</li>
+{% endfor %}
+<li class="page-item {% if cp >= tp %}disabled{% endif %}">
+  <a class="page-link" href="{{ url_for('users_page', page=(cp+1 if cp<tp else tp), q=query) }}" aria-label="Next">»</a>
+</li>

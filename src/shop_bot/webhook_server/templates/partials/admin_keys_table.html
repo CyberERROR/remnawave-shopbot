@@ -1,0 +1,29 @@
+{% for k in keys %}
+<tr>
+  <td>#{{ k.key_id }}</td>
+  <td>{{ k.user_id }}</td>
+  <td>{{ k.host_name }}</td>
+  <td>{{ k.key_email }}</td>
+  <td class="text-truncate" style="max-width:180px">{{ k.remnawave_user_uuid }}</td>
+  <td>{{ k.expiry_date or '' }}</td>
+  <td>{{ k.created_date or '' }}</td>
+  <td>
+    <div class="btn-list">
+      <button type="button" class="btn btn-sm btn-outline-secondary btn-glass btn-edit-comment" 
+              data-key-id="{{ k.key_id }}" 
+              data-current-comment="{{ (k.comment or '')|e }}"
+              title="Комментарий" aria-label="Комментарий" data-bs-toggle="tooltip">
+        <i class="ti ti-message"></i>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-warning btn-glass btn-open-expiry" data-key-id="{{ k.key_id }}" title="Изменить срок (в днях)" data-bs-toggle="tooltip">
+        <i class="ti ti-calendar-stats"></i>
+      </button>
+      <form action="{{ url_for('delete_key_route', key_id=k.key_id) }}" method="post" data-confirm="Удалить ключ #{{ k.key_id }}?" data-ajax="delete" data-refresh-target="keys-tbody">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-danger btn-sm btn-glass" title="Удалить" aria-label="Удалить" data-bs-toggle="tooltip"><i class="ti ti-trash"></i></button>
+      </form>
+    </div>
+  </td>
+</tr>
+{% endfor %}
+

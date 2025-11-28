@@ -1,0 +1,431 @@
+{% extends "base.html" %} {% block title %}Главная страница{% endblock %} {% block content %}
+
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Главная</h2>
+      <div class="text-secondary">Сводка и ключевые метрики</div>
+    </div>
+  </div>
+  <div id="dash-stats" class="row row-deck row-cards mt-2"
+       data-fetch-url="{{ url_for('dashboard_stats_partial') }}"
+       data-fetch-interval="8000">
+    {% include 'partials/dashboard_stats.html' %}
+  </div>
+  
+</div>
+
+<div class="row row-cards">
+  <div class="col-lg-7">
+    
+    <div class="card card-compact glass mb-3">
+      <div class="card-body py-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <div class="me-2" style="min-width:260px; max-width:420px; flex:1 1 auto;">
+            <label class="form-label mb-1 small">SSH цель</label>
+            <div class="soft-select" id="st_target_softselect" data-target="st-target">
+              <button type="button" class="soft-select-toggle" id="st_target_toggle">Выберите SSH цель...</button>
+              <div class="soft-select-menu" id="st_target_menu"></div>
+              <select id="st-target" class="form-select form-select-sm select-soft">
+                {% for t in ssh_targets %}
+                <option value="{{ t.target_name }}">{{ t.target_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="flex-grow-1 min-w-0">
+            <div class="small text-secondary mb-1">Последний результат</div>
+            <div id="st-latest" class="tiny text-truncate">—</div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <form id="st-run-form" action="#" method="post" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="method" value="both" />
+            <button type="submit" class="btn btn-primary btn-xs pill">Проверить выбранный</button>
+          </form>
+          <form id="st-run-all-form" action="{{ url_for('run_all_ssh_target_speedtests_route') }}" method="post" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-outline-secondary btn-xs pill">Запустить для всех</button>
+          </form>
+        </div>
+        <div class="chart" style="height: 280px;">
+          <canvas id="st-top-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Новые пользователи (30 дней)</h3>
+      </div>
+      <div class="card-body">
+        <div class="chart" style="height: 280px">
+          <canvas id="newUsersChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <h3 class="card-title">Новые ключи (30 дней)</h3>
+      </div>
+      <div class="card-body">
+        <div class="chart" style="height: 280px">
+          <canvas id="newKeysChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Недавние транзакции</h3>
+      </div>
+      <div class="card-body">
+        {% if transactions %}
+        <div class="table-responsive">
+          <table class="table table-vcenter">
+            <thead>
+              <tr>
+                <th>Пользователь</th>
+                <th>Хост</th>
+                <th>План</th>
+                <th>Цена</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody id="dash-transactions"
+                   data-fetch-url="{{ url_for('dashboard_transactions_partial', page=current_page) }}"
+                   data-fetch-interval="10000">
+              {% include 'partials/dashboard_transactions.html' %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="d-flex justify-content-center mt-3">
+          <ul class="pagination">
+            <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('dashboard_page', page=current_page - 1) }}" aria-label="Previous">«</a>
+            </li>
+            {% for p in range(1, total_pages + 1) %}
+            <li class="page-item {% if p == current_page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('dashboard_page', page=p) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('dashboard_page', page=current_page + 1) }}" aria-label="Next">»</a>
+            </li>
+          </ul>
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="text-secondary">Пока нет транзакций для отображения.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="modal modal-blur fade" id="speedtestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Скорость — <span id="st-modal-host"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 align-items-center mb-2">
+          <div class="col-auto"><label class="form-label m-0">Метрика:</label></div>
+          <div class="col-auto">
+            <select id="st-metric" class="form-select form-select-sm">
+              <option value="download_mbps" selected>Скорость загрузки (Mbps)</option>
+              <option value="upload_mbps">Скорость отдачи (Mbps)</option>
+              <option value="ping_ms">Пинг (ms)</option>
+            </select>
+          </div>
+          <div class="col-auto"><label class="form-label m-0">Период:</label></div>
+          <div class="col-auto">
+            <select id="st-range" class="form-select form-select-sm">
+              <option value="24">24 точки</option>
+              <option value="60" selected>60 точек</option>
+              <option value="120">120 точек</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <button id="st-refresh" class="btn btn-outline-primary btn-sm">Обновить</button>
+          </div>
+        </div>
+        <canvas id="st-detail-canvas" height="360"></canvas>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+
+<div class="modal modal-blur fade" id="speedtestRunningModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Идёт измерение скорости…</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body d-flex align-items-center gap-3">
+        <div class="spinner-aurora" aria-hidden="true"></div>
+        <div>
+          <div class="fw-semibold">Пожалуйста, подождите 10–30 секунд</div>
+          <div class="text-secondary small">Мы запускаем SSH‑тест. Окно закроется автоматически по завершении.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script id="chart-data" type="application/json">
+  {{ chart_data | tojson }}
+</script>
+<script>
+  const CHART_DATA = JSON.parse(document.getElementById('chart-data').textContent);
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Soft-select helpers (как в Ключах)
+    function buildSoftSelect(selectEl, toggleEl, menuEl, placeholder){
+      if (!selectEl || !toggleEl || !menuEl) return;
+      // Render items
+      menuEl.innerHTML = '';
+      const opts = Array.from(selectEl.options || []);
+      opts.forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
+        div.dataset.value = opt.value;
+        div.innerHTML = `<span style="opacity:.75">${opt.textContent||''}</span> <span class="ms-1 text-warning">⚡</span>`;
+        div.addEventListener('click', () => {
+          selectEl.value = opt.value;
+          menuEl.querySelectorAll('.soft-select-item').forEach(el => el.classList.remove('is-active'));
+          div.classList.add('is-active');
+          toggleEl.textContent = opt.textContent || placeholder || '';
+          toggleEl.closest('.soft-select')?.classList.remove('open');
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        menuEl.appendChild(div);
+      });
+      const selOpt = opts.find(o => o.selected) || opts[0];
+      toggleEl.textContent = (selOpt && selOpt.textContent) || placeholder || '';
+      const wrap = toggleEl.closest('.soft-select');
+      function placeMenu(){
+        const r = toggleEl.getBoundingClientRect();
+        menuEl.style.position = 'fixed';
+        menuEl.style.left = `${Math.round(r.left)}px`;
+        menuEl.style.top = `${Math.round(r.bottom + 6)}px`;
+        menuEl.style.width = `${Math.round(r.width)}px`;
+        menuEl.style.zIndex = '1065';
+      }
+      function openMenu(){
+        if (menuEl.parentElement !== document.body) document.body.appendChild(menuEl);
+        placeMenu();
+        wrap.classList.add('open');
+        menuEl.style.display='block';
+        window.addEventListener('scroll', placeMenu, true);
+        window.addEventListener('resize', placeMenu, true);
+      }
+      function closeMenu(){
+        wrap.classList.remove('open');
+        menuEl.style.display='none';
+        if (menuEl.parentElement === document.body) wrap.appendChild(menuEl);
+        window.removeEventListener('scroll', placeMenu, true);
+        window.removeEventListener('resize', placeMenu, true);
+      }
+      toggleEl.onclick = (e)=>{ e.stopPropagation(); if (wrap.classList.contains('open')) closeMenu(); else openMenu(); };
+      document.addEventListener('click', (e)=>{ if (!wrap.contains(e.target)) closeMenu(); });
+      document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeMenu(); });
+    }
+    function initSoftSelect(selectId, placeholder){
+      const sel = document.getElementById(selectId);
+      const wrap = document.querySelector(`.soft-select[data-target="${selectId}"]`);
+      if (!sel || !wrap) return;
+      const toggle = wrap.querySelector('.soft-select-toggle');
+      const menu = wrap.querySelector('.soft-select-menu');
+      buildSoftSelect(sel, toggle, menu, placeholder);
+      sel.addEventListener('change', ()=> buildSoftSelect(sel, toggle, menu, placeholder));
+    }
+    // Top compact block logic
+    const targetSelect = document.getElementById('st-target');
+    const latestBox = document.getElementById('st-latest');
+    const topCanvas = document.getElementById('st-top-canvas');
+    const runForm = document.getElementById('st-run-form');
+    let topChart = null;
+
+    async function loadAndDrawTop(){
+      if (!targetSelect || !topCanvas) return;
+      const name = targetSelect.value;
+      const url = `{{ url_for('host_speedtests_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(name));
+      try {
+        const resp = await fetch(url + '?limit=60', {headers: {'Accept': 'application/json'}});
+        const data = await resp.json();
+        if (!data || !data.ok) {
+          console.warn('Speedtests JSON not ok', {url, data});
+          return;
+        }
+        const items = (data.items||[]).slice().reverse();
+        // latest line
+        if (items.length){
+          const last = items[items.length-1];
+          const parts = [];
+          if (last.method) parts.push(`<span class='badge bg-blue-lt'>${String(last.method).toUpperCase()}</span>`);
+          parts.push(`⏱ ${last.ping_ms ?? '—'} ms`);
+          parts.push(`↓ ${last.download_mbps ?? '—'} Mbps`);
+          parts.push(`↑ ${last.upload_mbps ?? '—'} Mbps`);
+          if (last.server_name) parts.push(`📍 ${last.server_name}`);
+          parts.push(`<span class='text-secondary'>${last.created_at}</span>`);
+          if (latestBox) latestBox.innerHTML = parts.join(' · ');
+        } else {
+          if (latestBox) latestBox.textContent = 'Нет данных';
+        }
+        // chart
+        const labels = items.map(it => it.created_at);
+        const series = items.map(it => parseFloat(String(it.download_mbps ?? '0')) || 0);
+        const seriesUp = items.map(it => parseFloat(String(it.upload_mbps ?? '0')) || 0);
+        const pr = items.length <= 2 ? 3 : 0;
+        const tn = items.length <= 2 ? 0 : 0.3;
+        const ctx = topCanvas.getContext('2d');
+        if (topChart) topChart.destroy();
+        topChart = new Chart(ctx, {
+          type: 'line',
+          data: { labels, datasets: [
+            {
+              label: 'Download Mbps', data: series,
+              borderColor: '#206bc4', backgroundColor: 'rgba(32,107,196,0.08)',
+              borderWidth: 2, fill: true, tension: tn, pointRadius: pr
+            },
+            {
+              label: 'Upload Mbps', data: seriesUp,
+              borderColor: '#2fb344', backgroundColor: 'rgba(47,179,68,0.08)',
+              borderWidth: 2, fill: false, tension: tn, pointRadius: pr
+            }
+          ]},
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {display: true}, tooltip: {enabled: true, mode: 'nearest', intersect: false},
+              zoom: { zoom: { wheel: {enabled: true}, pinch: {enabled: true}, mode: 'x' }, pan: { enabled: true, mode: 'x' } }
+            },
+            scales: { x: { display: true, ticks: { maxTicksLimit: 10 } }, y: { display: true, beginAtZero: true } }
+          }
+        });
+      } catch(e) { console.error('Speedtests fetch failed', e); }
+    }
+    initSoftSelect('st-target', 'Выберите SSH цель...');
+    if (targetSelect) targetSelect.addEventListener('change', loadAndDrawTop);
+    await loadAndDrawTop();
+    function showRunning(){
+      try { new bootstrap.Modal(document.getElementById('speedtestRunningModal'), {backdrop:'static', keyboard:false}).show(); } catch(_){}
+    }
+    function hideRunning(){
+      try { bootstrap.Modal.getInstance(document.getElementById('speedtestRunningModal'))?.hide(); } catch(_){}
+    }
+
+    if (runForm) {
+      runForm.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const name = targetSelect ? targetSelect.value : '';
+        const fd = new FormData(runForm);
+        try {
+          showRunning();
+          const runUrl = `{{ url_for('run_ssh_target_speedtest_route', target_name='__TARGET__') }}`.replace('__TARGET__', encodeURIComponent(name));
+          const resp = await fetch(runUrl, {
+            method: 'POST', body: fd, credentials: 'same-origin'
+          });
+          // после выполнения — перерисуем
+          setTimeout(async ()=>{ await loadAndDrawTop(); hideRunning(); }, 800);
+        } catch(_){}}
+      );
+    }
+
+    // Intercept "run for all"
+    const runAllForm = document.getElementById('st-run-all-form');
+    if (runAllForm) {
+      runAllForm.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const fd = new FormData(runAllForm);
+        try {
+          showRunning();
+          await fetch(runAllForm.action, { method: 'POST', body: fd, credentials: 'same-origin' });
+          // после выполнения — просто закрываем и обновляем график
+          setTimeout(async ()=>{ await loadAndDrawTop(); hideRunning(); }, 1200);
+        } catch(_){}
+      });
+    }
+
+    const modalEl = document.getElementById('speedtestModal');
+    const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+    const titleHost = document.getElementById('st-modal-host');
+    const metricEl = document.getElementById('st-metric');
+    const rangeEl = document.getElementById('st-range');
+    const refreshBtn = document.getElementById('st-refresh');
+    const detailCanvas = document.getElementById('st-detail-canvas');
+    let detailChart = null;
+    let currentHost = null;
+    let currentUrl = null;
+
+    window.openSpeedtestModal = async function(host, url){
+      currentHost = host; currentUrl = url;
+      if (titleHost) titleHost.textContent = host;
+      if (modal) modal.show();
+      await drawDetail();
+    };
+
+    async function drawDetail(){
+      if (!detailCanvas) return;
+      const metric = metricEl.value || 'download_mbps';
+      const limit = parseInt(rangeEl.value||'60', 10);
+      try {
+        const resp = await fetch(currentUrl + '?limit=' + limit, {headers: {'Accept': 'application/json'}});
+        const data = await resp.json();
+        if (!data || !data.ok) return;
+        const items = (data.items || []).slice().reverse();
+        const labels = items.map(it => it.created_at);
+        const series = items.map(it => Number(it[metric] || 0));
+        const ctx = detailCanvas.getContext('2d');
+        if (detailChart) { detailChart.destroy(); }
+        detailChart = new Chart(ctx, {
+          type: 'line',
+          data: { labels, datasets: [{
+            label: metric,
+            data: series,
+            borderColor: metric === 'ping_ms' ? '#e67e22' : (metric === 'upload_mbps' ? '#2fb344' : '#206bc4'),
+            backgroundColor: 'rgba(32,107,196,0.08)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2,
+          }]},
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {display: false},
+              tooltip: {enabled: true, mode: 'index', intersect: false},
+              zoom: {
+                zoom: { wheel: {enabled: true}, pinch: {enabled: true}, mode: 'x' },
+                pan: { enabled: true, mode: 'x' }
+              }
+            },
+            interaction: { intersect: false, mode: 'nearest' },
+            scales: {
+              x: { display: true, ticks: { maxTicksLimit: 10 } },
+              y: { display: true, beginAtZero: true }
+            }
+          }
+        });
+      } catch(e) {}
+    }
+    if (refreshBtn) refreshBtn.addEventListener('click', drawDetail);
+    if (metricEl) metricEl.addEventListener('change', drawDetail);
+    if (rangeEl) rangeEl.addEventListener('change', drawDetail);
+  });
+</script>
+
+{% endblock %}

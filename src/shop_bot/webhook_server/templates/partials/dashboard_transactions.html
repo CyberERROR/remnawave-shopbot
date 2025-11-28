@@ -1,0 +1,11 @@
+{% for tx in transactions %}
+<tr>
+  <td>
+    {{ tx.username or 'N/A' }}<br><small class="text-secondary">({{ tx.user_id }})</small>
+  </td>
+  <td>{{ tx.host_name }}</td>
+  <td>{{ tx.plan_name }}</td>
+  <td>{{ tx.amount_rub | round(2) }} RUB</td>
+  <td>{{ tx.created_date.split(' ')[0] }}</td>
+</tr>
+{% endfor %}

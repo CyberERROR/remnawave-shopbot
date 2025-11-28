@@ -1,0 +1,28 @@
+{% if keys %}
+<div class="table-responsive">
+  <table class="table table-sm table-vcenter">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Хост</th>
+        <th>Email</th>
+        <th>UUID</th>
+        <th>Истекает</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for k in keys %}
+      <tr>
+        <td>#{{ k.key_id }}</td>
+        <td>{{ k.host_name }}</td>
+        <td>{{ k.key_email or k.email }}</td>
+        <td class="text-truncate" style="max-width:220px">{{ k.remnawave_user_uuid }}</td>
+        <td>{{ k.expiry_date or k.expire_at or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-secondary">Ключей нет</div>
+{% endif %}

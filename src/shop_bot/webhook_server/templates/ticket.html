@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Тикет #{{ ticket.ticket_id }} — Поддержка{% endblock %}
+
+{% block content %}
+<div id="ticket-root" data-ticket-id="{{ ticket.ticket_id }}">
+  <div class="page-header d-print-none">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-title">Тикет #{{ ticket.ticket_id }}</h2>
+        <div class="text-secondary">Пользователь: {{ ticket.user_id }} • Тема: {{ ticket.subject or 'Без темы' }}</div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <a class="btn btn-outline-secondary" href="{{ url_for('support_list_page') }}">← К списку</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="mb-2">
+        <strong>Статус:</strong>
+        <span id="ticket-status">
+          {% if ticket.status == 'open' %}
+            <span class="status-dot status-dot-animated bg-green"></span>
+            <span class="badge bg-green ms-1">Открыт</span>
+          {% else %}
+            <span class="status-dot"></span>
+            <span class="badge ms-1">Закрыт</span>
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="chat-box" id="chat-box">
+        {% for m in messages %}
+          <div class="chat-message {% if m.sender == 'admin' %}from-admin{% else %}from-user{% endif %}">
+            <div class="meta">
+              <span class="sender">{{ 'Админ' if m.sender == 'admin' else 'Пользователь' }}</span>
+              <span class="time">{{ m.created_at }}</span>
+            </div>
+            <div class="content">{{ m.content }}</div>
+          </div>
+        {% else %}
+          <p class="no-messages">Сообщений пока нет.</p>
+        {% endfor %}
+      </div>
+
+      <div class="ticket-actions">
+        <form method="post" class="form-inline" id="reply-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <textarea id="reply-text" name="message" rows="3" placeholder="Введите ответ админа..." {% if ticket.status == 'closed' %}disabled{% endif %}></textarea>
+          <div class="buttons">
+            <button id="reply-btn" type="submit" name="action" value="reply" class="btn btn-primary" {% if ticket.status == 'closed' %}disabled{% endif %}>Ответить</button>
+            {% if ticket.status == 'open' %}
+              <button id="toggle-status-btn" type="submit" name="action" value="close" class="btn btn-danger">Закрыть</button>
+            {% else %}
+              <button id="toggle-status-btn" type="submit" name="action" value="open" class="btn btn-success">Открыть</button>
+            {% endif %}
+          </div>
+        </form>
+        <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}" onsubmit="return confirm('Удалить тикет #{{ ticket.ticket_id }}? Это действие необратимо.');" style="display:inline-block;margin-top:8px;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-danger">Удалить тикет</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

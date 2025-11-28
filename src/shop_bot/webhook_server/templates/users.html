@@ -1,0 +1,430 @@
+{% extends "base.html" %} {% block title %}Управление Пользователями{% endblock %} {% block content %}
+
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Пользователи</h2>
+      <div class="text-secondary">Список зарегистрированных пользователей и быстрые действия</div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <div class="d-flex">
+        <input id="users-search" type="text" class="form-control" placeholder="Поиск по ID или Username..." value="{{ q or '' }}" />
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal modal-blur fade" id="balanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Баланс пользователя</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2 text-secondary" id="bm-user"></div>
+        <div class="mb-2">Текущий баланс: <strong id="bm-balance">0.00</strong> RUB</div>
+        <form id="bm-form" class="d-flex gap-2" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input class="form-control" type="text" inputmode="decimal" name="delta" placeholder="± сумма" required />
+          <button class="btn btn-primary" type="submit">Изменить</button>
+        </form>
+        <hr/>
+        <div class="mb-1">Рефералы: <strong id="bm-refcount">0</strong></div>
+        <div class="small text-secondary" style="max-height:180px;overflow:auto;">
+          <ul class="list-unstyled mb-0" id="bm-reflist"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+<div class="card card-compact glass">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table id="users-table" class="table table-vcenter table-compact">
+        <thead>
+          <tr>
+            <th>Telegram ID</th>
+            <th>Username</th>
+            <th>Статус</th>
+            <th>Активные ключи</th>
+            <th>Баланс</th>
+            <th class="w-1">Действия</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody" data-fetch-url="{{ url_for('users_table_partial', page=current_page, per_page=per_page, q=q) }}" data-fetch-interval="10000">
+          {% for user in users %}
+          <tr>
+            <td class="user-id">{{ user.telegram_id }}</td>
+            <td class="user-name">@{{ user.username or 'N/A' }}</td>
+            <td>
+              {% if user.is_banned %}
+                <span class="badge bg-red">Забанен</span>
+              {% else %}
+                <span class="badge bg-green">Активен</span>
+              {% endif %}
+            </td>
+            <td>{{ user.keys_count or 0 }} шт.</td>
+            <td>{{ '%.2f'|format(user.balance or 0) }}</td>
+            <td>
+              <div class="btn-list">
+                <a class="btn btn-primary btn-xs btn-glass" href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}" title="Выдать ключ" aria-label="Выдать ключ">
+                  <i class="ti ti-key-plus"></i>
+                </a>
+                <button type="button"
+                        class="btn btn-success btn-xs btn-glass btn-user-balance-sign"
+                        data-uid="{{ user.telegram_id }}"
+                        data-username="{{ user.username or 'N/A' }}"
+                        data-balance="{{ '%.2f'|format(user.balance or 0) }}"
+                        data-sign="+"
+                        title="Начислить баланс" aria-label="Начислить баланс">
+                  Начислить баланс
+                </button>
+                <button type="button"
+                        class="btn btn-danger btn-xs btn-glass btn-user-balance-sign"
+                        data-uid="{{ user.telegram_id }}"
+                        data-username="{{ user.username or 'N/A' }}"
+                        data-balance="{{ '%.2f'|format(user.balance or 0) }}"
+                        data-sign="-"
+                        title="Списать баланс" aria-label="Списать баланс">
+                  Списать баланс
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-xs btn-glass" data-toggle="keys" data-user="{{ user.telegram_id }}" title="Ключи" aria-label="Ключи">
+                  <i class="ti ti-key"></i>
+                </button>
+                {% if user.is_banned %}
+                <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit" class="btn btn-success btn-xs btn-glass" title="Разбанить" aria-label="Разбанить"><i class="ti ti-circle-check"></i></button>
+                </form>
+                {% else %}
+                <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post" data-confirm="Вы уверены, что хотите забанить этого пользователя? Он не сможет пользоваться ботом.">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit" class="btn btn-warning btn-xs btn-glass" title="Бан" aria-label="Бан"><i class="ti ti-ban"></i></button>
+                </form>
+                {% endif %}
+                {% if (user.keys_count or 0) > 0 %}
+                <form action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post" data-confirm="ВНИМАНИЕ! Это действие удалит ВСЕ ключи пользователя с серверов. Вы уверены?" data-ajax="delete" data-refresh-target="users-tbody" data-action="revoke-keys">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit" class="btn btn-danger btn-xs btn-glass" title="Отозвать ключи" aria-label="Отозвать ключи"><i class="ti ti-trash-x"></i></button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          <tr class="keys-row" id="keys-{{ user.telegram_id }}" style="display:none;" data-src="{{ url_for('user_keys_partial', user_id=user.telegram_id) }}">
+            <td colspan="6">
+              <div class="card card-compact">
+                <div class="card-header"><strong>Ключи пользователя</strong></div>
+                <div class="card-body p-2" data-lazy="keys"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if total_pages and total_pages > 1 %}
+<div class="d-flex justify-content-center mt-3">
+  <ul id="users-pagination" class="pagination" data-src="{{ url_for('users_pagination_partial', page=current_page, q=q, per_page=per_page) }}">
+    {% include 'partials/users_pagination.html' %}
+  </ul>
+  </div>
+{% endif %}
+
+  <script>
+  (function(){
+    const input = document.getElementById('users-search');
+    const table = document.getElementById('users-table');
+    if (!input || !table) return;
+    function norm(s){ return (s||'').toString().toLowerCase().trim(); }
+    // Храним раскрытые ключи между автообновлениями
+    const LS_KEY = 'users_open_keys_ids';
+    function loadOpenSet(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return new Set(Array.isArray(arr) ? arr : []);
+      } catch(_){ return new Set(); }
+    }
+    function saveOpenSet(set){
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(Array.from(set))); }catch(_){}
+    }
+    const openSet = loadOpenSet();
+    function getMainTbody(){
+      // Берём только главный tbody таблицы пользователей (первый уровень)
+      return table.tBodies && table.tBodies.length ? table.tBodies[0] : table.querySelector('tbody');
+    }
+    function getRows(){
+      // Только прямые дочерние строки главного tbody, исключая keys-row
+      const tbody = getMainTbody();
+      if (!tbody) return [];
+      return Array.from(tbody.children).filter(tr => tr.tagName === 'TR' && !tr.classList.contains('keys-row'));
+    }
+    function getKeysRowByUid(uid){ return document.getElementById('keys-' + uid); }
+    async function ensureKeysLoaded(uid){
+      const row = getKeysRowByUid(uid);
+      if (!row) return;
+      const body = row.querySelector('[data-lazy="keys"]');
+      if (!body) return;
+      if (body.getAttribute('data-loaded') === '1') return;
+      const src = row.getAttribute('data-src');
+      if (!src) return;
+      try{
+        const resp = await fetch(src, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
+        if (!resp.ok) return;
+        const html = await resp.text();
+        body.innerHTML = html;
+        body.setAttribute('data-loaded','1');
+      } catch(_){ }
+    }
+    function openKeysForUid(uid){
+      const row = getKeysRowByUid(uid);
+      if (!row) return;
+      row.style.display = '';
+      openSet.add(String(uid));
+      saveOpenSet(openSet);
+      // Подсветка/состояние кнопки
+      const btn = table.querySelector(`[data-toggle="keys"][data-user="${uid}"]`);
+      if (btn){
+        btn.classList.add('btn-secondary');
+        btn.classList.remove('btn-outline-secondary');
+      }
+    }
+    function closeKeysForUid(uid){
+      const row = getKeysRowByUid(uid);
+      if (!row) return;
+      row.style.display = 'none';
+      openSet.delete(String(uid));
+      saveOpenSet(openSet);
+      const btn = table.querySelector(`[data-toggle="keys"][data-user="${uid}"]`);
+      if (btn){
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-outline-secondary');
+      }
+    }
+    function restoreOpenedKeys(){
+      // Восстанавливаем состояние после перерисовки tbody
+      openSet.forEach(uid => {
+        const row = getKeysRowByUid(uid);
+        if (row) {
+          row.style.display = '';
+          const btn = table.querySelector(`[data-toggle="keys"][data-user="${uid}"]`);
+          if (btn){
+            btn.classList.add('btn-secondary');
+            btn.classList.remove('btn-outline-secondary');
+          }
+        }
+      });
+    }
+    function applyFilter(){
+      const q = norm(input.value);
+      const rows = getRows();
+      rows.forEach(tr => {
+        const id = norm(tr.querySelector('.user-id')?.textContent);
+        const name = norm(tr.querySelector('.user-name')?.textContent);
+        const ok = !q || id.includes(q) || name.includes(q);
+        tr.style.display = ok ? '' : 'none';
+      });
+      // Синхронизируем видимость строк ключей с видимостью родительской строки пользователя
+      // Показываем keys-row только если пользовательская строка видима и он числится открытым в openSet
+      const tbody = getMainTbody();
+      const allKeysRows = tbody ? Array.from(tbody.querySelectorAll(':scope > tr.keys-row')) : [];
+      allKeysRows.forEach(kr => {
+        const uid = (kr.id || '').replace('keys-', '');
+        const userRow = getRows().find(r => r.querySelector('.user-id')?.textContent?.trim() === uid);
+        const userVisible = userRow && userRow.style.display !== 'none';
+        const shouldShow = userVisible && openSet.has(String(uid));
+        kr.style.display = shouldShow ? '' : 'none';
+        const btn = table.querySelector(`[data-toggle="keys"][data-user="${uid}"]`);
+        if (btn){
+          btn.classList.toggle('btn-secondary', shouldShow);
+          btn.classList.toggle('btn-outline-secondary', !shouldShow);
+        }
+      });
+    }
+    input.addEventListener('input', applyFilter);
+    input.addEventListener('keyup', applyFilter);
+    input.addEventListener('search', applyFilter); // для очистки через крестик
+    // Синхронизируем поиск с сервером при паузе ввода (debounce)
+    (function(){
+      let t=null; const DEBOUNCE=400; const tbody=document.getElementById('users-tbody');
+      async function pushQuery(){
+        const q = encodeURIComponent(input.value||'');
+        const url = new URL(tbody.getAttribute('data-fetch-url'), window.location.origin);
+        url.searchParams.set('q', input.value||'');
+        url.searchParams.set('page','1');
+        try{
+          const resp = await fetch(url.toString(), { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
+          const html = await resp.text();
+          if (html){ tbody.innerHTML = html; restoreOpenedKeys(); applyFilter(); }
+          // Важно: синхронизируем data-fetch-url с текущим фильтром,
+          // чтобы автообновление не сбрасывало результаты и не скрывало найденного пользователя
+          tbody.setAttribute('data-fetch-url', url.pathname + '?' + url.searchParams.toString());
+          // Перерисуем пагинацию
+          const pag = document.getElementById('users-pagination');
+          if (pag){
+            const purl = new URL(pag.getAttribute('data-src'), window.location.origin);
+            purl.searchParams.set('q', input.value||''); purl.searchParams.set('page','1');
+            const presp = await fetch(purl.toString(), { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
+            const phtml = await presp.text(); if (phtml) pag.innerHTML = phtml;
+          }
+          // Обновим адресную строку
+          try {
+            history.replaceState(null,'', '/users?page=1' + (input.value ? ('&q=' + encodeURIComponent(input.value)) : ''));
+          } catch(_){ }
+        } catch(_){ }
+      }
+      input.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(pushQuery, DEBOUNCE); });
+    })();
+    // При автообновлении tbody — снова применяем фильтр
+    (function(){
+      const tbody = document.getElementById('users-tbody');
+      if (!tbody) return;
+      let t = null;
+      const obs = new MutationObserver(() => {
+        clearTimeout(t);
+        t = setTimeout(() => { applyFilter(); restoreOpenedKeys(); }, 50);
+      });
+      obs.observe(tbody, { childList: true, subtree: true });
+    })();
+    // Пагинация без перезагрузки страницы (partial)
+    (function(){
+      const tbody = document.getElementById('users-tbody');
+      const pag = document.getElementById('users-pagination');
+      if (!tbody || !pag) return;
+      pag.addEventListener('click', async function(e){
+        const a = e.target.closest('a.page-link');
+        if (!a) return;
+        e.preventDefault();
+        const url = new URL(a.getAttribute('href'), window.location.origin);
+        try{
+          // table
+          const turl = new URL(tbody.getAttribute('data-fetch-url'), window.location.origin);
+          turl.searchParams.set('page', url.searchParams.get('page') || '1');
+          const qVal = url.searchParams.get('q') || (document.getElementById('users-search')?.value || '');
+          turl.searchParams.set('q', qVal);
+          const resp = await fetch(turl.toString(), { headers: { 'Accept':'text/html' }, credentials: 'same-origin' });
+          const html = await resp.text();
+          if (html){ tbody.innerHTML = html; restoreOpenedKeys(); applyFilter(); }
+          // pagination
+          const purl = new URL(pag.getAttribute('data-src'), window.location.origin);
+          purl.searchParams.set('page', turl.searchParams.get('page'));
+          purl.searchParams.set('q', turl.searchParams.get('q'));
+          const presp = await fetch(purl.toString(), { headers: { 'Accept':'text/html' }, credentials: 'same-origin' });
+          const phtml = await presp.text();
+          if (phtml) pag.innerHTML = phtml;
+          // sync data-fetch-url for auto-refresh
+          tbody.setAttribute('data-fetch-url', turl.pathname + '?' + turl.searchParams.toString());
+          // update URL bar (optional)
+          try {
+            const qp = turl.searchParams.get('q');
+            const pg = turl.searchParams.get('page') || '1';
+            history.replaceState(null,'', '/users?page=' + encodeURIComponent(pg) + (qp ? ('&q=' + encodeURIComponent(qp)) : ''));
+          } catch(_){ }
+        } catch(_){ }
+      });
+    })();
+    // Тоггл строки с ключами
+    table.addEventListener('click', function(e){
+      const btn = e.target.closest('[data-toggle="keys"]');
+      if (!btn) return;
+      const uid = btn.getAttribute('data-user');
+      const row = document.getElementById('keys-' + uid);
+      if (!row) return;
+      const isHidden = window.getComputedStyle(row).display === 'none';
+      if (isHidden){
+        openKeysForUid(uid);
+        ensureKeysLoaded(uid);
+      } else {
+        closeKeysForUid(uid);
+      }
+    });
+
+    // Открытие модалки баланса с предустановленным знаком (+/-)
+    table.addEventListener('click', async function(e){
+      const btn = e.target.closest('.btn-user-balance-sign');
+      if (!btn) return;
+      const uid = btn.getAttribute('data-uid');
+      const uname = btn.getAttribute('data-username') || 'N/A';
+      const balance = btn.getAttribute('data-balance') || '0.00';
+      const sign = btn.getAttribute('data-sign') || '';
+      let refs = [];
+      try {
+        const resp = await fetch(`{{ url_for('user_referrals_json', user_id=0) }}`.replace('/0/', `/${uid}/`), { headers: { 'Accept':'application/json' }, credentials: 'same-origin' });
+        const data = await resp.json();
+        refs = (data && data.ok) ? (data.items||[]) : [];
+      } catch(_){ refs = []; }
+
+      const modalEl = document.getElementById('balanceModal');
+      const bmUser = modalEl.querySelector('#bm-user');
+      const bmBal = modalEl.querySelector('#bm-balance');
+      const bmForm = modalEl.querySelector('#bm-form');
+      const bmCount = modalEl.querySelector('#bm-refcount');
+      const bmList = modalEl.querySelector('#bm-reflist');
+      const deltaInput = bmForm.querySelector('input[name="delta"]');
+
+      bmUser.textContent = `@${uname} (#${uid})`;
+      bmBal.textContent = balance;
+      bmForm.action = `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
+      bmCount.textContent = refs.length;
+      bmList.innerHTML = refs.map(r => `<li>#${r.telegram_id} — @${(r.username||'N/A')} · ${r.registration_date}</li>`).join('');
+
+      // Проставляем знак и ставим курсор в конец
+      try {
+        deltaInput.value = sign;
+        deltaInput.focus();
+        const len = deltaInput.value.length;
+        deltaInput.setSelectionRange(len, len);
+      } catch(_){ }
+
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    });
+
+    // AJAX-сабмит формы изменения баланса (показываем тост, не перезагружаем страницу)
+    (function(){
+      const modalEl = document.getElementById('balanceModal');
+      if (!modalEl) return;
+      const form = modalEl.querySelector('#bm-form');
+      if (!form) return;
+      form.addEventListener('submit', async function(ev){
+        ev.preventDefault();
+        try{
+          const fd = new FormData(form);
+          // гарантируем csrf
+          if (!fd.get('csrf_token')){
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            const token = meta ? meta.getAttribute('content') : '';
+            if (token) fd.append('csrf_token', token);
+          }
+          const resp = await fetch(form.action, {
+            method: 'POST',
+            body: fd,
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+          });
+          const data = await resp.json().catch(()=>null);
+          if (resp.ok && data && data.ok){
+            try { window.showToast('success', data.message || 'Баланс изменён.'); } catch(_){ }
+            try { bootstrap.Modal.getInstance(modalEl)?.hide(); } catch(_){ }
+            try { await window.refreshContainerById('users-tbody'); } catch(_){ }
+          } else {
+            const msg = (data && data.message) || (data && data.error) || 'Не удалось изменить баланс';
+            try { window.showToast('danger', msg); } catch(_){ }
+          }
+        } catch(_){
+          try { window.showToast('danger', 'Ошибка сети'); } catch(__){}
+        }
+      });
+    })();
+  })();
+  </script>
+
+{% endblock %}
+

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{% block title %}Панель управления Ботом{% endblock %}</title>
+		<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}" />
+		<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/favicon-16x16.png') }}" />
+		<link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon-32x32.png') }}" />
+		<link rel="icon" href="{{ url_for('static', filename='img/safari-pinned-tab.svg') }}" type="image/svg+xml" />
+		<link rel="mask-icon" href="{{ url_for('static', filename='img/safari-pinned-tab.svg') }}" color="#ae3ec9" />
+		<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}" />
+		<meta name="theme-color" content="#ae3ec9" />
+		<meta name="csrf-token" content="{{ csrf_token() }}" />
+		
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" />
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler-flags.min.css" />
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler-payments.min.css" />
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler-vendors.min.css" />
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+		
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+		
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        
+	</head>
+	<body data-page="{{ request.endpoint }}" class="layout-boxed">
+		<div class="container">
+			<header class="main-header">
+				<div class="brand">
+					<a href="{{ url_for('dashboard_page') }}" class="brand-link">
+						<img src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип" />
+						<span id="brand-title" class="ms-2">{{ brand_title or 'Remnawave Control' }}</span>
+					</a>
+					<button type="button" id="brand-edit" class="btn btn-outline-secondary btn-sm btn-glass" title="Сменить название">✏️</button>
+				</div>
+				<nav class="navigation justify-content-center">
+					<a href="{{ url_for('dashboard_page') }}" class="nav-link {% if request.endpoint == 'dashboard_page' %}active{% endif %}">Главная</a>
+					<a href="{{ url_for('users_page') }}" class="nav-link {% if request.endpoint == 'users_page' %}active{% endif %}">Пользователи</a>
+					<a href="{{ url_for('admin_keys_page') }}" class="nav-link {% if request.endpoint == 'admin_keys_page' %}active{% endif %}">Ключи</a>
+					<a href="{{ url_for('support_list_page') }}" class="nav-link {% if request.endpoint in ['support_list_page', 'support_ticket_page'] %}active{% endif %}">
+						Поддержка
+						<span class="open-tickets-badge" data-fetch-url="{{ url_for('support_open_count_partial') }}" data-fetch-interval="10000">
+							{% if open_tickets_count and open_tickets_count > 0 %}
+							<span class="badge bg-green-lt" title="Открытые тикеты">
+								<span class="status-dot status-dot-animated bg-green"></span>{{ open_tickets_count }}
+							</span>
+							{% endif %}
+						</span>
+					</a>
+					<a href="{{ url_for('settings_page') }}" class="nav-link {% if request.endpoint == 'settings_page' %}active{% endif %}">Настройки</a>
+					<a href="{{ url_for('button_constructor_page') }}" class="nav-link {% if request.endpoint == 'button_constructor_page' %}active{% endif %}">Конструктор кнопок</a>
+					<a href="{{ url_for('monitor_page') }}" class="nav-link {% if request.endpoint == 'monitor_page' %}active{% endif %}">Мониторинг</a>
+				</nav>
+				<div class="bm float-end">
+					<input id="burger" type="checkbox" />
+					<label for="burger" class="burger_img"></label>
+					<nav class="burger-menu">
+						<ul>
+							<li><a href="{{ url_for('dashboard_page') }}">Главная</a></li>
+							<li><a href="{{ url_for('users_page') }}">Пользователи</a></li>
+							<li><a href="{{ url_for('admin_keys_page') }}">Ключи</a></li>
+							<li><a href="{{ url_for('support_list_page') }}">Поддержка</a></li>
+							<li><a href="{{ url_for('settings_page') }}">Настройки</a></li>
+							<li><a href="{{ url_for('button_constructor_page') }}">Конструктор кнопок</a></li>
+							<li><a href="{{ url_for('monitor_page') }}">Мониторинг</a></li>
+						</ul>
+					</nav>
+				</div>
+
+				<div class="header-controls">
+					<div class="bot-control">
+						{% set main_running = bot_status and bot_status.is_running %}
+						{% set support_running = support_bot_status and support_bot_status.is_running %}
+						{% if main_running and support_running %}
+							<p class="status-running"><span class="status-dot status-dot-animated bg-green"></span>Статус: <strong>Запущен</strong></p>
+							<form action="{{ url_for('stop_both_bots_route') }}" method="post" class="d-inline-flex align-items-center gap-2">
+								<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+								<button type="submit" class="btn btn-danger btn-sm">Остановить</button>
+							</form>
+						{% elif main_running %}
+							<p class="status-warning"><span class="status-dot status-dot-animated bg-yellow"></span>Основной бот запущен, Support-бот остановлен</p>
+							<form action="{{ url_for('stop_both_bots_route') }}" method="post" class="d-inline-flex align-items-center gap-2">
+								<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+								<button type="submit" class="btn btn-danger btn-sm">Остановить</button>
+							</form>
+						{% elif support_running %}
+							<p class="status-warning"><span class="status-dot status-dot-animated bg-yellow"></span>Support-бот запущен, основной бот остановлен</p>
+							<form action="{{ url_for('stop_both_bots_route') }}" method="post" class="d-inline-flex align-items-center gap-2">
+								<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+								<button type="submit" class="btn btn-danger btn-sm">Остановить</button>
+							</form>
+						{% else %}
+							<p class="status-stopped"><span class="status-dot"></span>Статус: <strong>Остановлен</strong></p>
+							{% if all_settings_ok and support_settings_ok %}
+								<form action="{{ url_for('start_both_bots_route') }}" method="post" class="d-inline-flex align-items-center gap-2">
+									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+									<button type="submit" class="btn btn-success btn-sm">Запустить</button>
+								</form>
+							{% else %}
+								<button class="btn btn-secondary btn-sm" disabled>Запустить</button>
+							{% endif %}
+						{% endif %}
+					</div>
+
+					<div class="user-session-controls">
+						<span>Вы вошли в систему.</span>
+						<form action="{{ url_for('logout_page') }}" method="post" style="display: inline">
+							<button type="submit" class="btn btn-outline-secondary">Выйти</button>
+						</form>
+					</div>
+				</div>
+
+			</header>
+
+			
+			<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>
+			{% with messages = get_flashed_messages(with_categories=true) %}
+				{% if messages %}
+					<script id="flash-messages" type="application/json">{{ messages|tojson }}</script>
+					<script>
+						(function(){
+							const cont = document.getElementById('toast-container');
+							const dataTag = document.getElementById('flash-messages');
+							if (!cont || !dataTag) return;
+							let items = [];
+							try { items = JSON.parse(dataTag.textContent || '[]'); } catch(_){ items = []; }
+
+							function renderToasts(){
+								items.forEach(function(item){
+									const category = item[0] || 'secondary';
+									const message = item[1] || '';
+									const el = document.createElement('div');
+									el.className = 'toast fade align-items-center text-bg-' + (category === 'danger' ? 'danger' : (category === 'success' ? 'success' : (category === 'warning' ? 'warning' : 'secondary')));
+									el.setAttribute('role','alert'); el.setAttribute('aria-live','assertive'); el.setAttribute('aria-atomic','true');
+									el.innerHTML = '<div class="d-flex"><div class="toast-body">'+ message +'</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>';
+									cont.appendChild(el);
+								});
+								// Если bootstrap уже загружен — показываем сразу, иначе дождёмся события load
+								function showNow(){
+									try {
+										cont.querySelectorAll('.toast').forEach(el => new bootstrap.Toast(el, { delay: 4000, autohide: true }).show());
+									} catch(_) {}
+								}
+								if (window.bootstrap && window.bootstrap.Toast) {
+									showNow();
+								} else {
+									window.addEventListener('load', showNow, { once: true });
+								}
+							}
+
+							renderToasts();
+						})();
+					</script>
+				{% endif %}
+			{% endwith %}
+
+			<main>{% block content %}{% endblock %}</main>
+		</div>
+
+		<footer class="main-footer"></footer>
+
+        
+        <div class="modal modal-blur fade" id="brandModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Сменить название в шапке</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="text" class="form-control" id="brand-input" placeholder="Введите название" />
+                        <small class="text-secondary">Название сохранится на сервере и будет показано в шапке.</small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn btn-primary" id="brand-save">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+        <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+        <script>
+            (function(){
+                const titleEl = document.getElementById('brand-title');
+                const editBtn = document.getElementById('brand-edit');
+                const modalEl = document.getElementById('brandModal');
+                const inputEl = document.getElementById('brand-input');
+                const saveBtn = document.getElementById('brand-save');
+                if (!titleEl || !editBtn || !modalEl) return;
+                editBtn.addEventListener('click', () => {
+                    try { inputEl.value = titleEl.textContent.trim(); } catch(_){ }
+                    const m = new bootstrap.Modal(modalEl); m.show();
+                });
+                async function save(){
+                    const val = String(inputEl.value||'').trim();
+                    if (!val) { try { window.showToast('warning', 'Введите название'); } catch(_){ } return; }
+                    try {
+                        const fd = new FormData();
+                        fd.append('csrf_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                        fd.append('title', val);
+                        const resp = await fetch('{{ url_for("update_brand_title_route") }}', { method: 'POST', body: fd, credentials: 'same-origin' });
+                        if (resp.ok) {
+                            titleEl.textContent = val;
+                            try { window.showToast('success', 'Название сохранено'); } catch(_){ }
+                            bootstrap.Modal.getInstance(modalEl)?.hide();
+                        } else {
+                            try { window.showToast('danger', 'Не удалось сохранить название'); } catch(_){ }
+                        }
+                    } catch(_){ try { window.showToast('danger', 'Ошибка сети'); } catch(__){} }
+                }
+                saveBtn.addEventListener('click', save);
+            })();
+        </script>
+    </body>
+</html>

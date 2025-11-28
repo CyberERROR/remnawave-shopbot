@@ -1,0 +1,30 @@
+{% for t in tickets %}
+<tr>
+  <td>#{{ t.ticket_id }}</td>
+  <td>{{ t.user_id }}</td>
+  <td>{{ t.subject or 'Без темы' }}</td>
+  <td>
+    {% if t.status == 'open' %}
+      <span class="status-dot status-dot-animated bg-green"></span>
+      <span class="badge bg-green ms-1">Открыт</span>
+    {% else %}
+      <span class="status-dot"></span>
+      <span class="badge ms-1">Закрыт</span>
+    {% endif %}
+  </td>
+  <td>{{ t.updated_at }}</td>
+  <td>
+    <div class="btn-list">
+      <a class="btn btn-sm btn-primary btn-glass" href="{{ url_for('support_ticket_page', ticket_id=t.ticket_id) }}" title="Открыть" data-bs-toggle="tooltip" aria-label="Открыть"><i class="ti ti-mail-opened"></i></a>
+      <form method="post"
+            action="{{ url_for('delete_support_ticket_route', ticket_id=t.ticket_id) }}"
+            style="display:inline-block"
+            data-confirm="Удалить тикет #{{ t.ticket_id }}? Это действие необратимо."
+            data-ajax="delete"
+            data-refresh-target="support-tbody">
+        <button type="submit" class="btn btn-sm btn-danger btn-glass" title="Удалить" data-bs-toggle="tooltip" aria-label="Удалить"><i class="ti ti-trash"></i></button>
+      </form>
+    </div>
+  </td>
+</tr>
+{% endfor %}

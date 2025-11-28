@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+	<head>
+		<meta charset="UTF-8" />
+		<title>ОТЛАДКА - Панель управления</title>
+	</head>
+	<body>
+		<h1>Страница отладки</h1>
+		<hr />
+
+		<h2>Статус Бота</h2>
+		{% if bot_status.is_running %}
+		<p style="color: green">Статус: <strong>Запущен</strong></p>
+		{% else %}
+		<p style="color: red">Статус: <strong>Остановлен</strong></p>
+		{% endif %}
+
+		<hr />
+
+		<h2>Управление</h2>
+
+		<h3>Запустить Бота</h3>
+		<form action="{{ url_for('start_bot_route') }}" method="post">
+			<button type="submit">ЗАПУСТИТЬ</button>
+		</form>
+
+		<br />
+
+		<h3>Остановить Бота</h3>
+		<form action="{{ url_for('stop_bot_route') }}" method="post">
+			<button type="submit">ОСТАНОВИТЬ</button>
+		</form>
+
+		<hr />
+
+		<h2>Сообщения от сервера:</h2>
+		{% with messages = get_flashed_messages(with_categories=true) %} {% if
+		messages %}
+		<ul>
+			{% for category, message in messages %}
+			<li class="{{ category }}">{{ message }}</li>
+			{% endfor %}
+		</ul>
+		{% else %}
+		<p>Сообщений нет.</p>
+		{% endif %} {% endwith %}
+	</body>
+</html>

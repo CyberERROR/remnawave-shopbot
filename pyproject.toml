@@ -1,0 +1,35 @@
+[project]
+name = "remnawave-shopbot"
+version = "1.3.0"
+description = "Remnawave Control Bot для автоматизации продаж VLESS VPN"
+dependencies = [
+    "aiogram==3.21.0",
+    "flask==3.1.1",
+    "flask-wtf==1.2.1",
+    "httpx==0.27.2",
+    "pyotp==2.9.0",
+    "python-dotenv==1.1.1",
+    "qrcode[pil]==8.2",
+    "yookassa==3.5.0",
+    "aiosend==2.1.2",
+    "aiohttp==3.9.5",
+    "aiohttp-sse-client==0.2.1",
+    "pytonconnect==0.3.2",
+    "paramiko==3.5.0",
+    "colorama==0.4.6",
+    "psutil==5.9.8"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pip-tools",
+    "pylint",
+    "black"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Вход в Панель управления</title>
+		<meta name="csrf-token" content="{{ csrf_token() }}" />
+		<link
+			rel="stylesheet"
+			href="{{ url_for('static', filename='css/style.css') }}"
+		/>
+	</head>
+	<body class="login-page">
+		<canvas id="scene" draggable="false"></canvas>
+		<div class="login-container">
+			<h1>Вход в панель</h1>
+
+			{% with messages = get_flashed_messages(with_categories=true) %} {% if
+			messages %} {% for category, message in messages %}
+			<div class="flash flash-{{ category }}">{{ message }}</div>
+			{% endfor %} {% endif %} {% endwith %}
+
+			<form method="post">
+				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+				<div class="form-group">
+					<label for="username">Логин:</label>
+					<input type="text" id="username" name="username" required />
+				</div>
+				<div class="form-group password-wrapper">
+					<label for="password">Пароль:</label>
+					<input type="password" id="password" name="password" required />
+					<button type="button" id="toggle-login-pass" class="toggle-password" aria-label="Показать пароль" title="Показать пароль">
+						
+						<svg id="icon-eye-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M3 3l18 18" />
+							<path d="M10.584 10.587a2 2 0 1 0 2.828 2.827" />
+							<path d="M6.712 6.715c-1.766 1.233-3.247 2.89-4.712 5.285c2.667 4 6.667 6 10 6c1.25 0 2.47-.214 3.638-.623" />
+							<path d="M9.88 4.598a9.956 9.956 0 0 1 2.12-.598c3.333 0 7.333 2 10 6c-1.093 1.64-2.3 3.022-3.614 4.047" />
+						</svg>
+						
+						<svg id="icon-eye" style="display:none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M2 12c2.667-4 6.667-6 10-6s7.333 2 10 6c-2.667 4-6.667 6-10 6s-7.333-2-10-6z" />
+							<circle cx="12" cy="12" r="2" />
+						</svg>
+					</button>
+				</div>
+				<div class="form-group" style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin:10px 0 16px;">
+					<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+						<input type="checkbox" id="remember_me" />
+						<span>Запомнить меня</span>
+					</label>
+				</div>
+				<button type="submit" class="button button-primary" style="width: 100%">
+					Войти
+				</button>
+			</form>
+		</div>
+	<script>
+		(() => {
+			const canvas = document.getElementById('scene');
+			if (!canvas) return;
+			const ctx = canvas.getContext('2d');
+			let DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+			let t = 0;
+
+			// Блокируем копирование/сохранение через UI только на странице логина
+			const prevent = (e) => e.preventDefault();
+			document.addEventListener('contextmenu', prevent, { passive: false });
+			canvas.addEventListener('dragstart', prevent, { passive: false });
+			canvas.addEventListener('mousedown', prevent, { passive: false });
+			document.addEventListener('copy', prevent, { passive: false });
+
+			function resize() {
+				// обновляем DPR динамически
+				DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+				const { innerWidth: w, innerHeight: h } = window;
+				canvas.width = Math.max(1, Math.floor(w * DPR));
+				canvas.height = Math.max(1, Math.floor(h * DPR));
+				canvas.style.width = w + 'px';
+				canvas.style.height = h + 'px';
+				ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+			}
+
+			function draw() {
+				// используем реальные размеры буфера, чтобы исключить баги с clientWidth/Height
+				const W = Math.max(1, Math.floor(canvas.width / DPR));
+				const H = Math.max(1, Math.floor(canvas.height / DPR));
+				ctx.clearRect(0, 0, W, H);
+
+				const L = Math.hypot(W, H);
+				const nx = H / L, ny = W / L;
+
+				const lines = 120;
+				const baseBand = H * 0.45 * 1.5 * 1.2;
+				const bandPulse = 1 + 0.06 * Math.sin(t * 0.07);
+
+				for (let i = 0; i < lines; i++) {
+					const f = i / (lines - 1);
+					const bias = f - 0.5;
+					const sideFactor = 0.6 + 0.4 * f;
+					const cornerFactor = 1 - 0.5 * (1 - f);
+					const offset = bias * baseBand * bandPulse * sideFactor * cornerFactor;
+
+					const lw = Math.max(0.55, 1.2 - f * 0.5);
+					const alpha = Math.max(0.06, 0.32 * (0.95 - Math.abs(bias) * 0.75));
+					ctx.beginPath();
+					ctx.lineWidth = lw;
+					ctx.strokeStyle = `rgba(88, 125, 255, ${alpha})`;
+
+					const twistStrength = 0.12 * (1 + 0.3 * Math.sin(t * 0.2 + i * 0.15));
+
+					for (let s = -0.2, first = true; s <= 1.2; s += 0.01) {
+						const sd = s;
+						const x0 = sd * W;
+						const y0 = H - sd * H;
+
+						const disp = Math.sin(t * 0.1 + i * 0.05) * (baseBand * 0.04);
+						const twist = Math.sin(sd * Math.PI + t * 0.12 + i * 0.03) * twistStrength * baseBand;
+
+						const x = x0 + (nx * disp) + Math.cos(sd * Math.PI) * twist;
+						const y = y0 + offset + (ny * disp) + Math.sin(sd * Math.PI) * twist;
+
+						if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+					}
+					ctx.stroke();
+				}
+			}
+
+			function animate(){ t += 0.016; draw(); requestAnimationFrame(animate); }
+
+			window.addEventListener('resize', resize, { passive:true });
+			resize();
+			// тестовая одноразовая отрисовка, чтобы убедиться, что что-то видно
+			ctx.fillStyle = 'rgba(88,125,255,0.08)';
+			ctx.fillRect(0, 0, Math.max(1, Math.floor(canvas.width / DPR)), Math.max(1, Math.floor(canvas.height / DPR)));
+			animate();
+		})();
+
+		// Переключатель видимости пароля на странице логина
+		(function(){
+			const btn = document.getElementById('toggle-login-pass');
+			const input = document.getElementById('password');
+			if (!btn || !input) return;
+			const eye = document.getElementById('icon-eye');
+			const eyeOff = document.getElementById('icon-eye-off');
+			btn.addEventListener('click', () => {
+				if (input.type === 'password') {
+					input.type = 'text';
+					btn.setAttribute('aria-label', 'Скрыть пароль');
+					btn.title = 'Скрыть пароль';
+					if (eye) eye.style.display = '';
+					if (eyeOff) eyeOff.style.display = 'none';
+				} else {
+					input.type = 'password';
+					btn.setAttribute('aria-label', 'Показать пароль');
+					btn.title = 'Показать пароль';
+					if (eye) eye.style.display = 'none';
+					if (eyeOff) eyeOff.style.display = '';
+				}
+			});
+		})();
+
+		// Запомнить логин (username) локально
+		(function(){
+			const u = document.getElementById('username');
+			const r = document.getElementById('remember_me');
+			if (!u || !r) return;
+			try {
+				const saved = localStorage.getItem('login_username');
+				if (saved) { u.value = saved; r.checked = true; }
+			} catch(_){}
+			// При отправке формы — сохранить/очистить
+			u.form?.addEventListener('submit', () => {
+				try {
+					if (r.checked) localStorage.setItem('login_username', u.value || '');
+					else localStorage.removeItem('login_username');
+				} catch(_){ }
+			});
+		})();
+	</script>
+	</body>
+</html>

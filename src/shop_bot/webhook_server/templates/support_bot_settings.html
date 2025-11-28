@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Support Bot — Настройки{% endblock %}
+
+{% block content %}
+<h1>Настройки Support-бота</h1>
+
+<div class="status-bar">
+  <p><strong>Статус:</strong>
+    {% if support_bot_status and support_bot_status.is_running %}
+      <span class="badge bg-green">запущен</span>
+    {% else %}
+      <span class="badge bg-red">остановлен</span>
+    {% endif %}
+  </p>
+  <div class="actions">
+    <form action="{{ url_for('start_support_bot_route') }}" method="post" style="display:inline-block;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button type="submit" class="btn btn-success" {% if not support_settings_ok %}disabled{% endif %}>Запустить</button>
+    </form>
+    <form action="{{ url_for('stop_support_bot_route') }}" method="post" style="display:inline-block; margin-left: 8px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button type="submit" class="btn btn-danger">Остановить</button>
+    </form>
+  </div>
+  {% if not support_settings_ok %}
+    <p class="hint">Укажите токен, username бота и admin_telegram_id, затем нажмите «Сохранить», чтобы активировать запуск.</p>
+  {% endif %}
+</div>
+
+<form action="{{ url_for('support_bot_settings_page') }}" method="post" class="settings-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <section class="settings-section">
+    <h2>Telegram</h2>
+    <div class="mb-3 password-wrapper">
+      <label class="form-label" for="support_bot_token">Токен support-бота</label>
+      <div class="d-flex gap-2">
+        <input class="form-control" type="password" id="support_bot_token" name="support_bot_token" value="{{ settings.support_bot_token or '' }}" required />
+        <button type="button" class="btn btn-outline-secondary toggle-password">👁️</button>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="support_bot_username">Username support-бота (без @)</label>
+      <input class="form-control" type="text" id="support_bot_username" name="support_bot_username" value="{{ settings.support_bot_username or '' }}" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="admin_telegram_id">Telegram ID Администратора</label>
+      <input class="form-control" type="text" id="admin_telegram_id" name="admin_telegram_id" value="{{ settings.admin_telegram_id or '' }}" required />
+    </div>
+  </section>
+
+  <section class="settings-section">
+    <h2>Группа поддержки</h2>
+    <div class="mb-3">
+      <label class="form-label" for="support_forum_chat_id">ID супергруппы поддержки (forum chat id)</label>
+      <input class="form-control" type="text" id="support_forum_chat_id" name="support_forum_chat_id" value="{{ settings.support_forum_chat_id or '' }}" placeholder="например, -1001234567890" />
+      <div class="form-hint">Группа должна быть супергруппой с включёнными темами, бот — админ.</div>
+    </div>
+  </section>
+
+  <button type="submit" class="btn btn-primary">Сохранить</button>
+</form>
+{% endblock %}
