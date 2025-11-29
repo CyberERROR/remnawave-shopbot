@@ -395,10 +395,15 @@ async def show_main_menu(message: types.Message, edit_message: bool = False):
     text = get_setting("main_menu_text") or "🏠 <b>Главное меню</b>\n\nВыберите действие:"
 
     try:
-        keyboard = keyboards.create_dynamic_main_menu_keyboard(user_keys, trial_available, is_admin_flag)
+        balance = get_balance(user_id)
+    except Exception:
+        balance = 0.0
+
+    try:
+        keyboard = keyboards.create_dynamic_main_menu_keyboard(user_keys, trial_available, is_admin_flag, balance)
     except Exception as e:
         logger.warning(f"Не удалось создать динамическую клавиатуру, используем статическую: {e}")
-        keyboard = keyboards.create_main_menu_keyboard(user_keys, trial_available, is_admin_flag)
+        keyboard = keyboards.create_main_menu_keyboard(user_keys, trial_available, is_admin_flag, balance)
 
     if edit_message:
         try:
@@ -1363,7 +1368,7 @@ def get_user_router() -> Router:
             )
         text = (
             "⚡ <b>Последние результаты Speedtest</b>\n"
-            + ("\n".join(lines) if lines else "(цели не настроены)")
+            + ("\n\n".join(lines) if lines else "(цели не настроены)")
         )
         kb = InlineKeyboardBuilder()
         kb.button(text="⬅️ В меню", callback_data="back_to_main_menu")
@@ -1671,7 +1676,7 @@ def get_user_router() -> Router:
             await message.delete()
             new_expiry_date = datetime.fromtimestamp(result['expiry_timestamp_ms'] / 1000)
             final_text = get_purchase_success_text("new", get_next_key_number(user_id) -1, new_expiry_date, result['connection_string'])
-            await message.answer(text=final_text, reply_markup=keyboards.create_key_info_keyboard(new_key_id))
+            await message.answer(text=final_text, reply_markup=keyboards.create_key_info_keyboard(new_key_id, result['connection_string']))
 
         except Exception as e:
             logger.error(f"Error creating trial key for user {user_id} on host {host_name}: {e}", exc_info=True)
@@ -1706,7 +1711,7 @@ def get_user_router() -> Router:
             
             await callback.message.edit_text(
                 text=final_text,
-                reply_markup=keyboards.create_key_info_keyboard(key_id_to_show)
+                reply_markup=keyboards.create_key_info_keyboard(key_id_to_show, connection_string)
             )
         except Exception as e:
             logger.error(f"Error showing key {key_id_to_show}: {e}")

@@ -3,7 +3,7 @@ import hashlib
 
 from datetime import datetime
 
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from shop_bot.data_manager.remnawave_repository import get_setting
@@ -16,7 +16,7 @@ main_reply_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-def create_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: bool) -> InlineKeyboardMarkup:
+def create_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: bool, balance: float = 0.0) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     
     if trial_available:
@@ -28,7 +28,10 @@ def create_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: 
     builder.button(text=f"{base_my_keys} ({keys_count})", callback_data="manage_keys")
     
     builder.button(text=(get_setting("btn_buy_key_text") or "🛒 Купить ключ"), callback_data="buy_new_key")
-    builder.button(text=(get_setting("btn_topup_text") or "💳 Пополнить баланс"), callback_data="top_up_start")
+    btn_topup_text = get_setting("btn_topup_text") or "💳 Пополнить баланс"
+    if balance > 0:
+        btn_topup_text += f" ({int(balance)})"
+    builder.button(text=btn_topup_text, callback_data="top_up_start")
     
     builder.button(text=(get_setting("btn_referral_text") or "🤝 Реферальная программа"), callback_data="show_referral_program")
     
@@ -509,13 +512,15 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
     builder.adjust(1)
     return builder.as_markup()
 
-def create_key_info_keyboard(key_id: int) -> InlineKeyboardMarkup:
+def create_key_info_keyboard(key_id: int, connection_string: str | None = None) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    if connection_string:
+        builder.button(text="💻 Личный кабинет", web_app=WebAppInfo(url=connection_string))
     builder.button(text="➕ Продлить этот ключ", callback_data=f"extend_key_{key_id}")
     builder.button(text="📱 Показать QR-код", callback_data=f"show_qr_{key_id}")
     builder.button(text="📖 Инструкция", callback_data=f"howto_vless_{key_id}")
     builder.button(text="⬅️ Назад к списку ключей", callback_data="manage_keys")
-    builder.adjust(1)
+    builder.adjust(1, 1, 2, 1)
     return builder.as_markup()
 
 def create_howto_vless_keyboard() -> InlineKeyboardMarkup:
@@ -712,7 +717,7 @@ def create_admin_months_pick_keyboard(action: str = "gift") -> InlineKeyboardMar
     return builder.as_markup()
 
 
-def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_available: bool = False, is_admin: bool = False) -> InlineKeyboardMarkup:
+def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_available: bool = False, is_admin: bool = False, balance: float = 0.0) -> InlineKeyboardMarkup:
     """Create a keyboard based on database configuration"""
     try:
         button_configs = get_button_configs(menu_type)
@@ -722,7 +727,7 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
             logger.warning(f"No button configs found for {menu_type}, using fallback")
 
             if menu_type == "main_menu":
-                return create_main_menu_keyboard(user_keys or [], trial_available, is_admin)
+                return create_main_menu_keyboard(user_keys or [], trial_available, is_admin, balance)
             elif menu_type == "admin_menu":
                 return create_admin_menu_keyboard()
             elif menu_type == "profile_menu":
@@ -769,6 +774,11 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 if menu_type == "main_menu" and user_keys is not None and "({len(user_keys)})" in text:
                     keys_count = len(user_keys) if user_keys else 0
                     text = text.replace("({len(user_keys)})", f"({keys_count})")
+                
+                if menu_type == "main_menu" and "{balance}" in text:
+                    text = text.replace("{balance}", f"{int(balance)}")
+                if menu_type == "main_menu" and "{len(balance)}" in text:
+                     text = text.replace("{len(balance)}", f"{int(balance)}")
 
                 if url:
                     row_buttons_objs.append(InlineKeyboardButton(text=text, url=url))
@@ -804,13 +814,13 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
         logger.error(f"Error creating dynamic keyboard for {menu_type}: {e}")
 
         if menu_type == "main_menu":
-            return create_main_menu_keyboard(user_keys or [], trial_available, is_admin)
+            return create_main_menu_keyboard(user_keys or [], trial_available, is_admin, balance)
         else:
             return create_back_to_menu_keyboard()
 
-def create_dynamic_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: bool) -> InlineKeyboardMarkup:
+def create_dynamic_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: bool, balance: float = 0.0) -> InlineKeyboardMarkup:
     """Create main menu keyboard using dynamic configuration"""
-    return create_dynamic_keyboard("main_menu", user_keys, trial_available, is_admin)
+    return create_dynamic_keyboard("main_menu", user_keys, trial_available, is_admin, balance)
 
 def create_dynamic_admin_menu_keyboard() -> InlineKeyboardMarkup:
     """Create admin menu keyboard using dynamic configuration"""
