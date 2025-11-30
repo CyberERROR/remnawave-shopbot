@@ -90,6 +90,8 @@ ALL_SETTINGS_KEYS = [
     "yoomoney_enabled", "yoomoney_wallet", "yoomoney_secret", "stars_per_rub", "stars_enabled",
 
     "yoomoney_api_token", "yoomoney_client_id", "yoomoney_client_secret", "yoomoney_redirect_uri",
+    
+    "platega_enabled", "platega_merchant_id", "platega_api_key",
 ]
 
 def create_webhook_app(bot_controller_instance):
@@ -1464,7 +1466,7 @@ def create_webhook_app(bot_controller_instance):
                 update_setting('panel_password', request.form.get('panel_password'))
 
 
-            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled']
+            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled']
             for checkbox_key in checkbox_keys:
                 values = request.form.getlist(checkbox_key)
                 value = values[-1] if values else 'false'
@@ -2274,6 +2276,68 @@ def create_webhook_app(bot_controller_instance):
             logger.error(f"Ошибка в обработчике вебхука TonAPI: {e}", exc_info=True)
             return 'Error', 500
 
+    @csrf.exempt
+    @flask_app.route('/platega-webhook', methods=['POST'])
+    def platega_webhook_handler():
+        """Обработчик webhook от Platega"""
+        try:
+            # Проверка заголовков аутентификации
+            merchant_id = request.headers.get('X-MerchantId')
+            secret = request.headers.get('X-Secret')
+            
+            expected_merchant = get_setting('platega_merchant_id')
+            expected_secret = get_setting('platega_api_key')
+            
+            if not expected_merchant or not expected_secret:
+                logger.warning("Platega webhook: настройки не заданы")
+                return 'OK', 200
+            
+            if merchant_id != expected_merchant or secret != expected_secret:
+                logger.warning(f"Platega webhook: неверные учетные данные. Получено: merchant_id={merchant_id}")
+                return 'Forbidden', 403
+            
+            data = request.json
+            logger.info(f"Platega webhook получен: {data}")
+            
+            # Обработка только успешных платежей
+            status = data.get('status')
+            if status == 'CONFIRMED':
+                # Platega отправляет наш payment_id в поле 'payload'
+                payment_id = data.get('payload')
+                
+                if not payment_id:
+                    logger.warning("Platega webhook: отсутствует payload (payment_id)")
+                    return 'OK', 200
+                
+                # Найти метаданные платежа
+                metadata = find_and_complete_pending_transaction(payment_id)
+                if metadata:
+                    logger.info(f"Platega: найдены метаданные для платежа {payment_id}")
+                    
+                    bot = _bot_controller.get_bot_instance()
+                    loop = current_app.config.get('EVENT_LOOP')
+                    payment_processor = handlers.process_successful_payment
+                    
+                    if bot and loop and loop.is_running():
+                        asyncio.run_coroutine_threadsafe(
+                            payment_processor(bot, metadata), 
+                            loop
+                        )
+                        logger.info(f"Platega: платеж {payment_id} обработан")
+                    else:
+                        logger.error("Platega webhook: бот или цикл событий недоступен")
+                else:
+                    logger.warning(f"Platega webhook: метаданные не найдены для платежа {payment_id}")
+            elif status == 'CANCELED':
+                logger.info(f"Platega webhook: платеж отменен, ID={data.get('id')}")
+            else:
+                logger.info(f"Platega webhook: получен статус {status}")
+            
+            return 'OK', 200
+        except Exception as e:
+            logger.error(f"Ошибка в обработчике вебхука Platega: {e}", exc_info=True)
+            return 'Error', 500
+
 
     def _ym_get_redirect_uri():
         try:
@@ -2392,7 +2456,7 @@ def create_webhook_app(bot_controller_instance):
     def get_button_configs_api(menu_type):
         """Get button configurations for a specific menu type"""
         try:
-            configs = get_button_configs(menu_type)
+            configs = get_button_configs(menu_type, include_inactive=True)
             return jsonify({'success': True, 'data': configs})
         except Exception as e:
             logger.error(f"Error getting button configs for {menu_type}: {e}")
@@ -2499,6 +2563,50 @@ def create_webhook_app(bot_controller_instance):
         except Exception as e:
             logger.error(f"Error reordering button configs for {menu_type}: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
+
+    @flask_app.route('/users/<int:user_id>/send-message', methods=['POST'])
+    @login_required
+    @csrf.exempt
+    def send_user_message_route(user_id):
+        """Send a message to a user via bot"""
+        try:
+            message_text = request.form.get('message', '').strip()
+            
+            if not message_text:
+                return jsonify({'ok': False, 'error': 'Сообщение не может быть пустым'}), 400
+            
+            
+            bot = _bot_controller.get_bot_instance()
+            if not bot:
+                return jsonify({'ok': False, 'error': 'Бот недоступен'}), 500
+            
+            
+            loop = current_app.config.get('EVENT_LOOP')
+            if not loop or not loop.is_running():
+                return jsonify({'ok': False, 'error': 'Event loop недоступен'}), 500
+            
+            
+            async def send_message():
+                try:
+                    await bot.send_message(chat_id=user_id, text=message_text)
+                    return True
+                except Exception as e:
+                    logger.error(f"Failed to send message to user {user_id}: {e}")
+                    return False
+            
+            
+            future = asyncio.run_coroutine_threadsafe(send_message(), loop)
+            success = future.result(timeout=10)
+            
+            if success:
+                logger.info(f"Message sent to user {user_id}")
+                return jsonify({'ok': True, 'message': 'Сообщение успешно отправлено'})
+            else:
+                return jsonify({'ok': False, 'error': 'Не удалось отправить сообщение'}), 500
+                
+        except Exception as e:
+            logger.error(f"Error sending message to user {user_id}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
 
     @flask_app.route('/button-constructor')
     @login_required

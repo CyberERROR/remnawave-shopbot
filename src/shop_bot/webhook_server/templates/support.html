@@ -10,13 +10,16 @@
     </div>
     <div class="col-auto ms-auto d-print-none">
       <div class="btn-list">
-        <a class="btn {% if not filter_status %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page') }}">
+        <a class="btn {% if not filter_status %}btn-primary{% else %}btn-outline-primary{% endif %}"
+          href="{{ url_for('support_list_page') }}">
           Все ({{ all_count }})
         </a>
-        <a class="btn {% if filter_status == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='open') }}">
+        <a class="btn {% if filter_status == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+          href="{{ url_for('support_list_page', status='open') }}">
           Открытые ({{ open_count }})
         </a>
-        <a class="btn {% if filter_status == 'closed' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='closed') }}">
+        <a class="btn {% if filter_status == 'closed' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+          href="{{ url_for('support_list_page', status='closed') }}">
           Закрытые ({{ closed_count }})
         </a>
       </div>
@@ -40,8 +43,8 @@
           </tr>
         </thead>
         <tbody id="support-tbody"
-               data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
-               data-fetch-interval="10000">
+          data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
+          data-fetch-interval="10000">
           {% include 'partials/support_table.html' %}
         </tbody>
       </table>
@@ -52,10 +55,12 @@
       <div class="text-secondary">Стр. {{ current_page }} из {{ total_pages }}</div>
       <ul class="pagination m-0">
         <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
-          <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">Назад</a>
+          <a class="page-link"
+            href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">Назад</a>
         </li>
         <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
-          <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">Вперед</a>
+          <a class="page-link"
+            href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">Вперед</a>
         </li>
       </ul>
     </div>
@@ -63,7 +68,7 @@
   </div>
 </div>
 {% else %}
-  <p class="text-secondary">Обращений пока нет.</p>
+<p class="text-secondary">Обращений пока нет.</p>
 {% endif %}
 
 {% endblock %}
