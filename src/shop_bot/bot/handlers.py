@@ -30,6 +30,7 @@ from aiogram.enums import ChatMemberStatus
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from shop_bot.bot import keyboards
+from shop_bot.modules.platega_api import PlategaAPI
 from shop_bot.data_manager.remnawave_repository import (
     add_to_balance,
     deduct_from_balance,
@@ -807,7 +808,7 @@ def get_user_router() -> Router:
             logger.error(f"Не удалось создать ожидание для Stars payment_id={payment_id}: {e}", exc_info=True)
 
         title = f"Подписка на {int(plan['months'])} мес."
-        description = f"Оплата VPN на {int(plan['months'])} мес."
+        description = f"Оплата подписки на {int(plan['months'])} мес."
         try:
             await callback.message.answer_invoice(
                 title=title,
@@ -1135,6 +1136,117 @@ def get_user_router() -> Router:
 
         logger.info(f"⏳ Платеж не найден или еще не оплачен: {pid}")
         await callback.answer("⏳ Оплата ещё не поступила. Попробуйте через минуту.", show_alert=True)
+
+    @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_platega")
+    async def pay_platega_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer("Создаю ссылку на оплату через СБП...")
+        data = await state.get_data()
+        plan = get_plan_by_id(data.get('plan_id'))
+        if not plan:
+            await callback.message.edit_text("❌ Ошибка: Тариф не найден.")
+            await state.clear()
+            return
+        
+        merchant_id = get_setting("platega_merchant_id")
+        api_key = get_setting("platega_api_key")
+        if not merchant_id or not api_key:
+            await callback.message.edit_text("❌ Platega временно недоступен.")
+            await state.clear()
+            return
+        
+        price_rub = Decimal(str(data.get('final_price', plan['price'])))
+        user_id = callback.from_user.id
+        payment_id = str(uuid.uuid4())
+        
+        metadata = {
+            "user_id": user_id,
+            "months": int(plan['months']),
+            "price": float(price_rub),
+            "action": data.get('action'),
+            "key_id": data.get('key_id'),
+            "host_name": data.get('host_name'),
+            "plan_id": data.get('plan_id'),
+            "customer_email": data.get('customer_email'),
+            "payment_method": "Platega",
+            "payment_id": payment_id,
+        }
+        
+        try:
+            create_payload_pending(payment_id, user_id, float(price_rub), metadata)
+            platega = PlategaAPI(merchant_id, api_key)
+            transaction_id, payment_url = await platega.create_payment(
+                amount=float(price_rub),
+                description=f"Оплата подписки на {int(plan['months'])} мес.",
+                payment_id=payment_id,
+                return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
+                failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
+                payment_method=2  # СБП/QR
+            )
+            
+            if payment_url:
+                await callback.message.edit_text(
+                    "Нажмите на кнопку ниже для оплаты:",
+                    reply_markup=keyboards.create_payment_keyboard(payment_url)
+                )
+                await state.clear()
+            else:
+                await callback.message.edit_text("❌ Не удалось создать ссылку на оплату. Попробуйте другой способ.")
+                await state.clear()
+        except Exception as e:
+            logger.error(f"Ошибка создания платежа Platega: {e}", exc_info=True)
+            await callback.message.edit_text("❌ Не удалось создать ссылку на оплату.")
+            await state.clear()
+
+    @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_platega")
+    async def topup_platega_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer("Создаю ссылку на оплату через СБП...")
+        data = await state.get_data()
+        user_id = callback.from_user.id
+        amount_rub = Decimal(str(data.get('topup_amount', 0)))
+        
+        merchant_id = get_setting("platega_merchant_id")
+        api_key = get_setting("platega_api_key")
+        
+        if not merchant_id or not api_key or amount_rub <= 0:
+            await callback.message.edit_text("❌ Platega временно недоступен.")
+            await state.clear()
+            return
+        
+        payment_id = str(uuid.uuid4())
+        metadata = {
+            "user_id": user_id,
+            "price": float(amount_rub),
+            "action": "top_up",
+            "payment_method": "Platega",
+            "payment_id": payment_id,
+        }
+        
+        try:
+            create_payload_pending(payment_id, user_id, float(amount_rub), metadata)
+            platega = PlategaAPI(merchant_id, api_key)
+            transaction_id, payment_url = await platega.create_payment(
+                amount=float(amount_rub),
+                description=f"Пополнение баланса на {amount_rub:.2f} RUB",
+                payment_id=payment_id,
+                return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
+                failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
+                payment_method=2  # СБП/QR
+            )
+            
+            if payment_url:
+                await callback.message.edit_text(
+                    "Нажмите на кнопку ниже для оплаты:",
+                    reply_markup=keyboards.create_payment_keyboard(payment_url)
+                )
+                await state.clear()
+            else:
+                await callback.message.edit_text("❌ Не удалось создать ссылку на оплату. Попробуйте другой способ.")
+                await state.clear()
+        except Exception as e:
+            logger.error(f"Ошибка создания пополнения Platega: {e}", exc_info=True)
+            await callback.message.edit_text("❌ Не удалось создать ссылку на оплату.")
+            await state.clear()
+
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_heleket")
     async def topup_pay_heleket_like(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю счёт...")

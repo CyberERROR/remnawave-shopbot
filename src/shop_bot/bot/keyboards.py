@@ -389,11 +389,11 @@ def create_payment_method_keyboard(
 
     pm = {
         "yookassa": bool((get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or "")),
+        "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
         "heleket": bool((get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or "")),
         "cryptobot": bool(get_setting("cryptobot_token") or ""),
         "tonconnect": bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or "")),
-        "yoomoney": ((get_setting("yoomoney_enabled") or "false").strip().lower() == "true"),
-
+        "yoomoney": ((get_setting("yoomoney_enabled") or "false").strip().lower() == "true"), 
         "stars": ((get_setting("stars_enabled") or "false").strip().lower() == "true"),
     }
 
@@ -413,7 +413,9 @@ def create_payment_method_keyboard(
             builder.button(text="🏦 СБП / Банковская карта", callback_data="pay_yookassa")
         else:
             builder.button(text="🏦 Банковская карта", callback_data="pay_yookassa")
-
+    
+    if pm.get("platega"):
+        builder.button(text="💳 СБП", callback_data="pay_platega")
     if pm.get("cryptobot"):
         builder.button(text="💎 Криптовалюта", callback_data="pay_cryptobot")
     elif pm.get("heleket"):
@@ -426,6 +428,7 @@ def create_payment_method_keyboard(
         builder.button(text="⭐ Telegram Stars", callback_data="pay_stars")
     if pm.get("yoomoney"):
         builder.button(text="💜 ЮMoney (кошелёк)", callback_data="pay_yoomoney")
+    
 
 
     if not promo_applied:
@@ -474,6 +477,7 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
         "cryptobot": bool(get_setting("cryptobot_token") or ""),
         "tonconnect": bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or "")),
         "yoomoney": ((get_setting("yoomoney_enabled") or "false").strip().lower() == "true"),
+        "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
         "stars": ((get_setting("stars_enabled") or "false").strip().lower() == "true"),
     }
 
@@ -493,6 +497,8 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
         builder.button(text="⭐ Telegram Stars", callback_data="topup_pay_stars")
     if pm.get("yoomoney"):
         builder.button(text="💜 ЮMoney (кошелёк)", callback_data="topup_pay_yoomoney")
+    if pm.get("platega"):
+        builder.button(text="💳 СБП", callback_data="topup_pay_platega")
 
     builder.button(text="⬅️ Назад", callback_data="show_profile")
     builder.adjust(1)

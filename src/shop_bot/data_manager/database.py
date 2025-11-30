@@ -389,6 +389,10 @@ def initialize_db():
                 "yoomoney_client_secret": None,
                 "yoomoney_redirect_uri": None,
                 "stars_per_rub": "1",
+                
+                "platega_enabled": "false",
+                "platega_merchant_id": None,
+                "platega_api_key": None,
             }
             run_migration()
             for key, value in default_settings.items():
@@ -1791,17 +1795,27 @@ def update_setting(key: str, value: str):
         logging.error(f"Failed to update setting '{key}': {e}")
 
 
-def get_button_configs(menu_type: str) -> list[dict]:
+def get_button_configs(menu_type: str, include_inactive: bool = False) -> list[dict]:
     """Get all button configurations for a specific menu type"""
     try:
         with sqlite3.connect(DB_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM button_configs 
-                WHERE menu_type = ? AND is_active = 1 
-                ORDER BY sort_order, row_position, column_position
-            """, (menu_type,))
+            
+            if include_inactive:
+                query = """
+                    SELECT * FROM button_configs 
+                    WHERE menu_type = ? 
+                    ORDER BY sort_order, row_position, column_position
+                """
+            else:
+                query = """
+                    SELECT * FROM button_configs 
+                    WHERE menu_type = ? AND is_active = 1 
+                    ORDER BY sort_order, row_position, column_position
+                """
+                
+            cursor.execute(query, (menu_type,))
             results = [dict(row) for row in cursor.fetchall()]
 
             return results
@@ -1968,30 +1982,62 @@ def reorder_button_configs(menu_type: str, button_orders: list[dict]) -> bool:
                 row_position = order_data.get('row_position', 0)
                 column_position = order_data.get('column_position', 0)
                 button_width = order_data.get('button_width', None)
+                is_active = order_data.get('is_active')
                 
-                logging.info(f"Updating {button_id}: sort={sort_order}, row={row_position}, col={column_position}, width={button_width}")
+                logging.info(f"Updating {button_id}: sort={sort_order}, row={row_position}, col={column_position}, width={button_width}, active={is_active}")
                 
+                updates = [
+                    "sort_order = ?",
+                    "row_position = ?",
+                    "column_position = ?",
+                    "updated_at = CURRENT_TIMESTAMP"
+                ]
+                params = [sort_order, row_position, column_position]
 
                 if button_width is not None:
-                    cursor.execute(
-                        """
-                        UPDATE button_configs 
-                        SET sort_order = ?, row_position = ?, column_position = ?, button_width = ?, updated_at = CURRENT_TIMESTAMP
-                        WHERE menu_type = ? AND button_id = ?
-                        """,
-                        (sort_order, row_position, column_position, int(button_width), menu_type, button_id),
-                    )
-                else:
-                    cursor.execute(
-                        """
-                        UPDATE button_configs 
-                        SET sort_order = ?, row_position = ?, column_position = ?, updated_at = CURRENT_TIMESTAMP
-                        WHERE menu_type = ? AND button_id = ?
-                        """,
-                        (sort_order, row_position, column_position, menu_type, button_id),
-                    )
+                    # Insert before updated_at
+                    updates.insert(3, "button_width = ?")
+                    params.insert(3, int(button_width))
                 
+                if is_active is not None:
+                    # Insert before updated_at
+                    updates.insert(len(updates)-1, "is_active = ?")
+                    # Insert into params before updated_at (which is not in params, it's hardcoded in updates list)
+                    # Wait, updated_at is in updates list, but no param for it.
+                    # params corresponds to placeholders '?'
+                    # updated_at = CURRENT_TIMESTAMP has no placeholder.
+                    # So I should be careful.
+                    pass
 
+                # Let's rewrite the query construction to be safer
+                set_clauses = [
+                    "sort_order = ?",
+                    "row_position = ?",
+                    "column_position = ?",
+                    "updated_at = CURRENT_TIMESTAMP"
+                ]
+                query_params = [sort_order, row_position, column_position]
+
+                if button_width is not None:
+                    set_clauses.insert(3, "button_width = ?")
+                    query_params.insert(3, int(button_width))
+                
+                if is_active is not None:
+                    set_clauses.insert(len(set_clauses)-1, "is_active = ?")
+                    query_params.insert(len(query_params), 1 if is_active else 0)
+
+                query_params.append(menu_type)
+                query_params.append(button_id)
+
+                cursor.execute(
+                    f"""
+                    UPDATE button_configs 
+                    SET {', '.join(set_clauses)}
+                    WHERE menu_type = ? AND button_id = ?
+                    """,
+                    query_params,
+                )
+                
                 if cursor.rowcount == 0:
                     logging.warning(f"No button found with menu_type={menu_type}, button_id={button_id}")
                 else:

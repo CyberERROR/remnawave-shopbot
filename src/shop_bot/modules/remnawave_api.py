@@ -317,6 +317,7 @@ async def ensure_user(
             "expireAt": expire_iso,
             "activeInternalSquads": [squad_uuid],
             "email": email,
+            "hwidDeviceLimit": 2,
         }
 
         if traffic_limit_bytes is not None:
@@ -344,6 +345,7 @@ async def ensure_user(
             "expireAt": expire_iso,
             "activeInternalSquads": [squad_uuid],
             "email": email,
+            "hwidDeviceLimit": 2,
         }
 
         if traffic_limit_bytes is not None:
