@@ -163,6 +163,11 @@ curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/in
   Если при установке выбран порт `8443`, то: `https://your-domain.com:8443/yookassa-webhook`.
 - При желании добавьте `Почту для чеков`.
 
+### Platega
+- Укажите `Merchant ID` и `API Key`.
+- URL вебхука: `https://your-domain.com//platega-webhook`
+- Если при установке выбран порт `8443`, то: `https://your-domain.com:8443//platega-webhook`.
+
 ### CryptoBot
 - Получите токен в [@CryptoBot](https://t.me/CryptoBot) → Crypto Pay.
 - Включите вебхуки на `https://your-domain.com/cryptobot-webhook` (или с портом `:8443`).
@@ -284,9 +289,12 @@ curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/in
 docker-compose down && docker-compose up -d --build
 ```
 
----
+--- 
+
+<div align="center">
 
 ## 💎 Автор исходного кода, и все права принадлежат - [tweopi](https://github.com/tweopi)
 
-## Лицензия
-Проект распространяется по лицензии [GPLv3](LICENSE).
+## 📄 Лицензия Проект распространяется по лицензии [GPLv3](LICENSE).
+
+---
