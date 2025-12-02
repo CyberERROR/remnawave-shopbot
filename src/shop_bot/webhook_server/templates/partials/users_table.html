@@ -13,36 +13,42 @@
   <td>{{ '%.2f'|format(user.balance or 0) }}</td>
   <td>
     <div class="btn-list">
-      <a class="btn btn-primary btn-xs btn-glass"
-        href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}">Выдать ключ</a>
+      <a class="btn btn-primary btn-xs btn-glass" href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}"
+        title="Выдать ключ" aria-label="Выдать ключ">
+        <i class="ti ti-key"></i>
+      </a>
       <button type="button" class="btn btn-success btn-xs btn-glass btn-user-balance-sign"
         data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
         data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="+" title="Начислить баланс"
         aria-label="Начислить баланс">
-        Начислить баланс
+        <i class="ti ti-plus"></i>
       </button>
       <button type="button" class="btn btn-danger btn-xs btn-glass btn-user-balance-sign"
         data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
         data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="-" title="Списать баланс"
         aria-label="Списать баланс">
-        Списать баланс
+        <i class="ti ti-minus"></i>
       </button>
       <button type="button" class="btn btn-info btn-xs btn-glass btn-user-message" data-uid="{{ user.telegram_id }}"
         data-username="{{ user.username or 'N/A' }}" title="Отправить сообщение" aria-label="Отправить сообщение">
-        Сообщение
+        <i class="ti ti-message"></i>
       </button>
       <button type="button" class="btn btn-outline-secondary btn-xs btn-glass" data-toggle="keys"
-        data-user="{{ user.telegram_id }}">Ключи</button>
+        data-user="{{ user.telegram_id }}" title="Ключи" aria-label="Ключи">
+        <i class="ti ti-key"></i>
+      </button>
       {% if user.is_banned %}
       <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-success btn-xs btn-glass">Разбанить</button>
+        <button type="submit" class="btn btn-success btn-xs btn-glass" title="Разбанить" aria-label="Разбанить"><i
+            class="ti ti-circle-check"></i></button>
       </form>
       {% else %}
       <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post"
         data-confirm="Вы уверены, что хотите забанить этого пользователя? Он не сможет пользоваться ботом.">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-warning btn-xs btn-glass">Бан</button>
+        <button type="submit" class="btn btn-warning btn-xs btn-glass" title="Бан" aria-label="Бан"><i
+            class="ti ti-ban"></i></button>
       </form>
       {% endif %}
       {% if (user.keys_count or 0) > 0 %}
@@ -50,9 +56,15 @@
         data-confirm="ВНИМАНИЕ! Это действие удалит ВСЕ ключи пользователя с серверов. Вы уверены?" data-ajax="delete"
         data-refresh-target="users-tbody" data-action="revoke-keys">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-danger btn-xs btn-glass">Отозвать ключи</button>
+        <button type="submit" class="btn btn-danger btn-xs btn-glass" title="Отозвать ключи"
+          aria-label="Отозвать ключи"><i class="ti ti-trash-x"></i></button>
       </form>
       {% endif %}
+      <br>
+      <button type="button" class="btn btn-secondary btn-xs btn-glass btn-user-details"
+        data-uid="{{ user.telegram_id }}" title="Подробнее" aria-label="Подробнее">
+        <i class="ti ti-info-circle">Подробнее</i>
+      </button>
     </div>
   </td>
 </tr>

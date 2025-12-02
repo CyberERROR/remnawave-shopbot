@@ -54,11 +54,163 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="mb-3">
             <label class="form-label">Сообщение</label>
+            <i class="mb-2 text-secondary">📩 Сообщение от администратора:</i>
             <textarea class="form-control" name="message" rows="5" placeholder="Введите текст сообщения..."
               required></textarea>
           </div>
           <button class="btn btn-primary w-100" type="submit">Отправить</button>
         </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal modal-blur fade" id="userDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Информация о пользователе</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="udm-loading" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Загрузка...</span>
+          </div>
+        </div>
+        <div id="udm-content" style="display:none;">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header"><strong>Основная информация</strong></div>
+                <div class="card-body">
+                  <table class="table table-sm">
+                    <tbody>
+                      <tr>
+                        <td><strong>Telegram ID:</strong></td>
+                        <td id="udm-telegram-id"></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Username:</strong></td>
+                        <td id="udm-username"></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Регистрация:</strong></td>
+                        <td id="udm-registration"></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Потрачено всего:</strong></td>
+                        <td id="udm-total-spent"></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Приобретено месяцев:</strong></td>
+                        <td id="udm-total-months"></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Пробный:</strong></td>
+                        <td>
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="udm-trial-toggle" data-user-id="">
+                            <label class="form-check-label" for="udm-trial-toggle" id="udm-trial-label"></label>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header"><strong>Реферальная система</strong></div>
+                <div class="card-body">
+                  <table class="table table-sm">
+                    <tbody>
+                      <tr>
+                        <td><strong>Реф. код:</strong></td>
+                        <td id="udm-ref-code"></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Рефералов:</strong></td>
+                        <td id="udm-ref-count"></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Приглашён:</strong></td>
+                        <td id="udm-referred-by"></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Баланс:</strong></td>
+                        <td id="udm-balance"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subscriptions Block -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <strong>Подписки</strong> <span id="udm-subs-stats" class="ms-2 text-muted small"></span>
+                </div>
+                <div class="card-body p-0">
+                  <div id="udm-subs-list" style="max-height: 300px; overflow-y: auto;"
+                    class="list-group list-group-flush">
+                    <!-- Subscriptions will be populated here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header"><strong>История платежей</strong></div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                      <thead>
+                        <tr>
+                          <th>Дата</th>
+                          <th>Тариф</th>
+                          <th>Сумма</th>
+                        </tr>
+                      </thead>
+                      <tbody id="udm-payment-history">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header"><strong>История транзакций баланса</strong></div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                      <thead>
+                        <tr>
+                          <th>Дата</th>
+                          <th>Тип</th>
+                          <th>Сумма</th>
+                        </tr>
+                      </thead>
+                      <tbody id="udm-balance-history">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -75,12 +227,12 @@
             <th>Статус</th>
             <th>Активные ключи</th>
             <th>Баланс</th>
-            <th class="w-1">Действия</th>
+            <th style="width: 140px;">Действия</th>
           </tr>
         </thead>
         <tbody id="users-tbody"
           data-fetch-url="{{ url_for('users_table_partial', page=current_page, per_page=per_page, q=q) }}"
-          data-fetch-interval="120000">
+          data-fetch-interval="1000000">
           {% for user in users %}
           <tr>
             <td class="user-id">{{ user.telegram_id }}</td>
@@ -99,24 +251,24 @@
                 <a class="btn btn-primary btn-xs btn-glass"
                   href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}" title="Выдать ключ"
                   aria-label="Выдать ключ">
-                  <i class="ti ti-key-plus"></i>
+                  <i class="ti ti-key"></i>
                 </a>
                 <button type="button" class="btn btn-success btn-xs btn-glass btn-user-balance-sign"
                   data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
                   data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="+" title="Начислить баланс"
                   aria-label="Начислить баланс">
-                  Начислить баланс
+                  <i class="ti ti-plus"></i>
                 </button>
                 <button type="button" class="btn btn-danger btn-xs btn-glass btn-user-balance-sign"
                   data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
                   data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="-" title="Списать баланс"
                   aria-label="Списать баланс">
-                  Списать баланс
+                  <i class="ti ti-minus"></i>
                 </button>
                 <button type="button" class="btn btn-info btn-xs btn-glass btn-user-message"
                   data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
                   title="Отправить сообщение" aria-label="Отправить сообщение">
-                  Сообщение
+                  <i class="ti ti-message"></i>
                 </button>
                 <button type="button" class="btn btn-outline-secondary btn-xs btn-glass" data-toggle="keys"
                   data-user="{{ user.telegram_id }}" title="Ключи" aria-label="Ключи">
@@ -145,6 +297,11 @@
                     aria-label="Отозвать ключи"><i class="ti ti-trash-x"></i></button>
                 </form>
                 {% endif %}
+                <br>
+                <button type="button" class="btn btn-secondary btn-xs btn-glass btn-user-details"
+                  data-uid="{{ user.telegram_id }}" title="Подробнее" aria-label="Подробнее">
+                  <i class="ti ti-info-circle">Подробнее</i>
+                </button>
               </div>
             </td>
           </tr>
@@ -518,6 +675,173 @@
         }
       });
     })();
+
+    // Открытие модалки с подробной информацией о пользователе
+    table.addEventListener('click', async function (e) {
+      const btn = e.target.closest('.btn-user-details');
+      if (!btn) return;
+      const uid = btn.getAttribute('data-uid');
+
+      const modalEl = document.getElementById('userDetailsModal');
+      const loadingEl = modalEl.querySelector('#udm-loading');
+      const contentEl = modalEl.querySelector('#udm-content');
+
+      // Show loading state
+      loadingEl.style.display = '';
+      contentEl.style.display = 'none';
+
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+
+      try {
+        const resp = await fetch(`{{ url_for('user_details_json', user_id=0) }}`.replace('/0/', `/${uid}/`), {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin'
+        });
+        const data = await resp.json();
+
+        if (data && data.ok) {
+          // Populate basic info
+          modalEl.querySelector('#udm-telegram-id').textContent = data.user.telegram_id || 'N/A';
+          modalEl.querySelector('#udm-username').textContent = '@' + (data.user.username || 'N/A');
+          modalEl.querySelector('#udm-registration').textContent = data.user.registration_date || 'N/A';
+          modalEl.querySelector('#udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' RUB';
+          modalEl.querySelector('#udm-total-months').textContent = (data.user.total_months || 0) + ' мес.';
+
+          // Trial toggle
+          const trialToggle = modalEl.querySelector('#udm-trial-toggle');
+          const trialLabel = modalEl.querySelector('#udm-trial-label');
+          trialToggle.checked = data.user.trial_used || false;
+          trialToggle.setAttribute('data-user-id', uid);
+          trialLabel.textContent = data.user.trial_used ? 'Использовано' : 'Не использовано';
+
+          // Populate referral info
+          modalEl.querySelector('#udm-ref-code').textContent = data.user.referral_code || 'N/A';
+          modalEl.querySelector('#udm-ref-count').textContent = data.user.referral_count || '0';
+          if (data.user.referred_by && data.user.referred_by.username) {
+            modalEl.querySelector('#udm-referred-by').textContent = '@' + data.user.referred_by.username + ' (#' + data.user.referred_by.telegram_id + ')';
+          } else {
+            modalEl.querySelector('#udm-referred-by').textContent = 'Не приглашён';
+          }
+          modalEl.querySelector('#udm-balance').textContent = (data.user.balance || 0).toFixed(2) + ' RUB';
+
+          // Populate subscriptions
+          const subsStatsEl = modalEl.querySelector('#udm-subs-stats');
+          const subsListEl = modalEl.querySelector('#udm-subs-list');
+
+          if (data.subs_stats) {
+            subsStatsEl.textContent = `(Всего: ${data.subs_stats.total}, Активно: ${data.subs_stats.active}, Истекло: ${data.subs_stats.expired})`;
+          } else {
+            subsStatsEl.textContent = '';
+          }
+
+          subsListEl.innerHTML = '';
+          if (data.subscriptions && data.subscriptions.length > 0) {
+            data.subscriptions.forEach(sub => {
+              const item = document.createElement('div');
+              item.className = 'list-group-item';
+
+              const statusClass = sub.is_expired ? 'text-danger' : 'text-success';
+
+              item.innerHTML = `
+                <div class="mb-1 small">
+                  <span class="${statusClass} fw-bold">${sub.status_text}</span> | Истекает: ${sub.expire_date}
+                </div>
+                <div class="text-break font-monospace small bg-light p-1 rounded" style="background-color: #2e3137 !important; margin: 10px 0px !important; padding: 10px 10px !important;">
+                  <strong style="font-size: 15px; color: #00ff00;">${sub.key}</strong> 
+                </div>
+              `;
+              subsListEl.appendChild(item);
+            });
+          } else {
+            subsListEl.innerHTML = '<div class="list-group-item text-center text-muted">Нет подписок</div>';
+          }
+
+          // Populate payment history
+          const paymentHistoryEl = modalEl.querySelector('#udm-payment-history');
+          paymentHistoryEl.innerHTML = '';
+          if (data.payment_history && data.payment_history.length > 0) {
+            data.payment_history.forEach(payment => {
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td>${payment.date || 'N/A'}</td>
+                <td>${payment.plan || 'N/A'}</td>
+                <td>${(payment.amount || 0).toFixed(2)} RUB</td>
+              `;
+              paymentHistoryEl.appendChild(row);
+            });
+          } else {
+            paymentHistoryEl.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет данных</td></tr>';
+          }
+
+          // Populate balance history
+          const balanceHistoryEl = modalEl.querySelector('#udm-balance-history');
+          balanceHistoryEl.innerHTML = '';
+          if (data.balance_history && data.balance_history.length > 0) {
+            data.balance_history.forEach(transaction => {
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td>${transaction.date || 'N/A'}</td>
+                <td>${transaction.type || 'N/A'}</td>
+                <td>${(transaction.amount || 0).toFixed(2)} RUB</td>
+              `;
+              balanceHistoryEl.appendChild(row);
+            });
+          } else {
+            balanceHistoryEl.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет данных</td></tr>';
+          }
+
+          // Show content
+          loadingEl.style.display = 'none';
+          contentEl.style.display = '';
+        } else {
+          try { window.showToast('danger', 'Не удалось загрузить данные пользователя'); } catch (_) { }
+          modal.hide();
+        }
+      } catch (err) {
+        try { window.showToast('danger', 'Ошибка сети'); } catch (_) { }
+        modal.hide();
+      }
+    });
+
+    // Trial toggle handler
+    document.addEventListener('change', async function (e) {
+      if (e.target && e.target.id === 'udm-trial-toggle') {
+        const toggle = e.target;
+        const userId = toggle.getAttribute('data-user-id');
+        const label = document.getElementById('udm-trial-label');
+
+        try {
+          const meta = document.querySelector('meta[name="csrf-token"]');
+          const token = meta ? meta.getAttribute('content') : '';
+
+          const resp = await fetch(`{{ url_for('toggle_trial_used_route', user_id=0) }}`.replace('/0/', `/${userId}/`), {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': token
+            },
+            credentials: 'same-origin'
+          });
+
+          const data = await resp.json();
+
+          if (data && data.ok) {
+            label.textContent = data.trial_used ? 'Использовано' : 'Не использовано';
+            try { window.showToast('success', data.message); } catch (_) { }
+          } else {
+            // Revert toggle on error
+            toggle.checked = !toggle.checked;
+            try { window.showToast('danger', 'Не удалось изменить статус'); } catch (_) { }
+          }
+        } catch (err) {
+          // Revert toggle on error
+          toggle.checked = !toggle.checked;
+          try { window.showToast('danger', 'Ошибка сети'); } catch (_) { }
+        }
+      }
+    });
   })();
 </script>
 

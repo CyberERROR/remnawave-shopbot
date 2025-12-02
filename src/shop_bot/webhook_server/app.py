@@ -51,9 +51,10 @@ from shop_bot.data_manager.remnawave_repository import (
 )
 from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
-    delete_button_config, reorder_button_configs
+    delete_button_config, reorder_button_configs, DB_FILE
 )
 from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id
+import sqlite3
 
 _bot_controller = None
 _support_bot_controller = SupportBotController()
@@ -593,6 +594,200 @@ def create_webhook_app(bot_controller_instance):
         except Exception as e:
             logger.warning(f"Не удалось отправить уведомление о балансе: {e}")
         return redirect(url_for('users_page'))
+
+    @flask_app.route('/users/<int:user_id>/details.json')
+    @login_required
+    def user_details_json(user_id: int):
+        """Fetch detailed user information for the details modal"""
+        try:
+            # Get basic user info
+            user = get_user(user_id)
+            if not user:
+                return jsonify({"ok": False, "error": "user_not_found"}), 404
+            
+            # Get referral information
+            referrals = get_referrals_for_user(user_id) or []
+            
+            # Get referred by user info
+            referred_by_user = None
+            if user.get('referred_by'):
+                try:
+                    referred_by_user = get_user(user.get('referred_by'))
+                except Exception:
+                    pass
+            
+            # Get payment history (transactions with status paid/completed/success)
+            payment_history = []
+            try:
+                with sqlite3.connect(DB_FILE) as conn:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    # First check if there are ANY transactions for this user
+                    cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = ?", (user_id,))
+                    total_count = cursor.fetchone()[0]
+                    logger.info(f"Total transactions for user {user_id}: {total_count}")
+                    
+                    cursor.execute("""
+                        SELECT created_date, amount_rub, metadata, status, payment_method
+                        FROM transactions
+                        WHERE user_id = ? 
+                        AND LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+                        AND (payment_method IS NULL OR LOWER(payment_method) != 'balance')
+                        ORDER BY created_date DESC
+                        LIMIT 50
+                    """, (user_id,))
+                    rows = cursor.fetchall()
+                    logger.info(f"Payment history rows for user {user_id}: {len(rows)}")
+                    
+                    for row in rows:
+                        plan_name = 'N/A'
+                        try:
+                            metadata = json.loads(row['metadata'] or '{}')
+                            plan_name = metadata.get('plan_name', 'N/A')
+                        except Exception:
+                            pass
+                        payment_history.append({
+                            'date': row['created_date'],
+                            'plan': plan_name,
+                            'amount': float(row['amount_rub'] or 0)
+                        })
+            except Exception as e:
+                logger.error(f"Failed to get payment history for user {user_id}: {e}")
+            
+            # Get balance transaction history (all transactions including balance payments)
+            balance_history = []
+            try:
+                with sqlite3.connect(DB_FILE) as conn:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT created_date, amount_rub, payment_method, status
+                        FROM transactions
+                        WHERE user_id = ?
+                        ORDER BY created_date DESC
+                        LIMIT 50
+                    """, (user_id,))
+                    rows = cursor.fetchall()
+                    logger.info(f"Balance history rows for user {user_id}: {len(rows)}")
+                    
+                    for row in rows:
+                        transaction_type = row['payment_method'] or 'N/A'
+                        if row['payment_method'] == 'balance':
+                            transaction_type = 'Баланс'
+                        balance_history.append({
+                            'date': row['created_date'],
+                            'type': transaction_type,
+                            'amount': float(row['amount_rub'] or 0),
+                            'status': row['status']
+                        })
+            except Exception as e:
+                logger.error(f"Failed to get balance history for user {user_id}: {e}")
+            
+            subscriptions = []
+            subs_stats = {
+                "total": 0,
+                "active": 0,
+                "expired": 0
+            }
+            try:
+                keys = get_keys_for_user(user_id) or []
+                subs_stats["total"] = len(keys)
+                now = datetime.utcnow()
+                
+                for key in keys:
+                    expire_at_str = key.get('expire_at')
+                    is_expired = False
+                    days_left = 0
+                    expire_date_fmt = 'N/A'
+                    
+                    if expire_at_str:
+                        try:
+                            expire_dt = datetime.strptime(str(expire_at_str), "%Y-%m-%d %H:%M:%S")
+                            expire_date_fmt = expire_dt.strftime("%Y-%m-%d %H:%M:%S")
+                            
+                            if expire_dt > now:
+                                delta = expire_dt - now
+                                days_left = delta.days
+                                subs_stats["active"] += 1
+                            else:
+                                is_expired = True
+                                subs_stats["expired"] += 1
+                        except Exception:
+                            pass
+                    else:
+                        subs_stats["active"] += 1
+                        days_left = 9999 # Infinite
+                    
+                    status_text = f"Осталось дней: {days_left}" if not is_expired else "ИСТЕК"
+                    
+                    subscriptions.append({
+                        "key": key.get('subscription_url') or key.get('access_url') or 'N/A',
+                        "status_text": status_text,
+                        "expire_date": expire_date_fmt,
+                        "is_expired": is_expired
+                    })
+                    
+            except Exception as e:
+                logger.error(f"Failed to get subscriptions for user {user_id}: {e}")
+
+            # Prepare response
+            result = {
+                "ok": True,
+                "user": {
+                    "telegram_id": user.get('telegram_id'),
+                    "username": user.get('username'),
+                    "registration_date": user.get('registration_date'),
+                    "balance": float(user.get('balance') or 0),
+                    "total_spent": float(user.get('total_spent') or 0),
+                    "total_months": int(user.get('total_months') or 0),
+                    "trial_used": bool(user.get('trial_used')),
+                    "referral_code": f"ref_{user_id}",
+                    "referral_count": len(referrals),
+                    "referred_by": {
+                        "telegram_id": referred_by_user.get('telegram_id') if referred_by_user else None,
+                        "username": referred_by_user.get('username') if referred_by_user else None
+                    } if referred_by_user else None
+                },
+                "payment_history": payment_history,
+                "balance_history": balance_history,
+                "subscriptions": subscriptions,
+                "subs_stats": subs_stats
+            }
+            
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"Failed to get user details for {user_id}: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @flask_app.route('/users/<int:user_id>/trial/toggle', methods=['POST'])
+    @login_required
+    def toggle_trial_used_route(user_id: int):
+        """Toggle trial_used status for a user"""
+        try:
+            user = get_user(user_id)
+            if not user:
+                return jsonify({"ok": False, "error": "user_not_found"}), 404
+            
+            current_status = bool(user.get('trial_used'))
+            new_status = not current_status
+            
+            # Update trial_used in database
+            with sqlite3.connect(DB_FILE) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE users SET trial_used = ? WHERE telegram_id = ?",
+                    (1 if new_status else 0, user_id)
+                )
+                conn.commit()
+            
+            return jsonify({
+                "ok": True,
+                "trial_used": new_status,
+                "message": f"Пробный период {'использован' if new_status else 'не использован'}"
+            })
+        except Exception as e:
+            logger.error(f"Failed to toggle trial for user {user_id}: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
 
     @flask_app.route('/admin/keys')
     @login_required
