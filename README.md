@@ -73,8 +73,8 @@
         <sub>Бот — Админ‑меню</sub>
       </td>
       <td align="center" valign="top">
-        <a href="docs/screenshots/button_design.png"><img src="docs/screenshots/button_design.png" width="480" alt="Button Constructor"/></a><br>
-        <sub>Панель — Конструктор кнопок</sub>
+        <a href="docs/screenshots/preview.png"><img src="docs/screenshots/preview.png" width="360" alt="Menu Preview"/></a><br>
+        <sub>Предпросмотр меню</sub>
       </td>
     </tr>
     <tr>
@@ -83,8 +83,8 @@
         <sub>Панель — Мониторинг системы</sub>
       </td>
       <td align="center" valign="top">
-        <a href="docs/screenshots/preview.png"><img src="docs/screenshots/preview.png" width="360" alt="Menu Preview"/></a><br>
-        <sub>Предпросмотр меню</sub>
+        <a href="docs/screenshots/button_design.png"><img src="docs/screenshots/button_design.png" width="480" alt="Button Constructor"/></a><br>
+        <sub>Панель — Конструктор кнопок</sub>
       </td>
     </tr>
   </table>
