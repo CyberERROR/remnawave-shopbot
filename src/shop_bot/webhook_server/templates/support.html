@@ -1,74 +1,404 @@
-{% extends 'base.html' %}
-{% block title %}Поддержка — Панель{% endblock %}
+{% extends "base.html" %}
+{% block title %}Поддержка{% endblock %}
 
 {% block content %}
-<div class="page-header d-print-none">
-  <div class="row align-items-center">
-    <div class="col">
-      <h2 class="page-title">Поддержка</h2>
-      <div class="text-secondary">Список обращений и их статусы</div>
+<style>
+    /* -------- DESKTOP STYLES (Unchanged) -------- */
+    @media (min-width: 769px) {
+        .desktop-table {
+            display: block;
+        }
+
+        .mobile-view {
+            display: none;
+        }
+
+        .mobile-app-header {
+            display: none;
+        }
+    }
+
+    /* -------- MOBILE MESSENGER STYLES (iOS-like) -------- */
+    @media (max-width: 768px) {
+
+        /* Hide PC Header/Table */
+        .hidden-on-mobile {
+            display: none !important;
+        }
+
+        .desktop-table {
+            display: none;
+        }
+
+        .mobile-view {
+            display: block;
+        }
+
+        /* App Bar / Header */
+        .mobile-app-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            /* Glass dark background */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 16px;
+            margin: -16px -16px 0 -16px;
+            /* Negative margin to span full width */
+            margin-bottom: 0;
+        }
+
+        .mobile-header-title {
+            font-size: 20px;
+            /* iOS Large Title size approx */
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 12px;
+            margin-top: 4px;
+        }
+
+        /* Filter Pills / Segmented Control feel */
+        .mobile-filter-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 8px;
+        }
+
+        .mobile-filter-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .mobile-filter-btn {
+            flex-shrink: 0;
+            padding: 8px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.08);
+            /* Subtle pill background */
+            color: rgba(255, 255, 255, 0.6);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mobile-filter-btn.active {
+            background: #13ec80;
+            color: #000;
+            font-weight: 600;
+        }
+
+        /* Messenger List Layout */
+        .messenger-list {
+            display: flex;
+            flex-direction: column;
+            margin: 0 -16px;
+            /* Span full width */
+            padding-bottom: 20px;
+            background: transparent;
+        }
+
+        .messenger-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            text-decoration: none;
+            position: relative;
+            background: transparent;
+            transition: background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .messenger-item:active {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Avatar Circle */
+        .messenger-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            /* Black text on green usually, but white on dark green contrast */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            margin-right: 12px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .messenger-avatar.closed {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+            /* Gray for closed */
+        }
+
+        /* Status indicator on avatar (optional, maybe keep it clean) */
+        .avatar-badge {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 14px;
+            height: 14px;
+            background: #13ec80;
+            border: 2px solid #000;
+            /* Match background */
+            border-radius: 50%;
+        }
+
+        .avatar-badge.yellow {
+            background: #eab308;
+        }
+
+        /* Message Body */
+        .messenger-body {
+            flex: 1;
+            min-width: 0;
+            /* Enable truncation */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 4px;
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+            padding-top: 14px;
+            padding-bottom: 14px;
+        }
+
+        .messenger-item:last-child .messenger-body {
+            border-bottom: none;
+        }
+
+        .messenger-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 2px;
+        }
+
+        .messenger-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+        }
+
+        .messenger-time {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+
+        .messenger-row-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .messenger-preview {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 85%;
+            line-height: 1.4;
+        }
+
+        .messenger-status-icon {
+            display: flex;
+            align-items: center;
+        }
+
+        .messenger-preview.highlight {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        /* Mobile Pagination */
+        .mobile-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .mobile-pagination a {
+            color: #13ec80;
+            text-decoration: none;
+            font-weight: 500;
+        }
+    }
+</style>
+
+<!-- Mobile App Header (sticky) -->
+<div class="mobile-app-header">
+    <div class="mobile-header-title">Поддержка</div>
+    <div class="mobile-filter-scroll">
+        <a href="{{ url_for('support_list_page') }}"
+            class="mobile-filter-btn {% if not filter_status %}active{% endif %}">
+            Все ({{ all_count }})
+        </a>
+        <a href="{{ url_for('support_list_page', status='open') }}"
+            class="mobile-filter-btn {% if filter_status == 'open' %}active{% endif %}">
+            Открытые ({{ open_count }})
+        </a>
+        <a href="{{ url_for('support_list_page', status='closed') }}"
+            class="mobile-filter-btn {% if filter_status == 'closed' %}active{% endif %}">
+            Закрытые ({{ closed_count }})
+        </a>
     </div>
-    <div class="col-auto ms-auto d-print-none">
-      <div class="btn-list">
-        <a class="btn {% if not filter_status %}btn-primary{% else %}btn-outline-primary{% endif %}"
-          href="{{ url_for('support_list_page') }}">
-          Все ({{ all_count }})
-        </a>
-        <a class="btn {% if filter_status == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %}"
-          href="{{ url_for('support_list_page', status='open') }}">
-          Открытые ({{ open_count }})
-        </a>
-        <a class="btn {% if filter_status == 'closed' %}btn-primary{% else %}btn-outline-primary{% endif %}"
-          href="{{ url_for('support_list_page', status='closed') }}">
-          Закрытые ({{ closed_count }})
-        </a>
-      </div>
+</div>
+
+<!-- Desktop Header (hidden on mobile) -->
+<div class="mb-6 hidden md:block hidden-on-mobile">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-white">Поддержка</h2>
+            <p class="text-white/50 text-sm">Список обращений и их статусы</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('support_list_page') }}"
+                class="px-4 py-2 rounded-lg text-sm font-medium {% if not filter_status %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
+                Все ({{ all_count }})
+            </a>
+            <a href="{{ url_for('support_list_page', status='open') }}"
+                class="px-4 py-2 rounded-lg text-sm font-medium {% if filter_status == 'open' %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
+                Открытые ({{ open_count }})
+            </a>
+            <a href="{{ url_for('support_list_page', status='closed') }}"
+                class="px-4 py-2 rounded-lg text-sm font-medium {% if filter_status == 'closed' %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
+                Закрытые ({{ closed_count }})
+            </a>
+        </div>
     </div>
-  </div>
 </div>
 
 {% if tickets %}
-<div class="card">
-  <div class="card-body">
-    <div class="table-responsive">
-      <table class="table table-vcenter">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Пользователь</th>
-            <th>Тема</th>
-            <th>Статус</th>
-            <th>Обновлен</th>
-            <th class="w-1">Действия</th>
-          </tr>
-        </thead>
-        <tbody id="support-tbody"
-          data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
-          data-fetch-interval="10000">
-          {% include 'partials/support_table.html' %}
-        </tbody>
-      </table>
+<!-- Mobile View: Messenger Layout -->
+<div class="mobile-view">
+    <div class="messenger-list">
+        {% for ticket in tickets %}
+        <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}" class="messenger-item">
+            <!-- Avatar with Initials -->
+            <div class="messenger-avatar {% if ticket.status != 'open' %}closed{% endif %}">
+                {{ ticket.username[0]|upper if ticket.username else 'U' }}
+
+                <!-- Status Badge on Avatar (Green if Admin sent last in open ticket, Yellow if User sent) -->
+                {% if ticket.status == 'open' %}
+                {% if ticket.last_sender == 'admin' %}
+                <div class="avatar-badge"></div>
+                {% elif ticket.last_sender == 'user' %}
+                <div class="avatar-badge yellow"></div>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="messenger-body">
+                <div class="messenger-row-top">
+                    <span class="messenger-name">
+                        {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
+                    </span>
+                    <span class="messenger-time">
+                        {{ (ticket.updated_at or ticket.created_at or "").split(' ')[1][:5] }}
+                    </span>
+                </div>
+                <div class="messenger-row-bottom">
+                    <span
+                        class="messenger-preview {% if ticket.status == 'open' and ticket.last_sender == 'user' %}highlight{% endif %}">
+                        {% if ticket.subject %}
+                        {{ ticket.subject }}
+                        {% else %}
+                        Чат #{{ ticket.ticket_id }}
+                        {% endif %}
+                    </span>
+
+                    <!-- Right side icon for status -->
+                    <div class="messenger-status-icon">
+                        {% if ticket.status == 'closed' %}
+                        <span class="material-symbols-outlined text-white/30" style="font-size: 18px;">check</span>
+                        {% else %}
+                        <span class="material-symbols-outlined text-primary/80"
+                            style="font-size: 18px;">chevron_right</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
     </div>
 
     {% if total_pages > 1 %}
-    <div class="d-flex align-items-center justify-content-between mt-2">
-      <div class="text-secondary">Стр. {{ current_page }} из {{ total_pages }}</div>
-      <ul class="pagination m-0">
-        <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
-          <a class="page-link"
-            href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">Назад</a>
-        </li>
-        <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
-          <a class="page-link"
+    <div class="mobile-pagination">
+        {% if current_page > 1 %}
+        <a href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">Назад</a>
+        {% endif %}
+        <span>{{ current_page }} / {{ total_pages }}</span>
+        {% if current_page < total_pages %} <a
             href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">Вперед</a>
-        </li>
-      </ul>
+            {% endif %}
     </div>
     {% endif %}
-  </div>
+</div>
+
+<!-- Desktop View: Table (Unchanged mainly, simplified wrapper) -->
+<div class="desktop-table">
+    <div class="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-white/5">
+                    <tr>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">ID</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Пользователь
+                        </th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Тема</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Статус</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Обновлен</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="support-tbody" class="divide-y divide-white/10"
+                    data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
+                    data-fetch-interval="10000">
+                    {% include 'partials/support_table.html' %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-between mt-4">
+        <div class="text-white/50 text-sm">Стр. {{ current_page }} из {{ total_pages }}</div>
+        <div class="flex gap-2">
+            {% if current_page > 1 %}
+            <a href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}"
+                class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">Назад</a>
+            {% endif %}
+            {% if current_page < total_pages %} <a
+                href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}"
+                class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">Вперед</a>
+                {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% else %}
-<p class="text-secondary">Обращений пока нет.</p>
+<div class="bg-white/5 border border-white/10 rounded-lg p-8 text-center" style="margin-top: 20px;">
+    <span class="material-symbols-outlined text-4xl text-white/30 mb-2">inbox</span>
+    <p class="text-white/50">Обращений пока нет.</p>
+</div>
 {% endif %}
-
 {% endblock %}

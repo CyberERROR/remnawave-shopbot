@@ -409,7 +409,7 @@ def create_payment_method_keyboard(
 
 
     if pm.get("yookassa"):
-        if get_setting("sbp_enabled"):
+        if (get_setting("sbp_enabled") or "false").strip().lower() == "true":
             builder.button(text="🏦 СБП / Банковская карта", callback_data="pay_yookassa")
         else:
             builder.button(text="🏦 Банковская карта", callback_data="pay_yookassa")
@@ -482,7 +482,7 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
     }
 
     if pm.get("yookassa"):
-        if get_setting("sbp_enabled"):
+        if (get_setting("sbp_enabled") or "false").strip().lower() == "true":
             builder.button(text="🏦 СБП / Банковская карта", callback_data="topup_pay_yookassa")
         else:
             builder.button(text="🏦 Банковская карта", callback_data="topup_pay_yookassa")

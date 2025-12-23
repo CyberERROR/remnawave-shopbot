@@ -1,68 +1,514 @@
-{% extends 'base.html' %}
-{% block title %}Тикет #{{ ticket.ticket_id }} — Поддержка{% endblock %}
+{% extends "base.html" %}
+{% block title %}Тикет #{{ ticket.ticket_id }}{% endblock %}
 
 {% block content %}
-<div id="ticket-root" data-ticket-id="{{ ticket.ticket_id }}">
-  <div class="page-header d-print-none">
-    <div class="row align-items-center">
-      <div class="col">
-        <h2 class="page-title">Тикет #{{ ticket.ticket_id }}</h2>
-        <div class="text-secondary">Пользователь: {{ ticket.user_id }} • Тема: {{ ticket.subject or 'Без темы' }}</div>
-      </div>
-      <div class="col-auto ms-auto d-print-none">
-        <a class="btn btn-outline-secondary" href="{{ url_for('support_list_page') }}">← К списку</a>
-      </div>
-    </div>
-  </div>
+<style>
+    /* -------- DESKTOP STYLES (Unchanged) -------- */
+    @media (min-width: 769px) {
+        .desktop-view {
+            display: block;
+        }
 
-  <div class="card">
-    <div class="card-body">
-      <div class="mb-2">
-        <strong>Статус:</strong>
-        <span id="ticket-status">
-          {% if ticket.status == 'open' %}
-            <span class="status-dot status-dot-animated bg-green"></span>
-            <span class="badge bg-green ms-1">Открыт</span>
-          {% else %}
-            <span class="status-dot"></span>
-            <span class="badge ms-1">Закрыт</span>
-          {% endif %}
-        </span>
-      </div>
+        .mobile-chat-view {
+            display: none;
+        }
+    }
 
-      <div class="chat-box" id="chat-box">
-        {% for m in messages %}
-          <div class="chat-message {% if m.sender == 'admin' %}from-admin{% else %}from-user{% endif %}">
-            <div class="meta">
-              <span class="sender">{{ 'Админ' if m.sender == 'admin' else 'Пользователь' }}</span>
-              <span class="time">{{ m.created_at }}</span>
+    /* -------- MOBILE CHAT STYLES (WhatsApp/Telegram-like) -------- */
+    @media (max-width: 768px) {
+        .desktop-view {
+            display: none;
+        }
+
+        .mobile-chat-view {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000;
+            /* Deep black/dark background */
+            background-image: radial-gradient(circle at 50% 0%, #1a2c24 0%, #000000 70%);
+            /* Subtle green glow at top */
+            z-index: 9999;
+        }
+
+        /* Fixed Header */
+        .mobile-chat-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            z-index: 100;
+            min-height: 64px;
+            flex-shrink: 0;
+        }
+
+        .mobile-back-btn {
+            margin-right: 8px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            padding: 8px;
+            margin-left: -8px;
+        }
+
+        .mobile-user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .mobile-header-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+            line-height: 1.2;
+        }
+
+        .mobile-header-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #f1f5f9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .mobile-header-subject {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.25;
+            margin-top: 2px;
+        }
+
+        .mobile-header-status {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 1px;
+        }
+
+        .mobile-header-actions {
+            position: relative;
+            margin-left: 8px;
+        }
+
+        .mobile-menu-btn {
+            color: #94a3b8;
+            background: none;
+            border: none;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Dropdown Menu */
+        .mobile-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            width: 200px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        .mobile-dropdown-menu.show {
+            display: flex;
+        }
+
+        .mobile-menu-item {
+            padding: 12px 16px;
+            color: #e2e8f0;
+            text-decoration: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .mobile-menu-item:active {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mobile-menu-item.danger {
+            color: #ef4444;
+        }
+
+        /* Chat Area */
+        .mobile-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 20px;
+        }
+
+        /* Message Bubbles - Glassmorphism */
+        .message-bubble {
+            max-width: 85%;
+            padding: 12px 14px;
+            border-radius: 18px;
+            position: relative;
+            font-size: 15px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Admin Messages (Me) - Primary Green Glass */
+        .message-bubble.admin {
+            align-self: flex-end;
+            background: rgba(19, 236, 128, 0.1);
+            /* Primary 10% opacity */
+            border: 1px solid rgba(19, 236, 128, 0.25);
+            /* Primary Border */
+            color: #13ec80;
+            /* Primary Text */
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(19, 236, 128, 0.05);
+        }
+
+        /* User Messages (Other) - White Glass */
+        .message-bubble.user {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Timestamps */
+        .message-time {
+            font-size: 10px;
+            display: block;
+            text-align: right;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        .message-bubble.admin .message-time {
+            color: rgba(19, 236, 128, 0.6);
+        }
+
+        .message-bubble.user .message-time {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Input Area */
+        .mobile-chat-input-area {
+            background: #000000;
+            background-image: radial-gradient(circle at 50% 0%, #1a2c24 0%, #000000 70%);
+            padding: 12px 16px;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+
+        .mobile-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 10px 16px;
+            color: #fff;
+            font-size: 16px;
+            max-height: 200px;
+            resize: none;
+            line-height: 1.4;
+            overflow-y: auto;
+            /* Enable scroll if content exceeds max-height */
+        }
+
+        .mobile-input:focus {
+            outline: none;
+            border-color: #13ec80;
+        }
+
+        .mobile-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #13ec80;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            border: none;
+            flex-shrink: 0;
+            transition: opacity 0.2s;
+        }
+
+        .mobile-send-btn:disabled {
+            opacity: 0.5;
+            background: #334155;
+        }
+    }
+</style>
+
+<!-- ================= MOBILE VIEW ================= -->
+<div class="mobile-chat-view">
+    <!-- Header -->
+    <div class="mobile-chat-header">
+        <a href="{{ url_for('support_list_page') }}" class="mobile-back-btn">
+            <span class="material-symbols-outlined">arrow_back_ios_new</span>
+        </a>
+
+        <div class="mobile-user-avatar">
+            {{ ticket.user_id|string|first|upper }}
+        </div>
+
+        <div class="mobile-header-info">
+            <div class="mobile-header-name">
+                {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
             </div>
-            <div class="content">{{ m.content }}</div>
-          </div>
-        {% else %}
-          <p class="no-messages">Сообщений пока нет.</p>
-        {% endfor %}
-      </div>
+            <div class="mobile-header-subject">
+                {{ ticket.subject or 'Без темы' }}
+            </div>
+            <div class="mobile-header-status">
+                {% if ticket.status == 'open' %}
+                <span style="color: #13ec80;">Открыт</span>
+                {% else %}
+                Закрыт
+                {% endif %}
+            </div>
+        </div>
 
-      <div class="ticket-actions">
-        <form method="post" class="form-inline" id="reply-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <textarea id="reply-text" name="message" rows="3" placeholder="Введите ответ админа..." {% if ticket.status == 'closed' %}disabled{% endif %}></textarea>
-          <div class="buttons">
-            <button id="reply-btn" type="submit" name="action" value="reply" class="btn btn-primary" {% if ticket.status == 'closed' %}disabled{% endif %}>Ответить</button>
-            {% if ticket.status == 'open' %}
-              <button id="toggle-status-btn" type="submit" name="action" value="close" class="btn btn-danger">Закрыть</button>
-            {% else %}
-              <button id="toggle-status-btn" type="submit" name="action" value="open" class="btn btn-success">Открыть</button>
-            {% endif %}
-          </div>
-        </form>
-        <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}" onsubmit="return confirm('Удалить тикет #{{ ticket.ticket_id }}? Это действие необратимо.');" style="display:inline-block;margin-top:8px;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <button type="submit" class="btn btn-danger">Удалить тикет</button>
-        </form>
-      </div>
+        <!-- 3 Dots Menu -->
+        <div class="mobile-header-actions">
+            <button type="button" class="mobile-menu-btn" onclick="toggleMobileMenu(event)">
+                <span class="material-symbols-outlined">more_vert</span>
+            </button>
+
+            <div class="mobile-dropdown-menu" id="mobileMenu">
+                <!-- Toggle Status Action -->
+                <form method="post"
+                    onsubmit="return confirm(`{% if ticket.status == 'open' %}Закрыть этот тикет?{% else %}Открыть этот тикет?{% endif %}`)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    {% if ticket.status == 'open' %}
+                    <button type="submit" name="action" value="close" class="mobile-menu-item">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Закрыть тикет
+                    </button>
+                    {% else %}
+                    <button type="submit" name="action" value="open" class="mobile-menu-item">
+                        <span class="material-symbols-outlined">restart_alt</span>
+                        Открыть тикет
+                    </button>
+                    {% endif %}
+                </form>
+
+                <!-- Delete Action -->
+                <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
+                    onsubmit="return confirm('Удалить этот тикет навсегда?')"
+                    style="border-top: 1px solid rgba(255,255,255,0.05);">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" class="mobile-menu-item danger">
+                        <span class="material-symbols-outlined">delete</span>
+                        Удалить тикет
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <!-- Messages -->
+    <div class="mobile-chat-messages" id="mobile-chat-box">
+        {% for m in messages %}
+        <div class="message-bubble {% if m.sender == 'admin' %}admin{% else %}user{% endif %}">
+            {{ m.content }}
+            <span class="message-time">{{ m.created_at.split(' ')[1][:5] }}</span>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: #555; margin-top: 40px;">
+            История сообщений пуста
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Input -->
+    <form method="post" class="mobile-chat-input-area">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <textarea name="message" class="mobile-input" rows="1" placeholder="Сообщение..." {% if ticket.status=='closed'
+            %}disabled{% endif %}></textarea>
+
+        <button type="submit" name="action" value="reply" class="mobile-send-btn" {% if ticket.status=='closed'
+            %}disabled{% endif %}>
+            <span class="material-symbols-outlined">send</span>
+        </button>
+    </form>
+</div>
+<script>
+    function toggleMobileMenu(event) {
+        event.stopPropagation();
+        const menu = document.getElementById('mobileMenu');
+        menu.classList.toggle('show');
+    }
+
+    // Close menu when clicking anywhere else
+    document.addEventListener('click', function (event) {
+        const menu = document.getElementById('mobileMenu');
+        const btn = document.querySelector('.mobile-menu-btn');
+        if (menu && menu.classList.contains('show') && !menu.contains(event.target) && !btn.contains(event.target)) {
+            menu.classList.remove('show');
+        }
+    });
+
+    // Auto-scroll to bottom on mobile load
+    document.addEventListener("DOMContentLoaded", function () {
+        if (window.innerWidth <= 768) {
+            const chatBox = document.getElementById('mobile-chat-box');
+            if (chatBox) {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            // Auto-expand textarea
+            const textarea = document.querySelector('.mobile-input');
+            if (textarea) {
+                textarea.addEventListener('input', function () {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+            }
+        }
+    });
+</script>
+
+<!-- ================= DESKTOP VIEW (Original) ================= -->
+<div id="ticket-root" class="desktop-view" data-ticket-id="{{ ticket.ticket_id }}">
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-white">Тикет #{{ ticket.ticket_id }}</h2>
+            <p class="text-white/50 text-sm">Пользователь: {{ ticket.user_id }} • Тема: {{ ticket.subject or 'Без темы'
+                }}</p>
+        </div>
+        <a href="{{ url_for('support_list_page') }}"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">
+            <span class="material-symbols-outlined text-base">arrow_back</span>
+            К списку
+        </a>
+    </div>
+
+    <!-- Status -->
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="text-white font-medium">Статус:</span>
+            {% if ticket.status == 'open' %}
+            <span
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
+                <span class="relative flex h-2 w-2">
+                    <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                </span>
+                Открыт
+            </span>
+            {% else %}
+            <span
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/50 text-sm font-medium">
+                Закрыт
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chat-box" class="space-y-4 max-h-[500px] overflow-y-auto mb-6">
+            {% for m in messages %}
+            <div class="flex {% if m.sender == 'admin' %}justify-end{% else %}justify-start{% endif %}">
+                <div
+                    class="max-w-[80%] {% if m.sender == 'admin' %}bg-primary/20 border-primary/30{% else %}bg-white/5 border-white/10{% endif %} border rounded-lg p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span
+                            class="text-sm font-medium {% if m.sender == 'admin' %}text-primary{% else %}text-white{% endif %}">
+                            {{ 'Админ' if m.sender == 'admin' else 'Пользователь' }}
+                        </span>
+                        <span class="text-xs text-white/50">{{ m.created_at }}</span>
+                    </div>
+                    <div class="text-white whitespace-pre-wrap">{{ m.content }}</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-white/50">
+                Сообщений пока нет.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Reply Form -->
+        <form method="post" id="reply-form" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <textarea id="reply-text" name="message" rows="3" placeholder="Введите ответ..."
+                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                {% if ticket.status=='closed' %}disabled{% endif %}></textarea>
+            <div class="flex flex-wrap gap-3">
+                <button type="submit" name="action" value="reply"
+                    class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 disabled:opacity-50"
+                    {% if ticket.status=='closed' %}disabled{% endif %}>
+                    Ответить
+                </button>
+                {% if ticket.status == 'open' %}
+                <button type="submit" name="action" value="close"
+                    class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30">
+                    Закрыть тикет
+                </button>
+                {% else %}
+                <button type="submit" name="action" value="open"
+                    class="px-4 py-2 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary/30">
+                    Открыть тикет
+                </button>
+                {% endif %}
+            </div>
+        </form>
+
+        <!-- Delete Form -->
+        <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
+            data-confirm="Удалить тикет #{{ ticket.ticket_id }}? Это действие необратимо." class="mt-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit"
+                class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30">
+                Удалить тикет
+            </button>
+        </form>
+    </div>
 </div>
 {% endblock %}

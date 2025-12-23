@@ -1,80 +1,112 @@
 {% for user in users %}
-<tr>
-  <td class="user-id">{{ user.telegram_id }}</td>
-  <td class="user-name">@{{ user.username or 'N/A' }}</td>
-  <td>
-    {% if user.is_banned %}
-    <span class="badge bg-red">Забанен</span>
-    {% else %}
-    <span class="badge bg-green">Активен</span>
-    {% endif %}
-  </td>
-  <td>{{ user.keys_count or 0 }} шт.</td>
-  <td>{{ '%.2f'|format(user.balance or 0) }}</td>
-  <td>
-    <div class="btn-list">
-      <a class="btn btn-primary btn-xs btn-glass" href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}"
-        title="Выдать ключ" aria-label="Выдать ключ">
-        <i class="ti ti-key"></i>
-      </a>
-      <button type="button" class="btn btn-success btn-xs btn-glass btn-user-balance-sign"
-        data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
-        data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="+" title="Начислить баланс"
-        aria-label="Начислить баланс">
-        <i class="ti ti-plus"></i>
-      </button>
-      <button type="button" class="btn btn-danger btn-xs btn-glass btn-user-balance-sign"
-        data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
-        data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="-" title="Списать баланс"
-        aria-label="Списать баланс">
-        <i class="ti ti-minus"></i>
-      </button>
-      <button type="button" class="btn btn-info btn-xs btn-glass btn-user-message" data-uid="{{ user.telegram_id }}"
-        data-username="{{ user.username or 'N/A' }}" title="Отправить сообщение" aria-label="Отправить сообщение">
-        <i class="ti ti-message"></i>
-      </button>
-      <button type="button" class="btn btn-outline-secondary btn-xs btn-glass" data-toggle="keys"
-        data-user="{{ user.telegram_id }}" title="Ключи" aria-label="Ключи">
-        <i class="ti ti-key"></i>
-      </button>
-      {% if user.is_banned %}
-      <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-success btn-xs btn-glass" title="Разбанить" aria-label="Разбанить"><i
-            class="ti ti-circle-check"></i></button>
-      </form>
-      {% else %}
-      <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post"
-        data-confirm="Вы уверены, что хотите забанить этого пользователя? Он не сможет пользоваться ботом.">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-warning btn-xs btn-glass" title="Бан" aria-label="Бан"><i
-            class="ti ti-ban"></i></button>
-      </form>
-      {% endif %}
-      {% if (user.keys_count or 0) > 0 %}
-      <form action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post"
-        data-confirm="ВНИМАНИЕ! Это действие удалит ВСЕ ключи пользователя с серверов. Вы уверены?" data-ajax="delete"
-        data-refresh-target="users-tbody" data-action="revoke-keys">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-danger btn-xs btn-glass" title="Отозвать ключи"
-          aria-label="Отозвать ключи"><i class="ti ti-trash-x"></i></button>
-      </form>
-      {% endif %}
-      <br>
-      <button type="button" class="btn btn-secondary btn-xs btn-glass btn-user-details"
-        data-uid="{{ user.telegram_id }}" title="Подробнее" aria-label="Подробнее">
-        <i class="ti ti-info-circle">Подробнее</i>
-      </button>
-    </div>
-  </td>
+<tr class="hover:bg-white/5">
+    <td class="px-6 py-4 whitespace-nowrap user-id">
+        <span class="text-sm font-medium text-white">{{ user.telegram_id }}</span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap user-name">
+        <span class="text-sm text-white">@{{ user.username or 'N/A' }}</span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        {% if user.is_banned %}
+        <span
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400">
+            Забанен
+        </span>
+        {% else %}
+        <span
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+            Активен
+        </span>
+        {% endif %}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ user.keys_count or 0 }} шт.</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ '%.2f'|format(user.balance or 0) }} RUB</td>
+    <td class="px-6 py-4 whitespace-nowrap text-right">
+        <div class="flex items-center justify-end gap-1.5 flex-wrap">
+            <!-- Give Key -->
+            <a href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}"
+                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+                title="Выдать ключ">
+                <span class="material-symbols-outlined text-base">key</span>
+            </a>
+            <!-- Add Balance -->
+            <button type="button"
+                class="btn-user-balance-sign inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
+                data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="+" title="Начислить баланс">
+                <span class="material-symbols-outlined text-base">add</span>
+            </button>
+            <!-- Subtract Balance -->
+            <button type="button"
+                class="btn-user-balance-sign inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
+                data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="-" title="Списать баланс">
+                <span class="material-symbols-outlined text-base">remove</span>
+            </button>
+            <!-- Send Message -->
+            <button type="button"
+                class="btn-user-message inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
+                title="Отправить сообщение">
+                <span class="material-symbols-outlined text-base">mail</span>
+            </button>
+            <!-- Toggle Keys -->
+            <button type="button" data-toggle="keys" data-user="{{ user.telegram_id }}"
+                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
+                title="Ключи">
+                <span class="material-symbols-outlined text-base">vpn_key</span>
+            </button>
+            <!-- Ban/Unban -->
+            {% if user.is_banned %}
+            <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                    title="Разбанить">
+                    <span class="material-symbols-outlined text-base">check_circle</span>
+                </button>
+            </form>
+            {% else %}
+            <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post" class="inline"
+                data-confirm="Вы уверены, что хотите забанить этого пользователя?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
+                    title="Бан">
+                    <span class="material-symbols-outlined text-base">block</span>
+                </button>
+            </form>
+            {% endif %}
+            <!-- Revoke Keys -->
+            {% if (user.keys_count or 0) > 0 %}
+            <form action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post" class="inline"
+                data-confirm="ВНИМАНИЕ! Это действие удалит ВСЕ ключи пользователя. Вы уверены?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                    title="Отозвать ключи">
+                    <span class="material-symbols-outlined text-base">delete</span>
+                </button>
+            </form>
+            {% endif %}
+            <!-- Details -->
+            <button type="button"
+                class="btn-user-details inline-flex items-center gap-1 px-3 h-8 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors text-sm"
+                data-uid="{{ user.telegram_id }}" title="Подробнее">
+                <span class="material-symbols-outlined text-base">info</span>
+                <span class="hidden sm:inline">Подробнее</span>
+            </button>
+        </div>
+    </td>
 </tr>
-<tr class="keys-row" id="keys-{{ user.telegram_id }}" style="display:none;"
-  data-src="{{ url_for('user_keys_partial', user_id=user.telegram_id) }}">
-  <td colspan="6">
-    <div class="card card-compact">
-      <div class="card-header"><strong>Ключи пользователя</strong></div>
-      <div class="card-body p-2" data-lazy="keys"></div>
-    </div>
-  </td>
+<!-- Keys row -->
+<tr class="keys-row hidden" id="keys-{{ user.telegram_id }}"
+    data-src="{{ url_for('user_keys_partial', user_id=user.telegram_id) }}">
+    <td colspan="6" class="p-0">
+        <div class="m-4 bg-white/5 border border-white/10 rounded-lg">
+            <div class="p-3 border-b border-white/10 text-white font-bold text-sm">Ключи пользователя</div>
+            <div class="p-3" data-lazy="keys"></div>
+        </div>
+    </td>
 </tr>
 {% endfor %}

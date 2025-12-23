@@ -1,33 +1,20 @@
-<div class="col-sm-6 col-lg-3">
-  <div class="card">
-    <div class="card-body">
-      <div class="subheader">Пользователей</div>
-      <div class="h1 mb-0">{{ stats.user_count }}</div>
-    </div>
-  </div>
+<div class="flex flex-col gap-2 rounded-lg p-6 bg-white/5 border border-white/10">
+    <p class="text-white/70 text-base font-medium leading-normal">Пользователей</p>
+    <p class="text-white tracking-light text-3xl font-bold leading-tight">{{ stats.user_count }}</p>
 </div>
-<div class="col-sm-6 col-lg-3">
-  <div class="card">
-    <div class="card-body">
-      <div class="subheader">Всего ключей</div>
-      <div class="h1 mb-0">{{ stats.total_keys }}</div>
-    </div>
-  </div>
+<div class="flex flex-col gap-2 rounded-lg p-6 bg-white/5 border border-white/10">
+    <p class="text-white/70 text-base font-medium leading-normal">Всего ключей</p>
+    <p class="text-white tracking-light text-3xl font-bold leading-tight">{{ stats.total_keys }}</p>
 </div>
-<div class="col-sm-6 col-lg-3">
-  <div class="card">
-    <div class="card-body">
-      <div class="subheader">Всего потрачено</div>
-      <div class="h1 mb-0">{{ stats.total_spent | round(2) }} <small class="text-secondary">RUB</small></div>
-    </div>
-  </div>
+<div class="flex flex-col gap-2 rounded-lg p-6 bg-white/5 border border-white/10">
+    <p class="text-white/70 text-base font-medium leading-normal">Всего потрачено</p>
+    <p class="text-white tracking-light text-3xl font-bold leading-tight">{{ stats.total_spent | round(2) }} RUB</p>
 </div>
-<div class="col-sm-6 col-lg-3">
-  <div class="card">
-    <div class="card-body">
-      <div class="subheader">Активных хостов</div>
-      <div class="h1 mb-1">{{ stats.host_count }}</div>
-      <div class="text-secondary small">Открытые тикеты: <span class="status-dot status-dot-animated bg-green"></span> {{ open_tickets_count }}</div>
-    </div>
-  </div>
+<div class="flex flex-col gap-2 rounded-lg p-6 bg-white/5 border border-white/10">
+    <p class="text-white/70 text-base font-medium leading-normal">Активных хостов</p>
+    <p class="text-white tracking-light text-3xl font-bold leading-tight">{{ stats.host_count }}</p>
+</div>
+<div class="flex flex-col gap-2 rounded-lg p-6 bg-white/5 border border-white/10">
+    <p class="text-white/70 text-base font-medium leading-normal">Открытые тикеты</p>
+    <p class="text-white tracking-light text-3xl font-bold leading-tight">{{ open_tickets_count }}</p>
 </div>

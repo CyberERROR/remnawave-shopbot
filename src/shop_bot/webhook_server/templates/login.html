@@ -1,182 +1,223 @@
 <!DOCTYPE html>
-<html lang="ru">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Вход в Панель управления</title>
-		<meta name="csrf-token" content="{{ csrf_token() }}" />
-		<link
-			rel="stylesheet"
-			href="{{ url_for('static', filename='css/style.css') }}"
-		/>
-	</head>
-	<body class="login-page">
-		<canvas id="scene" draggable="false"></canvas>
-		<div class="login-container">
-			<h1>Вход в панель</h1>
+<html class="dark" lang="ru">
 
-			{% with messages = get_flashed_messages(with_categories=true) %} {% if
-			messages %} {% for category, message in messages %}
-			<div class="flash flash-{{ category }}">{{ message }}</div>
-			{% endfor %} {% endif %} {% endwith %}
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Вход в Панель управления</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}" />
 
-			<form method="post">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-				<div class="form-group">
-					<label for="username">Логин:</label>
-					<input type="text" id="username" name="username" required />
-				</div>
-				<div class="form-group password-wrapper">
-					<label for="password">Пароль:</label>
-					<input type="password" id="password" name="password" required />
-					<button type="button" id="toggle-login-pass" class="toggle-password" aria-label="Показать пароль" title="Показать пароль">
-						
-						<svg id="icon-eye-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M3 3l18 18" />
-							<path d="M10.584 10.587a2 2 0 1 0 2.828 2.827" />
-							<path d="M6.712 6.715c-1.766 1.233-3.247 2.89-4.712 5.285c2.667 4 6.667 6 10 6c1.25 0 2.47-.214 3.638-.623" />
-							<path d="M9.88 4.598a9.956 9.956 0 0 1 2.12-.598c3.333 0 7.333 2 10 6c-1.093 1.64-2.3 3.022-3.614 4.047" />
-						</svg>
-						
-						<svg id="icon-eye" style="display:none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M2 12c2.667-4 6.667-6 10-6s7.333 2 10 6c-2.667 4-6.667 6-10 6s-7.333-2-10-6z" />
-							<circle cx="12" cy="12" r="2" />
-						</svg>
-					</button>
-				</div>
-				<div class="form-group" style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin:10px 0 16px;">
-					<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-						<input type="checkbox" id="remember_me" />
-						<span>Запомнить меня</span>
-					</label>
-				</div>
-				<button type="submit" class="button button-primary" style="width: 100%">
-					Войти
-				</button>
-			</form>
-		</div>
-	<script>
-		(() => {
-			const canvas = document.getElementById('scene');
-			if (!canvas) return;
-			const ctx = canvas.getContext('2d');
-			let DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-			let t = 0;
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
 
-			// Блокируем копирование/сохранение через UI только на странице логина
-			const prevent = (e) => e.preventDefault();
-			document.addEventListener('contextmenu', prevent, { passive: false });
-			canvas.addEventListener('dragstart', prevent, { passive: false });
-			canvas.addEventListener('mousedown', prevent, { passive: false });
-			document.addEventListener('copy', prevent, { passive: false });
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                    },
+                    fontFamily: { "display": ["Inter", "sans-serif"] }
+                },
+            },
+        }
+    </script>
+    <style>
+        #scene {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
 
-			function resize() {
-				// обновляем DPR динамически
-				DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-				const { innerWidth: w, innerHeight: h } = window;
-				canvas.width = Math.max(1, Math.floor(w * DPR));
-				canvas.height = Math.max(1, Math.floor(h * DPR));
-				canvas.style.width = w + 'px';
-				canvas.style.height = h + 'px';
-				ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-			}
+        .login-container {
+            position: relative;
+            z-index: 10;
+        }
 
-			function draw() {
-				// используем реальные размеры буфера, чтобы исключить баги с clientWidth/Height
-				const W = Math.max(1, Math.floor(canvas.width / DPR));
-				const H = Math.max(1, Math.floor(canvas.height / DPR));
-				ctx.clearRect(0, 0, W, H);
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 4px;
+        }
 
-				const L = Math.hypot(W, H);
-				const nx = H / L, ny = W / L;
+        .toggle-password:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
 
-				const lines = 120;
-				const baseBand = H * 0.45 * 1.5 * 1.2;
-				const bandPulse = 1 + 0.06 * Math.sin(t * 0.07);
+<body class="bg-background-dark font-display min-h-screen flex items-center justify-center p-4">
+    <canvas id="scene" draggable="false"></canvas>
 
-				for (let i = 0; i < lines; i++) {
-					const f = i / (lines - 1);
-					const bias = f - 0.5;
-					const sideFactor = 0.6 + 0.4 * f;
-					const cornerFactor = 1 - 0.5 * (1 - f);
-					const offset = bias * baseBand * bandPulse * sideFactor * cornerFactor;
+    <div class="login-container w-full max-w-md">
+        <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-8 shadow-2xl">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-white mb-2">Вход в панель</h1>
+                <p class="text-white/50">Введите данные для входа</p>
+            </div>
 
-					const lw = Math.max(0.55, 1.2 - f * 0.5);
-					const alpha = Math.max(0.06, 0.32 * (0.95 - Math.abs(bias) * 0.75));
-					ctx.beginPath();
-					ctx.lineWidth = lw;
-					ctx.strokeStyle = `rgba(88, 125, 255, ${alpha})`;
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div
+                class="mb-4 p-3 rounded-lg {% if category == 'danger' %}bg-red-500/20 text-red-400{% elif category == 'success' %}bg-primary/20 text-primary{% else %}bg-yellow-500/20 text-yellow-400{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
 
-					const twistStrength = 0.12 * (1 + 0.3 * Math.sin(t * 0.2 + i * 0.15));
+            <form method="post" class="space-y-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-					for (let s = -0.2, first = true; s <= 1.2; s += 0.01) {
-						const sd = s;
-						const x0 = sd * W;
-						const y0 = H - sd * H;
+                <div>
+                    <label for="username" class="block text-white/70 text-sm font-medium mb-2">Логин</label>
+                    <input type="text" id="username" name="username" required autocomplete="username"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" />
+                </div>
 
-						const disp = Math.sin(t * 0.1 + i * 0.05) * (baseBand * 0.04);
-						const twist = Math.sin(sd * Math.PI + t * 0.12 + i * 0.03) * twistStrength * baseBand;
+                <div>
+                    <label for="password" class="block text-white/70 text-sm font-medium mb-2">Пароль</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required autocomplete="current-password"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all pr-12" />
+                        <button type="button" id="toggle-login-pass" class="toggle-password"
+                            aria-label="Показать пароль" title="Показать пароль">
+                            <span class="material-symbols-outlined" id="icon-eye">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
 
-						const x = x0 + (nx * disp) + Math.cos(sd * Math.PI) * twist;
-						const y = y0 + offset + (ny * disp) + Math.sin(sd * Math.PI) * twist;
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="remember_me" name="remember_me"
+                        class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50 cursor-pointer" />
+                    <label for="remember_me" class="text-white/70 text-sm cursor-pointer">Запомнить меня</label>
+                </div>
 
-						if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
-					}
-					ctx.stroke();
-				}
-			}
+                <button type="submit"
+                    class="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold py-3 px-4 rounded-lg transition-colors duration-200">
+                    Войти
+                </button>
+            </form>
+        </div>
+    </div>
 
-			function animate(){ t += 0.016; draw(); requestAnimationFrame(animate); }
+    <script>
+            (() => {
+                const canvas = document.getElementById('scene');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                let DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+                let t = 0;
 
-			window.addEventListener('resize', resize, { passive:true });
-			resize();
-			// тестовая одноразовая отрисовка, чтобы убедиться, что что-то видно
-			ctx.fillStyle = 'rgba(88,125,255,0.08)';
-			ctx.fillRect(0, 0, Math.max(1, Math.floor(canvas.width / DPR)), Math.max(1, Math.floor(canvas.height / DPR)));
-			animate();
-		})();
+                function resize() {
+                    DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+                    const { innerWidth: w, innerHeight: h } = window;
+                    canvas.width = Math.max(1, Math.floor(w * DPR));
+                    canvas.height = Math.max(1, Math.floor(h * DPR));
+                    canvas.style.width = w + 'px';
+                    canvas.style.height = h + 'px';
+                    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+                }
 
-		// Переключатель видимости пароля на странице логина
-		(function(){
-			const btn = document.getElementById('toggle-login-pass');
-			const input = document.getElementById('password');
-			if (!btn || !input) return;
-			const eye = document.getElementById('icon-eye');
-			const eyeOff = document.getElementById('icon-eye-off');
-			btn.addEventListener('click', () => {
-				if (input.type === 'password') {
-					input.type = 'text';
-					btn.setAttribute('aria-label', 'Скрыть пароль');
-					btn.title = 'Скрыть пароль';
-					if (eye) eye.style.display = '';
-					if (eyeOff) eyeOff.style.display = 'none';
-				} else {
-					input.type = 'password';
-					btn.setAttribute('aria-label', 'Показать пароль');
-					btn.title = 'Показать пароль';
-					if (eye) eye.style.display = 'none';
-					if (eyeOff) eyeOff.style.display = '';
-				}
-			});
-		})();
+                function draw() {
+                    const W = Math.max(1, Math.floor(canvas.width / DPR));
+                    const H = Math.max(1, Math.floor(canvas.height / DPR));
+                    ctx.clearRect(0, 0, W, H);
 
-		// Запомнить логин (username) локально
-		(function(){
-			const u = document.getElementById('username');
-			const r = document.getElementById('remember_me');
-			if (!u || !r) return;
-			try {
-				const saved = localStorage.getItem('login_username');
-				if (saved) { u.value = saved; r.checked = true; }
-			} catch(_){}
-			// При отправке формы — сохранить/очистить
-			u.form?.addEventListener('submit', () => {
-				try {
-					if (r.checked) localStorage.setItem('login_username', u.value || '');
-					else localStorage.removeItem('login_username');
-				} catch(_){ }
-			});
-		})();
-	</script>
-	</body>
+                    const L = Math.hypot(W, H);
+                    const nx = H / L, ny = W / L;
+                    const lines = 120;
+                    const baseBand = H * 0.45 * 1.5 * 1.2;
+                    const bandPulse = 1 + 0.06 * Math.sin(t * 0.07);
+
+                    for (let i = 0; i < lines; i++) {
+                        const f = i / (lines - 1);
+                        const bias = f - 0.5;
+                        const sideFactor = 0.6 + 0.4 * f;
+                        const cornerFactor = 1 - 0.5 * (1 - f);
+                        const offset = bias * baseBand * bandPulse * sideFactor * cornerFactor;
+
+                        const lw = Math.max(0.55, 1.2 - f * 0.5);
+                        const alpha = Math.max(0.06, 0.32 * (0.95 - Math.abs(bias) * 0.75));
+                        ctx.beginPath();
+                        ctx.lineWidth = lw;
+                        ctx.strokeStyle = `rgba(19, 236, 128, ${alpha})`;
+
+                        const twistStrength = 0.12 * (1 + 0.3 * Math.sin(t * 0.2 + i * 0.15));
+
+                        for (let s = -0.2, first = true; s <= 1.2; s += 0.01) {
+                            const sd = s;
+                            const x0 = sd * W;
+                            const y0 = H - sd * H;
+                            const disp = Math.sin(t * 0.1 + i * 0.05) * (baseBand * 0.04);
+                            const twist = Math.sin(sd * Math.PI + t * 0.12 + i * 0.03) * twistStrength * baseBand;
+                            const x = x0 + (nx * disp) + Math.cos(sd * Math.PI) * twist;
+                            const y = y0 + offset + (ny * disp) + Math.sin(sd * Math.PI) * twist;
+                            if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+                        }
+                        ctx.stroke();
+                    }
+                }
+
+                function animate() { t += 0.016; draw(); requestAnimationFrame(animate); }
+
+                window.addEventListener('resize', resize, { passive: true });
+                resize();
+                animate();
+            })();
+
+        // Toggle password visibility
+        (function () {
+            const btn = document.getElementById('toggle-login-pass');
+            const input = document.getElementById('password');
+            if (!btn || !input) return;
+            const icon = document.getElementById('icon-eye');
+            btn.addEventListener('click', () => {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    if (icon) icon.textContent = 'visibility';
+                    btn.setAttribute('aria-label', 'Скрыть пароль');
+                    btn.title = 'Скрыть пароль';
+                } else {
+                    input.type = 'password';
+                    if (icon) icon.textContent = 'visibility_off';
+                    btn.setAttribute('aria-label', 'Показать пароль');
+                    btn.title = 'Показать пароль';
+                }
+            });
+        })();
+
+        // Remember username
+        (function () {
+            const u = document.getElementById('username');
+            const r = document.getElementById('remember_me');
+            if (!u || !r) return;
+            try {
+                const saved = localStorage.getItem('login_username');
+                if (saved) { u.value = saved; r.checked = true; }
+            } catch (_) { }
+            u.form?.addEventListener('submit', () => {
+                try {
+                    if (r.checked) localStorage.setItem('login_username', u.value || '');
+                    else localStorage.removeItem('login_username');
+                } catch (_) { }
+            });
+        })();
+    </script>
+</body>
+
 </html>

@@ -1,28 +1,29 @@
 {% if keys %}
-<div class="table-responsive">
-  <table class="table table-sm table-vcenter">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Хост</th>
-        <th>Email</th>
-        <th>UUID</th>
-        <th>Истекает</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for k in keys %}
-      <tr>
-        <td>#{{ k.key_id }}</td>
-        <td>{{ k.host_name }}</td>
-        <td>{{ k.key_email or k.email }}</td>
-        <td class="text-truncate" style="max-width:220px">{{ k.remnawave_user_uuid }}</td>
-        <td>{{ k.expiry_date or k.expire_at or '' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-white/5">
+            <tr>
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-white/70">ID</th>
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-white/70">Хост</th>
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-white/70">Email</th>
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-white/70">UUID</th>
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-white/70">Истекает</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-white/10">
+            {% for k in keys %}
+            <tr class="hover:bg-white/5">
+                <td class="px-3 py-2 text-white">#{{ k.key_id }}</td>
+                <td class="px-3 py-2 text-white">{{ k.host_name }}</td>
+                <td class="px-3 py-2 text-white">{{ k.key_email or k.email }}</td>
+                <td class="px-3 py-2 text-white/70 max-w-[200px] truncate" title="{{ k.remnawave_user_uuid }}">{{
+                    k.remnawave_user_uuid }}</td>
+                <td class="px-3 py-2 text-white/70">{{ k.expiry_date or k.expire_at or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% else %}
-<div class="text-secondary">Ключей нет</div>
+<div class="text-white/50 text-center py-4">Ключей нет</div>
 {% endif %}

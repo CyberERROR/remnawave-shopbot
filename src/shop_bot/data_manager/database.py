@@ -1007,7 +1007,7 @@ def update_key_comment(key_id: int, comment: str) -> bool:
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE vpn_keys SET comment = ? WHERE key_id = ?", (comment, key_id))
+            cursor.execute("UPDATE vpn_keys SET description = ? WHERE key_id = ?", (comment, key_id))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
@@ -3281,18 +3281,30 @@ def get_tickets_paginated(page: int = 1, per_page: int = 20, status: str | None 
         with sqlite3.connect(DB_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
+            
+            # Query with JOIN to users table and subquery for last_sender
+            base_query = """
+                SELECT t.*, 
+                       u.username,
+                       (SELECT sender FROM support_messages 
+                        WHERE ticket_id = t.ticket_id 
+                        ORDER BY created_at DESC LIMIT 1) as last_sender
+                FROM support_tickets t
+                LEFT JOIN users u ON t.user_id = u.telegram_id
+            """
+            
             if status:
                 cursor.execute("SELECT COUNT(*) FROM support_tickets WHERE status = ?", (status,))
                 total = cursor.fetchone()[0] or 0
                 cursor.execute(
-                    "SELECT * FROM support_tickets WHERE status = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+                    base_query + " WHERE t.status = ? ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
                     (status, per_page, offset)
                 )
             else:
                 cursor.execute("SELECT COUNT(*) FROM support_tickets")
                 total = cursor.fetchone()[0] or 0
                 cursor.execute(
-                    "SELECT * FROM support_tickets ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+                    base_query + " ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
                     (per_page, offset)
                 )
             return [dict(r) for r in cursor.fetchall()], total

@@ -227,6 +227,66 @@ def create_webhook_app(bot_controller_instance):
             'csrf_token': generate_csrf
         }
 
+    @flask_app.template_filter('relative_time')
+    def format_relative_time(date_value, is_future=False):
+        if not date_value:
+            return ""
+        try:
+            if isinstance(date_value, str):
+                # Попытка парсинга строки
+                try:
+                    dt = datetime.fromisoformat(date_value)
+                except ValueError:
+                    dt = datetime.strptime(date_value, '%Y-%m-%d %H:%M:%S')
+            else:
+                dt = date_value
+            
+            # Приводим к UTC naive, если нужно (предполагаем, что в базе UTC naive)
+            if dt.tzinfo:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            
+            now = datetime.utcnow()
+            
+            if is_future:
+                diff = dt - now
+                if diff.total_seconds() < 0:
+                    return "(истёк)"
+            else:
+                diff = now - dt
+                
+            total_seconds = abs(diff.total_seconds())
+            days = int(total_seconds // 86400)
+            hours = int((total_seconds % 86400) // 3600)
+            
+            if days > 0:
+                # Склонение дней
+                last_digit = days % 10
+                last_two = days % 100
+                if 11 <= last_two <= 19:
+                    suffix = "дней"
+                elif last_digit == 1:
+                    suffix = "день"
+                elif 2 <= last_digit <= 4:
+                    suffix = "дня"
+                else:
+                    suffix = "дней"
+                return f"({days} {suffix})"
+            else:
+                # Склонение часов
+                last_digit = hours % 10
+                last_two = hours % 100
+                if 11 <= last_two <= 19:
+                    suffix = "часов"
+                elif last_digit == 1:
+                    suffix = "час"
+                elif 2 <= last_digit <= 4:
+                    suffix = "часа"
+                else:
+                    suffix = "часов"
+                return f"({hours} {suffix})"
+        except Exception:
+            return ""
+
     def login_required(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -807,8 +867,16 @@ def create_webhook_app(bot_controller_instance):
             users = get_all_users()
         except Exception:
             users = []
+        
+        filter_mode = request.args.get('filter', 'general')
+        filtered_keys = []
+        if filter_mode == 'gift':
+            filtered_keys = [k for k in keys if (k.get('user_id') or 0) == 0]
+        else:
+            filtered_keys = [k for k in keys if (k.get('user_id') or 0) != 0]
+            
         common_data = get_common_template_data()
-        return render_template('admin_keys.html', keys=keys, hosts=hosts, users=users, **common_data)
+        return render_template('admin_keys.html', keys=filtered_keys, hosts=hosts, users=users, current_filter=filter_mode, **common_data)
 
 
     @flask_app.route('/admin/keys/table.partial')
@@ -819,7 +887,15 @@ def create_webhook_app(bot_controller_instance):
             keys = get_all_keys()
         except Exception:
             keys = []
-        return render_template('partials/admin_keys_table.html', keys=keys)
+            
+        filter_mode = request.args.get('filter', 'general')
+        filtered_keys = []
+        if filter_mode == 'gift':
+            filtered_keys = [k for k in keys if (k.get('user_id') or 0) == 0]
+        else:
+            filtered_keys = [k for k in keys if (k.get('user_id') or 0) != 0]
+            
+        return render_template('partials/admin_keys_table.html', keys=filtered_keys)
 
     @flask_app.route('/admin/hosts/<host_name>/plans')
     @login_required
@@ -1269,8 +1345,10 @@ def create_webhook_app(bot_controller_instance):
     def update_key_comment_route(key_id: int):
         comment = (request.form.get('comment') or '').strip()
         ok = update_key_comment(key_id, comment)
-        flash('Комментарий обновлён.' if ok else 'Не удалось обновить комментарий.', 'success' if ok else 'danger')
-        return redirect(request.referrer or url_for('admin_keys_page'))
+        if ok:
+            return jsonify({"ok": True})
+        else:
+            return jsonify({"ok": False, "error": "db_error"}), 500
 
 
     @flask_app.route('/admin/hosts/ssh/update', methods=['POST'])

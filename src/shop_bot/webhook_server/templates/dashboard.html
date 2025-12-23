@@ -1,431 +1,403 @@
-{% extends "base.html" %} {% block title %}Главная страница{% endblock %} {% block content %}
+{% extends "base.html" %}
+{% block title %}Главная страница{% endblock %}
 
-<div class="page-header d-print-none">
-  <div class="row align-items-center">
-    <div class="col">
-      <h2 class="page-title">Главная</h2>
-      <div class="text-secondary">Сводка и ключевые метрики</div>
-    </div>
-  </div>
-  <div id="dash-stats" class="row row-deck row-cards mt-2"
-       data-fetch-url="{{ url_for('dashboard_stats_partial') }}"
-       data-fetch-interval="8000">
+{% block content %}
+<!-- Stats Cards -->
+<section id="dash-stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8"
+    data-fetch-url="{{ url_for('dashboard_stats_partial') }}" data-fetch-interval="8000">
     {% include 'partials/dashboard_stats.html' %}
-  </div>
-  
-</div>
+</section>
 
-<div class="row row-cards">
-  <div class="col-lg-7">
-    
-    <div class="card card-compact glass mb-3">
-      <div class="card-body py-2">
-        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-          <div class="me-2" style="min-width:260px; max-width:420px; flex:1 1 auto;">
-            <label class="form-label mb-1 small">SSH цель</label>
-            <div class="soft-select" id="st_target_softselect" data-target="st-target">
-              <button type="button" class="soft-select-toggle" id="st_target_toggle">Выберите SSH цель...</button>
-              <div class="soft-select-menu" id="st_target_menu"></div>
-              <select id="st-target" class="form-select form-select-sm select-soft">
-                {% for t in ssh_targets %}
-                <option value="{{ t.target_name }}">{{ t.target_name }}</option>
-                {% endfor %}
-              </select>
+<!-- SSH Speedtest Section -->
+<section class="mb-8">
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+        <div class="flex flex-col lg:flex-row items-start justify-between gap-6 mb-6">
+            <div class="flex-1">
+                <div class="flex items-center gap-4 mb-2">
+                    <label class="text-lg font-bold text-white">SSH цель</label>
+                    <div class="soft-select min-w-[200px]" data-target="st-target">
+                        <button type="button" class="soft-select-toggle" id="st_target_toggle">Выберите SSH
+                            цель...</button>
+                        <div class="soft-select-menu" id="st_target_menu"></div>
+                        <select id="st-target" class="hidden">
+                            {% for t in ssh_targets %}
+                            <option value="{{ t.target_name }}">{{ t.target_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <p class="text-white/70 text-sm font-medium mb-1">Последний результат</p>
+                    <p id="st-latest" class="text-white/50 text-sm">—</p>
+                </div>
             </div>
-          </div>
-          <div class="flex-grow-1 min-w-0">
-            <div class="small text-secondary mb-1">Последний результат</div>
-            <div id="st-latest" class="tiny text-truncate">—</div>
-          </div>
+            <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                <form id="st-run-form" method="post" class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="method" value="both" />
+                    <button type="submit"
+                        class="flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20">
+                        <span class="material-symbols-outlined text-base">play_arrow</span>
+                        Проверить выбранный
+                    </button>
+                </form>
+                <form id="st-run-all-form" action="{{ url_for('run_all_ssh_target_speedtests_route') }}" method="post"
+                    class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit"
+                        class="flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-primary/80 px-4 py-2 text-sm font-semibold text-background-dark transition-colors hover:bg-primary">
+                        <span class="material-symbols-outlined text-base">skip_next</span>
+                        Запустить для всех
+                    </button>
+                </form>
+            </div>
         </div>
-        <div class="d-flex align-items-center gap-2 mb-2">
-          <form id="st-run-form" action="#" method="post" class="m-0">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <input type="hidden" name="method" value="both" />
-            <button type="submit" class="btn btn-primary btn-xs pill">Проверить выбранный</button>
-          </form>
-          <form id="st-run-all-form" action="{{ url_for('run_all_ssh_target_speedtests_route') }}" method="post" class="m-0">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-outline-secondary btn-xs pill">Запустить для всех</button>
-          </form>
-        </div>
-        <div class="chart" style="height: 280px;">
-          <canvas id="st-top-canvas"></canvas>
-        </div>
-      </div>
+        <div class="h-64"><canvas id="st-top-canvas"></canvas></div>
     </div>
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Новые пользователи (30 дней)</h3>
-      </div>
-      <div class="card-body">
-        <div class="chart" style="height: 280px">
-          <canvas id="newUsersChart"></canvas>
-        </div>
-      </div>
-    </div>
+</section>
 
-    <div class="card mt-3">
-      <div class="card-header">
-        <h3 class="card-title">Новые ключи (30 дней)</h3>
-      </div>
-      <div class="card-body">
-        <div class="chart" style="height: 280px">
-          <canvas id="newKeysChart"></canvas>
-        </div>
-      </div>
+<!-- Charts Section -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+        <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">Новые пользователи (30 дней)
+        </h2>
+        <div class="h-64"><canvas id="newUsersChart"></canvas></div>
     </div>
-  </div>
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+        <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">Новые ключи (30 дней)</h2>
+        <div class="h-64"><canvas id="newKeysChart"></canvas></div>
+    </div>
+</section>
 
-  <div class="col-lg-5">
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Недавние транзакции</h3>
-      </div>
-      <div class="card-body">
+<!-- Transactions Section -->
+<section class="mb-8">
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+        <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">Недавние транзакции</h2>
         {% if transactions %}
-        <div class="table-responsive">
-          <table class="table table-vcenter">
-            <thead>
-              <tr>
-                <th>Пользователь</th>
-                <th>Хост</th>
-                <th>План</th>
-                <th>Цена</th>
-                <th>Дата</th>
-              </tr>
-            </thead>
-            <tbody id="dash-transactions"
-                   data-fetch-url="{{ url_for('dashboard_transactions_partial', page=current_page) }}"
-                   data-fetch-interval="10000">
-              {% include 'partials/dashboard_transactions.html' %}
-            </tbody>
-          </table>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-white/5">
+                    <tr>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Пользователь
+                        </th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Хост</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">План</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Цена</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Тип</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Дата</th>
+                    </tr>
+                </thead>
+                <tbody id="dash-transactions" class="divide-y divide-white/10"
+                    data-fetch-url="{{ url_for('dashboard_transactions_partial', page=current_page) }}"
+                    data-fetch-interval="10000">
+                    {% include 'partials/dashboard_transactions.html' %}
+                </tbody>
+            </table>
         </div>
-
-        {% if total_pages > 1 %}
-        <div class="d-flex justify-content-center mt-3">
-          <ul class="pagination">
-            <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
-              <a class="page-link" href="{{ url_for('dashboard_page', page=current_page - 1) }}" aria-label="Previous">«</a>
-            </li>
+        {% if total_pages and total_pages > 1 %}
+        <div class="flex justify-center mt-4 gap-2">
+            {% if current_page > 1 %}
+            <a href="{{ url_for('dashboard_page', page=current_page - 1) }}"
+                class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">«</a>
+            {% endif %}
             {% for p in range(1, total_pages + 1) %}
-            <li class="page-item {% if p == current_page %}active{% endif %}">
-              <a class="page-link" href="{{ url_for('dashboard_page', page=p) }}">{{ p }}</a>
-            </li>
+            <a href="{{ url_for('dashboard_page', page=p) }}"
+                class="px-3 py-1 rounded {% if p == current_page %}bg-primary text-background-dark{% else %}bg-white/10 hover:bg-white/20 text-white{% endif %} text-sm">{{
+                p }}</a>
             {% endfor %}
-            <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
-              <a class="page-link" href="{{ url_for('dashboard_page', page=current_page + 1) }}" aria-label="Next">»</a>
-            </li>
-          </ul>
+            {% if current_page < total_pages %} <a href="{{ url_for('dashboard_page', page=current_page + 1) }}"
+                class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">»</a>
+                {% endif %}
         </div>
         {% endif %}
         {% else %}
-        <p class="text-secondary">Пока нет транзакций для отображения.</p>
+        <p class="text-white/50">Пока нет транзакций для отображения.</p>
         {% endif %}
-      </div>
     </div>
+</section>
 
-  </div>
-</div>
-
-
-<div class="modal modal-blur fade" id="speedtestModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Скорость — <span id="st-modal-host"></span></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row g-2 align-items-center mb-2">
-          <div class="col-auto"><label class="form-label m-0">Метрика:</label></div>
-          <div class="col-auto">
-            <select id="st-metric" class="form-select form-select-sm">
-              <option value="download_mbps" selected>Скорость загрузки (Mbps)</option>
-              <option value="upload_mbps">Скорость отдачи (Mbps)</option>
-              <option value="ping_ms">Пинг (ms)</option>
-            </select>
-          </div>
-          <div class="col-auto"><label class="form-label m-0">Период:</label></div>
-          <div class="col-auto">
-            <select id="st-range" class="form-select form-select-sm">
-              <option value="24">24 точки</option>
-              <option value="60" selected>60 точек</option>
-              <option value="120">120 точек</option>
-            </select>
-          </div>
-          <div class="col-auto">
-            <button id="st-refresh" class="btn btn-outline-primary btn-sm">Обновить</button>
-          </div>
+<!-- Speedtest Running Modal -->
+<div id="speedtestRunningModal" class="modal-overlay">
+    <div class="modal-content p-6">
+        <div class="flex items-center gap-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div>
+                <div class="font-semibold text-white">Идёт измерение скорости…</div>
+                <div class="text-white/50 text-sm">Пожалуйста, подождите 10–30 секунд</div>
+            </div>
         </div>
-        <canvas id="st-detail-canvas" height="360"></canvas>
-      </div>
     </div>
-  </div>
-  
 </div>
 
-
-<div class="modal modal-blur fade" id="speedtestRunningModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+<!-- Speedtest Detail Modal -->
+<div id="speedtestModal" class="modal-overlay modal-xl">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Идёт измерение скорости…</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body d-flex align-items-center gap-3">
-        <div class="spinner-aurora" aria-hidden="true"></div>
-        <div>
-          <div class="fw-semibold">Пожалуйста, подождите 10–30 секунд</div>
-          <div class="text-secondary small">Мы запускаем SSH‑тест. Окно закроется автоматически по завершении.</div>
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold">Скорость — <span id="st-modal-host"></span></h5>
+            <button onclick="closeModal('speedtestModal')" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
         </div>
-      </div>
+        <div class="p-6">
+            <div class="flex flex-wrap items-center gap-4 mb-4">
+                <label class="text-white/70">Метрика:</label>
+                <select id="st-metric"
+                    class="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm">
+                    <option value="download_mbps" selected>Скорость загрузки (Mbps)</option>
+                    <option value="upload_mbps">Скорость отдачи (Mbps)</option>
+                    <option value="ping_ms">Пинг (ms)</option>
+                </select>
+                <label class="text-white/70">Период:</label>
+                <select id="st-range"
+                    class="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm">
+                    <option value="24">24 точки</option>
+                    <option value="60" selected>60 точек</option>
+                    <option value="120">120 точек</option>
+                </select>
+                <button id="st-refresh"
+                    class="px-4 py-1.5 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30">
+                    Обновить
+                </button>
+            </div>
+            <div class="h-80"><canvas id="st-detail-canvas"></canvas></div>
+        </div>
     </div>
-  </div>
 </div>
+{% endblock %}
 
-<script id="chart-data" type="application/json">
-  {{ chart_data | tojson }}
-</script>
+{% block scripts %}
+<script id="chart-data" type="application/json">{{ chart_data | tojson }}</script>
 <script>
-  const CHART_DATA = JSON.parse(document.getElementById('chart-data').textContent);
-  document.addEventListener('DOMContentLoaded', async () => {
-    // Soft-select helpers (как в Ключах)
-    function buildSoftSelect(selectEl, toggleEl, menuEl, placeholder){
-      if (!selectEl || !toggleEl || !menuEl) return;
-      // Render items
-      menuEl.innerHTML = '';
-      const opts = Array.from(selectEl.options || []);
-      opts.forEach(opt => {
-        const div = document.createElement('div');
-        div.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
-        div.dataset.value = opt.value;
-        div.innerHTML = `<span style="opacity:.75">${opt.textContent||''}</span> <span class="ms-1 text-warning">⚡</span>`;
-        div.addEventListener('click', () => {
-          selectEl.value = opt.value;
-          menuEl.querySelectorAll('.soft-select-item').forEach(el => el.classList.remove('is-active'));
-          div.classList.add('is-active');
-          toggleEl.textContent = opt.textContent || placeholder || '';
-          toggleEl.closest('.soft-select')?.classList.remove('open');
-          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-        menuEl.appendChild(div);
-      });
-      const selOpt = opts.find(o => o.selected) || opts[0];
-      toggleEl.textContent = (selOpt && selOpt.textContent) || placeholder || '';
-      const wrap = toggleEl.closest('.soft-select');
-      function placeMenu(){
-        const r = toggleEl.getBoundingClientRect();
-        menuEl.style.position = 'fixed';
-        menuEl.style.left = `${Math.round(r.left)}px`;
-        menuEl.style.top = `${Math.round(r.bottom + 6)}px`;
-        menuEl.style.width = `${Math.round(r.width)}px`;
-        menuEl.style.zIndex = '1065';
-      }
-      function openMenu(){
-        if (menuEl.parentElement !== document.body) document.body.appendChild(menuEl);
-        placeMenu();
-        wrap.classList.add('open');
-        menuEl.style.display='block';
-        window.addEventListener('scroll', placeMenu, true);
-        window.addEventListener('resize', placeMenu, true);
-      }
-      function closeMenu(){
-        wrap.classList.remove('open');
-        menuEl.style.display='none';
-        if (menuEl.parentElement === document.body) wrap.appendChild(menuEl);
-        window.removeEventListener('scroll', placeMenu, true);
-        window.removeEventListener('resize', placeMenu, true);
-      }
-      toggleEl.onclick = (e)=>{ e.stopPropagation(); if (wrap.classList.contains('open')) closeMenu(); else openMenu(); };
-      document.addEventListener('click', (e)=>{ if (!wrap.contains(e.target)) closeMenu(); });
-      document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeMenu(); });
-    }
-    function initSoftSelect(selectId, placeholder){
-      const sel = document.getElementById(selectId);
-      const wrap = document.querySelector(`.soft-select[data-target="${selectId}"]`);
-      if (!sel || !wrap) return;
-      const toggle = wrap.querySelector('.soft-select-toggle');
-      const menu = wrap.querySelector('.soft-select-menu');
-      buildSoftSelect(sel, toggle, menu, placeholder);
-      sel.addEventListener('change', ()=> buildSoftSelect(sel, toggle, menu, placeholder));
-    }
-    // Top compact block logic
-    const targetSelect = document.getElementById('st-target');
-    const latestBox = document.getElementById('st-latest');
-    const topCanvas = document.getElementById('st-top-canvas');
-    const runForm = document.getElementById('st-run-form');
-    let topChart = null;
+    document.addEventListener('DOMContentLoaded', async () => {
+        const CHART_DATA = JSON.parse(document.getElementById('chart-data')?.textContent || '{}');
 
-    async function loadAndDrawTop(){
-      if (!targetSelect || !topCanvas) return;
-      const name = targetSelect.value;
-      const url = `{{ url_for('host_speedtests_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(name));
-      try {
-        const resp = await fetch(url + '?limit=60', {headers: {'Accept': 'application/json'}});
-        const data = await resp.json();
-        if (!data || !data.ok) {
-          console.warn('Speedtests JSON not ok', {url, data});
-          return;
+        // Chart config
+        const chartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'top', align: 'end', labels: { color: '#e0e0e0', boxWidth: 12, padding: 20, font: { size: 14 } } },
+                    tooltip: { backgroundColor: '#102219', titleColor: '#e0e0e0', bodyColor: '#e0e0e0', borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1, padding: 10, cornerRadius: 8 }
+                },
+                scales: {
+                    x: { ticks: { color: 'rgba(224, 224, 224, 0.5)' }, grid: { color: 'rgba(255, 255, 255, 0.1)', drawOnChartArea: false } },
+                    y: { ticks: { color: 'rgba(224, 224, 224, 0.5)' }, grid: { color: 'rgba(255, 255, 255, 0.1)', borderDash: [2, 4] }, beginAtZero: true }
+                }
+            }
+        };
+
+        // Преобразуем данные из формата {users: {date: count}, keys: {date: count}} в формат для Chart.js
+        let usersLabels = [], usersData = [], keysLabels = [], keysData = [];
+
+        if (CHART_DATA.users && typeof CHART_DATA.users === 'object') {
+            const sortedDates = Object.keys(CHART_DATA.users).sort();
+            usersLabels = sortedDates.map(d => d.slice(5)); // MM-DD формат
+            usersData = sortedDates.map(d => CHART_DATA.users[d] || 0);
         }
-        const items = (data.items||[]).slice().reverse();
-        // latest line
-        if (items.length){
-          const last = items[items.length-1];
-          const parts = [];
-          if (last.method) parts.push(`<span class='badge bg-blue-lt'>${String(last.method).toUpperCase()}</span>`);
-          parts.push(`⏱ ${last.ping_ms ?? '—'} ms`);
-          parts.push(`↓ ${last.download_mbps ?? '—'} Mbps`);
-          parts.push(`↑ ${last.upload_mbps ?? '—'} Mbps`);
-          if (last.server_name) parts.push(`📍 ${last.server_name}`);
-          parts.push(`<span class='text-secondary'>${last.created_at}</span>`);
-          if (latestBox) latestBox.innerHTML = parts.join(' · ');
+
+        if (CHART_DATA.keys && typeof CHART_DATA.keys === 'object') {
+            const sortedDates = Object.keys(CHART_DATA.keys).sort();
+            keysLabels = sortedDates.map(d => d.slice(5)); // MM-DD формат
+            keysData = sortedDates.map(d => CHART_DATA.keys[d] || 0);
+        }
+
+        // New Users Chart
+        const usersCtx = document.getElementById('newUsersChart')?.getContext('2d');
+        if (usersCtx && usersLabels.length > 0) {
+            const gradient = usersCtx.createLinearGradient(0, 0, 0, usersCtx.canvas.height);
+            gradient.addColorStop(0, 'rgba(19, 236, 128, 0.3)');
+            gradient.addColorStop(1, 'rgba(19, 236, 128, 0)');
+            new Chart(usersCtx, {
+                ...chartConfig,
+                data: {
+                    labels: usersLabels,
+                    datasets: [{
+                        label: 'Новые пользователи',
+                        data: usersData,
+                        borderColor: '#13ec80', backgroundColor: gradient, fill: true, tension: 0.4,
+                        pointBackgroundColor: '#13ec80', pointRadius: 4, pointHoverRadius: 8
+                    }]
+                },
+                options: { ...chartConfig.options, plugins: { ...chartConfig.options.plugins, legend: { display: false } } }
+            });
         } else {
-          if (latestBox) latestBox.textContent = 'Нет данных';
+            console.log('New Users chart: no data', CHART_DATA);
         }
-        // chart
-        const labels = items.map(it => it.created_at);
-        const series = items.map(it => parseFloat(String(it.download_mbps ?? '0')) || 0);
-        const seriesUp = items.map(it => parseFloat(String(it.upload_mbps ?? '0')) || 0);
-        const pr = items.length <= 2 ? 3 : 0;
-        const tn = items.length <= 2 ? 0 : 0.3;
-        const ctx = topCanvas.getContext('2d');
-        if (topChart) topChart.destroy();
-        topChart = new Chart(ctx, {
-          type: 'line',
-          data: { labels, datasets: [
-            {
-              label: 'Download Mbps', data: series,
-              borderColor: '#206bc4', backgroundColor: 'rgba(32,107,196,0.08)',
-              borderWidth: 2, fill: true, tension: tn, pointRadius: pr
-            },
-            {
-              label: 'Upload Mbps', data: seriesUp,
-              borderColor: '#2fb344', backgroundColor: 'rgba(47,179,68,0.08)',
-              borderWidth: 2, fill: false, tension: tn, pointRadius: pr
-            }
-          ]},
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {display: true}, tooltip: {enabled: true, mode: 'nearest', intersect: false},
-              zoom: { zoom: { wheel: {enabled: true}, pinch: {enabled: true}, mode: 'x' }, pan: { enabled: true, mode: 'x' } }
-            },
-            scales: { x: { display: true, ticks: { maxTicksLimit: 10 } }, y: { display: true, beginAtZero: true } }
-          }
-        });
-      } catch(e) { console.error('Speedtests fetch failed', e); }
-    }
-    initSoftSelect('st-target', 'Выберите SSH цель...');
-    if (targetSelect) targetSelect.addEventListener('change', loadAndDrawTop);
-    await loadAndDrawTop();
-    function showRunning(){
-      try { new bootstrap.Modal(document.getElementById('speedtestRunningModal'), {backdrop:'static', keyboard:false}).show(); } catch(_){}
-    }
-    function hideRunning(){
-      try { bootstrap.Modal.getInstance(document.getElementById('speedtestRunningModal'))?.hide(); } catch(_){}
-    }
 
-    if (runForm) {
-      runForm.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const name = targetSelect ? targetSelect.value : '';
-        const fd = new FormData(runForm);
-        try {
-          showRunning();
-          const runUrl = `{{ url_for('run_ssh_target_speedtest_route', target_name='__TARGET__') }}`.replace('__TARGET__', encodeURIComponent(name));
-          const resp = await fetch(runUrl, {
-            method: 'POST', body: fd, credentials: 'same-origin'
-          });
-          // после выполнения — перерисуем
-          setTimeout(async ()=>{ await loadAndDrawTop(); hideRunning(); }, 800);
-        } catch(_){}}
-      );
-    }
+        // New Keys Chart
+        const keysCtx = document.getElementById('newKeysChart')?.getContext('2d');
+        if (keysCtx && keysLabels.length > 0) {
+            const gradient = keysCtx.createLinearGradient(0, 0, 0, keysCtx.canvas.height);
+            gradient.addColorStop(0, 'rgba(19, 236, 128, 0.3)');
+            gradient.addColorStop(1, 'rgba(19, 236, 128, 0)');
+            new Chart(keysCtx, {
+                ...chartConfig,
+                data: {
+                    labels: keysLabels,
+                    datasets: [{
+                        label: 'Новые ключи',
+                        data: keysData,
+                        borderColor: '#13ec80', backgroundColor: gradient, fill: true, tension: 0.4,
+                        pointBackgroundColor: '#13ec80', pointRadius: 4, pointHoverRadius: 8
+                    }]
+                },
+                options: { ...chartConfig.options, plugins: { ...chartConfig.options.plugins, legend: { display: false } } }
+            });
+        } else {
+            console.log('New Keys chart: no data', CHART_DATA);
+        }
 
-    // Intercept "run for all"
-    const runAllForm = document.getElementById('st-run-all-form');
-    if (runAllForm) {
-      runAllForm.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const fd = new FormData(runAllForm);
-        try {
-          showRunning();
-          await fetch(runAllForm.action, { method: 'POST', body: fd, credentials: 'same-origin' });
-          // после выполнения — просто закрываем и обновляем график
-          setTimeout(async ()=>{ await loadAndDrawTop(); hideRunning(); }, 1200);
-        } catch(_){}
-      });
-    }
+        // SSH Target functionality
+        const targetSelect = document.getElementById('st-target');
+        const latestBox = document.getElementById('st-latest');
+        const topCanvas = document.getElementById('st-top-canvas');
+        const runForm = document.getElementById('st-run-form');
+        const runAllForm = document.getElementById('st-run-all-form');
+        let topChart = null;
 
-    const modalEl = document.getElementById('speedtestModal');
-    const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
-    const titleHost = document.getElementById('st-modal-host');
-    const metricEl = document.getElementById('st-metric');
-    const rangeEl = document.getElementById('st-range');
-    const refreshBtn = document.getElementById('st-refresh');
-    const detailCanvas = document.getElementById('st-detail-canvas');
-    let detailChart = null;
-    let currentHost = null;
-    let currentUrl = null;
+        window.initSoftSelect('st-target', 'Выберите SSH цель...');
 
-    window.openSpeedtestModal = async function(host, url){
-      currentHost = host; currentUrl = url;
-      if (titleHost) titleHost.textContent = host;
-      if (modal) modal.show();
-      await drawDetail();
-    };
+        async function loadAndDrawTop() {
+            if (!targetSelect || !topCanvas) return;
+            const name = targetSelect.value;
+            if (!name) return;
 
-    async function drawDetail(){
-      if (!detailCanvas) return;
-      const metric = metricEl.value || 'download_mbps';
-      const limit = parseInt(rangeEl.value||'60', 10);
-      try {
-        const resp = await fetch(currentUrl + '?limit=' + limit, {headers: {'Accept': 'application/json'}});
-        const data = await resp.json();
-        if (!data || !data.ok) return;
-        const items = (data.items || []).slice().reverse();
-        const labels = items.map(it => it.created_at);
-        const series = items.map(it => Number(it[metric] || 0));
-        const ctx = detailCanvas.getContext('2d');
-        if (detailChart) { detailChart.destroy(); }
-        detailChart = new Chart(ctx, {
-          type: 'line',
-          data: { labels, datasets: [{
-            label: metric,
-            data: series,
-            borderColor: metric === 'ping_ms' ? '#e67e22' : (metric === 'upload_mbps' ? '#2fb344' : '#206bc4'),
-            backgroundColor: 'rgba(32,107,196,0.08)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.3,
-            pointRadius: 2,
-          }]},
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {display: false},
-              tooltip: {enabled: true, mode: 'index', intersect: false},
-              zoom: {
-                zoom: { wheel: {enabled: true}, pinch: {enabled: true}, mode: 'x' },
-                pan: { enabled: true, mode: 'x' }
-              }
-            },
-            interaction: { intersect: false, mode: 'nearest' },
-            scales: {
-              x: { display: true, ticks: { maxTicksLimit: 10 } },
-              y: { display: true, beginAtZero: true }
-            }
-          }
-        });
-      } catch(e) {}
-    }
-    if (refreshBtn) refreshBtn.addEventListener('click', drawDetail);
-    if (metricEl) metricEl.addEventListener('change', drawDetail);
-    if (rangeEl) rangeEl.addEventListener('change', drawDetail);
-  });
+            const url = `{{ url_for('host_speedtests_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(name));
+            try {
+                const resp = await fetch(url + '?limit=60', { headers: { 'Accept': 'application/json' } });
+                const data = await resp.json();
+                if (!data || !data.ok) return;
+
+                const items = (data.items || []).slice().reverse();
+
+                // Latest result
+                if (items.length && latestBox) {
+                    const last = items[items.length - 1];
+                    const parts = [];
+                    if (last.method) parts.push(`<span class='px-2 py-0.5 rounded bg-primary/20 text-primary text-xs'>${String(last.method).toUpperCase()}</span>`);
+                    parts.push(`⏱ ${last.ping_ms ?? '—'} ms`);
+                    parts.push(`↓ ${last.download_mbps ?? '—'} Mbps`);
+                    parts.push(`↑ ${last.upload_mbps ?? '—'} Mbps`);
+                    if (last.server_name) parts.push(`📍 ${last.server_name}`);
+                    parts.push(`<span class='text-white/50'>${last.created_at}</span>`);
+                    latestBox.innerHTML = parts.join(' · ');
+                } else if (latestBox) {
+                    latestBox.textContent = 'Нет данных';
+                }
+
+                // Chart
+                const labels = items.map(it => it.created_at);
+                const seriesDown = items.map(it => parseFloat(String(it.download_mbps ?? '0')) || 0);
+                const seriesUp = items.map(it => parseFloat(String(it.upload_mbps ?? '0')) || 0);
+
+                const ctx = topCanvas.getContext('2d');
+                const gradDown = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+                gradDown.addColorStop(0, 'rgba(19, 236, 128, 0.3)');
+                gradDown.addColorStop(1, 'rgba(19, 236, 128, 0)');
+                const gradUp = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+                gradUp.addColorStop(0, 'rgba(0, 191, 255, 0.3)');
+                gradUp.addColorStop(1, 'rgba(0, 191, 255, 0)');
+
+                if (topChart) topChart.destroy();
+                topChart = new Chart(ctx, {
+                    ...chartConfig,
+                    data: {
+                        labels,
+                        datasets: [
+                            { label: 'Download Mbps', data: seriesDown, borderColor: '#13ec80', backgroundColor: gradDown, fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 8, borderWidth: 2 },
+                            { label: 'Upload Mbps', data: seriesUp, borderColor: '#00bfff', backgroundColor: gradUp, fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 8, borderWidth: 2 }
+                        ]
+                    }
+                });
+            } catch (e) { console.error('Speedtest fetch failed:', e); }
+        }
+
+        if (targetSelect) {
+            targetSelect.addEventListener('change', loadAndDrawTop);
+            await loadAndDrawTop();
+        }
+
+        function showRunning() { openModal('speedtestRunningModal'); }
+        function hideRunning() { closeModal('speedtestRunningModal'); }
+
+        if (runForm) {
+            runForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = targetSelect?.value || '';
+                const fd = new FormData(runForm);
+                try {
+                    showRunning();
+                    const runUrl = `{{ url_for('run_ssh_target_speedtest_route', target_name='__TARGET__') }}`.replace('__TARGET__', encodeURIComponent(name));
+                    await fetch(runUrl, { method: 'POST', body: fd, credentials: 'same-origin' });
+                    setTimeout(async () => { await loadAndDrawTop(); hideRunning(); }, 800);
+                } catch (e) { hideRunning(); }
+            });
+        }
+
+        if (runAllForm) {
+            runAllForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const fd = new FormData(runAllForm);
+                try {
+                    showRunning();
+                    await fetch(runAllForm.action, { method: 'POST', body: fd, credentials: 'same-origin' });
+                    setTimeout(async () => { await loadAndDrawTop(); hideRunning(); }, 1200);
+                } catch (e) { hideRunning(); }
+            });
+        }
+
+        // Detail modal functionality
+        const modalEl = document.getElementById('speedtestModal');
+        const titleHost = document.getElementById('st-modal-host');
+        const metricEl = document.getElementById('st-metric');
+        const rangeEl = document.getElementById('st-range');
+        const refreshBtn = document.getElementById('st-refresh');
+        const detailCanvas = document.getElementById('st-detail-canvas');
+        let detailChart = null;
+        let currentUrl = null;
+
+        window.openSpeedtestModal = async function (host, url) {
+            currentUrl = url;
+            if (titleHost) titleHost.textContent = host;
+            openModal('speedtestModal');
+            await drawDetail();
+        };
+
+        async function drawDetail() {
+            if (!detailCanvas || !currentUrl) return;
+            const metric = metricEl?.value || 'download_mbps';
+            const limit = parseInt(rangeEl?.value || '60', 10);
+            try {
+                const resp = await fetch(currentUrl + '?limit=' + limit, { headers: { 'Accept': 'application/json' } });
+                const data = await resp.json();
+                if (!data || !data.ok) return;
+                const items = (data.items || []).slice().reverse();
+                const labels = items.map(it => it.created_at);
+                const series = items.map(it => Number(it[metric] || 0));
+                const ctx = detailCanvas.getContext('2d');
+                if (detailChart) detailChart.destroy();
+                detailChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: metric,
+                            data: series,
+                            borderColor: metric === 'ping_ms' ? '#f59e0b' : (metric === 'upload_mbps' ? '#00bfff' : '#13ec80'),
+                            backgroundColor: 'rgba(19, 236, 128, 0.1)',
+                            borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2
+                        }]
+                    },
+                    options: chartConfig.options
+                });
+            } catch (e) { }
+        }
+
+        if (refreshBtn) refreshBtn.addEventListener('click', drawDetail);
+        if (metricEl) metricEl.addEventListener('change', drawDetail);
+        if (rangeEl) rangeEl.addEventListener('change', drawDetail);
+    });
 </script>
-
 {% endblock %}
