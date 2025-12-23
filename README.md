@@ -63,14 +63,14 @@
         <sub>Бот — Главное меню</sub>
       </td>
       <td align="center" valign="top">
-        <a href="docs/screenshots/bot-admin-menu.png"><img src="docs/screenshots/bot-admin-menu.png" width="360" alt="Bot Admin Menu"/></a><br>
-        <sub>Бот — Админ‑меню</sub>
+        <a href="docs/screenshots/bot-settings.png"><img src="docs/screenshots/bot-settings.png" width="360" alt="Bot Settings"/></a><br>
+        <sub>Бот — Настройки/Помощь</sub>
       </td>
     </tr>
     <tr>
       <td align="center" valign="top">
-        <a href="docs/screenshots/bot-settings.png"><img src="docs/screenshots/bot-settings.png" width="360" alt="Bot Settings"/></a><br>
-        <sub>Бот — Настройки/Помощь</sub>
+        <a href="docs/screenshots/bot-admin-menu.png"><img src="docs/screenshots/bot-admin-menu.png" width="360" alt="Bot Admin Menu"/></a><br>
+        <sub>Бот — Админ‑меню</sub>
       </td>
       <td align="center" valign="top">
         <a href="docs/screenshots/button_design.png"><img src="docs/screenshots/button_design.png" width="480" alt="Button Constructor"/></a><br>
