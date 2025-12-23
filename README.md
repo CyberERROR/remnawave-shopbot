@@ -4,12 +4,12 @@
 
 <div align="center">
 
-[![Release](https://img.shields.io/github/v/release/CyberERROR/remnawave-shopbot?label=release&style=flat-square)](https://github.com/bt4g/remnawave-shopbot/releases)
-[![Downloads](https://img.shields.io/github/downloads/CyberERROR/remnawave-shopbot/total?label=downloads&style=flat-square)](https://github.com/bt4g/remnawave-shopbot/releases)
+[![Release](https://img.shields.io/github/v/release/CyberERROR/remnawave-shopbot?label=release&style=flat-square)](https://github.com/CyberERROR/remnawave-shopbot/releases)
+[![Downloads](https://img.shields.io/github/downloads/CyberERROR/remnawave-shopbot/total?label=downloads&style=flat-square)](https://github.com/CyberERROR/remnawave-shopbot/releases)
 [![License](https://img.shields.io/github/license/CyberERROR/remnawave-shopbot?label=license&style=flat-square)](LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/CyberERROR/remnawave-shopbot?label=last%20commit&style=flat-square)](https://github.com/bt4g/remnawave-shopbot/commits)
-[![Issues](https://img.shields.io/github/issues/CyberERROR/remnawave-shopbot?label=issues&style=flat-square)](https://github.com/bt4g/remnawave-shopbot/issues)
-[![Stars](https://img.shields.io/github/stars/CyberERROR/remnawave-shopbot?label=stars&style=flat-square)](https://github.com/bt4g/remnawave-shopbot/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/CyberERROR/remnawave-shopbot?label=last%20commit&style=flat-square)](https://github.com/CyberERROR/remnawave-shopbot/commits)
+[![Issues](https://img.shields.io/github/issues/CyberERROR/remnawave-shopbot?label=issues&style=flat-square)](https://github.com/CyberERROR/remnawave-shopbot/issues)
+[![Stars](https://img.shields.io/github/stars/CyberERROR/remnawave-shopbot?label=stars&style=flat-square)](https://github.com/CyberERROR/remnawave-shopbot/stargazers)
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue?style=flat-square)](https://www.python.org/downloads/)
 
 [Установка](#-быстрая-установка-под-ключ) • [Документация](#⚙️-первичная-конфигурация) • [Платёжные системы](#-платёжные-системы) • [Скриншоты](#-скриншоты) • [Поддержка](#-техническая-поддержка)
