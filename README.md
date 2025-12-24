@@ -91,7 +91,7 @@ ssh root@your-server-ip
 ### 2️⃣ Запустите установщик
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/bt4g/remnawave-shopbot/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash
 ```
 
 ### 3️⃣ Следуйте инструкциям
@@ -159,7 +159,7 @@ truncate -s 0 /var/lib/docker/containers/*/*-json.log
 
 ```bash
 # Запустить установщик (загружает свежую версию)
-curl -sSL https://raw.githubusercontent.com/bt4g/remnawave-shopbot/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash
 
 # Пересоздать контейнеры с новым кодом
 docker-compose down && docker-compose up -d --build
@@ -347,7 +347,7 @@ https://t.me/<bot_username>?start=ref_<telegram_id>
 
 Если вы нашли баг или хотите предложить улучшение:
 
-1. Проверьте [Issues](https://github.com/bt4g/remnawave-shopbot/issues) — возможно, это уже известно
+1. Проверьте [Issues](https://github.com/CyberERROR/remnawave-shopbot/issues) — возможно, это уже известно
 2. Создайте новый issue с описанием:
    - Что произошло
    - Как это воспроизвести
@@ -359,7 +359,7 @@ https://t.me/<bot_username>?start=ref_<telegram_id>
 
 **Исходный код и все права принадлежат:** [@tweopi](https://github.com/tweopi)
 
-**Текущая версия:** [Releases](https://github.com/bt4g/remnawave-shopbot/releases)
+**Текущая версия:** [Releases](https://github.com/CyberERROR/remnawave-shopbot/releases)
 
 ---
 
@@ -375,6 +375,6 @@ https://t.me/<bot_username>?start=ref_<telegram_id>
 
 **Сделано с ❤️ для сообщества**
 
-[⭐ Звёздочка на GitHub](https://github.com/bt4g/remnawave-shopbot) поддержит развитие проекта
+[⭐ Звёздочка на GitHub](https://github.com/CyberERROR/remnawave-shopbot) поддержит развитие проекта
 
 </div>
