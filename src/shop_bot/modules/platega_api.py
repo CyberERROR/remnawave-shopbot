@@ -138,3 +138,5 @@ class PlategaAPI:
         except Exception as e:
             logger.error(f"Platega unexpected error during status check for {transaction_id}: {e}", exc_info=True)
             return False
+
+ 
