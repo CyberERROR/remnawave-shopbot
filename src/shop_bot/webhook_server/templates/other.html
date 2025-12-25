@@ -184,6 +184,40 @@
                 Отправить рассылку
             </button>
         </form>
+
+        <!-- Прогресс-бар рассылки -->
+        <div id="broadcast-progress-container" class="mt-6 hidden">
+            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-white font-medium">Отправка рассылки...</h4>
+                    <span id="broadcast-progress-percent" class="text-primary font-bold">0%</span>
+                </div>
+
+                <!-- Прогресс бар -->
+                <div class="w-full bg-white/10 rounded-full h-3 overflow-hidden mb-3">
+                    <div id="broadcast-progress-bar"
+                        class="h-full bg-gradient-to-r from-primary to-green-400 rounded-full transition-all duration-300 ease-out"
+                        style="width: 0%">
+                    </div>
+                </div>
+
+                <!-- Статистика -->
+                <div class="grid grid-cols-3 gap-3 text-center text-sm">
+                    <div>
+                        <p class="text-white/50">Отправлено</p>
+                        <p class="text-green-400 font-bold" id="broadcast-progress-sent">0</p>
+                    </div>
+                    <div>
+                        <p class="text-white/50">Ошибок</p>
+                        <p class="text-red-400 font-bold" id="broadcast-progress-failed">0</p>
+                    </div>
+                    <div>
+                        <p class="text-white/50">Пропущено</p>
+                        <p class="text-yellow-400 font-bold" id="broadcast-progress-skipped">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -734,12 +768,92 @@
                     method: 'POST',
                     body: formData
                 });
+
+                // Проверка на таймаут или другие ошибки сервера
+                if (!resp.ok) {
+                    if (resp.status === 504) {
+                        window.showToast('warning', 'Рассылка запущена, но сервер не успел ответить вовремя. Проверьте результаты через несколько минут.');
+                    } else {
+                        window.showToast('danger', `Ошибка сервера: ${resp.status}`);
+                    }
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
+                    return;
+                }
+
+                // Проверка что ответ - JSON
+                const contentType = resp.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    window.showToast('danger', 'Сервер вернул некорректный ответ');
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
+                    return;
+                }
+
                 const data = await resp.json();
 
-                btn.disabled = false;
-                btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
+                // Проверяем новый формат ответа с task_id
+                if (data.ok && data.task_id) {
+                    // Показываем прогресс-бар
+                    document.getElementById('broadcast-progress-container').classList.remove('hidden');
 
-                if (data.ok) {
+                    // Функция опроса статуса
+                    const pollStatus = async (taskId) => {
+                        try {
+                            const statusResp = await fetch(`/other/broadcast/status/${taskId}`);
+                            if (!statusResp.ok) return;
+
+                            const statusData = await statusResp.json();
+                            if (!statusData.ok) return;
+
+                            const progress = statusData.progress;
+
+                            // Обновление прогресс-бара
+                            document.getElementById('broadcast-progress-bar').style.width = `${progress.progress}%`;
+                            document.getElementById('broadcast-progress-percent').textContent = `${progress.progress}%`;
+                            document.getElementById('broadcast-progress-sent').textContent = progress.sent || 0;
+                            document.getElementById('broadcast-progress-failed').textContent = progress.failed || 0;
+                            document.getElementById('broadcast-progress-skipped').textContent = progress.skipped || 0;
+
+                            // Если рассылка завершена
+                            if (progress.status === 'completed') {
+                                setTimeout(() => {
+                                    document.getElementById('broadcast-progress-container').classList.add('hidden');
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
+
+                                    window.showToast('success',
+                                        `Рассылка завершена! Отправлено: ${progress.sent}, Ошибок: ${progress.failed}, Пропущено: ${progress.skipped}`);
+
+                                    loadStats();
+                                    document.getElementById('broadcast-text').value = '';
+                                    buttons = [];
+                                    renderButtons();
+                                    if (uploadedMediaFilename) {
+                                        document.getElementById('media-preview').classList.add('hidden');
+                                        uploadedMediaFilename = null;
+                                    }
+                                }, 2000);
+                            } else {
+                                // Продолжаем опрос
+                                setTimeout(() => pollStatus(taskId), 2000);
+                            }
+                        } catch (e) {
+                            console.error('Error polling broadcast status:', e);
+                        }
+                    };
+
+                    // Обновляем кнопку
+                    btn.innerHTML = '<span class="material-symbols-outlined text-base">schedule</span> Рассылка выполняется...';
+
+                    // Первый опрос сразу
+                    pollStatus(data.task_id);
+
+                    window.showToast('info', `Запущена рассылка для ${data.total_users} пользователей`);
+                } else if (data.ok && data.results) {
+                    // Старый формат ответа (на всякий случай)
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
                     window.showToast('success', `Рассылка завершена! Отправлено: ${data.results.sent}, Ошибок: ${data.results.failed}, Пропущено: ${data.results.skipped}`);
                     loadStats();
                     document.getElementById('broadcast-text').value = '';
@@ -750,6 +864,8 @@
                         uploadedMediaFilename = null;
                     }
                 } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
                     window.showToast('danger', data.error || 'Ошибка отправки рассылки');
                 }
             } catch (e) {
