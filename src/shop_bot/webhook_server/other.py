@@ -3,6 +3,7 @@ import json
 import asyncio
 import logging
 import uuid
+import threading
 from datetime import datetime
 from flask import render_template, request, jsonify, current_app
 from werkzeug.utils import secure_filename
@@ -16,6 +17,10 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'templates', 'partials')
 RESULTS_FILE = os.path.join(UPLOAD_FOLDER, 'total.json')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Хранилище прогресса рассылок (thread-safe)
+broadcast_progress = {}
+broadcast_lock = threading.Lock()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -56,12 +61,26 @@ def load_broadcast_results():
         logger.error(f"Failed to load broadcast results: {e}")
     return {'sent': 0, 'failed': 0, 'skipped': 0, 'timestamp': None}
 
-async def send_broadcast_async(bot, users, text, media_path=None, media_type=None, buttons=None, mode='all'):
+async def send_broadcast_async(bot, users, text, media_path=None, media_type=None, buttons=None, mode='all', task_id=None):
     sent = 0
     failed = 0
     skipped = 0
+    total = len(users)
     
-    for user in users:
+    # Инициализация прогресса
+    if task_id:
+        with broadcast_lock:
+            broadcast_progress[task_id] = {
+                'status': 'running',
+                'total': total,
+                'sent': 0,
+                'failed': 0,
+                'skipped': 0,
+                'progress': 0,
+                'start_time': datetime.now().isoformat()
+            }
+    
+    for index, user in enumerate(users):
         user_id = user.get('telegram_id')
         if not user_id:
             continue
@@ -69,6 +88,14 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
         is_banned = user.get('is_banned', False)
         if is_banned:
             skipped += 1
+            # Обновление прогресса
+            if task_id:
+                with broadcast_lock:
+                    if task_id in broadcast_progress:
+                        broadcast_progress[task_id].update({
+                            'skipped': skipped,
+                            'progress': int((index + 1) / total * 100)
+                        })
             continue
         
         try:
@@ -124,6 +151,30 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
         except Exception as e:
             logger.warning(f"Failed to send broadcast to {user_id}: {e}")
             failed += 1
+        
+        # Обновление прогресса каждые 10 сообщений или в конце
+        if task_id and ((index + 1) % 10 == 0 or (index + 1) == total):
+            with broadcast_lock:
+                if task_id in broadcast_progress:
+                    broadcast_progress[task_id].update({
+                        'sent': sent,
+                        'failed': failed,
+                        'skipped': skipped,
+                        'progress': int((index + 1) / total * 100)
+                    })
+    
+    # Финальное обновление
+    if task_id:
+        with broadcast_lock:
+            if task_id in broadcast_progress:
+                broadcast_progress[task_id].update({
+                    'status': 'completed',
+                    'sent': sent,
+                    'failed': failed,
+                    'skipped': skipped,
+                    'progress': 100,
+                    'end_time': datetime.now().isoformat()
+                })
     
     save_broadcast_results(sent, failed, skipped)
     
@@ -363,20 +414,39 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not loop or not loop.is_running():
                 return jsonify({'ok': False, 'error': 'Event loop not available'}), 500
             
-            future = asyncio.run_coroutine_threadsafe(
-                send_broadcast_async(bot, all_users, text, media_path, media_type, buttons, mode),
+            # Генерация уникального ID задачи
+            task_id = str(uuid.uuid4())
+            
+            # Запуск рассылки в фоне (не ждем результата)
+            asyncio.run_coroutine_threadsafe(
+                send_broadcast_async(bot, all_users, text, media_path, media_type, buttons, mode, task_id),
                 loop
             )
             
-            results = future.result(timeout=600)
-            
+            # Сразу возвращаем task_id
             return jsonify({
                 'ok': True,
-                'results': results
+                'task_id': task_id,
+                'total_users': len(all_users)
             })
         except Exception as e:
-            logger.error(f"Error sending broadcast: {e}")
+            logger.error(f"Error starting broadcast: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/broadcast/status/<task_id>', methods=['GET'])
+    @login_required
+    def broadcast_status(task_id):
+        """Получение прогресса рассылки"""
+        with broadcast_lock:
+            if task_id not in broadcast_progress:
+                return jsonify({'ok': False, 'error': 'Task not found'}), 404
+            
+            progress = broadcast_progress[task_id].copy()
+        
+        return jsonify({
+            'ok': True,
+            'progress': progress
+        })
     
     @flask_app.route('/other/broadcast/delete-media/<filename>', methods=['DELETE'])
     @login_required
