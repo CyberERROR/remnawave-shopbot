@@ -8,11 +8,19 @@
         <h2 class="text-2xl font-bold text-white">📊 Мониторинг системы</h2>
         <p class="text-white/50 text-sm">Состояние панели и серверов в реальном времени</p>
     </div>
-    <button type="button" id="refresh-all"
-        class="px-4 py-2 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary/30 flex items-center gap-2">
-        <span class="material-symbols-outlined text-base">refresh</span>
-        Обновить все
-    </button>
+    <div class="flex items-center gap-2">
+        <button type="button" id="clear-metrics"
+            class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 flex items-center gap-2 group"
+            title="БЕЗОПАСНО: Удалить старые замеры для графиков. Это НЕ влияет на работу системы и статистику пользователей. Просто освобождает место в БД, удаляя исторические данные мониторинга.">
+            <span class="material-symbols-outlined text-base">delete_sweep</span>
+            <span class="hidden sm:inline">Очистить метрики</span>
+        </button>
+        <button type="button" id="refresh-all"
+            class="px-4 py-2 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary/30 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">refresh</span>
+            Обновить все
+        </button>
+    </div>
 </div>
 
 <!-- Stats Cards -->
@@ -83,7 +91,7 @@
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-white font-bold flex items-center gap-2">
                 <span class="material-symbols-outlined text-blue-400">dns</span>
-                Серверы (xui_hosts)
+                Серверы (Remna_hosts)
             </h3>
             <span class="px-2 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium" id="hosts-count">{{
                 hosts|length }}</span>
@@ -501,6 +509,43 @@
             refreshAll();
 
             document.getElementById('refresh-all')?.addEventListener('click', refreshAll);
+
+            // Кнопка очистки метрик
+            document.getElementById('clear-metrics')?.addEventListener('click', async () => {
+                if (!confirm('Вы уверены, что хотите удалить все старые замеры из БД?\n\nЭто действие необратимо и освободит память, но не повлияет на текущую статистику.')) {
+                    return;
+                }
+
+                const btn = document.getElementById('clear-metrics');
+                const originalHTML = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span> Очистка...';
+
+                try {
+                    const resp = await fetch('/monitor/clear-metrics', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
+                        }
+                    });
+                    const data = await resp.json();
+
+                    if (data.ok) {
+                        window.showToast('success', data.message || 'Метрики успешно очищены');
+                        // Обновляем графики
+                        await refreshCharts();
+                    } else {
+                        window.showToast('danger', data.error || 'Ошибка очистки метрик');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    window.showToast('danger', 'Ошибка очистки метрик');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }
+            });
 
             // Кнопки обновления хостов
             document.querySelectorAll('.host-refresh-btn').forEach(btn => {

@@ -55,6 +55,7 @@ from shop_bot.data_manager.database import (
 )
 from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id
 import sqlite3
+from .other import register_other_routes
 
 _bot_controller = None
 _support_bot_controller = SupportBotController()
@@ -495,6 +496,31 @@ def create_webhook_app(bot_controller_instance):
             series = rw_repo.get_metrics_series(scope, name, since_hours=hours, limit=1000)
             return jsonify({"ok": True, "items": series})
         except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @flask_app.route('/monitor/clear-metrics', methods=['POST'])
+    @login_required
+    def monitor_clear_metrics():
+        """Удаление всех старых замеров из resource_metrics"""
+        try:
+            from shop_bot.data_manager.database import DB_FILE
+            import sqlite3
+            
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM resource_metrics")
+            deleted_count = cursor.rowcount
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Cleared {deleted_count} records from resource_metrics")
+            return jsonify({
+                "ok": True, 
+                "message": f"Удалено записей: {deleted_count}",
+                "deleted_count": deleted_count
+            })
+        except Exception as e:
+            logger.error(f"Error clearing metrics: {e}")
             return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -2887,6 +2913,8 @@ def create_webhook_app(bot_controller_instance):
         """Button constructor page"""
         template_data = get_common_template_data()
         return render_template('button_constructor.html', **template_data)
+
+    register_other_routes(flask_app, login_required, get_common_template_data)
 
     return flask_app
 

@@ -309,17 +309,17 @@
                                 class="material-symbols-outlined {% if request.endpoint == 'settings_page' %}text-primary{% endif %} text-base">settings</span>
                             <p class="text-sm font-medium leading-normal">Настройки</p>
                         </a>
-                        <a class="flex items-center gap-2 px-3 py-2 rounded-lg {% if request.endpoint == 'button_constructor_page' %}bg-primary/20 text-primary{% else %}text-white/70 hover:bg-white/5 hover:text-white{% endif %} transition-colors duration-200 flex-shrink-0"
-                            href="{{ url_for('button_constructor_page') }}">
-                            <span
-                                class="material-symbols-outlined {% if request.endpoint == 'button_constructor_page' %}text-primary{% endif %} text-base">construction</span>
-                            <p class="text-sm font-medium leading-normal">Конструктор кнопок</p>
-                        </a>
                         <a class="flex items-center gap-2 px-3 py-2 rounded-lg {% if request.endpoint == 'monitor_page' %}bg-primary/20 text-primary{% else %}text-white/70 hover:bg-white/5 hover:text-white{% endif %} transition-colors duration-200 flex-shrink-0"
                             href="{{ url_for('monitor_page') }}">
                             <span
                                 class="material-symbols-outlined {% if request.endpoint == 'monitor_page' %}text-primary{% endif %} text-base">monitoring</span>
                             <p class="text-sm font-medium leading-normal">Мониторинг</p>
+                        </a>
+                        <a class="flex items-center gap-2 px-3 py-2 rounded-lg {% if request.endpoint == 'other_page' %}bg-primary/20 text-primary{% else %}text-white/70 hover:bg-white/5 hover:text-white{% endif %} transition-colors duration-200 flex-shrink-0"
+                            href="{{ url_for('other_page') }}">
+                            <span
+                                class="material-symbols-outlined {% if request.endpoint == 'other_page' %}text-primary{% endif %} text-base">more_horiz</span>
+                            <p class="text-sm font-medium leading-normal">Прочее</p>
                         </a>
                     </nav>
                     <div class="items-center gap-4 hidden sm:flex ml-4">

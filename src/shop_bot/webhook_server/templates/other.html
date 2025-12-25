@@ -1,0 +1,1228 @@
+{% extends "base.html" %}
+
+{% block title %}Прочее - Панель управления{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-white">Прочее</h2>
+    <p class="text-white/50 text-sm">Дополнительные функции и настройки</p>
+</div>
+
+<div class="bg-white/5 border border-white/10 rounded-lg p-2 mb-6 overflow-x-auto">
+    <nav class="flex gap-1 min-w-max" id="other-nav">
+        <button type="button" data-tab="broadcast"
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-primary text-background-dark transition-colors">Рассылка</button>
+        <button type="button" data-tab="promo"
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Промо
+            коды</button>
+        <button type="button" data-tab="servers"
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Сервера</button>
+        <button type="button" data-tab="remnawave"
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Remnawave</button>
+    </nav>
+</div>
+
+<section id="tab-broadcast" class="tab-content">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="material-symbols-outlined text-primary text-2xl">group</span>
+                <p class="text-white/50 text-sm">Всего пользователей</p>
+            </div>
+            <p class="text-2xl font-bold text-white" id="stat-total">-</p>
+        </div>
+        <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="material-symbols-outlined text-primary text-2xl">key</span>
+                <p class="text-white/50 text-sm">С активными ключами</p>
+            </div>
+            <p class="text-2xl font-bold text-white" id="stat-with-keys">-</p>
+        </div>
+        <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="material-symbols-outlined text-red-400 text-2xl">key_off</span>
+                <p class="text-white/50 text-sm">С истекшими ключами</p>
+            </div>
+            <p class="text-2xl font-bold text-white" id="stat-expired-keys">-</p>
+        </div>
+        <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="material-symbols-outlined text-primary text-2xl">card_giftcard</span>
+                <p class="text-white/50 text-sm">Не использовали пробный</p>
+            </div>
+            <p class="text-2xl font-bold text-white" id="stat-no-trial">-</p>
+        </div>
+    </div>
+
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined">bar_chart</span>
+            Последние результаты рассылки
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">✅</span>
+                <div>
+                    <p class="text-white/50 text-sm">Отправлено</p>
+                    <p class="text-lg font-bold text-white" id="result-sent">0</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">❌</span>
+                <div>
+                    <p class="text-white/50 text-sm">Не удалось отправить</p>
+                    <p class="text-lg font-bold text-white" id="result-failed">0</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">⏭</span>
+                <div>
+                    <p class="text-white/50 text-sm">Пропущено (забанены)</p>
+                    <p class="text-lg font-bold text-white" id="result-skipped">0</p>
+                </div>
+            </div>
+        </div>
+        <p class="text-white/50 text-xs mt-4" id="result-time">-</p>
+    </div>
+
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+        <h3 class="text-xl font-bold text-white mb-4">Создать рассылку</h3>
+
+        <form id="broadcast-form">
+            <!-- Текст сообщения -->
+            <div class="mb-6">
+                <label class="block text-white/70 text-sm font-medium mb-2">Текст сообщения</label>
+                <textarea id="broadcast-text" rows="6"
+                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Введите текст сообщения..."></textarea>
+                <p class="text-white/50 text-xs mt-1">
+                    Поддерживаются HTML теги: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;s&gt;, &lt;code&gt;, &lt;pre&gt;,
+                    &lt;a href=""&gt;
+                </p>
+                <button type="button" id="btn-preview"
+                    class="mt-2 px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">visibility</span>
+                    Предпросмотр
+                </button>
+            </div>
+
+            <!-- Медиа и Кнопки в 2 колонки -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Медиа -->
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Медиа (опционально)</label>
+                    <div class="flex gap-2 items-start">
+                        <button type="button" id="btn-upload-media"
+                            class="px-4 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-base">upload</span>
+                            Прикрепить фото/видео/GIF
+                        </button>
+                        <input type="file" id="media-input" accept="image/*,video/*,.gif" class="hidden" />
+                    </div>
+                    <div id="media-preview" class="mt-4 hidden">
+                        <div class="relative inline-block">
+                            <img id="media-preview-img" src=""
+                                class="max-w-xs max-h-64 rounded-lg border border-white/10 hidden" />
+                            <video id="media-preview-video" controls
+                                class="max-w-xs max-h-64 rounded-lg border border-white/10 hidden"></video>
+                            <button type="button" id="btn-remove-media"
+                                class="absolute top-2 right-2 px-2 py-1 rounded bg-red-500/80 text-white text-sm hover:bg-red-500">
+                                <span class="material-symbols-outlined text-base">close</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кнопки -->
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Кнопки (опционально)</label>
+                    <p class="text-white/50 text-xs mb-2">URL должен начинаться с http:// или https://</p>
+                    <div id="buttons-list" class="space-y-2 mb-2"></div>
+                    <button type="button" id="btn-add-button"
+                        class="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">add</span>
+                        Добавить кнопку
+                    </button>
+                </div>
+            </div>
+
+            <!-- Кому отправить - 2 колонки -->
+            <div class="mb-6">
+                <label class="block text-white/70 text-sm font-medium mb-3">Кому отправить</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="mode" value="test"
+                            class="w-4 h-4 text-primary focus:ring-primary/50" />
+                        <span class="text-white/70 text-sm">⚙️ Тестовый режим (только админу)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="mode" value="with_keys"
+                            class="w-4 h-4 text-primary focus:ring-primary/50" />
+                        <span class="text-white/70 text-sm">🔑 С активным ключом</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="mode" value="expired_keys"
+                            class="w-4 h-4 text-primary focus:ring-primary/50" />
+                        <span class="text-white/70 text-sm">⏰ С истёкшим ключом</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="mode" value="without_trial"
+                            class="w-4 h-4 text-primary focus:ring-primary/50" />
+                        <span class="text-white/70 text-sm">🎁 Без пробного</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer md:col-span-2">
+                        <input type="radio" name="mode" value="all" checked
+                            class="w-4 h-4 text-primary focus:ring-primary/50" />
+                        <span class="text-white/70 text-sm">👥 Отправить всем</span>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" id="btn-send"
+                class="px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">send</span>
+                Отправить рассылку
+            </button>
+        </form>
+    </div>
+</section>
+
+<section id="tab-promo" class="tab-content hidden">
+    <!-- Форма создания промокода -->
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
+        <h3 class="text-xl font-bold text-white mb-4">Создать промокод</h3>
+
+        <form id="promo-create-form">
+            <!-- Способ создания и код -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Способ создания</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="code_mode" value="auto" checked
+                                class="w-4 h-4 text-primary focus:ring-primary/50" />
+                            <span class="text-white/70 text-sm">🎲 Генерировать автоматически</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="code_mode" value="manual"
+                                class="w-4 h-4 text-primary focus:ring-primary/50" />
+                            <span class="text-white/70 text-sm">✍️ Ввести вручную</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="manual-code-field" class="hidden">
+                    <label class="block text-white/70 text-sm font-medium mb-2">Код промокода</label>
+                    <input type="text" name="code"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 uppercase"
+                        placeholder="PROMO2025" />
+                    <p class="text-white/50 text-xs mt-1">Будет преобразован в верхний регистр</p>
+                </div>
+            </div>
+
+            <!-- Тип и значение скидки -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Тип скидки *</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="discount_type" value="percent" checked
+                                class="w-4 h-4 text-primary focus:ring-primary/50" />
+                            <span class="text-white/70 text-sm">% Процентная скидка</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="discount_type" value="fixed"
+                                class="w-4 h-4 text-primary focus:ring-primary/50" />
+                            <span class="text-white/70 text-sm">₽ Фиксированная скидка</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Значение скидки *</label>
+                    <input type="number" name="discount_value" step="0.01" min="0" required
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        placeholder="10" />
+                </div>
+            </div>
+
+            <!-- Лимиты и даты - 4 колонки на больших экранах -->
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Общий лимит</label>
+                    <input type="number" name="usage_limit_total" min="1"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        placeholder="∞" />
+                </div>
+
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Лимит/польз.</label>
+                    <input type="number" name="usage_limit_per_user" min="1"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        placeholder="∞" />
+                </div>
+
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Действует с</label>
+                    <input type="datetime-local" name="valid_from"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                </div>
+
+                <div>
+                    <label class="block text-white/70 text-sm font-medium mb-2">Действует до</label>
+                    <input type="datetime-local" name="valid_until"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                </div>
+            </div>
+
+            <!-- Описание -->
+            <div class="mb-4">
+                <label class="block text-white/70 text-sm font-medium mb-2">Описание</label>
+                <textarea name="description" rows="2"
+                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Промокод для новых клиентов..."></textarea>
+            </div>
+
+            <button type="submit"
+                class="px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">add</span>
+                Создать промокод
+            </button>
+        </form>
+    </div>
+
+    <!-- Таблица промокодов -->
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+        <h3 class="text-xl font-bold text-white mb-4">Существующие промокоды</h3>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-white/5">
+                    <tr>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Код</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Скидка</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Использовано
+                        </th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Лимиты</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Срок действия
+                        </th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Статус</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-right">
+                            Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="promo-table-body" class="divide-y divide-white/10">
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-white/50">Загрузка...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Модальное окно редактирования промокода -->
+<div id="editPromoModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold">Редактировать промокод</h5>
+            <button onclick="closeModal('editPromoModal')" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="promo-edit-form">
+                <input type="hidden" id="edit-promo-code" name="code" />
+
+                <div class="mb-4">
+                    <label class="block text-white/70 text-sm font-medium mb-2">Код</label>
+                    <input type="text" id="edit-code-display" readonly
+                        class="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-2.5 text-white/50 cursor-not-allowed" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-white/70 text-sm font-medium mb-2">Тип скидки *</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="edit_discount_type" value="percent"
+                                    class="w-4 h-4 text-primary focus:ring-primary/50" />
+                                <span class="text-white/70 text-sm">% Процентная</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="edit_discount_type" value="fixed"
+                                    class="w-4 h-4 text-primary focus:ring-primary/50" />
+                                <span class="text-white/70 text-sm">₽ Фиксированная</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-white/70 text-sm font-medium mb-2">Значение *</label>
+                        <input type="number" name="edit_discount_value" step="0.01" min="0" required
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-white/70 text-sm font-medium mb-2">Общий лимит</label>
+                        <input type="number" name="edit_usage_limit_total" min="1"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+
+                    <div>
+                        <label class="block text-white/70 text-sm font-medium mb-2">Лимит на пользователя</label>
+                        <input type="number" name="edit_usage_limit_per_user" min="1"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-white/70 text-sm font-medium mb-2">Дата начала</label>
+                        <input type="datetime-local" name="edit_valid_from"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+
+                    <div>
+                        <label class="block text-white/70 text-sm font-medium mb-2">Дата окончания</label>
+                        <input type="datetime-local" name="edit_valid_until"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-white/70 text-sm font-medium mb-2">Описание</label>
+                    <textarea name="edit_description" rows="2"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"></textarea>
+                </div>
+
+                <button type="submit"
+                    class="w-full px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors">
+                    Сохранить изменения
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<section id="tab-remnawave" class="tab-content hidden">
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+        <h3 class="text-xl font-bold text-white mb-4">Remnawave</h3>
+        <p class="text-white/70 text-sm mb-6">Настройки панели Remnawave</p>
+        <div class="bg-white/[0.02] border border-white/10 rounded-lg p-8 text-center">
+            <span class="material-symbols-outlined text-4xl text-white/30 mb-2">settings_applications</span>
+            <p class="text-white/50">Настройки Remnawave будут добавлены позже</p>
+        </div>
+    </div>
+</section>
+
+<section id="tab-servers" class="tab-content hidden">
+    <!-- Сетка с серверами и SSH-целями -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Серверы Remnawave -->
+        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-white font-bold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-blue-400">dns</span>
+                    Серверы (Remna_hosts)
+                </h3>
+                <span class="px-2 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium"
+                    id="remna-hosts-count">0</span>
+            </div>
+            <div id="remna-hosts-list" class="space-y-3">
+                <div class="text-center py-8 text-white/40">
+                    <span class="material-symbols-outlined text-4xl mb-2">dns</span>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SSH-цели -->
+        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-white font-bold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-yellow-400">terminal</span>
+                    SSH-цели
+                </h3>
+                <span class="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs font-medium"
+                    id="ssh-targets-count">0</span>
+            </div>
+            <div id="ssh-targets-list" class="space-y-3">
+                <div class="text-center py-8 text-white/40">
+                    <span class="material-symbols-outlined text-4xl mb-2">terminal</span>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Информация о планируемом функционале -->
+    <div class="mt-6 bg-gradient-to-r from-primary/10 to-blue-500/10 border border-primary/30 rounded-lg p-6">
+        <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-2xl text-primary">construction</span>
+            </div>
+            <div class="flex-1">
+                <h4 class="text-white font-bold text-lg mb-2 flex items-center gap-2">
+                    🚧 Функционал в разработке
+                    <span class="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-medium">Скоро</span>
+                </h4>
+                <p class="text-white/70 text-sm mb-4">
+                    Для каждой SSH-цели, Ноды Remnawave скоро будет доступен расширенный функционал управления:
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-center gap-2 text-white/80 text-sm">
+                        <span class="material-symbols-outlined text-base text-green-400">rocket_launch</span>
+                        Быстрое развёртывание Ноды
+                    </div>
+                    <div class="flex items-center gap-2 text-white/80 text-sm">
+                        <span class="material-symbols-outlined text-base text-blue-400">package_2</span>
+                        Быстрая установка Docker
+                    </div>
+                    <div class="flex items-center gap-2 text-white/80 text-sm">
+                        <span class="material-symbols-outlined text-base text-purple-400">edit_document</span>
+                        Создание/редактирование docker-compose.yml
+                    </div>
+                    <div class="flex items-center gap-2 text-white/80 text-sm">
+                        <span class="material-symbols-outlined text-base text-yellow-400">description</span>
+                        Управление логами Ноды и просмотр логов Xray
+                    </div>
+                    <div class="flex items-center gap-2 text-white/80 text-sm col-span-1 md:col-span-2">
+                        <span class="material-symbols-outlined text-base text-orange-400">public</span>
+                        Управление geosite и geoip Xray
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabs = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
+
+        function switchTab(tabId) {
+            tabs.forEach(btn => {
+                const isActive = btn.getAttribute('data-tab') === tabId;
+                btn.classList.toggle('bg-primary', isActive);
+                btn.classList.toggle('text-background-dark', isActive);
+                btn.classList.toggle('text-white/70', !isActive);
+                btn.classList.toggle('hover:bg-white/5', !isActive);
+            });
+            contents.forEach(content => {
+                const isActive = content.id === 'tab-' + tabId;
+                content.classList.toggle('hidden', !isActive);
+            });
+            history.replaceState(null, '', '#' + tabId);
+        }
+
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+        });
+
+        const hash = location.hash.slice(1) || 'broadcast';
+        switchTab(hash);
+
+        let uploadedMediaFilename = null;
+        let buttons = [];
+
+        async function loadStats() {
+            try {
+                const resp = await fetch('/other/broadcast/stats');
+                const data = await resp.json();
+                if (data.ok) {
+                    document.getElementById('stat-total').textContent = data.total_users;
+                    document.getElementById('stat-with-keys').textContent = data.users_with_keys;
+                    document.getElementById('stat-expired-keys').textContent = data.users_with_expired_keys || 0;
+                    document.getElementById('stat-no-trial').textContent = data.users_without_trial;
+
+                    if (data.last_results) {
+                        document.getElementById('result-sent').textContent = data.last_results.sent || 0;
+                        document.getElementById('result-failed').textContent = data.last_results.failed || 0;
+                        document.getElementById('result-skipped').textContent = data.last_results.skipped || 0;
+                        if (data.last_results.timestamp) {
+                            const date = new Date(data.last_results.timestamp);
+                            document.getElementById('result-time').textContent = `Последняя рассылка: ${date.toLocaleString('ru-RU')} `;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+
+        loadStats();
+
+        document.getElementById('btn-upload-media').addEventListener('click', () => {
+            document.getElementById('media-input').click();
+        });
+
+        document.getElementById('media-input').addEventListener('change', async function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('csrf_token', window.getCsrfToken());
+
+            try {
+                const loading = document.createElement('p');
+                loading.textContent = 'Загрузка...';
+                loading.className = 'text-white/50 text-sm mt-2';
+                e.target.parentElement.appendChild(loading);
+
+                const resp = await fetch('/other/broadcast/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+
+                loading.remove();
+
+                if (data.ok) {
+                    uploadedMediaFilename = data.filename;
+                    const preview = document.getElementById('media-preview');
+                    const img = document.getElementById('media-preview-img');
+                    const video = document.getElementById('media-preview-video');
+
+                    preview.classList.remove('hidden');
+
+                    if (data.media_type === 'photo' || data.media_type === 'animation') {
+                        img.src = URL.createObjectURL(file);
+                        img.classList.remove('hidden');
+                        video.classList.add('hidden');
+                    } else if (data.media_type === 'video') {
+                        video.src = URL.createObjectURL(file);
+                        video.classList.remove('hidden');
+                        img.classList.add('hidden');
+                    }
+
+                    window.showToast('success', 'Медиа загружено');
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка загрузки');
+                }
+            } catch (err) {
+                console.error(err);
+                window.showToast('danger', 'Ошибка загрузки медиа');
+            }
+        });
+
+        document.getElementById('btn-remove-media').addEventListener('click', async () => {
+            if (uploadedMediaFilename) {
+                try {
+                    await fetch(`/other/broadcast/delete-media/${uploadedMediaFilename}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': window.getCsrfToken()
+                        }
+                    });
+                } catch (e) {
+                    console.error('Failed to delete media:', e);
+                }
+                uploadedMediaFilename = null;
+            }
+            document.getElementById('media-preview').classList.add('hidden');
+            document.getElementById('media-input').value = '';
+        });
+
+        function renderButtons() {
+            const list = document.getElementById('buttons-list');
+            list.innerHTML = '';
+            buttons.forEach((btn, idx) => {
+                const item = document.createElement('div');
+                item.className = 'flex gap-2';
+                item.innerHTML = `
+                    <input type="text" value="${btn.text}" placeholder="Текст кнопки" class="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-white text-sm" data-idx="${idx}" data-field="text" />
+                    <input type="url" value="${btn.url}" placeholder="https://..." class="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-white text-sm" data-idx="${idx}" data-field="url" />
+                    <button type="button" class="px-3 py-2 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30" data-remove="${idx}">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+
+            list.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const idx = parseInt(e.target.dataset.idx);
+                    const field = e.target.dataset.field;
+                    buttons[idx][field] = e.target.value;
+                });
+            });
+
+            list.querySelectorAll('[data-remove]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(e.target.closest('[data-remove]').dataset.remove);
+                    buttons.splice(idx, 1);
+                    renderButtons();
+                });
+            });
+        }
+
+        document.getElementById('btn-add-button').addEventListener('click', () => {
+            if (buttons.length >= 6) {
+                window.showToast('warning', 'Максимум 6 кнопок');
+                return;
+            }
+            buttons.push({ text: '', url: '' });
+            renderButtons();
+        });
+
+        document.getElementById('btn-preview').addEventListener('click', async () => {
+            const text = document.getElementById('broadcast-text').value.trim();
+            if (!text) {
+                window.showToast('warning', 'Введите текст сообщения');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('csrf_token', window.getCsrfToken());
+            formData.append('text', text);
+            formData.append('buttons', JSON.stringify(buttons));
+
+            try {
+                const resp = await fetch('/other/broadcast/preview', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    window.showToast('success', 'Предпросмотр отправлен вам в бот');
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка отправки');
+                }
+            } catch (e) {
+                console.error(e);
+                window.showToast('danger', 'Ошибка отправки предпросмотра');
+            }
+        });
+
+        document.getElementById('broadcast-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const text = document.getElementById('broadcast-text').value.trim();
+            if (!text) {
+                window.showToast('warning', 'Введите текст сообщения');
+                return;
+            }
+
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+
+            if (!confirm('Вы уверены, что хотите отправить рассылку?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('csrf_token', window.getCsrfToken());
+            formData.append('text', text);
+            formData.append('mode', mode);
+            formData.append('buttons', JSON.stringify(buttons));
+            if (uploadedMediaFilename) {
+                formData.append('media_filename', uploadedMediaFilename);
+            }
+
+            const btn = document.getElementById('btn-send');
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin h-5 w-5 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Отправка...`;
+
+            try {
+                const resp = await fetch('/other/broadcast/send', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
+
+                if (data.ok) {
+                    window.showToast('success', `Рассылка завершена! Отправлено: ${data.results.sent}, Ошибок: ${data.results.failed}, Пропущено: ${data.results.skipped}`);
+                    loadStats();
+                    document.getElementById('broadcast-text').value = '';
+                    buttons = [];
+                    renderButtons();
+                    if (uploadedMediaFilename) {
+                        document.getElementById('media-preview').classList.add('hidden');
+                        uploadedMediaFilename = null;
+                    }
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка отправки рассылки');
+                }
+            } catch (e) {
+                console.error(e);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
+                window.showToast('danger', 'Ошибка отправки рассылки');
+            }
+        });
+
+        // ==================== Промокоды ====================
+
+        // Переключение между авто/ручным вводом кода
+        document.querySelectorAll('input[name="code_mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const manualField = document.getElementById('manual-code-field');
+                if (e.target.value === 'manual') {
+                    manualField.classList.remove('hidden');
+                } else {
+                    manualField.classList.add('hidden');
+                }
+            });
+        });
+
+        // Загрузка списка промокодов
+        async function loadPromos() {
+            try {
+                const resp = await fetch('/other/promo/list');
+                const data = await resp.json();
+
+                if (data.ok && data.promos) {
+                    renderPromos(data.promos);
+                }
+            } catch (e) {
+                console.error('Failed to load promos:', e);
+            }
+        }
+
+        // Отрисовка таблицы промокодов
+        function renderPromos(promos) {
+            const tbody = document.getElementById('promo-table-body');
+
+            if (promos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-white/50">Промокодов нет</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = promos.map(promo => {
+                const discount = promo.discount_percent
+                    ? `${promo.discount_percent}%`
+                    : `${promo.discount_amount} ₽`;
+
+                const used = promo.used_total || 0;
+                const totalLimit = promo.usage_limit_total || '∞';
+                const perUserLimit = promo.usage_limit_per_user || '∞';
+
+                const validFrom = promo.valid_from ? new Date(promo.valid_from).toLocaleDateString('ru-RU') : '—';
+                const validUntil = promo.valid_until ? new Date(promo.valid_until).toLocaleDateString('ru-RU') : '—';
+
+                const isActive = promo.is_active;
+                const statusColor = isActive ? 'text-green-400' : 'text-red-400';
+                const statusText = isActive ? 'Активен' : 'Неактивен';
+                const toggleIcon = isActive ? 'toggle_on' : 'toggle_off';
+
+                return `
+                    <tr class="hover:bg-white/5">
+                        <td class="px-4 py-3 text-white font-mono font-bold">${promo.code}</td>
+                        <td class="px-4 py-3 text-white">${discount}</td>
+                        <td class="px-4 py-3 text-white">${used} / ${totalLimit}</td>
+                        <td class="px-4 py-3 text-white">${perUserLimit}</td>
+                        <td class="px-4 py-3 text-white/70 text-sm">${validFrom} — ${validUntil}</td>
+                        <td class="px-4 py-3 ${statusColor}">${statusText}</td>
+                        <td class="px-4 py-3 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <button onclick="togglePromo('${promo.code}')" class="p-2 rounded hover:bg-white/10" title="Вкл/Выкл">
+                                    <span class="material-symbols-outlined ${statusColor}">${toggleIcon}</span>
+                                </button>
+                                <button onclick="editPromo('${promo.code}')" class="p-2 rounded hover:bg-white/10 text-primary" title="Изменить условия">
+                                    <span class="material-symbols-outlined">edit</span>
+                                </button>
+                                <button onclick="deletePromo('${promo.code}')" class="p-2 rounded hover:bg-white/10 text-red-400" title="Удалить">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Создание промокода
+        document.getElementById('promo-create-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            formData.append('csrf_token', window.getCsrfToken());
+
+            // Если авто-режим, удаляем код из formData
+            const codeMode = formData.get('code_mode');
+            if (codeMode === 'auto') {
+                formData.delete('code');
+            }
+            formData.delete('code_mode');
+
+            try {
+                const resp = await fetch('/other/promo/create', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    window.showToast('success', `Промокод ${data.code} создан!`);
+                    e.target.reset();
+                    loadPromos();
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка создания промокода');
+                }
+            } catch (err) {
+                console.error(err);
+                window.showToast('danger', 'Ошибка создания промокода');
+            }
+        });
+
+        // Toggle промокода
+        window.togglePromo = async function (code) {
+            try {
+                const resp = await fetch(`/other/promo/toggle/${code}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': window.getCsrfToken()
+                    }
+                });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    window.showToast('success', `Промокод ${data.is_active ? 'активирован' : 'деактивирован'}`);
+                    loadPromos();
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка изменения статуса');
+                }
+            } catch (e) {
+                console.error(e);
+                window.showToast('danger', 'Ошибка изменения статуса');
+            }
+        };
+
+        // Редактирование промокода
+        window.editPromo = async function (code) {
+            try {
+                const resp = await fetch('/other/promo/list');
+                const data = await resp.json();
+
+                if (data.ok) {
+                    const promo = data.promos.find(p => p.code === code);
+                    if (!promo) return;
+
+                    // Заполняем форму
+                    document.getElementById('edit-promo-code').value = promo.code;
+                    document.getElementById('edit-code-display').value = promo.code;
+
+                    const discountType = promo.discount_percent ? 'percent' : 'fixed';
+                    document.querySelector(`input[name="edit_discount_type"][value="${discountType}"]`).checked = true;
+                    document.querySelector('input[name="edit_discount_value"]').value = promo.discount_percent || promo.discount_amount;
+
+                    document.querySelector('input[name="edit_usage_limit_total"]').value = promo.usage_limit_total || '';
+                    document.querySelector('input[name="edit_usage_limit_per_user"]').value = promo.usage_limit_per_user || '';
+
+                    if (promo.valid_from) {
+                        const dt = new Date(promo.valid_from);
+                        document.querySelector('input[name="edit_valid_from"]').value = dt.toISOString().slice(0, 16);
+                    }
+                    if (promo.valid_until) {
+                        const dt = new Date(promo.valid_until);
+                        document.querySelector('input[name="edit_valid_until"]').value = dt.toISOString().slice(0, 16);
+                    }
+
+                    document.querySelector('textarea[name="edit_description"]').value = promo.description || '';
+
+                    openModal('editPromoModal');
+                }
+            } catch (e) {
+                console.error(e);
+                window.showToast('danger', 'Ошибка загрузки данных промокода');
+            }
+        };
+
+        // Сохранение изменений
+        document.getElementById('promo-edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const code = document.getElementById('edit-promo-code').value;
+            const formData = new FormData();
+            formData.append('csrf_token', window.getCsrfToken());
+            formData.append('discount_type', document.querySelector('input[name="edit_discount_type"]:checked').value);
+            formData.append('discount_value', document.querySelector('input[name="edit_discount_value"]').value);
+            formData.append('usage_limit_total', document.querySelector('input[name="edit_usage_limit_total"]').value);
+            formData.append('usage_limit_per_user', document.querySelector('input[name="edit_usage_limit_per_user"]').value);
+            formData.append('valid_from', document.querySelector('input[name="edit_valid_from"]').value);
+            formData.append('valid_until', document.querySelector('input[name="edit_valid_until"]').value);
+            formData.append('description', document.querySelector('textarea[name="edit_description"]').value);
+
+            try {
+                const resp = await fetch(`/other/promo/update/${code}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    window.showToast('success', 'Промокод обновлён');
+                    closeModal('editPromoModal');
+                    loadPromos();
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка обновления');
+                }
+            } catch (err) {
+                console.error(err);
+                window.showToast('danger', 'Ошибка обновления промокода');
+            }
+        });
+
+        // Удаление промокода
+        window.deletePromo = async function (code) {
+            if (!confirm(`Удалить промокод ${code}?`)) return;
+
+            try {
+                const resp = await fetch(`/other/promo/delete/${code}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': window.getCsrfToken()
+                    }
+                });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    window.showToast('success', 'Промокод удалён');
+                    loadPromos();
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка удаления');
+                }
+            } catch (e) {
+                console.error(e);
+                window.showToast('danger', 'Ошибка удаления промокода');
+            }
+        };
+
+        // Загрузка промокодов при переключении на вкладку
+        const promoTab = document.querySelector('[data-tab="promo"]');
+        if (promoTab) {
+            promoTab.addEventListener('click', () => {
+                loadPromos();
+            });
+        }
+
+        // ==================== Сервера ====================
+
+        let serversAutoRefresh = null;
+
+        // Загрузка списка серверов
+        async function loadServers() {
+            try {
+                const resp = await fetch('/other/servers/list');
+                const data = await resp.json();
+
+                if (data.ok) {
+                    renderHosts(data.hosts || []);
+                    renderSshTargets(data.ssh_targets || []);
+                }
+            } catch (e) {
+                console.error('Failed to load servers:', e);
+            }
+        }
+
+        // Отрисовка серверов Remnawave
+        function renderHosts(hosts) {
+            const listEl = document.getElementById('remna-hosts-list');
+            const countEl = document.getElementById('remna-hosts-count');
+
+            countEl.textContent = hosts.length;
+
+            if (hosts.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-8 text-white/40">
+                        <span class="material-symbols-outlined text-4xl mb-2">dns</span>
+                        <p>Хосты не добавлены</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = hosts.map((host, idx) => `
+                <div class="bg-white/5 rounded-lg p-3 border border-white/10" data-host="${host.host_name}">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-white/30" id="host-status-${idx}"></div>
+                            <div>
+                                <div class="text-white font-medium text-sm">${host.host_name}</div>
+                                <div class="text-white/40 text-xs">${host.host_url || 'URL не указан'}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="refreshHostUptime('${host.host_name}', ${idx})" class="p-2 rounded bg-white/10 hover:bg-white/20 text-white/70" title="Обновить данные">
+                                <span class="material-symbols-outlined text-sm">refresh</span>
+                            </button>
+                            <button onclick="rebootServer('host', '${host.host_name}')" class="p-2 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Перезапустить сервер">
+                                <span class="material-symbols-outlined text-sm">restart_alt</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-sm text-white/60" id="host-uptime-${idx}">
+                        <div class="flex items-center gap-2 text-white/40">
+                            <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                            Загрузка uptime...
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Загружаем uptime для каждого хоста
+            hosts.forEach((host, idx) => {
+                loadUptime('host', host.host_name, idx);
+            });
+        }
+
+        // Отрисовка SSH-целей
+        function renderSshTargets(targets) {
+            const listEl = document.getElementById('ssh-targets-list');
+            const countEl = document.getElementById('ssh-targets-count');
+
+            countEl.textContent = targets.length;
+
+            if (targets.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-8 text-white/40">
+                        <span class="material-symbols-outlined text-4xl mb-2">terminal</span>
+                        <p>SSH-цели не добавлены</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = targets.map((target, idx) => `
+                <div class="bg-white/5 rounded-lg p-3 border border-white/10" data-target="${target.target_name}">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-white/30" id="target-status-${idx}"></div>
+                            <div>
+                                <div class="text-white font-medium text-sm">${target.target_name}</div>
+                                <div class="text-white/40 text-xs">${target.ssh_host}:${target.ssh_port || 22}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="refreshTargetUptime('${target.target_name}', ${idx})" class="p-2 rounded bg-white/10 hover:bg-white/20 text-white/70" title="Обновить данные">
+                                <span class="material-symbols-outlined text-sm">refresh</span>
+                            </button>
+                            <button onclick="rebootServer('ssh', '${target.target_name}')" class="p-2 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Перезапустить сервер">
+                                <span class="material-symbols-outlined text-sm">restart_alt</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-sm text-white/60" id="target-uptime-${idx}">
+                        <div class="flex items-center gap-2 text-white/40">
+                            <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                            Загрузка uptime...
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Загружаем uptime для каждой цели
+            targets.forEach((target, idx) => {
+                loadUptime('ssh', target.target_name, idx);
+            });
+        }
+
+        // Загрузка uptime для сервера
+        async function loadUptime(type, name, idx) {
+            const uptimeEl = type === 'host' ? document.getElementById(`host-uptime-${idx}`) : document.getElementById(`target-uptime-${idx}`);
+            const statusEl = type === 'host' ? document.getElementById(`host-status-${idx}`) : document.getElementById(`target-status-${idx}`);
+
+            try {
+                const resp = await fetch(`/other/servers/uptime/${type}/${encodeURIComponent(name)}`);
+                const data = await resp.json();
+
+                if (data.ok) {
+                    if (uptimeEl) {
+                        uptimeEl.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-blue-400">schedule</span>
+                                <span class="text-white">Uptime: ${data.uptime_formatted}</span>
+                            </div>
+                        `;
+                    }
+                    if (statusEl) {
+                        statusEl.className = 'w-2 h-2 rounded-full bg-green-500';
+                    }
+                } else {
+                    if (uptimeEl) {
+                        uptimeEl.innerHTML = `<div class="text-red-400 text-xs">Ошибка: ${data.error || 'Недоступен'}</div>`;
+                    }
+                    if (statusEl) {
+                        statusEl.className = 'w-2 h-2 rounded-full bg-red-500';
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load uptime:', e);
+                if (uptimeEl) {
+                    uptimeEl.innerHTML = '<div class="text-red-400 text-xs">Ошибка загрузки</div>';
+                }
+                if (statusEl) {
+                    statusEl.className = 'w-2 h-2 rounded-full bg-red-500';
+                }
+            }
+        }
+
+        // Обновление uptime для хоста
+        window.refreshHostUptime = function (name, idx) {
+            loadUptime('host', name, idx);
+        };
+
+        // Обновление uptime для SSH-цели
+        window.refreshTargetUptime = function (name, idx) {
+            loadUptime('ssh', name, idx);
+        };
+
+        // Перезагрузка сервера
+        window.rebootServer = async function (type, name) {
+            const typeName = type === 'host' ? 'сервер' : 'SSH-цель';
+
+            if (!confirm(`Вы уверены, что хотите перезагрузить ${typeName} "${name}"?\n\nЭто действие приведет к перезапуску системы.`)) {
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/other/servers/reboot/${type}/${encodeURIComponent(name)}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': window.getCsrfToken()
+                    }
+                });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    window.showToast('success', `Команда перезагрузки отправлена на ${name}`);
+                    // Обновляем список через 5 секунд
+                    setTimeout(() => {
+                        loadServers();
+                    }, 5000);
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка перезагрузки');
+                }
+            } catch (e) {
+                console.error(e);
+                window.showToast('danger', 'Ошибка перезагрузки сервера');
+            }
+        };
+
+        // Загрузка серверов при переключении на вкладку
+        const serversTab = document.querySelector('[data-tab="servers"]');
+        if (serversTab) {
+            serversTab.addEventListener('click', () => {
+                loadServers();
+
+                // Автообновление каждые 60 секунд
+                if (serversAutoRefresh) {
+                    clearInterval(serversAutoRefresh);
+                }
+                serversAutoRefresh = setInterval(() => {
+                    loadServers();
+                }, 60000);
+            });
+        }
+    });
+</script>
+{% endblock %}
