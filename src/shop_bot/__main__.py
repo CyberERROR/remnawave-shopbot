@@ -1,5 +1,7 @@
 import logging
 import threading
+from logging.handlers import RotatingFileHandler
+import os
 import asyncio
 import signal
 import re
@@ -56,6 +58,14 @@ def main():
     ch.setLevel(logging.INFO)
     ch.setFormatter(ColoredFormatter())
     root.addHandler(ch)
+
+    # File Handler
+    os.makedirs('logs', exist_ok=True)
+    fh = RotatingFileHandler('logs/bot.log', maxBytes=5*1024*1024, backupCount=1, encoding='utf-8')
+    fh.setLevel(logging.INFO)
+    file_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+    fh.setFormatter(file_formatter)
+    root.addHandler(fh)
 
 
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
