@@ -9,131 +9,211 @@
 </div>
 
 <!-- Create Key Form -->
-<div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
-    <form action="{{ url_for('create_key_ajax_route') }}" method="post" id="create-key-form" autocomplete="off">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <input type="hidden" name="mode" id="create_mode" value="personal" />
+<!-- Create Key Form -->
+<div
+    class="relative overflow-hidden rounded-2xl bg-[#102219]/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 hover:border-primary/20 hover:shadow-primary/5 mb-8 group">
+    <!-- Decorative glow -->
+    <div
+        class="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none group-hover:bg-primary/30 transition-all duration-500">
+    </div>
 
-        <!-- Mode Switch -->
-        <div class="mb-6">
-            <div class="flex gap-2" id="mode_switch">
-                <button type="button" data-mode="personal"
-                    class="px-4 py-2 rounded-lg bg-primary text-background-dark font-medium text-sm transition-colors">
-                    Персональный ключ
-                </button>
-                <button type="button" data-mode="gift"
-                    class="px-4 py-2 rounded-lg bg-white/10 text-white font-medium text-sm transition-colors hover:bg-white/20">
-                    Подарочный ключ
-                </button>
-            </div>
-        </div>
+    <div class="p-5 sm:p-6 relative z-10">
+        <form action="{{ url_for('create_key_ajax_route') }}" method="post" id="create-key-form" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="mode" id="create_mode" value="personal" />
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- User ID (personal mode) -->
-            <div class="mode-section mode-personal">
-                <label class="block text-white/70 text-sm font-medium mb-2">Пользователь</label>
-                <input id="user_id" name="user_id" placeholder="ID или @username"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-            </div>
+            <!-- Header & Mode Switcher -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 rounded-lg bg-primary/10 text-primary">
+                        <span class="material-symbols-outlined text-2xl">add_circle</span>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-white leading-tight">Создать ключ</h2>
+                        <p class="text-xs text-white/50 font-medium">Новый доступ VPN</p>
+                    </div>
+                </div>
 
-            <!-- Host -->
-            <div>
-                <label class="block text-white/70 text-sm font-medium mb-2">Хост</label>
-                <div class="soft-select" data-target="host_name">
-                    <button type="button" class="soft-select-toggle" id="host_name_toggle">Выберите хост...</button>
-                    <div class="soft-select-menu" id="host_name_menu"></div>
-                    <select id="host_name" name="host_name" required>
-                        <option value="" disabled selected>Выберите хост...</option>
-                        {% for h in hosts %}
-                        <option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}">{{ h.host_name }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                <!-- Segmented Control -->
+                <div class="bg-black/40 p-1 rounded-xl flex w-full sm:w-auto overflow-hidden relative shadow-inner border border-white/5"
+                    id="mode_switch">
+                    <div class="absolute inset-y-1 w-[calc(50%-4px)] bg-primary rounded-lg shadow-lg shadow-primary/20 transition-all duration-300 ease-out"
+                        id="mode_indicator"></div>
+
+                    <button type="button" data-mode="personal"
+                        class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-[#102219] w-full sm:w-36 text-center"
+                        onclick="updateModeIndicator(this)">
+                        Персональный
+                    </button>
+                    <button type="button" data-mode="gift"
+                        class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-white/60 w-full sm:w-36 text-center hover:text-white"
+                        onclick="updateModeIndicator(this)">
+                        Подарочный
+                    </button>
                 </div>
             </div>
 
-            <!-- Inbound ID -->
-            <div>
-                <label class="block text-white/70 text-sm font-medium mb-2">Inbound ID</label>
-                <input id="inbound_id" type="text" placeholder="—" readonly
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white/50 cursor-not-allowed" />
-            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- User ID (Personal Only) -->
+                <div class="mode-section mode-personal relative group/input">
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Пользователь</label>
+                    <div class="relative">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-colors">person</span>
+                        <input id="user_id" name="user_id" placeholder="ID или @username"
+                            class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-inner" />
+                    </div>
+                </div>
 
-            <!-- Plan with Price Badge -->
-            <div>
-                <label class="block text-white/70 text-sm font-medium mb-2">Тариф</label>
-                <div class="flex gap-2">
-                    <div class="soft-select flex-1" data-target="plan_select">
-                        <button type="button" class="soft-select-toggle" id="plan_select_toggle">— Не выбран —</button>
-                        <div class="soft-select-menu" id="plan_select_menu"></div>
-                        <select id="plan_select">
-                            <option value="">— Не выбран —</option>
+                <!-- Host -->
+                <div class="relative min-w-0 group/input transition-all duration-300" id="host_container">
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Хост</label>
+                    <div class="soft-select min-w-0 max-w-full" data-target="host_name">
+                        <button type="button"
+                            class="soft-select-toggle w-full truncate text-left rounded-xl pl-10 py-3 bg-black/20 border-white/10 text-sm focus:ring-1 focus:ring-primary/50 shadow-inner text-white"
+                            id="host_name_toggle">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-hover/input:text-primary transition-colors">dns</span>
+                            <span class="ml-6">Выберите хост...</span>
+                        </button>
+                        <div class="soft-select-menu rounded-xl border-white/10 bg-[#15261d] backdrop-blur-xl shadow-2xl"
+                            id="host_name_menu"></div>
+                        <select id="host_name" name="host_name" required
+                            style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;">
+                            <option value="" disabled selected>Выберите хост...</option>
+                            {% for h in hosts %}
+                            <option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}">{{ h.host_name }}
+                            </option>
+                            {% endfor %}
                         </select>
                     </div>
-                    <span id="plan_price"
-                        class="px-3 py-2.5 rounded-lg bg-purple-500/20 text-purple-300 font-semibold text-sm whitespace-nowrap">—
-                        RUB</span>
+                </div>
+
+                <!-- Plan -->
+                <div class="relative min-w-0 group/input">
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Тариф</label>
+                    <div class="flex gap-2">
+                        <div class="soft-select flex-1 min-w-0 max-w-full" data-target="plan_select">
+                            <button type="button"
+                                class="soft-select-toggle w-full truncate text-left rounded-xl pl-10 py-3 bg-black/20 border-white/10 text-sm text-white focus:ring-1 focus:ring-primary/50 shadow-inner"
+                                id="plan_select_toggle">
+                                <span
+                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">payments</span>
+                                <span class="ml-6">—</span>
+                            </button>
+                            <div class="soft-select-menu rounded-xl border-white/10 bg-[#15261d] backdrop-blur-xl shadow-2xl"
+                                id="plan_select_menu"></div>
+                            <select id="plan_select"
+                                style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;">
+                                <option value="">— Не выбран —</option>
+                            </select>
+                        </div>
+                        <!-- Price Badge -->
+                        <div class="hidden flex-shrink-0" id="plan_price_wrapper">
+                            <span id="plan_price"
+                                class="h-full flex items-center px-4 rounded-xl bg-primary/10 text-primary font-bold text-sm whitespace-nowrap border border-primary/20 shadow-inner">0₽</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Days -->
+                <div class="relative group/input">
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Дней</label>
+                    <div class="relative">
+                        <input id="custom_days" type="number" min="1" placeholder="30"
+                            class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-center font-mono text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner" />
+                    </div>
+                </div>
+
+                <!-- Expiry Date (Personal Mode) -->
+                <div class="mode-section mode-personal col-span-1 md:col-span-2">
+                    <label class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Дата
+                        истечения <span id="expiry_days_label"
+                            class="text-white/50 text-[10px] ml-1 lowercase font-normal"></span></label>
+                    <div
+                        class="bg-black/20 border border-white/10 rounded-xl p-1.5 flex flex-wrap sm:flex-nowrap items-center gap-2 shadow-inner">
+                        <div class="relative flex-1 min-w-[140px]">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">calendar_today</span>
+                            <input id="expiry_date" name="expiry_date" type="text" placeholder="Укажите дату"
+                                class="w-full bg-transparent border-none py-2 pl-10 pr-2 text-sm text-white focus:ring-0 placeholder:text-white/30" />
+                        </div>
+
+                        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 px-1">
+                            <button type="button" data-preset="30"
+                                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+30</button>
+                            <button type="button" data-preset="90"
+                                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+90</button>
+                            <button type="button" data-preset="180"
+                                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+180</button>
+                            <button type="button" data-preset="365"
+                                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+1г</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comment -->
+                <div class="col-span-1 md:col-span-2" id="comment_container">
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Комментарий</label>
+                    <textarea id="comment" name="comment" rows="1" placeholder="Заметка..."
+                        class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all resize-none shadow-inner min-h-[48px]"></textarea>
                 </div>
             </div>
 
-            <!-- Custom Days -->
-            <div>
-                <label class="block text-white/70 text-sm font-medium mb-2">Дней</label>
-                <input id="custom_days" type="number" min="1" placeholder="например, 30"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-            </div>
+            <!-- Details Expander -->
+            <details class="mt-4 group/details">
+                <summary
+                    class="flex items-center gap-2 text-xs font-medium text-white/40 cursor-pointer hover:text-white/70 transition-colors select-none w-max">
+                    <span
+                        class="material-symbols-outlined text-base transition-transform group-open/details:rotate-90">chevron_right</span>
+                    Технические детали (Inbound, Email)
+                </summary>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pl-6 border-l border-white/5 ml-1.5">
+                    <div>
+                        <label class="block text-[10px] text-white/30 mb-1">Inbound ID</label>
+                        <input id="inbound_id" type="text" placeholder="—" readonly
+                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                    </div>
+                    <div class="mode-section mode-personal">
+                        <label class="block text-[10px] text-white/30 mb-1">Email</label>
+                        <input id="key_email" name="key_email" type="email" placeholder="—" readonly
+                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                    </div>
+                </div>
+            </details>
 
-            <!-- Email (personal mode) -->
-            <div class="mode-section mode-personal">
-                <label class="block text-white/70 text-sm font-medium mb-2">Email ключа</label>
-                <input id="key_email" name="key_email" type="email" placeholder="user@bot.local" readonly
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white/70 cursor-not-allowed" />
-            </div>
-
-            <!-- Expiry Date (personal mode) -->
-            <div class="mode-section mode-personal md:col-span-2">
-                <label class="block text-white/70 text-sm font-medium mb-2">Истекает</label>
-                <div class="flex flex-wrap items-center gap-2">
-                    <input id="expiry_date" name="expiry_date" type="text" placeholder="Выберите дату"
-                        class="flex-1 min-w-[200px] bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    <button type="button" data-preset="30"
-                        class="px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20">+30</button>
-                    <button type="button" data-preset="90"
-                        class="px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20">+90</button>
-                    <button type="button" data-preset="180"
-                        class="px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20">+180</button>
-                    <button type="button" data-preset="365"
-                        class="px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20">+365</button>
+            <!-- Gift Info -->
+            <div class="mode-section mode-gift hidden mt-4 animate-fade-in">
+                <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex gap-3 items-start">
+                    <span class="material-symbols-outlined text-blue-400 mt-0.5">card_giftcard</span>
+                    <div class="text-xs text-blue-200">
+                        <strong class="block text-blue-100 text-sm mb-1">Подарочный ключ</strong>
+                        Ключ будет создан без привязки к пользователю. Ссылка будет сгенерирована автоматически.
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Gift mode info -->
-        <div class="mode-section mode-gift hidden mt-4">
-            <div class="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300">
-                Будет создан <strong>подарочный ключ</strong> на выбранном хосте. Email сгенерируется автоматически.
-            </div>
-        </div>
-
-        <!-- Comment -->
-        <div class="mt-4">
-            <label class="block text-white/70 text-sm font-medium mb-2">Комментарий</label>
-            <textarea id="comment" name="comment" rows="2" placeholder="Необязательный комментарий"
-                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"></textarea>
-        </div>
-
-        <!-- Submit -->
-        <div class="mt-4">
+            <!-- Submit -->
             <button type="button" id="btn-submit-create"
-                class="px-6 py-2.5 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors">
-                Создать
+                class="mt-6 w-full py-3.5 rounded-xl bg-gradient-to-r from-primary/90 to-primary text-background-dark font-bold text-sm uppercase tracking-wide shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 group">
+                <span
+                    class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">vpn_key</span>
+                Создать ключ
             </button>
-        </div>
-    </form>
+        </form>
+    </div>
 </div>
 
+
+
 <!-- Filter & Sweep -->
-<div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+<!-- Filter & Sweep -->
+<div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
     <div class="flex gap-2">
         <a href="{{ url_for('admin_keys_page', filter='general') }}"
             class="px-4 py-2 rounded-lg text-sm font-medium {% if current_filter == 'general' %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
@@ -144,11 +224,20 @@
             Gift
         </a>
     </div>
+
+    <!-- Search Bar -->
+    <div class="relative flex-1 w-full md:w-auto">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/50">search</span>
+        <input id="keys-search" type="text" value="{{ q or '' }}"
+            class="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+            placeholder="Поиск..." />
+    </div>
+
     <form action="{{ url_for('sweep_expired_keys_route') }}" method="post"
         data-confirm="Удалить все истёкшие ключи? Это действие необратимо.">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <button type="submit"
-            class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 flex items-center gap-2">
+            class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 flex items-center gap-2 whitespace-nowrap">
             <span class="material-symbols-outlined text-base">delete_sweep</span>
             Удалить истёкшие
         </button>
@@ -172,12 +261,18 @@
                 </tr>
             </thead>
             <tbody id="keys-tbody" class="divide-y divide-white/10"
-                data-fetch-url="{{ url_for('admin_keys_table_partial', filter=current_filter) }}"
+                data-fetch-url="{{ url_for('admin_keys_table_partial', filter=current_filter, q=q, page=current_page) }}"
                 data-fetch-interval="100000">
                 {% include 'partials/admin_keys_table.html' %}
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- Pagination -->
+<div class="flex justify-center mt-4 gap-2" id="keys-pagination"
+    data-src="{{ url_for('admin_keys_pagination_partial', page=current_page, q=q, filter=current_filter) }}">
+    {% include 'partials/admin_keys_pagination.html' %}
 </div>
 
 <!-- Comment Modal -->
@@ -314,6 +409,23 @@
         }
 
         // ========= Set Expiry Days =========
+        function updateExpiryLabel(dateStr) {
+            const lbl = document.getElementById('expiry_days_label');
+            if (!lbl) return;
+            if (!dateStr) { lbl.textContent = ''; return; }
+
+            const d = new Date(dateStr);
+            const now = new Date();
+            const diffTime = d.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 0) {
+                lbl.textContent = `(на ${diffDays} дн.)`;
+            } else {
+                lbl.textContent = '';
+            }
+        }
+
         function setExpiryDays(days) {
             if (!expiryInput) return;
             const d = new Date();
@@ -324,6 +436,12 @@
             if (window.flatpickr && expiryInput._flatpickr) {
                 expiryInput._flatpickr.setDate(val, true, 'Y-m-d H:i');
             }
+            updateExpiryLabel(val);
+        }
+
+        if (expiryInput) {
+            expiryInput.addEventListener('change', () => updateExpiryLabel(expiryInput.value));
+            // Flatpickr might trigger change, or we verify with hooks if needed, but 'change' is standard.
         }
 
         // ========= Load Plans =========
@@ -496,28 +614,61 @@
         const modeSections = document.querySelectorAll('.mode-section');
         function applyMode(mode) {
             if (modeInput) modeInput.value = mode;
+
+            // Toggle visibility of sections
             modeSections.forEach(section => {
                 const isCurrent = section.classList.contains(`mode-${mode}`);
                 section.classList.toggle('hidden', !isCurrent);
             });
-            if (modeSwitch) {
-                modeSwitch.querySelectorAll('[data-mode]').forEach(btn => {
-                    const active = btn.getAttribute('data-mode') === mode;
-                    btn.classList.toggle('bg-primary', active);
-                    btn.classList.toggle('text-background-dark', active);
-                    btn.classList.toggle('bg-white/10', !active);
-                    btn.classList.toggle('text-white', !active);
+
+            // Update visual state of buttons (Segmented Control)
+            if (modeSwitch && typeof window.updateModeIndicator === 'function') {
+                const btn = modeSwitch.querySelector(`[data-mode="${mode}"]`);
+                if (btn) window.updateModeIndicator(btn);
+            } else if (modeSwitch) {
+                // Fallback logic
+                const indicator = document.getElementById('mode_indicator');
+                const commentContainer = document.getElementById('comment_container');
+                const btn = modeSwitch.querySelector(`[data-mode="${mode}"]`);
+
+                modeSwitch.querySelectorAll('button').forEach(b => {
+                    b.classList.remove('text-[#102219]');
+                    b.classList.add('text-white/60');
                 });
+                if (btn) {
+                    btn.classList.add('text-[#102219]');
+                    btn.classList.remove('text-white/60');
+                }
+
+                if (mode === 'personal') {
+                    if (indicator) indicator.style.transform = 'translateX(0)';
+                    // Personal: Comment fills 2 cols in row 2 (leaving Expiry 2 cols)
+                    if (commentContainer) commentContainer.classList.add('md:col-span-2');
+                } else {
+                    if (indicator) indicator.style.transform = 'translateX(100%)';
+                    // Gift: Comment fits in 1 col (4th in row 1)
+                    if (commentContainer) commentContainer.classList.remove('md:col-span-2');
+                }
             }
+
             if (userInput) userInput.required = (mode === 'personal');
             if (emailInput) emailInput.required = false;
             saveState();
         }
+
+        // Attach listeners
         if (modeSwitch) {
             modeSwitch.querySelectorAll('[data-mode]').forEach(btn => {
-                btn.addEventListener('click', () => applyMode(btn.getAttribute('data-mode') || 'personal'));
+                btn.addEventListener('click', (e) => {
+                    // Prevent default to avoid double firing if onclick is also set (though onclick handles visual, we want logic here)
+                    // Actually, onclick in HTML calls updateModeIndicator. 
+                    // We should let this listener handle the LOGIC (applyMode).
+                    applyMode(btn.getAttribute('data-mode') || 'personal');
+                });
             });
         }
+
+        // Initial apply
         applyMode(restoredState.mode || (modeInput?.value || 'personal'));
 
         // ========= Submit =========
@@ -596,6 +747,41 @@
                 } else { showToast('danger', 'Ошибка'); }
             } catch (_) { showToast('danger', 'Ошибка сети'); }
         });
+        const searchInput = document.getElementById('keys-search');
+        if (searchInput) {
+            let searchTimeout = null;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(async () => {
+                    const tbody = document.getElementById('keys-tbody');
+                    if (!tbody) return;
+
+                    const url = new URL(tbody.getAttribute('data-fetch-url'), location.origin);
+                    url.searchParams.set('q', searchInput.value || '');
+                    url.searchParams.set('page', '1');
+
+                    try {
+                        const resp = await fetch(url, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
+                        if (resp.ok) {
+                            tbody.innerHTML = await resp.text();
+
+                            const pagEl = document.getElementById('keys-pagination');
+                            if (pagEl) {
+                                const pagUrl = new URL(pagEl.getAttribute('data-src'), location.origin);
+                                pagUrl.searchParams.set('q', searchInput.value || '');
+                                pagUrl.searchParams.set('page', '1');
+                                const r2 = await fetch(pagUrl, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
+                                if (r2.ok) {
+                                    pagEl.innerHTML = await r2.text();
+                                    pagEl.setAttribute('data-src', pagUrl.toString());
+                                }
+                            }
+                        }
+                    } catch (e) { console.error(e); }
+                }, 400);
+            });
+        }
+
     })();
 </script>
 {% endblock %}

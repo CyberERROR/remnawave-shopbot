@@ -501,7 +501,17 @@
                             <span class="${sub.is_expired ? 'text-red-400' : 'text-primary'} font-bold text-sm">${sub.status_text}</span>
                             <span class="text-white/50 text-sm">Истекает: ${sub.expire_date}</span>
                         </div>
-                        <div class="bg-white/5 rounded p-2 font-mono text-sm text-primary break-all">${sub.key}</div>
+                        <div class="bg-white/5 rounded p-2 font-mono text-sm text-primary break-all mb-2">${sub.key}</div>
+                        <div class="flex gap-2 flex-wrap">
+                            <div class="bg-white/5 rounded px-2 py-1 text-xs text-white/70 cursor-pointer hover:bg-white/10 transition-colors" 
+                                 onclick="copyToClipboard('${sub.email}', this)" title="Нажмите для копирования">
+                                <span class="text-white/50">Email:</span> ${sub.email}
+                            </div>
+                            <div class="bg-white/5 rounded px-2 py-1 text-xs text-white/70 cursor-pointer hover:bg-white/10 transition-colors" 
+                                 onclick="copyToClipboard('${sub.remnawave_user_uuid}', this)" title="Нажмите для копирования">
+                                <span class="text-white/50">UUID:</span> ${sub.remnawave_user_uuid}
+                            </div>
+                        </div>
                     </div>
                 `).join('') : '<div class="p-4 text-center text-white/50">Нет подписок</div>';
 
@@ -563,5 +573,19 @@
         // Initialize
         restoreOpenedKeys();
     })();
+
+    // Copy to clipboard function
+    function copyToClipboard(text, element) {
+        navigator.clipboard.writeText(text).then(() => {
+            const originalBg = element.className;
+            element.classList.add('bg-primary/20');
+            showToast('success', 'Скопировано');
+            setTimeout(() => {
+                element.className = originalBg;
+            }, 300);
+        }).catch(() => {
+            showToast('danger', 'Не удалось скопировать');
+        });
+    }
 </script>
 {% endblock %}

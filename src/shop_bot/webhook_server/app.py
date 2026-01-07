@@ -94,6 +94,8 @@ ALL_SETTINGS_KEYS = [
     "yoomoney_api_token", "yoomoney_client_id", "yoomoney_client_secret", "yoomoney_redirect_uri",
     
     "platega_enabled", "platega_merchant_id", "platega_api_key",
+
+    "main_menu_image",
 ]
 
 def create_webhook_app(bot_controller_instance):
@@ -124,6 +126,8 @@ def create_webhook_app(bot_controller_instance):
 
     flask_app.config['SECRET_KEY'] = os.getenv('SHOPBOT_SECRET_KEY') or secrets.token_hex(32)
     flask_app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+    # Increase max upload size to 500MB for video uploads
+    flask_app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 
 
     csrf = CSRFProtect()
@@ -234,7 +238,7 @@ def create_webhook_app(bot_controller_instance):
             return ""
         try:
             if isinstance(date_value, str):
-                # Попытка парсинга строки
+                
                 try:
                     dt = datetime.fromisoformat(date_value)
                 except ValueError:
@@ -242,7 +246,7 @@ def create_webhook_app(bot_controller_instance):
             else:
                 dt = date_value
             
-            # Приводим к UTC naive, если нужно (предполагаем, что в базе UTC naive)
+            
             if dt.tzinfo:
                 dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
             
@@ -260,7 +264,7 @@ def create_webhook_app(bot_controller_instance):
             hours = int((total_seconds % 86400) // 3600)
             
             if days > 0:
-                # Склонение дней
+                
                 last_digit = days % 10
                 last_two = days % 100
                 if 11 <= last_two <= 19:
@@ -273,7 +277,7 @@ def create_webhook_app(bot_controller_instance):
                     suffix = "дней"
                 return f"({days} {suffix})"
             else:
-                # Склонение часов
+                
                 last_digit = hours % 10
                 last_two = hours % 100
                 if 11 <= last_two <= 19:
@@ -578,6 +582,14 @@ def create_webhook_app(bot_controller_instance):
             except Exception:
                 user['balance'] = 0.0
             user['keys_count'] = int(keys_counts.get(uid, 0) or 0)
+            # Добавляем total_months (приобретено месяцев)
+            user['total_months'] = int(user.get('total_months') or 0)
+            # Добавляем количество рефералов
+            try:
+                referrals = get_referrals_for_user(uid) or []
+                user['referral_count'] = len(referrals)
+            except Exception:
+                user['referral_count'] = 0
 
 
         from math import ceil
@@ -606,6 +618,14 @@ def create_webhook_app(bot_controller_instance):
             except Exception:
                 user['balance'] = 0.0
             user['keys_count'] = int(keys_counts.get(uid, 0) or 0)
+            # Добавляем total_months (приобретено месяцев)
+            user['total_months'] = int(user.get('total_months') or 0)
+            # Добавляем количество рефералов
+            try:
+                referrals = get_referrals_for_user(uid) or []
+                user['referral_count'] = len(referrals)
+            except Exception:
+                user['referral_count'] = 0
         return render_template('partials/users_table.html', users=users)
 
 
@@ -686,15 +706,15 @@ def create_webhook_app(bot_controller_instance):
     def user_details_json(user_id: int):
         """Fetch detailed user information for the details modal"""
         try:
-            # Get basic user info
+            
             user = get_user(user_id)
             if not user:
                 return jsonify({"ok": False, "error": "user_not_found"}), 404
             
-            # Get referral information
+            
             referrals = get_referrals_for_user(user_id) or []
             
-            # Get referred by user info
+            
             referred_by_user = None
             if user.get('referred_by'):
                 try:
@@ -702,13 +722,13 @@ def create_webhook_app(bot_controller_instance):
                 except Exception:
                     pass
             
-            # Get payment history (transactions with status paid/completed/success)
+            
             payment_history = []
             try:
                 with sqlite3.connect(DB_FILE) as conn:
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
-                    # First check if there are ANY transactions for this user
+                    
                     cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = ?", (user_id,))
                     total_count = cursor.fetchone()[0]
                     logger.info(f"Total transactions for user {user_id}: {total_count}")
@@ -740,7 +760,7 @@ def create_webhook_app(bot_controller_instance):
             except Exception as e:
                 logger.error(f"Failed to get payment history for user {user_id}: {e}")
             
-            # Get balance transaction history (all transactions including balance payments)
+            
             balance_history = []
             try:
                 with sqlite3.connect(DB_FILE) as conn:
@@ -802,7 +822,7 @@ def create_webhook_app(bot_controller_instance):
                             pass
                     else:
                         subs_stats["active"] += 1
-                        days_left = 9999 # Infinite
+                        days_left = 9999 
                     
                     status_text = f"Осталось дней: {days_left}" if not is_expired else "ИСТЕК"
                     
@@ -810,13 +830,15 @@ def create_webhook_app(bot_controller_instance):
                         "key": key.get('subscription_url') or key.get('access_url') or 'N/A',
                         "status_text": status_text,
                         "expire_date": expire_date_fmt,
-                        "is_expired": is_expired
+                        "is_expired": is_expired,
+                        "email": key.get('email') or key.get('key_email') or 'N/A',
+                        "remnawave_user_uuid": key.get('remnawave_user_uuid') or 'N/A'
                     })
                     
             except Exception as e:
                 logger.error(f"Failed to get subscriptions for user {user_id}: {e}")
 
-            # Prepare response
+            
             result = {
                 "ok": True,
                 "user": {
@@ -857,7 +879,7 @@ def create_webhook_app(bot_controller_instance):
             current_status = bool(user.get('trial_used'))
             new_status = not current_status
             
-            # Update trial_used in database
+            
             with sqlite3.connect(DB_FILE) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -883,6 +905,34 @@ def create_webhook_app(bot_controller_instance):
             keys = get_all_keys()
         except Exception:
             keys = []
+        
+        filter_mode = request.args.get('filter', 'general')
+        if filter_mode == 'gift':
+            keys = [k for k in keys if (k.get('user_id') or 0) == 0]
+        else:
+            keys = [k for k in keys if (k.get('user_id') or 0) != 0]
+
+        q = (request.args.get('q') or '').strip().lower()
+        if q:
+            def match(k):
+                return (
+                    q in str(k.get('key_id', '')).lower() or
+                    q in str(k.get('user_id', '')).lower() or
+                    q in str(k.get('host_name', '')).lower() or
+                    q in str(k.get('key_email', '')).lower() or
+                    q in str(k.get('remnawave_user_uuid', '')).lower()
+                )
+            keys = [k for k in keys if match(k)]
+
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        total_items = len(keys)
+        total_pages = ceil(total_items / per_page) if per_page else 1
+        
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_keys = keys[start:end]
+
         hosts = []
         try:
             hosts = get_all_hosts()
@@ -893,16 +943,9 @@ def create_webhook_app(bot_controller_instance):
             users = get_all_users()
         except Exception:
             users = []
-        
-        filter_mode = request.args.get('filter', 'general')
-        filtered_keys = []
-        if filter_mode == 'gift':
-            filtered_keys = [k for k in keys if (k.get('user_id') or 0) == 0]
-        else:
-            filtered_keys = [k for k in keys if (k.get('user_id') or 0) != 0]
             
         common_data = get_common_template_data()
-        return render_template('admin_keys.html', keys=filtered_keys, hosts=hosts, users=users, current_filter=filter_mode, **common_data)
+        return render_template('admin_keys.html', keys=paginated_keys, hosts=hosts, users=users, current_filter=filter_mode, current_page=page, total_pages=total_pages, q=q, **common_data)
 
 
     @flask_app.route('/admin/keys/table.partial')
@@ -915,13 +958,66 @@ def create_webhook_app(bot_controller_instance):
             keys = []
             
         filter_mode = request.args.get('filter', 'general')
-        filtered_keys = []
         if filter_mode == 'gift':
-            filtered_keys = [k for k in keys if (k.get('user_id') or 0) == 0]
+            keys = [k for k in keys if (k.get('user_id') or 0) == 0]
         else:
-            filtered_keys = [k for k in keys if (k.get('user_id') or 0) != 0]
+            keys = [k for k in keys if (k.get('user_id') or 0) != 0]
+
+        q = (request.args.get('q') or '').strip().lower()
+        if q:
+            def match(k):
+                return (
+                    q in str(k.get('key_id', '')).lower() or
+                    q in str(k.get('user_id', '')).lower() or
+                    q in str(k.get('host_name', '')).lower() or
+                    q in str(k.get('key_email', '')).lower() or
+                    q in str(k.get('remnawave_user_uuid', '')).lower()
+                )
+            keys = [k for k in keys if match(k)]
             
-        return render_template('partials/admin_keys_table.html', keys=filtered_keys)
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        total_items = len(keys)
+        
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_keys = keys[start:end]
+            
+        return render_template('partials/admin_keys_table.html', keys=paginated_keys)
+
+    @flask_app.route('/admin/keys/pagination.partial')
+    @login_required
+    def admin_keys_pagination_partial():
+        keys = []
+        try:
+            keys = get_all_keys()
+        except Exception:
+            keys = []
+            
+        filter_mode = request.args.get('filter', 'general')
+        if filter_mode == 'gift':
+            keys = [k for k in keys if (k.get('user_id') or 0) == 0]
+        else:
+            keys = [k for k in keys if (k.get('user_id') or 0) != 0]
+
+        q = (request.args.get('q') or '').strip().lower()
+        if q:
+            def match(k):
+                return (
+                    q in str(k.get('key_id', '')).lower() or
+                    q in str(k.get('user_id', '')).lower() or
+                    q in str(k.get('host_name', '')).lower() or
+                    q in str(k.get('key_email', '')).lower() or
+                    q in str(k.get('remnawave_user_uuid', '')).lower()
+                )
+            keys = [k for k in keys if match(k)]
+            
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        total_items = len(keys)
+        total_pages = ceil(total_items / per_page) if per_page else 1
+        
+        return render_template('partials/admin_keys_pagination.html', current_page=page, total_pages=total_pages, q=q, current_filter=filter_mode)
 
     @flask_app.route('/admin/hosts/<host_name>/plans')
     @login_required
@@ -1239,6 +1335,8 @@ def create_webhook_app(bot_controller_instance):
             else:
                 exp_dt = cur_expiry or datetime.utcnow()
             new_dt = exp_dt + timedelta(days=delta_days)
+            if new_dt.tzinfo is None:
+                new_dt = new_dt.replace(tzinfo=timezone.utc)
             new_ms = int(new_dt.timestamp() * 1000)
 
 
@@ -1246,7 +1344,8 @@ def create_webhook_app(bot_controller_instance):
                 result = asyncio.run(remnawave_api.create_or_update_key_on_host(
                     host_name=key.get('host_name'),
                     email=key.get('key_email'),
-                    expiry_timestamp_ms=new_ms
+                    expiry_timestamp_ms=new_ms,
+                    force_expiry=True  # Из админки всегда принудительно обновляем срок
                 ))
             except Exception as e:
                 result = None
@@ -1396,6 +1495,71 @@ def create_webhook_app(bot_controller_instance):
         flash('SSH-параметры обновлены.' if ok else 'Не удалось обновить SSH-параметры.', 'success' if ok else 'danger')
         return redirect(request.referrer or url_for('settings_page'))
 
+
+    @flask_app.route('/admin/hosts/hwid-limit/update', methods=['POST'])
+    @login_required
+    def update_host_hwid_limit_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        # Используем getlist для корректной обработки чекбокса с hidden input
+        hwid_enabled = 1 if '1' in request.form.getlist('hwid_enabled') else 0
+        hwid_limit_raw = (request.form.get('hwid_limit') or '0').strip()
+        
+        try:
+            hwid_limit = int(hwid_limit_raw)
+            if hwid_limit < 0:
+                hwid_limit = 0
+        except Exception:
+            hwid_limit = 0
+        
+        # Обновляем настройки в БД
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE xui_hosts SET remnawave_hwid_enabled = ?, remnawave_limit_hwid = ? WHERE host_name = ?",
+                    (hwid_enabled, hwid_limit, host_name)
+                )
+                conn.commit()
+                ok = cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Failed to update HWID limit for host {host_name}: {e}")
+            ok = False
+        
+        flash('Настройки HWID лимита обновлены.' if ok else 'Не удалось обновить настройки HWID лимита.', 
+              'success' if ok else 'danger')
+        return redirect(request.referrer or url_for('settings_page'))
+
+
+    @flask_app.route('/admin/hosts/traffic-limit/update', methods=['POST'])
+    @login_required
+    def update_host_traffic_limit_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        traffic_limit_raw = (request.form.get('traffic_limit') or '0').strip()
+        
+        try:
+            traffic_limit = int(traffic_limit_raw)
+            if traffic_limit < 0:
+                traffic_limit = 0
+        except Exception:
+            traffic_limit = 0
+        
+        # Обновляем настройки в БД
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE xui_hosts SET remnawave_limit_traffic = ? WHERE host_name = ?",
+                    (traffic_limit, host_name)
+                )
+                conn.commit()
+                ok = cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Failed to update traffic limit for host {host_name}: {e}")
+            ok = False
+        
+        flash('Лимит трафика обновлен.' if ok else 'Не удалось обновить лимит трафика.', 
+              'success' if ok else 'danger')
+        return redirect(request.referrer or url_for('settings_page'))
 
     @flask_app.route('/admin/ssh-targets/<target_name>/speedtest/run', methods=['POST'])
     @login_required
@@ -2580,7 +2744,7 @@ def create_webhook_app(bot_controller_instance):
     def platega_webhook_handler():
         """Обработчик webhook от Platega"""
         try:
-            # Проверка заголовков аутентификации
+            
             merchant_id = request.headers.get('X-MerchantId')
             secret = request.headers.get('X-Secret')
             
@@ -2598,17 +2762,17 @@ def create_webhook_app(bot_controller_instance):
             data = request.json
             logger.info(f"Platega webhook получен: {data}")
             
-            # Обработка только успешных платежей
+            
             status = data.get('status')
             if status == 'CONFIRMED':
-                # Platega отправляет наш payment_id в поле 'payload'
+                
                 payment_id = data.get('payload')
                 
                 if not payment_id:
                     logger.warning("Platega webhook: отсутствует payload (payment_id)")
                     return 'OK', 200
                 
-                # Найти метаданные платежа
+                
                 metadata = find_and_complete_pending_transaction(payment_id)
                 if metadata:
                     logger.info(f"Platega: найдены метаданные для платежа {payment_id}")
@@ -2913,6 +3077,103 @@ def create_webhook_app(bot_controller_instance):
         """Button constructor page"""
         template_data = get_common_template_data()
         return render_template('button_constructor.html', **template_data)
+
+
+
+    
+    MENU_IMAGE_SECTIONS = {
+        'profile': 'profile_image',
+        'keys': 'keys_image',
+        'buy_key': 'buy_key_image',
+        'topup': 'topup_image',
+        'referral': 'referral_image',
+        'support': 'support_image',
+        'about': 'about_image',
+        'speedtest': 'speedtest_image',
+        'howto': 'howto_image',
+        'main_menu': 'main_menu_image',
+        'topup_amount': 'topup_amount_image',
+
+        'payment': 'payment_image',
+        'buy_server': 'buy_server_image',
+        'buy_plan': 'buy_plan_image',
+        'enter_email': 'enter_email_image',
+        'key_info': 'key_info_image',
+        'extend_plan': 'extend_plan_image',
+        'keys_list': 'keys_list_image',
+        'payment_method': 'payment_method_image',
+    }
+
+    @flask_app.route('/upload-menu-image/<section>', methods=['POST'])
+    @login_required
+    def upload_menu_image_route(section):
+        if section not in MENU_IMAGE_SECTIONS:
+            return jsonify({'ok': False, 'error': 'Неизвестный раздел'}), 400
+        
+        setting_key = MENU_IMAGE_SECTIONS[section]
+        ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+        MAX_SIZE_BYTES = 10 * 1024 * 1024
+
+        if 'file' not in request.files:
+            return jsonify({'ok': False, 'error': 'Файл не выбран'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'ok': False, 'error': 'Файл не выбран'}), 400
+
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            return jsonify({'ok': False, 'error': f'Неподдерживаемый формат. Разрешены: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+
+        file.seek(0, 2)
+        size = file.tell()
+        file.seek(0)
+        if size > MAX_SIZE_BYTES:
+            return jsonify({'ok': False, 'error': 'Размер файла превышает 10 МБ'}), 400
+
+        try:
+            current_image = get_setting(setting_key)
+            if current_image and os.path.exists(current_image):
+                try:
+                    os.remove(current_image)
+                except Exception:
+                    pass
+
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            upload_dir = os.path.join(base_dir, 'modules', 'menu_images')
+            os.makedirs(upload_dir, exist_ok=True)
+
+            filename = f"{section}_{int(time.time())}.{ext}"
+            filepath = os.path.join(upload_dir, filename)
+
+            file.save(filepath)
+            update_setting(setting_key, filepath)
+
+            return jsonify({'ok': True, 'path': filepath})
+        except Exception as e:
+            logger.error(f"Ошибка загрузки изображения {section}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/delete-menu-image/<section>', methods=['POST'])
+    @login_required
+    def delete_menu_image_route(section):
+        if section not in MENU_IMAGE_SECTIONS:
+            return jsonify({'ok': False, 'error': 'Неизвестный раздел'}), 400
+        
+        setting_key = MENU_IMAGE_SECTIONS[section]
+        try:
+            current_image = get_setting(setting_key)
+            if current_image and os.path.exists(current_image):
+                try:
+                    os.remove(current_image)
+                except Exception as e:
+                    logger.warning(f"Не удалось удалить файл {current_image}: {e}")
+
+            update_setting(setting_key, '')
+            return jsonify({'ok': True})
+        except Exception as e:
+            logger.error(f"Ошибка удаления изображения {section}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
 
     register_other_routes(flask_app, login_required, get_common_template_data)
 

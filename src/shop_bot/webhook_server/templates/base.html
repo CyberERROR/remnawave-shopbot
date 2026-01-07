@@ -245,28 +245,33 @@
                         {% set main_running = bot_status and bot_status.is_running %}
                         {% set support_running = support_bot_status and support_bot_status.is_running %}
                         {% if main_running or support_running %}
-                        <form action="{{ url_for('stop_both_bots_route') }}" method="post" class="inline">
+                        <form action="{{ url_for('stop_both_bots_route') }}" method="post" class="inline"
+                            data-confirm="Вы уверены, что хотите остановить бота?">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <button type="submit"
-                                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#e53e3e]/80 hover:bg-[#e53e3e] text-white text-sm font-bold leading-normal tracking-[0.015em] transition-colors duration-200">
-                                <span class="truncate">Остановить</span>
+                            <button type="submit" title="Остановить"
+                                class="flex min-w-[40px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-[#e53e3e]/80 hover:bg-[#e53e3e] text-white transition-colors duration-200">
+                                <span class="material-symbols-outlined text-xl">stop_circle</span>
                             </button>
                         </form>
                         {% else %}
                         {% if all_settings_ok and support_settings_ok %}
                         <form action="{{ url_for('start_both_bots_route') }}" method="post" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <button type="submit"
-                                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary/80 hover:bg-primary text-background-dark text-sm font-bold leading-normal tracking-[0.015em] transition-colors duration-200">
-                                <span class="truncate">Запустить</span>
+                            <button type="submit" title="Запустить"
+                                class="flex min-w-[40px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-primary/80 hover:bg-primary text-background-dark transition-colors duration-200">
+                                <span class="material-symbols-outlined text-xl">play_circle</span>
                             </button>
                         </form>
                         {% endif %}
                         {% endif %}
+                        <button type="button" id="btn-restart-bot" title="Полный перезапуск бота"
+                            class="flex min-w-[40px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-blue-500/80 hover:bg-blue-500 text-white transition-colors duration-200">
+                            <span class="material-symbols-outlined text-xl">restart_alt</span>
+                        </button>
                         <form action="{{ url_for('logout_page') }}" method="post" class="inline">
-                            <button type="submit"
-                                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-white/10 hover:bg-white/20 text-white text-sm font-bold leading-normal tracking-[0.015em] transition-colors duration-200">
-                                <span class="truncate">Выход</span>
+                            <button type="submit" title="Выход"
+                                class="flex min-w-[40px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-white/10 hover:bg-white/20 text-white transition-colors duration-200">
+                                <span class="material-symbols-outlined text-xl">logout</span>
                             </button>
                         </form>
                     </div>
@@ -383,6 +388,20 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="modal-overlay">
+        <div class="modal-content p-6" style="max-width: 400px;">
+            <h3 class="text-lg font-bold text-white mb-3">Подтверждение</h3>
+            <p id="confirmationMessage" class="text-white/70 mb-6">Вы уверены?</p>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeModal('confirmationModal')"
+                    class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors">Отмена</button>
+                <button id="confirmBtn"
+                    class="px-4 py-2 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-colors">Да</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -460,11 +479,37 @@
         };
 
         // Confirm dialog for forms with data-confirm
+        // Global Confirmation Modal Logic
+        let confirmCallback = null;
+
+        window.showConfirmModal = function (message, onConfirm) {
+            const modal = document.getElementById('confirmationModal');
+            const msgEl = document.getElementById('confirmationMessage');
+            const btn = document.getElementById('confirmBtn');
+
+            if (msgEl) msgEl.textContent = message;
+
+            // Clone button to remove old listeners
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+
+            newBtn.addEventListener('click', function () {
+                closeModal('confirmationModal');
+                if (onConfirm) onConfirm();
+            });
+
+            openModal('confirmationModal');
+        };
+
+        // Confirm dialog for forms with data-confirm
         document.addEventListener('submit', function (e) {
             const form = e.target;
             const confirmMsg = form.getAttribute('data-confirm');
-            if (confirmMsg && !confirm(confirmMsg)) {
+            if (confirmMsg) {
                 e.preventDefault();
+                showConfirmModal(confirmMsg, () => {
+                    form.submit();
+                });
             }
         });
 
@@ -563,6 +608,45 @@
                         showToast('danger', 'Ошибка сети');
                     }
                 });
+            }
+        })();
+
+        // Restart Bot Logic
+        (function () {
+            const btn = document.getElementById('btn-restart-bot');
+            if (!btn) return;
+
+            btn.addEventListener('click', async () => {
+                showConfirmModal('Вы уверены, что хотите полностью перезагрузить бота (контейнер)? Это займет 10-20 секунд.', async () => {
+                    executeRestart();
+                });
+            });
+
+            async function executeRestart() {
+
+                try {
+                    const fd = new FormData();
+                    fd.append('csrf_token', getCsrfToken());
+
+                    const resp = await fetch('/other/restart', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': getCsrfToken() }, // Add header for safety
+                        body: fd // Keep body for old handling if any
+                    });
+
+                    const data = await resp.json();
+
+                    if (data.ok) {
+                        showToast('success', data.message || 'Перезагрузка...');
+                        // Отключаем кнопку чтобы не спамили
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50');
+                    } else {
+                        showToast('danger', data.error || 'Ошибка перезагрузки');
+                    }
+                } catch (e) {
+                    showToast('danger', 'Ошибка соединения с сервером (возможно перезагрузка уже идет)');
+                }
             }
         })();
     </script>

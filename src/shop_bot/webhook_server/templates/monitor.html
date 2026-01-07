@@ -511,40 +511,38 @@
             document.getElementById('refresh-all')?.addEventListener('click', refreshAll);
 
             // Кнопка очистки метрик
-            document.getElementById('clear-metrics')?.addEventListener('click', async () => {
-                if (!confirm('Вы уверены, что хотите удалить все старые замеры из БД?\n\nЭто действие необратимо и освободит память, но не повлияет на текущую статистику.')) {
-                    return;
-                }
+            document.getElementById('clear-metrics')?.addEventListener('click', () => {
+                showConfirmModal('Вы уверены, что хотите удалить все старые замеры из БД?\n\nЭто действие необратимо и освободит память, но не повлияет на текущую статистику.', async () => {
+                    const btn = document.getElementById('clear-metrics');
+                    const originalHTML = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span> Очистка...';
 
-                const btn = document.getElementById('clear-metrics');
-                const originalHTML = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span> Очистка...';
+                    try {
+                        const resp = await fetch('/monitor/clear-metrics', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
+                            }
+                        });
+                        const data = await resp.json();
 
-                try {
-                    const resp = await fetch('/monitor/clear-metrics', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
+                        if (data.ok) {
+                            window.showToast('success', data.message || 'Метрики успешно очищены');
+                            // Обновляем графики
+                            await refreshCharts();
+                        } else {
+                            window.showToast('danger', data.error || 'Ошибка очистки метрик');
                         }
-                    });
-                    const data = await resp.json();
-
-                    if (data.ok) {
-                        window.showToast('success', data.message || 'Метрики успешно очищены');
-                        // Обновляем графики
-                        await refreshCharts();
-                    } else {
-                        window.showToast('danger', data.error || 'Ошибка очистки метрик');
+                    } catch (e) {
+                        console.error(e);
+                        window.showToast('danger', 'Ошибка очистки метрик');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHTML;
                     }
-                } catch (e) {
-                    console.error(e);
-                    window.showToast('danger', 'Ошибка очистки метрик');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHTML;
-                }
+                });
             });
 
             // Кнопки обновления хостов

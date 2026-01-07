@@ -255,6 +255,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
         try:
             text = request.form.get('text', '')
             buttons_json = request.form.get('buttons', '[]')
+            media_filename = request.form.get('media_filename', '')
             buttons = json.loads(buttons_json) if buttons_json else []
             
             admin_id = rw_repo.get_setting('admin_telegram_id')
@@ -278,17 +279,54 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 builder.adjust(1)
                 keyboard = builder.as_markup() if builder.export() else None
             
+            # Проверка наличия медиа файла
+            media_path = None
+            media_type = None
+            if media_filename:
+                media_path = os.path.join(UPLOAD_FOLDER, media_filename)
+                if os.path.exists(media_path):
+                    media_type = get_media_type(media_filename)
+            
             loop = current_app.config.get('EVENT_LOOP')
             if not loop or not loop.is_running():
                 return jsonify({'ok': False, 'error': 'Event loop not available'}), 500
             
             async def send_preview():
-                await bot.send_message(
-                    chat_id=int(admin_id),
-                    text=f"📨 <b>Предпросмотр рассылки</b>\n\n{text}",
-                    parse_mode='HTML',
-                    reply_markup=keyboard
-                )
+                preview_text = f"📨 <b>Предпросмотр рассылки</b>\n\n{text}"
+                
+                if media_path and media_type:
+                    media_file = FSInputFile(media_path)
+                    if media_type == 'photo':
+                        await bot.send_photo(
+                            chat_id=int(admin_id),
+                            photo=media_file,
+                            caption=preview_text,
+                            parse_mode='HTML',
+                            reply_markup=keyboard
+                        )
+                    elif media_type == 'video':
+                        await bot.send_video(
+                            chat_id=int(admin_id),
+                            video=media_file,
+                            caption=preview_text,
+                            parse_mode='HTML',
+                            reply_markup=keyboard
+                        )
+                    elif media_type == 'animation':
+                        await bot.send_animation(
+                            chat_id=int(admin_id),
+                            animation=media_file,
+                            caption=preview_text,
+                            parse_mode='HTML',
+                            reply_markup=keyboard
+                        )
+                else:
+                    await bot.send_message(
+                        chat_id=int(admin_id),
+                        text=preview_text,
+                        parse_mode='HTML',
+                        reply_markup=keyboard
+                    )
             
             asyncio.run_coroutine_threadsafe(send_preview(), loop).result(timeout=10)
             
@@ -400,7 +438,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     if not has_active_key and has_expired_key:
                         filtered_users.append(user)
                 all_users = filtered_users
-            elif mode == 'without_trial':
+            elif mode == 'without_trial' or mode == 'not_used_trial':
                 all_users = [u for u in all_users if not u.get('trial_used', 0)]
             
             media_path = None
@@ -727,20 +765,81 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Получаем uptime
-            result = execute_ssh_command(host, port, username, password, 'cat /proc/uptime')
+            # Получаем системную информацию: uptime, CPU, RAM, SWAP
+            # Команда объединяет несколько метрик через &&
+            # Получаем системную информацию: uptime, CPU, RAM, SWAP
+            # Используем разделитель '___' чтобы точно знать где какая метрика
+            # Для каждой команды добавляем fallback, чтобы цепочка не прерывалась
+            delimiter = "___"
+            command = (
+                f"cat /proc/uptime || echo '0 0'; echo '{delimiter}'; "
+                f"top -bn1 | grep 'Cpu(s)' | awk '{{print $2}}' || echo '0.0'; echo '{delimiter}'; "
+                f"nproc || echo '1'; echo '{delimiter}'; "
+                f"free -m | grep Mem | awk '{{print $3 \" \" $2}}' || echo '0 0'; echo '{delimiter}'; "
+                f"free -m | grep Swap | awk '{{print $3 \" \" $2}}' || echo '0 0'; echo '{delimiter}'; "
+                f"cat /proc/sys/vm/swappiness || echo '-1'"
+            )
+            result = execute_ssh_command(host, port, username, password, command)
             
             if result['ok']:
-                uptime_output = result['output']
                 try:
-                    uptime_seconds = float(uptime_output.split()[0])
+                    parts = result['output'].strip().split(delimiter)
+                    
+                    # 1. Uptime
+                    uptime_str = parts[0].strip().split()[0]
+                    uptime_seconds = float(uptime_str) if uptime_str else 0
+                    
+                    # 2. CPU
+                    cpu_str = parts[1].strip().replace(',', '.') # Fix for some locales
+                    cpu_usage = float(cpu_str) if cpu_str else 0.0
+                    
+                    # 3. Cores
+                    cores_str = parts[2].strip()
+                    cpu_cores = int(cores_str) if cores_str.isdigit() else 1
+                    
+                    # 4. RAM
+                    ram_str = parts[3].strip().split()
+                    if len(ram_str) >= 2:
+                        ram_used = int(ram_str[0])
+                        ram_total = int(ram_str[1])
+                    else:
+                        ram_used = 0
+                        ram_total = 0
+                    ram_percent = (ram_used / ram_total * 100) if ram_total > 0 else 0
+                    
+                    # 5. SWAP
+                    swap_str = parts[4].strip().split()
+                    if len(swap_str) >= 2:
+                        swap_used = int(swap_str[0])
+                        swap_total = int(swap_str[1])
+                    else:
+                        # Fallback parsing logic if grep Swap failed but Swap exists in summary 
+                        # (rare, usually means no swap line)
+                        swap_used = 0
+                        swap_total = 0
+                    swap_percent = (swap_used / swap_total * 100) if swap_total > 0 else 0
+                    
+                    # 6. Swappiness
+                    swappiness_str = parts[5].strip()
+                    swappiness = int(swappiness_str) if swappiness_str.replace('-','').isdigit() else -1
+
                     return jsonify({
                         'ok': True,
                         'uptime_seconds': uptime_seconds,
-                        'uptime_formatted': format_uptime(uptime_seconds)
+                        'uptime_formatted': format_uptime(uptime_seconds),
+                        'cpu_percent': round(cpu_usage, 1),
+                        'cpu_cores': cpu_cores,
+                        'ram_used': ram_used,
+                        'ram_total': ram_total,
+                        'ram_percent': round(ram_percent, 1),
+                        'swap_used': swap_used,
+                        'swap_total': swap_total,
+                        'swap_percent': round(swap_percent, 1),
+                        'swappiness': swappiness
                     })
-                except:
-                    return jsonify({'ok': False, 'error': 'Failed to parse uptime'}), 500
+                except Exception as parse_error:
+                    logger.exception(f"Failed to parse system info for {name}. Output was: {result['output']}")
+                    return jsonify({'ok': False, 'error': 'Failed to parse system info'}), 500
             else:
                 return jsonify({'ok': False, 'error': result['error']}), 500
         except Exception as e:
@@ -804,4 +903,1297 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             })
         except Exception as e:
             logger.error(f"Error rebooting {server_type}/{name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    # ==================== Развертывание Ноды Remnawave ====================
+    
+    @flask_app.route('/other/servers/deploy/check-status/<name>', methods=['GET'])
+    @login_required
+    def deploy_check_status(name):
+        """Проверка состояния развертывания: Docker, директория, docker-compose.yml"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            status = {
+                'docker_installed': False,
+                'directory_exists': False,
+                'compose_file_exists': False,
+                'suggested_step': 1
+            }
+            
+            # Проверка Docker
+            logger.info(f"Checking Docker on {name} ({host}:{port})")
+            docker_check = execute_ssh_command(
+                host, port, username, password,
+                'docker --version',
+                timeout=10
+            )
+            status['docker_installed'] = docker_check['ok']
+            
+            # Проверка директории
+            if status['docker_installed']:
+                dir_check = execute_ssh_command(
+                    host, port, username, password,
+                    'test -d /opt/remnanode && echo "exists"',
+                    timeout=10
+                )
+                status['directory_exists'] = 'exists' in dir_check.get('output', '')
+                
+                # Проверка docker-compose.yml
+                if status['directory_exists']:
+                    compose_check = execute_ssh_command(
+                        host, port, username, password,
+                        'test -f /opt/remnanode/docker-compose.yml && echo "exists"',
+                        timeout=10
+                    )
+                    status['compose_file_exists'] = 'exists' in compose_check.get('output', '')
+            
+            # Определяем рекомендуемый шаг
+            if not status['docker_installed']:
+                status['suggested_step'] = 1
+            elif not status['directory_exists']:
+                status['suggested_step'] = 2
+            elif not status['compose_file_exists']:
+                status['suggested_step'] = 3
+            else:
+                status['suggested_step'] = 5  # Все готово, переходим к управлению
+            
+            return jsonify({
+                'ok': True,
+                'status': status
+            })
+        except Exception as e:
+            logger.error(f"Error checking deployment status on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/servers/deploy/install-docker/<name>', methods=['POST'])
+    @login_required
+    def deploy_install_docker(name):
+        """Установка Docker на SSH-цели"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Устанавливаем Docker
+            logger.info(f"Installing Docker on {name} ({host}:{port})")
+            result = execute_ssh_command(
+                host, port, username, password,
+                'sudo curl -fsSL https://get.docker.com | sh',
+                timeout=300  # 5 минут на установку
+            )
+            
+            if result['ok']:
+                return jsonify({
+                    'ok': True,
+                    'message': 'Docker successfully installed',
+                    'output': result['output']
+                })
+            else:
+                return jsonify({
+                    'ok': False,
+                    'error': result['error'] or 'Failed to install Docker',
+                    'output': result['output']
+                }), 500
+        except Exception as e:
+            logger.error(f"Error installing Docker on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/servers/deploy/create-directory/<name>', methods=['POST'])
+    @login_required
+    def deploy_create_directory(name):
+        """Создание директории для Remnawave ноды"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Создаем директорию
+            logger.info(f"Creating directory on {name} ({host}:{port})")
+            result = execute_ssh_command(
+                host, port, username, password,
+                'mkdir -p /opt/remnanode && cd /opt/remnanode && pwd',
+                timeout=30
+            )
+            
+            if result['ok']:
+                return jsonify({
+                    'ok': True,
+                    'message': 'Directory created successfully',
+                    'output': result['output']
+                })
+            else:
+                return jsonify({
+                    'ok': False,
+                    'error': result['error'] or 'Failed to create directory',
+                    'output': result['output']
+                }), 500
+        except Exception as e:
+            logger.error(f"Error creating directory on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/servers/deploy/save-compose/<name>', methods=['POST'])
+    @login_required
+    def deploy_save_compose(name):
+        """Сохранение docker-compose.yml файла"""
+        try:
+            content = request.form.get('content', '').strip()
+            if not content:
+                return jsonify({'ok': False, 'error': 'Content is required'}), 400
+            
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Экранируем содержимое для безопасной передачи
+            safe_content = content.replace("'", "'\\''")
+            
+            # Сохраняем файл
+            logger.info(f"Saving docker-compose.yml on {name} ({host}:{port})")
+            result = execute_ssh_command(
+                host, port, username, password,
+                f"cd /opt/remnanode && cat > docker-compose.yml << 'EOF'\n{content}\nEOF",
+                timeout=30
+            )
+            
+            if result['ok'] or result['exit_status'] == 0:
+                return jsonify({
+                    'ok': True,
+                    'message': 'docker-compose.yml saved successfully'
+                })
+            else:
+                return jsonify({
+                    'ok': False,
+                    'error': result['error'] or 'Failed to save docker-compose.yml',
+                    'output': result['output']
+                }), 500
+        except Exception as e:
+            logger.error(f"Error saving docker-compose.yml on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/servers/deploy/view-compose/<name>', methods=['GET'])
+    @login_required
+    def deploy_view_compose(name):
+        """Просмотр содержимого docker-compose.yml"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Читаем файл
+            logger.info(f"Reading docker-compose.yml from {name} ({host}:{port})")
+            result = execute_ssh_command(
+                host, port, username, password,
+                'cd /opt/remnanode && cat docker-compose.yml',
+                timeout=30
+            )
+            
+            if result['ok']:
+                return jsonify({
+                    'ok': True,
+                    'content': result['output']
+                })
+            else:
+                return jsonify({
+                    'ok': False,
+                    'error': result['error'] or 'File not found or error reading',
+                    'output': result['output']
+                }), 500
+        except Exception as e:
+            logger.error(f"Error reading docker-compose.yml from {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/servers/deploy/manage-containers/<name>', methods=['POST'])
+    @login_required
+    def deploy_manage_containers(name):
+        """Управление контейнерами (start, restart, logs)"""
+        try:
+            action = request.form.get('action', 'start')  # start, restart, logs
+            
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Выбираем команду на основе действия
+            if action == 'start':
+                command = 'cd /opt/remnanode && docker compose up -d'
+                timeout = 120
+            elif action == 'restart':
+                command = 'cd /opt/remnanode && docker compose restart remnanode'
+                timeout = 60
+            elif action == 'logs':
+                # Убираем -f (follow) чтобы команда завершалась
+                command = 'cd /opt/remnanode && docker compose logs -t --tail=100 remnanode'
+                timeout = 30
+            else:
+                return jsonify({'ok': False, 'error': 'Invalid action'}), 400
+            
+            # Выполняем команду
+            logger.info(f"Managing containers on {name} ({host}:{port}) - action: {action}")
+            result = execute_ssh_command(host, port, username, password, command, timeout=timeout)
+            
+            if result['ok'] or result['exit_status'] == 0:
+                return jsonify({
+                    'ok': True,
+                    'message': f'Action {action} executed successfully',
+                    'output': result['output']
+                })
+            else:
+                return jsonify({
+                    'ok': False,
+                    'error': result['error'] or f'Failed to execute {action}',
+                    'output': result['output']
+                }), 500
+        except Exception as e:
+            logger.error(f"Error managing containers on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/servers/deploy/remove-all/<name>', methods=['POST'])
+    @login_required
+    def deploy_remove_all(name):
+        """Полное удаление ноды и Docker"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Полная команда удаления с проверками
+            command = (
+                '('
+                'if [ -f /opt/remnanode/docker-compose.yml ]; then '
+                    'cd /opt/remnanode && sudo docker compose down 2>/dev/null || true; '
+                'fi; '
+                'sudo rm -rf /opt/remnanode; '
+                'if command -v docker &> /dev/null; then '
+                    'sudo apt-get purge -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin docker-ce-rootless-extras 2>/dev/null || true; '
+                    'sudo rm -rf /var/lib/docker /var/lib/containerd ~/.docker 2>/dev/null || true; '
+                'fi; '
+                'echo "Cleanup completed"'
+                ')'
+            )
+            
+            logger.warning(f"REMOVING ALL Docker and node data on {name} ({host}:{port})")
+            result = execute_ssh_command(host, port, username, password, command, timeout=180)
+            
+            # Проверяем результат
+            if result.get('output') and 'Cleanup completed' in result.get('output', ''):
+                return jsonify({
+                    'ok': True,
+                    'message': 'Нода и Docker полностью удалены',
+                    'output': result['output']
+                })
+            elif result.get('ok') or result.get('exit_status') == 0:
+                return jsonify({
+                    'ok': True,
+                    'message': 'Команда удаления выполнена',
+                    'output': result.get('output', '')
+                })
+            else:
+                logger.error(f"Remove all failed on {name}: {result.get('error')}, output: {result.get('output')}")
+                return jsonify({
+                    'ok': False,
+                    'error': result.get('error') or 'Failed to remove',
+                    'output': result.get('output', '')
+                }), 500
+        except Exception as e:
+            logger.error(f"Error removing all on {name}: {e}", exc_info=True)
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    # ==================== Просмотр Логов ====================
+
+    @flask_app.route('/other/logs/stream')
+    @login_required
+    def logs_stream():
+        """Стриминг логов. Пытается использовать Docker CLI, Socket или локальные файлы."""
+        def generate():
+            import subprocess
+            import shutil
+            import time
+            import socket
+            import http.client
+            
+            # 1. Windows Simulation
+            if os.name == 'nt':
+                yield f"data: [INFO] --- Windows Logs Simulation Mode ---\n\n"
+                while True:
+                    yield f"data: [INFO] {datetime.now().isoformat()} - Heartbeat\n\n"
+                    time.sleep(2)
+                return
+
+            # 2. Попытка через Docker CLI (если установлен)
+            cli_cmd = None
+            if shutil.which('docker-compose'):
+                cli_cmd = ['docker-compose', 'logs', '-f', '--tail=100']
+            elif shutil.which('docker'):
+                cli_cmd = ['docker', 'compose', 'logs', '-f', '--tail=100']
+            
+            # Если есть CLI, пробуем запустить
+            if cli_cmd and os.path.exists('/root/remnawave-shopbot'):
+                yield f"data: [INFO] Docker CLI found. Trying to stream via command...\n\n"
+                try:
+                    process = subprocess.Popen(
+                        cli_cmd,
+                        cwd='/root/remnawave-shopbot',
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        universal_newlines=True,
+                        bufsize=1
+                    )
+                    for line in iter(process.stdout.readline, ''):
+                        if line: yield f"data: {line.rstrip()}\n\n"
+                    process.stdout.close()
+                    yield f"data: [EXIT] CLI process exited.\n\n"
+                    return # Если CLI отработал (или упал), выходим, не пробуем сокет (чтобы не дублировать)
+                except Exception as e:
+                    yield f"data: [WARN] CLI failed: {e}. Trying Docker Socket...\n\n"
+            
+            # 3. Попытка через Docker Socket (напрямую через socket, без aiohttp для синхронного генератора)
+            socket_path = '/var/run/docker.sock'
+            if os.path.exists(socket_path):
+                yield f"data: [INFO] Docker socket found at {socket_path}. Connecting...\n\n"
+                try:
+                    # Узнаем ID текущего контейнера (если мы в контейнере)
+                    hostname = socket.gethostname()
+                    
+                    # Соединяемся с сокетом
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    sock.connect(socket_path)
+                    
+                    # HTTP запрос к Docker API
+                    # GET /containers/{hostname}/logs?stdout=1&stderr=1&follow=1&tail=100
+                    request = f"GET /containers/{hostname}/logs?stdout=1&stderr=1&follow=1&tail=100 HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                    sock.sendall(request.encode('ascii'))
+                    
+                    # Читаем ответ (простой парсинг чанков)
+                    fp = sock.makefile('rb')
+                    
+                    # Пропускаем заголовки
+                    while True:
+                        line = fp.readline()
+                        if line in (b'\r\n', b'\n', b''): break
+                        
+                    # Читаем поток фреймов Docker (Header: [STREAM_TYPE, 0, 0, SIZE] + Body)
+                    while True:
+                        # Docker attach protocol header is 8 bytes
+                        header = fp.read(8)
+                        if not header or len(header) < 8: break
+                        
+                        # payload size is last 4 bytes big endian
+                        import struct
+                        # stream_type = header[0] (0=stdin, 1=stdout, 2=stderr)
+                        payload_size = struct.unpack('>I', header[4:])[0]
+                        
+                        if payload_size > 0:
+                            payload = fp.read(payload_size)
+                            if not payload: break
+                            # Декодируем и отправляем
+                            try:
+                                text = payload.decode('utf-8', errors='replace')
+                                # Разбиваем на строки, так как payload может содержать несколько
+                                for line in text.splitlines():
+                                    yield f"data: {line}\n\n"
+                            except:
+                                pass
+                                
+                    sock.close()
+                    yield f"data: [EXIT] Socket stream ended.\n\n"
+                    return
+                except Exception as e:
+                     yield f"data: [ERROR] Socket connection failed: {e}\n\n"
+            else:
+                 yield f"data: [WARN] Docker socket not found at {socket_path}.\n\n"
+
+            # 4. Fallback: лог-файл (если есть)
+            log_files = ['logs/bot.log', 'bot.log']
+            found_log = False
+            for log_file in log_files:
+                if os.path.exists(log_file):
+                    found_log = True
+                    yield f"data: [INFO] Reading local log file: {log_file} (tail mode)\n\n"
+                    try:
+                        from collections import deque
+                        # Сначала читаем последние 100 строк для контекста
+                        with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
+                            # deque(f, 100) эффективно читает файл и оставляет только последние 100 строк
+                            for line in deque(f, 100):
+                                yield f"data: {line.strip()}\n\n"
+                            
+                            # Теперь переходим в режим tail -f
+                            # Нужно переоткрыть или искать позицию, но проще переоткрыть и сделать seek
+                            # Однако файл мог измениться. 
+                            # Надежнее: запомнить позицию где остановились? 
+                            # deque прочел весь файл. Значит мы в конце.
+                            f.seek(0, os.SEEK_END)
+                            
+                            while True:
+                                line = f.readline()
+                                if not line:
+                                    time.sleep(0.5)
+                                    continue
+                                yield f"data: {line.strip()}\n\n"
+                                
+                    except Exception as e:
+                        yield f"data: [ERROR] Error reading file: {e}\n\n"
+                    break
+            
+            if not found_log:
+                yield f"data: [CRITICAL] No log methods work. CLI missing, Socket missing, Log files missing.\n\n"
+
+        return current_app.response_class(generate(), mimetype='text/event-stream')
+
+    @flask_app.route('/other/logs/clear', methods=['POST'])
+    @login_required
+    def logs_clear():
+        """Очистка логов (локальных или docker)"""
+        try:
+            import subprocess
+            
+            cleared_any = False
+            
+            # 1. Очистка локальных файлов (приоритет для контейнеров без доступа к хосту)
+            log_files = ['logs/bot.log', 'bot.log']
+            for log_file in log_files:
+                if os.path.exists(log_file):
+                    try:
+                        # Truncate file to 0 bytes
+                        with open(log_file, 'w', encoding='utf-8') as f:
+                            pass
+                        logger.info(f"Cleared local log file: {log_file}")
+                        cleared_any = True
+                    except Exception as e:
+                        logger.error(f"Failed to clear {log_file}: {e}")
+            
+            if cleared_any:
+                return jsonify({'ok': True, 'message': 'Local logs cleared successfully'})
+
+            # 2. Очистка Docker логов (если локальных нет, пробуем system command)
+            # Внимание: для выполнения может потребоваться sudo или права root
+            # truncate -s 0 /var/lib/docker/containers/*/*-json.log
+            cmd = "truncate -s 0 /var/lib/docker/containers/*/*-json.log"
+            
+            if os.name == 'nt':
+                logger.info("Windows detected using dummy log clear")
+                return jsonify({'ok': True, 'message': 'Logs cleared (Simulation)'})
+            
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                return jsonify({'ok': True, 'message': 'Docker logs cleared successfully'})
+            else:
+                return jsonify({'ok': False, 'error': f"Failed: {result.stderr or 'Permission denied'}"}), 500
+                
+        except Exception as e:
+            logger.error(f"Error clearing logs: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/restart', methods=['POST'])
+    @login_required
+    def logs_restart():
+        """Полный перезапуск бота через docker-compose restart"""
+        try:
+            import subprocess
+            
+            # 1. Check for docker-compose
+            cmd = None
+            try:
+                subprocess.run(["docker-compose", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                cmd = "docker-compose restart"
+            except FileNotFoundError:
+                try:
+                    subprocess.run(["docker", "compose", "version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    cmd = "docker compose restart"
+                except FileNotFoundError:
+                    pass
+            
+            if not cmd:
+                # Fallback: Process Suicide (Docker should restart us)
+                logger.warning("Docker CLI not found. Falling back to process exit.")
+                
+                def suicide():
+                    import time
+                    import sys
+                    time.sleep(1)
+                    logger.critical("Initiating self-restart via sys.exit(1)")
+                    os._exit(1)
+
+                threading.Thread(target=suicide).start()
+                return jsonify({'ok': True, 'message': 'Перезапускаем процесс...'})
+
+            # 2. Execute
+            proc = subprocess.Popen(cmd, shell=True) 
+            return jsonify({'ok': True, 'message': 'Перезапуск бота отправлен. Пожалуйста, подождите 10-20 секунд.'})
+
+        except Exception as e:
+            logger.error(f"Error restarting bot: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    # ==================== Управление WARP (socks) ====================
+
+    @flask_app.route('/other/servers/warp/status/<name>', methods=['GET'])
+    @login_required
+    def warp_status(name):
+        """Проверка статуса WARP (wireproxy)"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Проверяем сервис wireproxy и наличие бинарника
+            # Используем systemctl cat для получения полной конфигурации (включая overrides)
+            
+            command = (
+                "systemctl is-active wireproxy; "
+                "if systemctl list-unit-files | grep -q wireproxy; then echo 'SERVICE_EXISTS'; else echo 'SERVICE_MISSING'; fi; "
+                "if [ -f /usr/local/bin/wireproxy ] || [ -f /usr/bin/wireproxy ]; then echo 'BINARY_FOUND'; else echo 'BINARY_MISSING'; fi; "
+                "systemctl cat wireproxy 2>/dev/null | grep -E 'MemoryMax|MemoryHigh' || true"
+            )
+            
+            result = execute_ssh_command(host, port, username, password, command, timeout=15)
+            
+            status = {
+                'installed': False,
+                'active': False,
+                'service_exists': False,
+                'binary_exists': False,
+                'memory_max': 'N/A',
+                'memory_high': 'N/A'
+            }
+            
+            if result['ok']:
+                lines = result['output'].splitlines()
+                if len(lines) >= 3:
+                    is_active = lines[0].strip() == 'active'
+                    service_exists = 'SERVICE_EXISTS' in result['output']
+                    binary_exists = 'BINARY_FOUND' in result['output']
+                    
+                    # Считаем установленным если есть сервис ИЛИ бинарник
+                    status['active'] = is_active
+                    status['service_exists'] = service_exists
+                    status['binary_exists'] = binary_exists
+                    status['installed'] = service_exists or binary_exists
+                    
+                    # Парсинг памяти (берем последние найденные значения, т.к. cat выводит base + override)
+                    import re
+                    # Ищем все совпадения
+                    all_max = re.findall(r'MemoryMax=([^\s]+)', result['output'])
+                    all_high = re.findall(r'MemoryHigh=([^\s]+)', result['output'])
+                    
+                    if all_max: status['memory_max'] = all_max[-1]
+                    if all_high: status['memory_high'] = all_high[-1]
+            
+            return jsonify({'ok': True, 'status': status})
+            
+        except Exception as e:
+            logger.error(f"Error checking WARP status on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/install/<name>', methods=['POST'])
+    @login_required
+    def warp_install(name):
+        """Установка WARP (wireproxy)"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Команда установки с авто-ответами: 1 (install), 1 (ipv4), 40000 (port)
+            # Используем printf для передачи ответов в скрипт
+            # Меню скрипта:
+            # 1. Install WARP-Socks5
+            # ...
+            # Select: 1
+            # ...
+            # 1. IPv4 only
+            # ...
+            # Select: 1
+            # ...
+            # Port: 40000
+            
+            # Внимание: скрипт может обновляться, но следуем инструкции юзера (1,1,40000)
+            install_cmd = "printf '1\\n1\\n40000\\n' | bash <(curl -fsSL https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh) w"
+            
+            logger.info(f"Installing WARP on {name} ({host}:{port})")
+            
+            # Увеличенный таймаут т.к. установка может занять время
+            result = execute_ssh_command(host, port, username, password, install_cmd, timeout=300)
+            
+            # Применение дефолтного конфига сразу после установки
+            if result['ok'] or "Socks5 configured" in result['output']:
+                try:
+                    # Создание drop-in override для сервиса
+                    # Environment="WG_LOG_LEVEL=error"
+                    # StandardOutput=null
+                    # StandardError=journal
+                    # MemoryMax=800M
+                    # MemoryHigh=1G
+                    
+                    config_cmd = (
+                        "mkdir -p /etc/systemd/system/wireproxy.service.d && "
+                        "printf '[Service]\\nEnvironment=\"WG_LOG_LEVEL=error\"\\nStandardOutput=null\\nStandardError=journal\\nMemoryMax=800M\\nMemoryHigh=1G\\n' > /etc/systemd/system/wireproxy.service.d/override.conf && "
+                        "systemctl daemon-reload && "
+                        "systemctl restart wireproxy"
+                    )
+                    
+                    logger.info(f"Applying default config to WARP on {name}")
+                    config_res = execute_ssh_command(host, port, username, password, config_cmd, timeout=30)
+                    if config_res['ok']:
+                        result['output'] += "\n[Config] Applied default settings (800M/1G)"
+                    else:
+                        result['output'] += f"\n[Config] Failed to apply defaults: {config_res['error']}"
+                        
+                except Exception as e:
+                    logger.error(f"Failed to apply default config on {name}: {e}")
+            
+            if result['ok'] or "Socks5 configured" in result['output']:
+                 return jsonify({
+                    'ok': True, 
+                    'message': 'WARP успешно установлен',
+                    'output': result['output']
+                })
+            else:
+                return jsonify({
+                    'ok': False, 
+                    'error': result['error'] or 'Ошибка установки',
+                    'output': result['output']
+                }), 500
+                
+        except Exception as e:
+            logger.error(f"Error installing WARP on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/uninstall/<name>', methods=['POST'])
+    @login_required
+    def warp_uninstall(name):
+        """Удаление WARP"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            # Команда удаления: u (uninstall), y (confirm)
+            # bash <(...) u -> prompts for confirm (y/n)
+            uninstall_cmd = "printf 'y\\n' | bash <(curl -fsSL https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh) u"
+            
+            logger.info(f"Uninstalling WARP on {name}")
+            result = execute_ssh_command(host, port, username, password, uninstall_cmd, timeout=120)
+            
+            if result['ok']:
+                 return jsonify({
+                    'ok': True, 
+                    'message': 'WARP успешно удален',
+                    'output': result['output']
+                })
+            else:
+                return jsonify({
+                    'ok': False, 
+                    'error': result['error'] or 'Ошибка удаления',
+                    'output': result['output']
+                }), 500
+                
+        except Exception as e:
+            logger.error(f"Error uninstalling WARP on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/config/<name>', methods=['POST'])
+    @login_required
+    def warp_config(name):
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+                
+            memory_max = request.form.get('memory_max', '800M')
+            memory_high = request.form.get('memory_high', '1G')
+            
+            override_dir = '/etc/systemd/system/wireproxy.service.d'
+            override_file = f'{override_dir}/override.conf'
+            
+            check_cmd = f"test -f {override_file} && echo 'EXISTS' || echo 'NOT_EXISTS'"
+            check_result = execute_ssh_command(host, port, username, password, check_cmd, timeout=10)
+            
+            if check_result['ok'] and 'EXISTS' in check_result['output']:
+                cmd = (
+                    f"mkdir -p {override_dir} && "
+                    f"if grep -q '^MemoryMax=' {override_file}; then "
+                    f"sed -i 's/^MemoryMax=.*/MemoryMax={memory_max}/' {override_file}; "
+                    f"else "
+                    f"sed -i '/^\\[Service\\]/a MemoryMax={memory_max}' {override_file}; "
+                    f"fi && "
+                    f"if grep -q '^MemoryHigh=' {override_file}; then "
+                    f"sed -i 's/^MemoryHigh=.*/MemoryHigh={memory_high}/' {override_file}; "
+                    f"else "
+                    f"sed -i '/^\\[Service\\]/a MemoryHigh={memory_high}' {override_file}; "
+                    f"fi && "
+                    "systemctl daemon-reload && "
+                    "systemctl restart wireproxy"
+                )
+            else:
+                override_content = f"""[Service]
+MemoryMax={memory_max}
+MemoryHigh={memory_high}
+"""
+                safe_content = override_content.replace("'", "'\"'\"'")
+                cmd = (
+                    f"mkdir -p {override_dir} && "
+                    f"printf '%s' '{safe_content}' > {override_file} && "
+                    "systemctl daemon-reload && "
+                    "systemctl restart wireproxy"
+                )
+            
+            logger.info(f"Configuring WARP on {name}: {memory_max}/{memory_high}")
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=60)
+            
+            if result['ok']:
+                 return jsonify({
+                    'ok': True, 
+                    'message': 'Конфигурация обновлена и сервис перезапущен',
+                    'output': result['output']
+                })
+            else:
+                 return jsonify({
+                    'ok': False, 
+                    'error': result['error'] or 'Ошибка конфигурации',
+                    'output': result['output']
+                }), 500
+                
+        except Exception as e:
+             logger.error(f"Error configuring WARP on {name}: {e}")
+             return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/restart/<name>', methods=['POST'])
+    @login_required
+    def warp_restart(name):
+        """Перезапуск сервиса wireproxy"""
+        try:
+             ssh_targets = rw_repo.get_all_ssh_targets()
+             server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+             if not server:
+                 return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+             
+             host = server.get('ssh_host')
+             port = server.get('ssh_port', 22)
+             username = server.get('ssh_username', 'root')
+             password = server.get('ssh_password')
+             
+             if not host or not password:
+                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+             
+             cmd = "systemctl restart wireproxy"
+             
+             result = execute_ssh_command(host, port, username, password, cmd, timeout=30)
+             
+             if result['ok']:
+                  return jsonify({'ok': True, 'message': 'Сервис wireproxy перезапущен'})
+             else:
+                  return jsonify({'ok': False, 'error': result['error']}), 500
+        except Exception as e:
+             logger.error(f"Error restarting WARP on {name}: {e}")
+             return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/start/<name>', methods=['POST'])
+    @login_required
+    def warp_start(name):
+        """Запуск WARP"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+                
+            cmd = "systemctl start wireproxy"
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=30)
+            
+            if result['ok']:
+                 return jsonify({'ok': True, 'message': 'Сервис запущен'})
+            else:
+                return jsonify({'ok': False, 'error': result['error'] or 'Ошибка запуска'}), 500
+                
+        except Exception as e:
+            logger.error(f"Error starting WARP on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/stop/<name>', methods=['POST'])
+    @login_required
+    def warp_stop(name):
+        """Остановка WARP"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+                
+            cmd = "systemctl stop wireproxy"
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=30)
+            
+            if result['ok']:
+                 return jsonify({'ok': True, 'message': 'Сервис остановлен'})
+            else:
+                return jsonify({'ok': False, 'error': result['error'] or 'Ошибка остановки'}), 500
+                
+        except Exception as e:
+            logger.error(f"Error stopping WARP on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    # ==================== Управление SWAP ====================
+
+    @flask_app.route('/other/servers/swap/install/<name>', methods=['POST'])
+    @login_required
+    def swap_install(name):
+        """Установка SWAP файла"""
+        try:
+            size_mb = request.form.get('size_mb', '2048')
+            if not size_mb.isdigit():
+                 return jsonify({'ok': False, 'error': 'Invalid size'}), 400
+            
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+
+            # Команды установки swap
+            # 1. fallocate
+            # 2. chmod
+            # 3. mkswap
+            # 4. swapon
+            # 5. fstab
+            
+            cmd = (
+                f"fallocate -l {size_mb}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count={size_mb}; "
+                "chmod 600 /swapfile; "
+                "mkswap /swapfile; "
+                "swapon /swapfile; "
+                "grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab"
+            )
+            
+            logger.info(f"Installing SWAP ({size_mb}MB) on {name}")
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=120)
+            
+            if result['ok']:
+                 return jsonify({'ok': True, 'message': 'SWAP установлен'})
+            else:
+                 return jsonify({'ok': False, 'error': result['error'] or 'Failed to install SWAP'}), 500
+                 
+        except Exception as e:
+            logger.error(f"Error installing SWAP on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/swap/delete/<name>', methods=['DELETE'])
+    @login_required
+    def swap_delete(name):
+        """Удаление SWAP файла"""
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+
+            cmd = (
+                "swapoff /swapfile; "
+                "rm /swapfile; "
+                "sed -i '/\/swapfile/d' /etc/fstab"
+            )
+            
+            logger.info(f"Deleting SWAP on {name}")
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=60)
+            
+            if result['ok']:
+                 return jsonify({'ok': True, 'message': 'SWAP удален'})
+            else:
+                 return jsonify({'ok': False, 'error': result['error'] or 'Failed to delete SWAP'}), 500
+                 
+        except Exception as e:
+            logger.error(f"Error deleting SWAP on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+            
+    @flask_app.route('/other/servers/swap/resize/<name>', methods=['POST'])
+    @login_required
+    def swap_resize(name):
+        """Изменение размера SWAP (удаление + установка)"""
+        try:
+            size_mb = request.form.get('size_mb', '2048')
+            if not size_mb.isdigit():
+                 return jsonify({'ok': False, 'error': 'Invalid size'}), 400
+                 
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+
+            # Объединяем удаление и установку
+            # Безопасное изменение размера:
+            # 1. Проверяем, подключен ли swap. Если да - пробуем отключить.
+            # 2. Если отключение не удалось (например, не хватает RAM) - прерываем операцию.
+            # 3. Если удалось - удаляем и создаем новый.
+            
+            cmd = (
+                "if grep -q '/swapfile' /proc/swaps; then "
+                "  swapoff /swapfile || exit 1; "
+                "fi && "
+                "rm -f /swapfile && "
+                f"fallocate -l {size_mb}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count={size_mb} && "
+                "chmod 600 /swapfile && "
+                "mkswap /swapfile && "
+                "swapon /swapfile && "
+                "grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab"
+            )
+            
+            logger.info(f"Resizing SWAP to {size_mb}MB on {name}")
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=180)
+            
+            if result['ok']:
+                 return jsonify({'ok': True, 'message': 'Размер SWAP изменен'})
+            else:
+                 return jsonify({'ok': False, 'error': result['error'] or 'Failed to resize SWAP'}), 500
+                 
+        except Exception as e:
+            logger.error(f"Error resizing SWAP on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/swap/swappiness/<name>', methods=['POST'])
+    @login_required
+    def swap_swappiness(name):
+        """Изменение swappiness"""
+        try:
+            swappiness = request.form.get('swappiness', '60')
+            if not swappiness.isdigit() or not (0 <= int(swappiness) <= 100):
+                 return jsonify({'ok': False, 'error': 'Invalid swappiness value (0-100)'}), 400
+            
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+
+            # Применяем на лету и сохраняем
+            # 1. sysctl vm.swappiness=XX
+            # 2. echo "vm.swappiness=XX" >> /etc/sysctl.conf (или заменяем если есть)
+            
+            cmd = (
+                f"sysctl vm.swappiness={swappiness}; "
+                f"if grep -q 'vm.swappiness' /etc/sysctl.conf; then "
+                f"sed -i 's/^vm.swappiness.*/vm.swappiness={swappiness}/' /etc/sysctl.conf; "
+                "else "
+                f"echo 'vm.swappiness={swappiness}' >> /etc/sysctl.conf; "
+                "fi"
+            )
+            
+            logger.info(f"Changing swappiness to {swappiness} on {name}")
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=30)
+            
+            if result['ok']:
+                 return jsonify({'ok': True, 'message': 'Parametr swappiness обновлен'})
+            else:
+                 return jsonify({'ok': False, 'error': result['error'] or 'Failed to change swappiness'}), 500
+                 
+        except Exception as e:
+            logger.error(f"Error changing swappiness on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/systemd/get/<name>', methods=['GET'])
+    @login_required
+    def warp_systemd_get(name):
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            override_file = '/etc/systemd/system/wireproxy.service.d/override.conf'
+            cmd = f"if [ -f {override_file} ]; then cat {override_file}; else echo ''; fi"
+            
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=15)
+            
+            if result['ok']:
+                return jsonify({'ok': True, 'content': result['output']})
+            else:
+                return jsonify({'ok': False, 'error': result['error'] or 'Failed to read config'}), 500
+                
+        except Exception as e:
+            logger.error(f"Error reading systemd config on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/systemd/save/<name>', methods=['POST'])
+    @login_required
+    def warp_systemd_save(name):
+        try:
+            content = request.form.get('content', '')
+            
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            override_dir = '/etc/systemd/system/wireproxy.service.d'
+            override_file = f'{override_dir}/override.conf'
+            
+            safe_content = content.replace("'", "'\"'\"'")
+            
+            cmd = (
+                f"mkdir -p {override_dir} && "
+                f"printf '%s' '{safe_content}' > {override_file} && "
+                "systemctl daemon-reload && "
+                "systemctl restart wireproxy"
+            )
+            
+            logger.info(f"Saving systemd config on {name}")
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=60)
+            
+            if result['ok']:
+                return jsonify({'ok': True, 'message': 'Конфигурация сохранена и сервис перезапущен'})
+            else:
+                return jsonify({'ok': False, 'error': result['error'] or 'Failed to save config'}), 500
+                
+        except Exception as e:
+            logger.error(f"Error saving systemd config on {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/logs/usage/<name>', methods=['GET'])
+    @login_required
+    def warp_logs_usage(name):
+        try:
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            cmd = "journalctl --disk-usage"
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=15)
+            
+            if result['ok']:
+                return jsonify({'ok': True, 'usage': result['output']})
+            else:
+                return jsonify({'ok': False, 'error': result['error']}), 500
+                
+        except Exception as e:
+            logger.error(f"Error checking log usage for {name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/warp/logs/clean/<name>', methods=['POST'])
+    @login_required
+    def warp_logs_clean(name):
+        try:
+            max_size = request.form.get('max_size', '0')
+            max_age = request.form.get('max_age', '0')
+            
+            if not max_size.isdigit() or not max_age.isdigit():
+                return jsonify({'ok': False, 'error': 'Invalid values'}), 400
+            
+            max_size_int = int(max_size)
+            max_age_int = int(max_age)
+            
+            if max_size_int == 0 and max_age_int == 0:
+                return jsonify({'ok': False, 'error': 'Укажите хотя бы один параметр (размер или возраст)'}), 400
+            
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            server = next((t for t in ssh_targets if t.get('target_name') == name), None)
+            if not server:
+                return jsonify({'ok': False, 'error': 'SSH target not found'}), 404
+            
+            host = server.get('ssh_host')
+            port = server.get('ssh_port', 22)
+            username = server.get('ssh_username', 'root')
+            password = server.get('ssh_password')
+            
+            if not host or not password:
+                return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
+            
+            cmd_parts = ['sudo journalctl -u wireproxy.service']
+            
+            if max_size_int > 0:
+                cmd_parts.append(f'--vacuum-size={max_size_int}M')
+            
+            if max_age_int > 0:
+                cmd_parts.append(f'--vacuum-time={max_age_int}d')
+            
+            cmd = ' '.join(cmd_parts)
+            
+            logger.info(f"Cleaning wireproxy logs on {name}: {cmd}")
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=60)
+            
+            if result['ok']:
+                return jsonify({
+                    'ok': True,
+                    'message': 'Логи wireproxy очищены',
+                    'output': result['output']
+                })
+            else:
+                return jsonify({
+                    'ok': False,
+                    'error': result['error'] or 'Ошибка очистки логов',
+                    'output': result['output']
+                }), 500
+                
+        except Exception as e:
+            logger.error(f"Error cleaning logs for {name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500

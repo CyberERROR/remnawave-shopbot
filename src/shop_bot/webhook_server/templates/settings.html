@@ -2,13 +2,13 @@
 {% block title %}Настройки{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
+
 <div class="mb-6">
     <h2 class="text-2xl font-bold text-white">Настройки</h2>
     <p class="text-white/50 text-sm">Панель, боты, платежи, хосты и контент</p>
 </div>
 
-<!-- Status Alert -->
+
 {% if all_settings_ok and support_settings_ok %}
 <div class="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/20 text-primary">
     ✅ Веб-панель и оба бота настроены. Можно запускать.
@@ -23,7 +23,7 @@
 </div>
 {% endif %}
 
-<!-- Navigation Tabs -->
+
 <div class="bg-white/5 border border-white/10 rounded-lg p-2 mb-6 overflow-x-auto">
     <nav class="flex gap-1 min-w-max" id="settings-nav">
         <button type="button" data-tab="panel"
@@ -56,7 +56,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <input type="hidden" name="next_hash" id="settings-next-hash" value="panel" />
 
-    <!-- TAB: Panel -->
+
     <section id="tab-panel" class="tab-content">
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
             <h3 class="text-xl font-bold text-white mb-6">Настройки Панели</h3>
@@ -128,7 +128,7 @@
         </div>
     </section>
 
-    <!-- TAB: Bot -->
+
     <section id="tab-bot" class="tab-content hidden">
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
             <h3 class="text-xl font-bold text-white mb-6">Настройка Бота</h3>
@@ -154,7 +154,7 @@
         </div>
     </section>
 
-    <!-- TAB: Support Bot -->
+
     <section id="tab-support-bot" class="tab-content hidden">
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
             <h3 class="text-xl font-bold text-white mb-6">Настройки Support-бота</h3>
@@ -180,10 +180,10 @@
         </div>
     </section>
 
-    <!-- TAB: Payments -->
+
     <section id="tab-payments" class="tab-content hidden">
         <div class="space-y-6">
-            <!-- YooKassa -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
                 <h3 class="text-xl font-bold text-white mb-4">YooKassa</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -215,7 +215,7 @@
                 </div>
             </div>
 
-            <!-- CryptoBot -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
                 <h3 class="text-xl font-bold text-white mb-4">CryptoBot</h3>
                 <div>
@@ -225,7 +225,7 @@
                 </div>
             </div>
 
-            <!-- Heleket + Domain -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
                 <h3 class="text-xl font-bold text-white mb-4">Heleket</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -248,7 +248,7 @@
                 </div>
             </div>
 
-            <!-- TonConnect -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
                 <h3 class="text-xl font-bold text-white mb-4">TonConnect</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -265,7 +265,7 @@
                 </div>
             </div>
 
-            <!-- Telegram Stars -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
                 <h3 class="text-xl font-bold text-white mb-4">Telegram Stars</h3>
                 <div class="mb-4">
@@ -287,7 +287,7 @@
                 </div>
             </div>
 
-            <!-- YooMoney -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
                 <h3 class="text-xl font-bold text-white mb-4">YooMoney (кошелёк)</h3>
                 <div class="mb-4">
@@ -354,7 +354,7 @@
                 </div>
             </div>
 
-            <!-- Platega -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
                 <h3 class="text-xl font-bold text-white mb-4">Platega</h3>
                 <div class="mb-4">
@@ -382,7 +382,7 @@
                         class="text-primary/80">{{ request.url_root.rstrip('/') }}/platega-webhook</code></p>
             </div>
 
-            <!-- TonConnect -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
                 <h3 class="text-xl font-bold text-white mb-4">TonConnect</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -405,10 +405,10 @@
 
 </form>
 
-<!-- TAB: Hosts (outside main form to avoid nested form validation conflicts, has its own individual forms) -->
+
 <section id="tab-hosts" class="tab-content hidden">
     <div class="space-y-6">
-        <!-- Add Host Form -->
+
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
             <h3 class="text-xl font-bold text-white mb-4">Добавить новый хост</h3>
             <form action="{{ url_for('add_host_route') }}" method="post">
@@ -442,7 +442,7 @@
             </form>
         </div>
 
-        <!-- Existing Hosts -->
+
         {% if hosts %}
         {% for host in hosts %}
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
@@ -456,7 +456,7 @@
                 </form>
             </div>
 
-            <!-- Host URL -->
+
             <form action="{{ url_for('update_host_url_route') }}" method="post" class="mb-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <input type="hidden" name="host_name" value="{{ host.host_name }}" />
@@ -470,7 +470,7 @@
                 </div>
             </form>
 
-            <!-- Host Name (Rename) -->
+
             <form action="{{ url_for('rename_host_route') }}" method="post" class="mb-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <input type="hidden" name="old_host_name" value="{{ host.host_name }}" />
@@ -482,7 +482,7 @@
                 </div>
             </form>
 
-            <!-- Subscription URL -->
+
             <form action="{{ url_for('update_host_subscription_route') }}" method="post" class="mb-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <input type="hidden" name="host_name" value="{{ host.host_name }}" />
@@ -496,7 +496,7 @@
                 </div>
             </form>
 
-            <!-- SSH for Speedtest -->
+
             <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
                 <h5 class="text-white font-medium mb-3">SSH для Speedtest</h5>
                 <form action="{{ url_for('update_host_ssh_route') }}" method="post">
@@ -546,7 +546,62 @@
                 </form>
             </div>
 
-            <!-- Plans -->
+
+            <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
+                <h5 class="text-white font-medium mb-3">Лимит устройств (HWID Device Limit)</h5>
+                <form action="{{ url_for('update_host_hwid_limit_route') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+
+                    <div class="mb-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="hidden" name="hwid_enabled" value="0" />
+                            <input type="checkbox" name="hwid_enabled" value="1" id="hwid-enabled-{{ host.host_name }}"
+                                {% if host.remnawave_hwid_enabled %}checked{% endif %}
+                                class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
+                            <span class="text-white/70 text-sm">Включить ограничение устройств</span>
+                        </label>
+                        <p class="text-white/50 text-xs mt-1 ml-6">Если выключено, параметр hwidDeviceLimit не будет
+                            отправляться в API</p>
+                    </div>
+
+                    <div class="flex gap-2 items-end">
+                        <div class="flex-1">
+                            <label class="block text-white/50 text-xs mb-1">Лимит устройств</label>
+                            <input type="number" name="hwid_limit" value="{{ host.remnawave_limit_hwid or 0 }}" min="0"
+                                placeholder="0"
+                                class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
+                            <p class="text-white/50 text-xs mt-1">Максимальное количество устройств для одного
+                                пользователя (0 = без ограничений)</p>
+                        </div>
+                        <button type="submit"
+                            class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm hover:bg-primary/30">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+
+
+            <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
+                <h5 class="text-white font-medium mb-3">Лимит трафика (Traffic Limit)</h5>
+                <form action="{{ url_for('update_host_traffic_limit_route') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+
+                    <div class="flex gap-2 items-end">
+                        <div class="flex-1">
+                            <label class="block text-white/50 text-xs mb-1">Лимит трафика (GB)</label>
+                            <input type="number" name="traffic_limit" value="{{ host.remnawave_limit_traffic or 0 }}"
+                                min="0" placeholder="0" step="1"
+                                class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
+                            <p class="text-white/50 text-xs mt-1">Лимит трафика в гигабайтах (0 = без ограничений)</p>
+                        </div>
+                        <button type="submit"
+                            class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm hover:bg-primary/30">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+
+
             <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4">
                 <h5 class="text-white font-medium mb-3">Тарифы</h5>
                 {% if host.plans %}
@@ -613,11 +668,11 @@
         </div>
         {% endif %}
 
-        <!-- SSH Targets Section -->
+
         <div class="border-t border-white/10 pt-6">
             <h3 class="text-xl font-bold text-white mb-4">SSH цели для Speedtest (не зависят от хостов)</h3>
 
-            <!-- Add SSH Target -->
+
             <div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-4">
                 <h4 class="text-white font-medium mb-4">Добавить SSH-цель</h4>
                 <form action="{{ url_for('create_ssh_target_route') }}" method="post">
@@ -668,7 +723,7 @@
                 </form>
             </div>
 
-            <!-- Existing SSH Targets -->
+
             {% if ssh_targets %}
             {% for t in ssh_targets %}
             <div class="bg-white/5 border border-white/10 rounded-lg p-4 mb-4">
@@ -729,12 +784,12 @@
     </div>
 </section>
 
-<!-- Continuation of settings form for remaining tabs -->
+
 <form action="{{ url_for('settings_page') }}" method="post" id="settings-form-part2">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <input type="hidden" name="next_hash" id="settings-next-hash-part2" value="referrals" />
 
-    <!-- TAB: Referrals -->
+
     <section id="tab-referrals" class="tab-content hidden">
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
             <h3 class="text-xl font-bold text-white mb-6">Реферальная система</h3>
@@ -770,9 +825,9 @@
                 </div>
             </div>
 
-            <!-- Conditional fields based on referral_reward_type -->
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- percent_purchase: Процент вознаграждения -->
+
                 <div data-ref-section="percent_purchase">
                     <label class="block text-white/70 text-sm font-medium mb-2">Процент вознаграждения
                         пригласившему</label>
@@ -787,7 +842,7 @@
                     </p>
                 </div>
 
-                <!-- fixed_purchase: Фиксированная сумма за покупку -->
+
                 <div data-ref-section="fixed_purchase">
                     <label class="block text-white/70 text-sm font-medium mb-2">Фиксированная сумма за покупку</label>
                     <div class="flex">
@@ -801,7 +856,7 @@
                         сумму.</p>
                 </div>
 
-                <!-- fixed_start_referrer: Бонус пригласившему при старте -->
+
                 <div data-ref-section="fixed_start_referrer">
                     <label class="block text-white/70 text-sm font-medium mb-2">Бонус пригласившему при старте</label>
                     <div class="flex">
@@ -815,7 +870,7 @@
                         пользователь запускает бота по реферальной ссылке.</p>
                 </div>
 
-                <!-- Always visible: Скидка новому пользователю -->
+
                 <div>
                     <label class="block text-white/70 text-sm font-medium mb-2">Скидка новому пользователю на первую
                         покупку</label>
@@ -828,13 +883,13 @@
                 </div>
             </div>
 
-            <!-- Hidden field for enable_fixed_referral_bonus -->
+
             <input type="hidden" id="enable_fixed_referral_bonus" name="enable_fixed_referral_bonus"
                 value="{% if settings.enable_fixed_referral_bonus == 'true' %}true{% else %}false{% endif %}" />
         </div>
     </section>
 
-    <!-- TAB: Trial -->
+
     <section id="tab-trial" class="tab-content hidden">
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
             <h3 class="text-xl font-bold text-white mb-6">Пробный период</h3>
@@ -853,7 +908,7 @@
         </div>
     </section>
 
-    <!-- TAB: Content -->
+
     <section id="tab-content" class="tab-content hidden">
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
             <h3 class="text-xl font-bold text-white mb-6">Настройки контента</h3>
@@ -873,6 +928,514 @@
                     <textarea name="main_menu_text" rows="3"
                         placeholder="🏠 <b>Главное меню</b>&#10;&#10;Выберите действие:"
                         class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50">{{ settings.main_menu_text or '' }}</textarea>
+                </div>
+                <div class="pt-4 border-t border-white/10">
+                    <div class="flex items-center gap-2 mb-4">
+                        <h4 class="text-white font-bold">Изображение главного меню</h4>
+                        <button type="button" class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                            data-copy-text="ГЛАВНОЕ МЕНЮ" title="Скопировать заголовок">
+                            <span class="material-symbols-outlined text-sm">content_copy</span>
+                        </button>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-white/70 text-sm mb-2">Текущее изображение</label>
+                            <input type="text" id="main_menu_image_url" value="{{ settings.main_menu_image or '' }}"
+                                readonly
+                                class="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-2.5 text-white/70" />
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button type="button"
+                                class="btn-upload-menu-image px-4 py-2 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary/30 flex items-center gap-2"
+                                data-section="main_menu">
+                                <span class="material-symbols-outlined text-base">upload</span> Загрузить
+                            </button>
+                            <button type="button"
+                                class="btn-delete-menu-image px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 flex items-center gap-2"
+                                data-section="main_menu">
+                                <span class="material-symbols-outlined text-base">delete</span> Удалить
+                            </button>
+                        </div>
+
+                        <input type="file" id="main_menu_image_file" accept=".jpg,.jpeg,.png,.gif" class="hidden"
+                            data-section="main_menu" />
+                        <p class="text-white/50 text-xs">Форматы: JPG, PNG, GIF. Макс. размер: 10 МБ</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-white/10">
+                    <h4 class="text-white font-bold mb-4">Изображения разделов меню</h4>
+                    <p class="text-white/50 text-sm mb-4">Загрузите изображения для каждого раздела бота. Вы можете
+                        настроить изображение для каждого шага взаимодействия с пользователем.</p>
+
+                    <div class="space-y-6">
+
+
+                        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                            <h5
+                                class="text-white/90 font-semibold mb-3 border-b border-white/10 pb-2 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-sm">info</span>
+                                Главное меню / Инфо
+                            </h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Мой профиль</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ВАШ ПРОФИЛЬ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается при нажатии кнопки "👤 Мой
+                                        профиль"</p>
+                                    <input type="text" id="profile_image_url" value="{{ settings.profile_image or '' }}"
+                                        readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="profile">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="profile">Удалить</button>
+                                    </div>
+                                    <input type="file" id="profile_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="profile" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Поддержка</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ТЕХ ПОДДЕРЖКА" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается при нажатии кнопки "🆘 Поддержка"
+                                    </p>
+                                    <input type="text" id="support_image_url" value="{{ settings.support_image or '' }}"
+                                        readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="support">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="support">Удалить</button>
+                                    </div>
+                                    <input type="file" id="support_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="support" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">О проекте</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="О СЕРВИСЕ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается при нажатии кнопки "ℹ️ О боте"
+                                    </p>
+                                    <input type="text" id="about_image_url" value="{{ settings.about_image or '' }}"
+                                        readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="about">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="about">Удалить</button>
+                                    </div>
+                                    <input type="file" id="about_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="about" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Скорость
+                                            (Speedtest)</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ПРОВЕРКА СКОРОСТИ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается в разделе проверки скорости</p>
+                                    <input type="text" id="speedtest_image_url"
+                                        value="{{ settings.speedtest_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="speedtest">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="speedtest">Удалить</button>
+                                    </div>
+                                    <input type="file" id="speedtest_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="speedtest" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Как использовать
+                                            (HowTo)</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ИНСТРУКЦИЯ ПО ПОДКЛЮЧЕНИЮ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается в инструкциях по подключению</p>
+                                    <input type="text" id="howto_image_url" value="{{ settings.howto_image or '' }}"
+                                        readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="howto">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="howto">Удалить</button>
+                                    </div>
+                                    <input type="file" id="howto_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="howto" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Реферальная
+                                            программа</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ПАРТНЕРСКАЯ ПРОГРАММА" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается при нажатии "🤝 Реферальная
+                                        система"</p>
+                                    <input type="text" id="referral_image_url"
+                                        value="{{ settings.referral_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="referral">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="referral">Удалить</button>
+                                    </div>
+                                    <input type="file" id="referral_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="referral" />
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                            <h5
+                                class="text-white/90 font-semibold mb-3 border-b border-white/10 pb-2 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-green-400 text-sm">shopping_cart</span>
+                                Процесс покупки (Purchase)
+                            </h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Выбор сервера</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ВЫБОР ЛОКАЦИИ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Шаг 1: Когда пользователь нажал "Купить ключ"
+                                        и выбирает страну/сервер.</p>
+                                    <input type="text" id="buy_server_image_url"
+                                        value="{{ settings.buy_server_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="buy_server">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="buy_server">Удалить</button>
+                                    </div>
+                                    <input type="file" id="buy_server_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="buy_server" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Выбор тарифа</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ВЫБОР ТАРИФА" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Шаг 2: Когда пользователь выбрал сервер и
+                                        выбирает длительность (1 мес, 3 мес...)</p>
+                                    <input type="text" id="buy_plan_image_url"
+                                        value="{{ settings.buy_plan_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="buy_plan">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="buy_plan">Удалить</button>
+                                    </div>
+                                    <input type="file" id="buy_plan_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="buy_plan" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Запрос Email</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ВВОД EMAIL" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Шаг 3: Когда бота просит ввести Email для
+                                        чека.</p>
+                                    <input type="text" id="enter_email_image_url"
+                                        value="{{ settings.enter_email_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="enter_email">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="enter_email">Удалить</button>
+                                    </div>
+                                    <input type="file" id="enter_email_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="enter_email" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Выбор метода
+                                            оплаты</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ВЫБОР СПОСОБА ОПЛАТЫ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Процесс покупки / Процесс пополнения баланса
+                                    </p>
+                                    <input type="text" id="payment_method_image_url"
+                                        value="{{ settings.payment_method_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="payment_method">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="payment_method">Удалить</button>
+                                    </div>
+                                    <input type="file" id="payment_method_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="payment_method" />
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                            <h5
+                                class="text-white/90 font-semibold mb-3 border-b border-white/10 pb-2 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-blue-400 text-sm">vpn_key</span>
+                                Ключи (Keys)
+                            </h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Список ключей</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="МОИ ПОДПИСКИ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается в разделе "🔑 Мои ключи" (список
+                                        ваших подписок).</p>
+                                    <input type="text" id="keys_list_image_url"
+                                        value="{{ settings.keys_list_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="keys_list">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="keys_list">Удалить</button>
+                                    </div>
+                                    <input type="file" id="keys_list_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="keys_list" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Детали ключа</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ИНФОРМАЦИЯ О ПОДПИСКЕ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается при просмотре конкретного ключа
+                                        (Инструкции, Подключение).</p>
+                                    <input type="text" id="key_info_image_url"
+                                        value="{{ settings.key_info_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="key_info">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="key_info">Удалить</button>
+                                    </div>
+                                    <input type="file" id="key_info_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="key_info" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Продление ключа</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ПРОДЛЕНИЕ ПОДПИСКИ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Экран выбора тарифа при нажатии "Продлить".
+                                    </p>
+                                    <input type="text" id="extend_plan_image_url"
+                                        value="{{ settings.extend_plan_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="extend_plan">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="extend_plan">Удалить</button>
+                                    </div>
+                                    <input type="file" id="extend_plan_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="extend_plan" />
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                            <h5
+                                class="text-white/90 font-semibold mb-3 border-b border-white/10 pb-2 flex items-center gap-2">
+                                <span
+                                    class="material-symbols-outlined text-yellow-500 text-sm">account_balance_wallet</span>
+                                Пополнение баланса (Top Up)
+                            </h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Меню пополнения</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ПОПОЛНЕНИЕ БАЛАНСА" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Основной экран раздела "💰 Пополнить баланс".
+                                    </p>
+                                    <input type="text" id="topup_image_url" value="{{ settings.topup_image or '' }}"
+                                        readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="topup">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="topup">Удалить</button>
+                                    </div>
+                                    <input type="file" id="topup_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="topup" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Ввод суммы</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="ВВОД СУММЫ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Экран "Введите сумму пополнения в рублях".</p>
+                                    <input type="text" id="topup_amount_image_url"
+                                        value="{{ settings.topup_amount_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="topup_amount">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="topup_amount">Удалить</button>
+                                    </div>
+                                    <input type="file" id="topup_amount_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="topup_amount" />
+                                </div>
+
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Счет на оплату
+                                            (Инвойс)</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="СЧЕТ НА ОПЛАТУ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Финальный экран с кнопкой "Оплатить" (Pay).
+                                    </p>
+                                    <input type="text" id="payment_image_url" value="{{ settings.payment_image or '' }}"
+                                        readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="payment">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="payment">Удалить</button>
+                                    </div>
+                                    <input type="file" id="payment_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="payment" />
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <p class="text-white/50 text-xs mt-3">Форматы: JPG, PNG, GIF. Макс. размер: 10 МБ</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -906,7 +1469,7 @@
                     <span class="text-white/70 text-sm">Требовать подписку на канал</span>
                 </label>
 
-                <!-- Button texts -->
+
                 <div class="pt-6 border-t border-white/10">
                     <h4 class="text-white font-bold mb-4">Тексты кнопок (главное меню)</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -985,7 +1548,7 @@
                     </div>
                 </div>
 
-                <!-- How-to Instructions -->
+
                 <div class="pt-6 border-t border-white/10">
                     <h4 class="text-white font-bold mb-4">Инструкции по подключению</h4>
                     <div class="space-y-4">
@@ -1021,7 +1584,7 @@
         </div>
     </section>
 
-    <!-- TAB: Monitoring -->
+
     <section id="tab-monitoring" class="tab-content hidden">
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
             <h3 class="text-xl font-bold text-white mb-6">Мониторинг ресурсов</h3>
@@ -1069,7 +1632,7 @@
         </div>
     </section>
 
-    <!-- Save Button -->
+
     <div class="mt-6">
         <button type="button" id="save-all-settings-btn"
             class="px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors">
@@ -1227,6 +1790,23 @@
             updateRefSections(); // Initial call
         }
 
+        document.querySelectorAll('.btn-copy-text').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const textToCopy = this.getAttribute('data-copy-text');
+                if (textToCopy) {
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const originalIcon = this.innerHTML;
+                        this.innerHTML = '<span class="material-symbols-outlined text-green-400 text-[16px]">check</span>';
+                        setTimeout(() => {
+                            this.innerHTML = originalIcon;
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+                }
+            });
+        });
+
         // Save all settings - AJAX submission
         const saveAllBtn = document.getElementById('save-all-settings-btn');
         if (saveAllBtn) {
@@ -1370,11 +1950,91 @@
                 });
             }
         });
+
+
+
+        // === Обработчики для изображений разделов меню ===
+        document.querySelectorAll('.btn-upload-menu-image').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const section = this.dataset.section;
+                const fileInput = document.getElementById(section + '_image_file');
+                if (fileInput) fileInput.click();
+            });
+        });
+
+        document.querySelectorAll('input[type="file"][data-section]').forEach(fileInput => {
+            fileInput.addEventListener('change', async function () {
+                if (!this.files || !this.files[0]) return;
+                const section = this.dataset.section;
+                const urlInput = document.getElementById(section + '_image_url');
+                const btn = document.querySelector('.btn-upload-menu-image[data-section="' + section + '"]');
+
+                if (btn) btn.disabled = true;
+                const formData = new FormData();
+                formData.append('file', this.files[0]);
+
+                try {
+                    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                    const resp = await fetch('/upload-menu-image/' + section, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                        body: formData
+                    });
+                    const data = await resp.json();
+                    if (data.ok) {
+                        if (urlInput) urlInput.value = data.path;
+                        showToast('Изображение загружено', 'success');
+                    } else {
+                        showToast(data.error || 'Ошибка загрузки', 'error');
+                    }
+                } catch (e) {
+                    showToast('Ошибка загрузки: ' + e.message, 'error');
+                } finally {
+                    if (btn) btn.disabled = false;
+                    this.value = '';
+                }
+            });
+        });
+
+        document.querySelectorAll('.btn-delete-menu-image').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const section = this.dataset.section;
+                const urlInput = document.getElementById(section + '_image_url');
+
+                if (!urlInput || !urlInput.value) {
+                    showToast('Изображение не установлено', 'warning');
+                    return;
+                }
+                if (!confirm('Удалить изображение?')) return;
+
+                this.disabled = true;
+                try {
+                    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                    const resp = await fetch('/delete-menu-image/' + section, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await resp.json();
+                    if (data.ok) {
+                        urlInput.value = '';
+                        showToast('Изображение удалено', 'success');
+                    } else {
+                        showToast(data.error || 'Ошибка удаления', 'error');
+                    }
+                } catch (e) {
+                    showToast('Ошибка удаления: ' + e.message, 'error');
+                } finally {
+                    this.disabled = false;
+                }
+            });
+        });
     });
 </script>
 
 <style>
-    /* Spinner animation for loading buttons */
     .animate-spin {
         animation: spin 1s linear infinite;
     }

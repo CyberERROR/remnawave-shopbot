@@ -96,18 +96,37 @@
         </div>
         {% if total_pages and total_pages > 1 %}
         <div class="flex justify-center mt-4 gap-2">
-            {% if current_page > 1 %}
-            <a href="{{ url_for('dashboard_page', page=current_page - 1) }}"
+            {% set cp = current_page or 1 %}
+            {% set tp = total_pages or 1 %}
+            {% set ns = namespace(last_m=1, last_d=1) %}
+            {% if cp > 1 %}
+            <a href="{{ url_for('dashboard_page', page=cp - 1) }}"
                 class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">«</a>
             {% endif %}
-            {% for p in range(1, total_pages + 1) %}
-            <a href="{{ url_for('dashboard_page', page=p) }}"
-                class="px-3 py-1 rounded {% if p == current_page %}bg-primary text-background-dark{% else %}bg-white/10 hover:bg-white/20 text-white{% endif %} text-sm">{{
-                p }}</a>
-            {% endfor %}
-            {% if current_page < total_pages %} <a href="{{ url_for('dashboard_page', page=current_page + 1) }}"
-                class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">»</a>
-                {% endif %}
+            <a href="{{ url_for('dashboard_page', page=1) }}"
+                class="px-3 py-1 rounded {% if 1 == cp %}bg-primary text-background-dark{% else %}bg-white/10 hover:bg-white/20 text-white{% endif %} text-sm">1</a>
+            {% for p in range(2, tp + 1) %}
+            {% set diff = (p - cp)|abs %}
+            {% set is_m = (p == tp) or (diff <= 1) %} {% set is_d=(p==tp) or (p <=4) or (p>= tp - 3) or (diff <= 2) %}
+                    {% if is_m or is_d %} {% set gap_m=is_m and (p - ns.last_m> 1) %}
+                    {% set gap_d = is_d and (p - ns.last_d > 1) %}
+                    {% if gap_m and gap_d %}
+                    <span class="px-1 text-white/50 text-sm">...</span>
+                    {% elif gap_d %}
+                    <span class="px-1 text-white/50 text-sm hidden md:inline-block">...</span>
+                    {% elif gap_m %}
+                    <span class="px-1 text-white/50 text-sm md:hidden">...</span>
+                    {% endif %}
+                    <a href="{{ url_for('dashboard_page', page=p) }}"
+                        class="px-3 py-1 rounded {% if p == cp %}bg-primary text-background-dark{% else %}bg-white/10 hover:bg-white/20 text-white{% endif %} text-sm {% if not is_m %}hidden md:inline-block{% endif %}">{{
+                        p }}</a>
+                    {% if is_m %}{% set ns.last_m = p %}{% endif %}
+                    {% if is_d %}{% set ns.last_d = p %}{% endif %}
+                    {% endif %}
+                    {% endfor %}
+                    {% if cp < tp %} <a href="{{ url_for('dashboard_page', page=cp + 1) }}"
+                        class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">»</a>
+                        {% endif %}
         </div>
         {% endif %}
         {% else %}

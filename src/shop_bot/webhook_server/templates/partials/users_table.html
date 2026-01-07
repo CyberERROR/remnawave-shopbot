@@ -19,7 +19,8 @@
         </span>
         {% endif %}
     </td>
-    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ user.keys_count or 0 }} шт.</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ user.keys_count or 0 }}шт. / {{ user.total_months or 0
+        }}мес. / {{ user.referral_count or 0 }}реф.</td>
     <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ '%.2f'|format(user.balance or 0) }} RUB</td>
     <td class="px-6 py-4 whitespace-nowrap text-right">
         <div class="flex items-center justify-end gap-1.5 flex-wrap">
