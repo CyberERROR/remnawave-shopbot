@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
 from pathlib import Path
 import json
@@ -393,6 +393,27 @@ def initialize_db():
                 "platega_enabled": "false",
                 "platega_merchant_id": None,
                 "platega_api_key": None,
+
+                "main_menu_image": None,
+                "profile_image": None,
+                "keys_image": None, 
+                "buy_key_image": None, 
+                "topup_image": None, 
+                "referral_image": None,
+                "support_image": None,
+                "about_image": None,
+                "speedtest_image": None,
+                "howto_image": None,
+                "topup_amount_image": None,
+
+                "payment_image": None,
+                "buy_server_image": None,
+                "buy_plan_image": None,
+                "enter_email_image": None,
+                "key_info_image": None,
+                "extend_plan_image": None,
+                "keys_list_image": None,
+                "payment_method_image": None,
             }
             run_migration()
             for key, value in default_settings.items():
@@ -451,6 +472,9 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
 
         "remnawave_base_url": "TEXT",
         "remnawave_api_token": "TEXT",
+        "remnawave_limit_hwid": "INTEGER DEFAULT 0",
+        "remnawave_hwid_enabled": "INTEGER DEFAULT 0",
+        "remnawave_limit_traffic": "INTEGER DEFAULT 0",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "xui_hosts", column, definition)
@@ -1102,13 +1126,17 @@ def insert_host_speedtest(
         method_s = (method or '').strip().lower()
         if method_s not in ('ssh', 'net'):
             method_s = 'ssh'
+        
+        # Moscow time is UTC+3
+        created_at_val = (datetime.utcnow() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
+
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 '''
                 INSERT INTO host_speedtests
-                (host_name, method, ping_ms, jitter_ms, download_mbps, upload_mbps, server_name, server_id, ok, error)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (host_name, method, ping_ms, jitter_ms, download_mbps, upload_mbps, server_name, server_id, ok, error, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 '''
                 , (
                     host_name_n,
@@ -1120,7 +1148,8 @@ def insert_host_speedtest(
                     server_name,
                     server_id,
                     1 if ok else 0,
-                    (error or None)
+                    (error or None),
+                    created_at_val
                 )
             )
             conn.commit()
