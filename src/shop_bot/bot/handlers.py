@@ -382,6 +382,38 @@ def is_valid_email(email: str) -> bool:
     pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
     return re.match(pattern, email) is not None
 
+async def smart_edit_message(message: types.Message, text: str, reply_markup=None, photo_path: str = None):
+    from aiogram.types import FSInputFile, InputMediaPhoto
+    
+    has_photo = bool(message.photo)
+    want_photo = photo_path and os.path.exists(photo_path)
+    
+    if has_photo and want_photo:
+        photo = FSInputFile(photo_path)
+        media = InputMediaPhoto(media=photo, caption=text)
+        try:
+            return await message.edit_media(media=media, reply_markup=reply_markup)
+        except TelegramBadRequest:
+            return None
+    elif has_photo and not want_photo:
+        try:
+            await message.delete()
+        except TelegramBadRequest:
+            pass
+        return await message.answer(text, reply_markup=reply_markup)
+    elif not has_photo and want_photo:
+        try:
+            await message.delete()
+        except TelegramBadRequest:
+            pass
+        photo = FSInputFile(photo_path)
+        return await message.answer_photo(photo=photo, caption=text, reply_markup=reply_markup)
+    else:
+        try:
+            return await message.edit_text(text, reply_markup=reply_markup)
+        except TelegramBadRequest:
+            return None
+
 async def show_main_menu(message: types.Message, edit_message: bool = False):
     user_id = message.chat.id
     user_db_data = get_user(user_id)
@@ -389,11 +421,10 @@ async def show_main_menu(message: types.Message, edit_message: bool = False):
     
     trial_available = not (user_db_data and user_db_data.get('trial_used'))
     is_admin_flag = is_admin(user_id)
-    
-
-
 
     text = get_setting("main_menu_text") or "🏠 <b>Главное меню</b>\n\nВыберите действие:"
+    main_menu_image = get_setting("main_menu_image")
+    photo_path = main_menu_image if (main_menu_image and os.path.exists(main_menu_image)) else None
 
     try:
         balance = get_balance(user_id)
@@ -407,12 +438,14 @@ async def show_main_menu(message: types.Message, edit_message: bool = False):
         keyboard = keyboards.create_main_menu_keyboard(user_keys, trial_available, is_admin_flag, balance)
 
     if edit_message:
-        try:
-            await message.edit_text(text, reply_markup=keyboard)
-        except TelegramBadRequest:
-            pass
+        await smart_edit_message(message, text, keyboard, photo_path)
     else:
-        await message.answer(text, reply_markup=keyboard)
+        if photo_path:
+            from aiogram.types import FSInputFile
+            photo = FSInputFile(photo_path)
+            await message.answer_photo(photo=photo, caption=text, reply_markup=keyboard)
+        else:
+            await message.answer(text, reply_markup=keyboard)
 
 async def process_successful_onboarding(callback: types.CallbackQuery, state: FSMContext):
     """Завершает онбординг: ставит флаг согласия и открывает главное меню."""
@@ -656,40 +689,109 @@ def get_user_router() -> Router:
             f"\n🤝 <b>Рефералы:</b> {referral_count}"
             f"\n💰 <b>Заработано по рефералке (всего):</b> {total_ref_earned:.2f} RUB"
         )
-        await callback.message.edit_text(final_text, reply_markup=keyboards.create_profile_keyboard())
+        profile_image = get_setting("profile_image")
+        await smart_edit_message(callback.message, final_text, keyboards.create_dynamic_profile_keyboard(), profile_image)
 
     @user_router.callback_query(F.data == "top_up_start")
     @registration_required
     async def topup_start_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
-        await callback.message.edit_text(
+        topup_amount_image = get_setting("topup_amount_image")
+        msg = await smart_edit_message(
+            callback.message,
             "Введите сумму пополнения в рублях (например, 300):\nМинимум: 10 RUB, максимум: 100000 RUB",
-            reply_markup=keyboards.create_back_to_menu_keyboard()
+            keyboards.create_back_to_menu_keyboard(),
+            topup_amount_image
         )
+        if msg:
+            await state.update_data(topup_prompt_mid=msg.message_id)
         await state.set_state(TopUpProcess.waiting_for_amount)
 
     @user_router.message(TopUpProcess.waiting_for_amount)
-    async def topup_amount_input(message: types.Message, state: FSMContext):
-        text = (message.text or "").replace(",", ".").strip()
+    async def topup_amount_input(message: types.Message, state: FSMContext, bot: Bot):
+        
         try:
-            amount = Decimal(text)
+            await message.delete()
+        except:
+            pass
+
+        data = await state.get_data()
+        prompt_mid = data.get('topup_prompt_mid')
+        chat_id = message.chat.id
+        topup_amount_image = get_setting("topup_amount_image")
+        
+        
+        async def edit_prompt(text: str, kb=None, image_key: str = None):
+            
+            if not prompt_mid:
+                new_msg = await message.answer(text, reply_markup=kb)
+                await state.update_data(topup_prompt_mid=new_msg.message_id)
+                return
+
+            
+            target_image_path = get_setting(image_key) if image_key else None
+            has_new_photo = bool(target_image_path and os.path.exists(target_image_path))
+            has_old_photo = bool(topup_amount_image and os.path.exists(topup_amount_image))
+
+            try:
+                if has_old_photo and has_new_photo:
+                    
+                    from aiogram.types import FSInputFile, InputMediaPhoto
+                    media = InputMediaPhoto(media=FSInputFile(target_image_path), caption=text)
+                    await bot.edit_message_media(chat_id=chat_id, message_id=prompt_mid, media=media, reply_markup=kb)
+                elif not has_old_photo and not has_new_photo:
+                    
+                    await bot.edit_message_text(chat_id=chat_id, message_id=prompt_mid, text=text, reply_markup=kb)
+                else:
+                    
+                    try:
+                        await bot.delete_message(chat_id=chat_id, message_id=prompt_mid)
+                    except:
+                        pass
+                    if has_new_photo:
+                        from aiogram.types import FSInputFile
+                        new_msg = await bot.send_photo(chat_id=chat_id, photo=FSInputFile(target_image_path), caption=text, reply_markup=kb)
+                    else:
+                        new_msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=kb)
+                    
+                    if new_msg:
+                        await state.update_data(topup_prompt_mid=new_msg.message_id)
+            except TelegramBadRequest:
+                
+                try:
+                    if has_new_photo:
+                        from aiogram.types import FSInputFile
+                        new_msg = await bot.send_photo(chat_id=chat_id, photo=FSInputFile(target_image_path), caption=text, reply_markup=kb)
+                    else:
+                        new_msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=kb)
+                    if new_msg:
+                        await state.update_data(topup_prompt_mid=new_msg.message_id)
+                except:
+                    pass
+
+        text_input = (message.text or "").replace(",", ".").strip()
+        try:
+            amount = Decimal(text_input)
         except Exception:
-            await message.answer("❌ Введите корректную сумму, например: 300", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await edit_prompt("❌ Введите корректную сумму, например: 300", keyboards.create_back_to_menu_keyboard(), "topup_amount_image")
             return
         if amount <= 0:
-            await message.answer("❌ Сумма должна быть положительной", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await edit_prompt("❌ Сумма должна быть положительной", keyboards.create_back_to_menu_keyboard(), "topup_amount_image")
             return
         if amount < Decimal("10"):
-            await message.answer("❌ Минимальная сумма пополнения: 10 RUB", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await edit_prompt("❌ Минимальная сумма пополнения: 10 RUB", keyboards.create_back_to_menu_keyboard(), "topup_amount_image")
             return
         if amount > Decimal("100000"):
-            await message.answer("❌ Максимальная сумма пополнения: 100000 RUB", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await edit_prompt("❌ Максимальная сумма пополнения: 100000 RUB", keyboards.create_back_to_menu_keyboard(), "topup_amount_image")
             return
+            
         final_amount = amount.quantize(Decimal("0.01"))
         await state.update_data(topup_amount=float(final_amount))
-        await message.answer(
+        
+        await edit_prompt(
             f"К пополнению: {final_amount:.2f} RUB\nВыберите способ оплаты:",
-            reply_markup=keyboards.create_topup_payment_method_keyboard(PAYMENT_METHODS)
+            keyboards.create_topup_payment_method_keyboard(PAYMENT_METHODS),
+            "payment_method_image"
         )
         await state.set_state(TopUpProcess.waiting_for_topup_method)
 
@@ -697,7 +799,7 @@ def get_user_router() -> Router:
     async def topup_pay_yookassa(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю ссылку на оплату...")
         
-        # Ensure YooKassa configuration is set
+        
         yookassa_shop_id = get_setting("yookassa_shop_id")
         yookassa_secret_key = get_setting("yookassa_secret_key")
         
@@ -712,7 +814,7 @@ def get_user_router() -> Router:
         data = await state.get_data()
         amount = Decimal(str(data.get('topup_amount', 0)))
         if amount <= 0:
-            await callback.message.edit_text("❌ Некорректная сумма пополнения. Повторите ввод.")
+            await smart_edit_message(callback.message, "❌ Некорректная сумма пополнения. Повторите ввод.")
             await state.clear()
             return
         user_id = callback.from_user.id
@@ -752,9 +854,12 @@ def get_user_router() -> Router:
                 payment_payload['receipt'] = receipt
             payment = Payment.create(payment_payload, uuid.uuid4())
             await state.clear()
-            await callback.message.edit_text(
+            payment_image = get_setting("payment_image")
+            await smart_edit_message(
+                callback.message,
                 "Нажмите на кнопку ниже для оплаты:",
-                reply_markup=keyboards.create_payment_keyboard(payment.confirmation.confirmation_url)
+                keyboards.create_payment_keyboard(payment.confirmation.confirmation_url),
+                payment_image
             )
         except Exception as e:
             logger.error(f"Не удалось создать платеж пополнения YooKassa: {e}", exc_info=True)
@@ -768,7 +873,7 @@ def get_user_router() -> Router:
         data = await state.get_data()
         plan = get_plan_by_id(data.get('plan_id'))
         if not plan:
-            await callback.message.edit_text("❌ Ошибка: Тариф не найден.")
+            await smart_edit_message(callback.message, "❌ Ошибка: Тариф не найден.")
             await state.clear()
             return
         user_id = callback.from_user.id
@@ -780,7 +885,7 @@ def get_user_router() -> Router:
         except Exception:
             stars_ratio = Decimal('0')
         if stars_ratio <= 0:
-            await callback.message.edit_text("❌ Оплата в Stars временно недоступна.")
+            await smart_edit_message(callback.message, "❌ Оплата в Stars временно недоступна.")
             await state.clear()
             return
 
@@ -820,7 +925,7 @@ def get_user_router() -> Router:
             await state.clear()
         except Exception as e:
             logger.error(f"Не удалось создать счет Stars: {e}")
-            await callback.message.edit_text("❌ Не удалось создать счёт в Stars. Попробуйте другой способ оплаты.")
+            await smart_edit_message(callback.message, "❌ Не удалось создать счёт в Stars. Попробуйте другой способ оплаты.")
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_stars")
@@ -830,7 +935,7 @@ def get_user_router() -> Router:
         user_id = callback.from_user.id
         amount_rub = Decimal(str(data.get('topup_amount', 0)))
         if amount_rub <= 0:
-            await callback.message.edit_text("❌ Некорректная сумма пополнения.")
+            await smart_edit_message(callback.message, "❌ Некорректная сумма пополнения.")
             await state.clear()
             return
         try:
@@ -839,7 +944,7 @@ def get_user_router() -> Router:
         except Exception:
             stars_ratio = Decimal('0')
         if stars_ratio <= 0:
-            await callback.message.edit_text("❌ Оплата в Stars временно недоступна.")
+            await smart_edit_message(callback.message, "❌ Оплата в Stars временно недоступна.")
             await state.clear()
             return
         stars_amount = int((amount_rub * stars_ratio).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
@@ -869,7 +974,7 @@ def get_user_router() -> Router:
             await state.clear()
         except Exception as e:
             logger.error(f"Не удалось создать счет пополнения Stars: {e}")
-            await callback.message.edit_text("❌ Не удалось создать счёт в Stars.")
+            await smart_edit_message(callback.message, "❌ Не удалось создать счёт в Stars.")
             await state.clear()
 
 
@@ -956,26 +1061,43 @@ def get_user_router() -> Router:
     async def pay_yoomoney_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Готовлю ссылку YooMoney...")
         data = await state.get_data()
-        plan = get_plan_by_id(data.get('plan_id'))
+        
+        plan_id = data.get('plan_id')
+        
+        # Валидация plan_id
+        if not plan_id:
+            logger.error(f"[PAYMENT_BUG] Missing plan_id for user {callback.from_user.id}")
+            await callback.message.answer(
+                "❌ Произошла ошибка при обработке тарифа.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
+            await state.clear()
+            return
+        
+        plan = get_plan_by_id(plan_id)
         if not plan:
-            await callback.message.edit_text("❌ Ошибка: Тариф не найден.")
+            logger.error(f"[PAYMENT_BUG] Invalid plan_id={plan_id} for user {callback.from_user.id}")
+            await callback.message.answer(
+                "❌ Выбранный тариф не найден.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
             await state.clear()
             return
         wallet = get_setting("yoomoney_wallet")
         secret = get_setting("yoomoney_secret")
         if not wallet or not secret:
-            await callback.message.edit_text("❌ YooMoney временно недоступен.")
+            await smart_edit_message(callback.message, "❌ YooMoney временно недоступен.")
             await state.clear()
             return
 
         w = (wallet or "").strip()
         if not (w.isdigit() and len(w) >= 11):
-            await callback.message.edit_text("❌ Некорректный номер кошелька YooMoney. Проверьте в панели настроек.")
+            await smart_edit_message(callback.message, "❌ Некорректный номер кошелька YooMoney. Проверьте в панели настроек.")
             await state.clear()
             return
         price_rub = Decimal(str(data.get('final_price', plan['price'])))
         if price_rub < Decimal("1.00"):
-            await callback.message.edit_text("❌ Минимальная сумма перевода YooMoney — 1 RUB. Выберите другой тариф или способ оплаты.")
+            await smart_edit_message(callback.message, "❌ Минимальная сумма перевода YooMoney — 1 RUB. Выберите другой тариф или способ оплаты.")
             await state.clear()
             return
         user_id = callback.from_user.id
@@ -994,9 +1116,12 @@ def get_user_router() -> Router:
         }
         create_payload_pending(payment_id, user_id, float(price_rub), metadata)
         pay_url = _build_yoomoney_link(wallet, price_rub, payment_id)
-        await callback.message.edit_text(
+        payment_image = get_setting("payment_image")
+        await smart_edit_message(
+            callback.message,
             "Нажмите на кнопку ниже для оплаты:",
-            reply_markup=keyboards.create_yoomoney_payment_keyboard(pay_url, payment_id)
+            keyboards.create_yoomoney_payment_keyboard(pay_url, payment_id),
+            payment_image
         )
         await state.clear()
 
@@ -1014,19 +1139,19 @@ def get_user_router() -> Router:
         logger.info(f"💰 Детали платежа: сумма={amount_rub:.2f} RUB, кошелек={wallet}")
         
         if not wallet or not secret or amount_rub <= 0:
-            logger.warning(f"❌ ЮMoney недоступен: кошелек={bool(wallet)}, секрет={bool(secret)}, сумма={amount_rub}")
-            await callback.message.edit_text("❌ YooMoney временно недоступен.")
+            logger.warning(f"❌ Ю​Money недоступен: кошелек={bool(wallet)}, секрет={bool(secret)}, сумма={amount_rub}")
+            await smart_edit_message(callback.message, "❌ YooMoney временно недоступен.")
             await state.clear()
             return
         w = (wallet or "").strip()
         if not (w.isdigit() and len(w) >= 11):
             logger.warning(f"❌ Неверный формат кошелька: {w}")
-            await callback.message.edit_text("❌ Некорректный номер кошелька YooMoney. Проверьте в панели настроек.")
+            await smart_edit_message(callback.message, "❌ Некорректный номер кошелька YooMoney. Проверьте в панели настроек.")
             await state.clear()
             return
         if amount_rub < Decimal("1.00"):
             logger.warning(f"❌ Сумма слишком мала: {amount_rub}")
-            await callback.message.edit_text("❌ Минимальная сумма перевода YooMoney — 1 RUB. Введите сумму побольше.")
+            await smart_edit_message(callback.message, "❌ Минимальная сумма перевода YooMoney — 1 RUB. Введите сумму побольше.")
             await state.clear()
             return
         
@@ -1044,9 +1169,12 @@ def get_user_router() -> Router:
         pay_url = _build_yoomoney_link(wallet, amount_rub, payment_id)
         
         logger.info(f"🔗 Сгенерирован URL платежа для пользователя {user_id}: {amount_rub:.2f} RUB")
-        await callback.message.edit_text(
+        payment_image = get_setting("payment_image")
+        await smart_edit_message(
+            callback.message,
             "Нажмите на кнопку ниже для оплаты:",
-            reply_markup=keyboards.create_yoomoney_payment_keyboard(pay_url, payment_id)
+            keyboards.create_yoomoney_payment_keyboard(pay_url, payment_id),
+            payment_image
         )
         await state.clear()
 
@@ -1141,16 +1269,35 @@ def get_user_router() -> Router:
     async def pay_platega_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю ссылку на оплату через СБП...")
         data = await state.get_data()
-        plan = get_plan_by_id(data.get('plan_id'))
+        
+        plan_id = data.get('plan_id')
+        
+        # Валидация plan_id
+        if not plan_id:
+            logger.error(f"[PAYMENT_BUG] Missing plan_id for user {callback.from_user.id}")
+            await smart_edit_message(
+                callback.message, 
+                "❌ Произошла ошибка при обработке тарифа.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
+            await state.clear()
+            return
+        
+        plan = get_plan_by_id(plan_id)
         if not plan:
-            await callback.message.edit_text("❌ Ошибка: Тариф не найден.")
+            logger.error(f"[PAYMENT_BUG] Invalid plan_id={plan_id} for user {callback.from_user.id}")
+            await smart_edit_message(
+                callback.message, 
+                "❌ Выбранный тариф не найден.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
             await state.clear()
             return
         
         merchant_id = get_setting("platega_merchant_id")
         api_key = get_setting("platega_api_key")
         if not merchant_id or not api_key:
-            await callback.message.edit_text("❌ Platega временно недоступен.")
+            await smart_edit_message(callback.message, "❌ Platega временно недоступен.")
             await state.clear()
             return
         
@@ -1180,21 +1327,24 @@ def get_user_router() -> Router:
                 payment_id=payment_id,
                 return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
                 failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
-                payment_method=2  # СБП/QR
+                payment_method=2  
             )
             
             if payment_url:
-                await callback.message.edit_text(
+                payment_image = get_setting("payment_image")
+                await smart_edit_message(
+                    callback.message,
                     "Нажмите на кнопку ниже для оплаты:",
-                    reply_markup=keyboards.create_payment_keyboard(payment_url)
+                    keyboards.create_payment_keyboard(payment_url),
+                    payment_image
                 )
                 await state.clear()
             else:
-                await callback.message.edit_text("❌ Не удалось создать ссылку на оплату. Попробуйте другой способ.")
+                await smart_edit_message(callback.message, "❌ Не удалось создать ссылку на оплату. Попробуйте другой способ.")
                 await state.clear()
         except Exception as e:
             logger.error(f"Ошибка создания платежа Platega: {e}", exc_info=True)
-            await callback.message.edit_text("❌ Не удалось создать ссылку на оплату.")
+            await smart_edit_message(callback.message, "❌ Не удалось создать ссылку на оплату.")
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_platega")
@@ -1208,7 +1358,7 @@ def get_user_router() -> Router:
         api_key = get_setting("platega_api_key")
         
         if not merchant_id or not api_key or amount_rub <= 0:
-            await callback.message.edit_text("❌ Platega временно недоступен.")
+            await smart_edit_message(callback.message, "❌ Platega временно недоступен.")
             await state.clear()
             return
         
@@ -1230,21 +1380,24 @@ def get_user_router() -> Router:
                 payment_id=payment_id,
                 return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
                 failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
-                payment_method=2  # СБП/QR
+                payment_method=2  
             )
             
             if payment_url:
-                await callback.message.edit_text(
+                payment_image = get_setting("payment_image")
+                await smart_edit_message(
+                    callback.message,
                     "Нажмите на кнопку ниже для оплаты:",
-                    reply_markup=keyboards.create_payment_keyboard(payment_url)
+                    keyboards.create_payment_keyboard(payment_url),
+                    payment_image
                 )
                 await state.clear()
             else:
-                await callback.message.edit_text("❌ Не удалось создать ссылку на оплату. Попробуйте другой способ.")
+                await smart_edit_message(callback.message, "❌ Не удалось создать ссылку на оплату. Попробуйте другой способ.")
                 await state.clear()
         except Exception as e:
             logger.error(f"Ошибка создания пополнения Platega: {e}", exc_info=True)
-            await callback.message.edit_text("❌ Не удалось создать ссылку на оплату.")
+            await smart_edit_message(callback.message, "❌ Не удалось создать ссылку на оплату.")
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_heleket")
@@ -1254,7 +1407,7 @@ def get_user_router() -> Router:
         user_id = callback.from_user.id
         amount = float(data.get('topup_amount', 0))
         if amount <= 0:
-            await callback.message.edit_text("❌ Некорректная сумма пополнения. Повторите ввод.")
+            await smart_edit_message(callback.message, "❌ Некорректная сумма пополнения. Повторите ввод.")
             await state.clear()
             return
 
@@ -1274,16 +1427,19 @@ def get_user_router() -> Router:
                 state_data=state_data
             )
             if pay_url:
-                await callback.message.edit_text(
+                payment_image = get_setting("payment_image")
+                await smart_edit_message(
+                    callback.message,
                     "Нажмите на кнопку ниже для оплаты:",
-                    reply_markup=keyboards.create_payment_keyboard(pay_url)
+                    keyboards.create_payment_keyboard(pay_url),
+                    payment_image
                 )
                 await state.clear()
             else:
-                await callback.message.edit_text("❌ Не удалось создать счёт. Попробуйте другой способ оплаты.")
+                await smart_edit_message(callback.message, "❌ Не удалось создать счёт. Попробуйте другой способ оплаты.")
         except Exception as e:
             logger.error(f"Failed to create topup Heleket-like invoice: {e}", exc_info=True)
-            await callback.message.edit_text("❌ Не удалось создать счёт. Попробуйте другой способ оплаты.")
+            await smart_edit_message(callback.message, "❌ Не удалось создать счёт. Попробуйте другой способ оплаты.")
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_cryptobot")
@@ -1293,7 +1449,7 @@ def get_user_router() -> Router:
         user_id = callback.from_user.id
         amount = float(data.get('topup_amount', 0))
         if amount <= 0:
-            await callback.message.edit_text("❌ Некорректная сумма пополнения. Повторите ввод.")
+            await smart_edit_message(callback.message, "❌ Некорректная сумма пополнения. Повторите ввод.")
             await state.clear()
             return
         state_data = {
@@ -1313,16 +1469,19 @@ def get_user_router() -> Router:
             )
             if result:
                 pay_url, invoice_id = result
-                await callback.message.edit_text(
+                payment_image = get_setting("payment_image")
+                await smart_edit_message(
+                    callback.message,
                     "Нажмите на кнопку ниже для оплаты:",
-                    reply_markup=keyboards.create_cryptobot_payment_keyboard(pay_url, invoice_id)
+                    keyboards.create_cryptobot_payment_keyboard(pay_url, invoice_id),
+                    payment_image
                 )
                 await state.clear()
             else:
-                await callback.message.edit_text("❌ Не удалось создать счёт в CryptoBot. Попробуйте другой способ оплаты.")
+                await smart_edit_message(callback.message, "❌ Не удалось создать счёт в CryptoBot. Попробуйте другой способ оплаты.")
         except Exception as e:
             logger.error(f"Failed to create CryptoBot topup invoice: {e}", exc_info=True)
-            await callback.message.edit_text("❌ Не удалось создать счёт в CryptoBot. Попробуйте другой способ оплаты.")
+            await smart_edit_message(callback.message, "❌ Не удалось создать счёт в CryptoBot. Попробуйте другой способ оплаты.")
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_tonconnect")
@@ -1332,20 +1491,20 @@ def get_user_router() -> Router:
         user_id = callback.from_user.id
         amount_rub = Decimal(str(data.get('topup_amount', 0)))
         if amount_rub <= 0:
-            await callback.message.edit_text("❌ Некорректная сумма пополнения. Повторите ввод.")
+            await smart_edit_message(callback.message, "❌ Некорректная сумма пополнения. Повторите ввод.")
             await state.clear()
             return
 
         wallet_address = get_setting("ton_wallet_address")
         if not wallet_address:
-            await callback.message.edit_text("❌ Оплата через TON временно недоступна.")
+            await smart_edit_message(callback.message, "❌ Оплата через TON временно недоступна.")
             await state.clear()
             return
 
         usdt_rub_rate = await get_usdt_rub_rate()
         ton_usdt_rate = await get_ton_usdt_rate()
         if not usdt_rub_rate or not ton_usdt_rate:
-            await callback.message.edit_text("❌ Не удалось получить курс TON. Попробуйте позже.")
+            await smart_edit_message(callback.message, "❌ Не удалось получить курс TON. Попробуйте позже.")
             await state.clear()
             return
 
@@ -1386,7 +1545,7 @@ def get_user_router() -> Router:
             await state.clear()
         except Exception as e:
             logger.error(f"Failed to start TON Connect topup: {e}", exc_info=True)
-            await callback.message.edit_text("❌ Не удалось подготовить оплату TON Connect.")
+            await smart_edit_message(callback.message, "❌ Не удалось подготовить оплату TON Connect.")
             await state.clear()
 
     @user_router.callback_query(F.data == "show_referral_program")
@@ -1412,8 +1571,9 @@ def get_user_router() -> Router:
 
         builder = InlineKeyboardBuilder()
         builder.button(text="⬅️ Назад", callback_data="back_to_main_menu")
-        await callback.message.edit_text(
-            text, reply_markup=builder.as_markup()
+        referral_image = get_setting("referral_image")
+        await smart_edit_message(
+            callback.message, text, builder.as_markup(), referral_image
         )
 
 
@@ -1431,10 +1591,12 @@ def get_user_router() -> Router:
 
         keyboard = keyboards.create_about_keyboard(channel_url, terms_url, privacy_url)
 
-        await callback.message.edit_text(
+        about_image = get_setting("about_image")
+        await smart_edit_message(
+            callback.message,
             final_text,
-            reply_markup=keyboard,
-            disable_web_page_preview=True
+            keyboard,
+            about_image
         )
 
 
@@ -1484,31 +1646,37 @@ def get_user_router() -> Router:
         )
         kb = InlineKeyboardBuilder()
         kb.button(text="⬅️ В меню", callback_data="back_to_main_menu")
+        speedtest_image = get_setting("speedtest_image")
         try:
-            await callback.message.edit_text(text, reply_markup=kb.as_markup())
+            await smart_edit_message(callback.message, text, kb.as_markup(), speedtest_image)
         except Exception:
             await callback.message.answer(text, reply_markup=kb.as_markup())
 
     @user_router.callback_query(F.data == "show_help")
     @registration_required
-    async def about_handler(callback: types.CallbackQuery):
+    async def help_handler(callback: types.CallbackQuery):
         await callback.answer()
         support_bot_username = get_setting("support_bot_username")
         support_text = get_setting("support_text") or "Раздел поддержки. Нажмите кнопку ниже, чтобы открыть чат с поддержкой."
+        support_image = get_setting("support_image")
         if support_bot_username:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 support_text,
-                reply_markup=keyboards.create_support_bot_link_keyboard(support_bot_username)
+                keyboards.create_support_bot_link_keyboard(support_bot_username),
+                support_image
             )
         else:
             support_user = get_setting("support_user")
             if support_user:
-                await callback.message.edit_text(
+                await smart_edit_message(
+                    callback.message,
                     "Для связи с поддержкой используйте кнопку ниже.",
-                    reply_markup=keyboards.create_support_keyboard(support_user)
+                    keyboards.create_support_keyboard(support_user),
+                    support_image
                 )
             else:
-                await callback.message.edit_text("Контакты поддержки не настроены.", reply_markup=keyboards.create_back_to_menu_keyboard())
+                await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.callback_query(F.data == "support_menu")
     @registration_required
@@ -1516,20 +1684,25 @@ def get_user_router() -> Router:
         await callback.answer()
         support_bot_username = get_setting("support_bot_username")
         support_text = get_setting("support_text") or "Раздел поддержки. Нажмите кнопку ниже, чтобы открыть чат с поддержкой."
+        support_image = get_setting("support_image")
         if support_bot_username:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 support_text,
-                reply_markup=keyboards.create_support_bot_link_keyboard(support_bot_username)
+                keyboards.create_support_bot_link_keyboard(support_bot_username),
+                support_image
             )
         else:
             support_user = get_setting("support_user")
             if support_user:
-                await callback.message.edit_text(
+                await smart_edit_message(
+                    callback.message,
                     "Для связи с поддержкой используйте кнопку ниже.",
-                    reply_markup=keyboards.create_support_keyboard(support_user)
+                    keyboards.create_support_keyboard(support_user),
+                    support_image
                 )
             else:
-                await callback.message.edit_text("Контакты поддержки не настроены.", reply_markup=keyboards.create_back_to_menu_keyboard())
+                await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.callback_query(F.data == "support_external")
     @registration_required
@@ -1537,18 +1710,20 @@ def get_user_router() -> Router:
         await callback.answer()
         support_bot_username = get_setting("support_bot_username")
         if support_bot_username:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 get_setting("support_text") or "Раздел поддержки.",
-                reply_markup=keyboards.create_support_bot_link_keyboard(support_bot_username)
+                keyboards.create_support_bot_link_keyboard(support_bot_username)
             )
             return
         support_user = get_setting("support_user")
         if not support_user:
-            await callback.message.edit_text("Внешний контакт поддержки не настроен.", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await smart_edit_message(callback.message, "Внешний контакт поддержки не настроен.", keyboards.create_back_to_menu_keyboard())
             return
-        await callback.message.edit_text(
+        await smart_edit_message(
+            callback.message,
             "Для связи с поддержкой используйте кнопку ниже.",
-            reply_markup=keyboards.create_support_keyboard(support_user)
+            keyboards.create_support_keyboard(support_user)
         )
 
     @user_router.callback_query(F.data == "support_new_ticket")
@@ -1557,12 +1732,13 @@ def get_user_router() -> Router:
         await callback.answer()
         support_bot_username = get_setting("support_bot_username")
         if support_bot_username:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 "Раздел поддержки вынесен в отдельного бота.",
-                reply_markup=keyboards.create_support_bot_link_keyboard(support_bot_username)
+                keyboards.create_support_bot_link_keyboard(support_bot_username)
             )
         else:
-            await callback.message.edit_text("Контакты поддержки не настроены.", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.message(SupportDialog.waiting_for_subject)
     @registration_required
@@ -1596,12 +1772,13 @@ def get_user_router() -> Router:
         await callback.answer()
         support_bot_username = get_setting("support_bot_username")
         if support_bot_username:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 "Список обращений доступен в отдельном боте поддержки.",
-                reply_markup=keyboards.create_support_bot_link_keyboard(support_bot_username)
+                keyboards.create_support_bot_link_keyboard(support_bot_username)
             )
         else:
-            await callback.message.edit_text("Контакты поддержки не настроены.", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.callback_query(F.data.startswith("support_view_"))
     @registration_required
@@ -1609,12 +1786,13 @@ def get_user_router() -> Router:
         await callback.answer()
         support_bot_username = get_setting("support_bot_username")
         if support_bot_username:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 "Просмотр тикетов доступен в отдельном боте поддержки.",
-                reply_markup=keyboards.create_support_bot_link_keyboard(support_bot_username)
+                keyboards.create_support_bot_link_keyboard(support_bot_username)
             )
         else:
-            await callback.message.edit_text("Контакты поддержки не настроены.", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.callback_query(F.data.startswith("support_reply_"))
     @registration_required
@@ -1623,12 +1801,13 @@ def get_user_router() -> Router:
         await state.clear()
         support_bot_username = get_setting("support_bot_username")
         if support_bot_username:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 "Отправка ответов доступна в отдельном боте поддержки.",
-                reply_markup=keyboards.create_support_bot_link_keyboard(support_bot_username)
+                keyboards.create_support_bot_link_keyboard(support_bot_username)
             )
         else:
-            await callback.message.edit_text("Контакты поддержки не настроены.", reply_markup=keyboards.create_back_to_menu_keyboard())
+            await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.message(SupportDialog.waiting_for_reply)
     @registration_required
@@ -1696,12 +1875,13 @@ def get_user_router() -> Router:
         await callback.answer()
         support_bot_username = get_setting("support_bot_username")
         if support_bot_username:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 "Управление тикетами доступно в отдельном боте поддержки.",
-                reply_markup=keyboards.create_support_bot_link_keyboard(support_bot_username)
+                keyboards.create_support_bot_link_keyboard(support_bot_username)
             )
             return
-        await callback.message.edit_text("Контакты поддержки не настроены.", reply_markup=keyboards.create_back_to_menu_keyboard())
+        await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.callback_query(F.data == "manage_keys")
     @registration_required
@@ -1709,9 +1889,12 @@ def get_user_router() -> Router:
         await callback.answer()
         user_id = callback.from_user.id
         user_keys = get_user_keys(user_id)
-        await callback.message.edit_text(
+        keys_image = get_setting("keys_image")
+        await smart_edit_message(
+            callback.message,
             "Ваши ключи:" if user_keys else "У вас пока нет ключей.",
-            reply_markup=keyboards.create_keys_management_keyboard(user_keys)
+            keyboards.create_keys_management_keyboard(user_keys),
+            get_setting("keys_list_image")
         )
 
     @user_router.callback_query(F.data == "get_trial")
@@ -1725,7 +1908,7 @@ def get_user_router() -> Router:
 
         hosts = get_all_hosts()
         if not hosts:
-            await callback.message.edit_text("❌ В данный момент нет доступных серверов для создания пробного ключа.")
+            await smart_edit_message(callback.message, "❌ В данный момент нет доступных серверов для создания пробного ключа.")
             return
             
         if len(hosts) == 1:
@@ -1733,9 +1916,10 @@ def get_user_router() -> Router:
             await process_trial_key_creation(callback.message, hosts[0]['host_name'])
         else:
             await callback.answer()
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 "Выберите сервер, на котором хотите получить пробный ключ:",
-                reply_markup=keyboards.create_host_selection_keyboard(hosts, action="trial")
+                keyboards.create_host_selection_keyboard(hosts, action="trial")
             )
 
     @user_router.callback_query(F.data.startswith("select_host_trial_"))
@@ -1747,7 +1931,7 @@ def get_user_router() -> Router:
 
     async def process_trial_key_creation(message: types.Message, host_name: str):
         user_id = message.chat.id
-        await message.edit_text(f"Отлично! Создаю для вас бесплатный ключ на {get_setting('trial_duration_days')} дня на сервере \"{host_name}\"...")
+        await smart_edit_message(message, f"Отлично! Создаю для вас бесплатный ключ на {get_setting('trial_duration_days')} дня на сервере \"{host_name}\"...")
 
         try:
 
@@ -1771,10 +1955,11 @@ def get_user_router() -> Router:
             result = await remnawave_api.create_or_update_key_on_host(
                 host_name=host_name,
                 email=candidate_email,
-                days_to_add=int(get_setting("trial_duration_days"))
+                days_to_add=int(get_setting("trial_duration_days")),
+                telegram_id=user_id,
             )
             if not result:
-                await message.edit_text("❌ Не удалось создать пробный ключ. Ошибка на сервере.")
+                await smart_edit_message(message, "❌ Не удалось создать пробный ключ. Ошибка на сервере.")
                 return
 
             set_trial_used(user_id)
@@ -1785,34 +1970,52 @@ def get_user_router() -> Router:
                 host_name=host_name,
             )
             
-            await message.delete()
+            try:
+                await message.delete()
+            except Exception:
+                # Игнорируем ошибку если сообщение уже удалено
+                pass
+            
             new_expiry_date = datetime.fromtimestamp(result['expiry_timestamp_ms'] / 1000)
             final_text = get_purchase_success_text("new", get_next_key_number(user_id) -1, new_expiry_date, result['connection_string'])
             await message.answer(text=final_text, reply_markup=keyboards.create_key_info_keyboard(new_key_id, result['connection_string']))
 
         except Exception as e:
             logger.error(f"Error creating trial key for user {user_id} on host {host_name}: {e}", exc_info=True)
-            await message.edit_text("❌ Произошла ошибка при создании пробного ключа.")
+            await smart_edit_message(message, "❌ Произошла ошибка при создании пробного ключа.")
 
     @user_router.callback_query(F.data.startswith("show_key_"))
     @registration_required
     async def show_key_handler(callback: types.CallbackQuery):
         key_id_to_show = int(callback.data.split("_")[2])
-        await callback.message.edit_text("Загружаю информацию о ключе...")
+        msg = await smart_edit_message(callback.message, "Загружаю информацию о ключе...")
+        
+        
+        message_to_edit = msg if msg else callback.message
+
         user_id = callback.from_user.id
         key_data = rw_repo.get_key_by_id(key_id_to_show)
 
         if not key_data or key_data['user_id'] != user_id:
-            await callback.message.edit_text("❌ Ошибка: ключ не найден.")
+            await smart_edit_message(message_to_edit, "❌ Ошибка: ключ не найден.")
             return
             
+        connection_string = None
         try:
             details = await remnawave_api.get_key_details_from_host(key_data)
-            if not details or not details['connection_string']:
-                await callback.message.edit_text("❌ Ошибка на сервере. Не удалось получить данные ключа.")
-                return
+            if details:
+                connection_string = details.get('connection_string')
+        except Exception:
+            pass
+            
+        if not connection_string:
+            connection_string = key_data.get('subscription_url')
+            
+        if not connection_string:
+            await smart_edit_message(message_to_edit, "❌ Ошибка на сервере. Не удалось получить данные ключа.")
+            return
 
-            connection_string = details['connection_string']
+        try:
             expiry_date = datetime.fromisoformat(key_data['expiry_date'])
             created_date = datetime.fromisoformat(key_data['created_date'])
             
@@ -1821,13 +2024,16 @@ def get_user_router() -> Router:
             
             final_text = get_key_info_text(key_number, expiry_date, created_date, connection_string)
             
-            await callback.message.edit_text(
-                text=final_text,
-                reply_markup=keyboards.create_key_info_keyboard(key_id_to_show, connection_string)
+            key_info_image = get_setting("key_info_image")
+            await smart_edit_message(
+                message_to_edit,
+                final_text,
+                keyboards.create_key_info_keyboard(key_id_to_show, connection_string),
+                key_info_image
             )
         except Exception as e:
             logger.error(f"Error showing key {key_id_to_show}: {e}")
-            await callback.message.edit_text("❌ Произошла ошибка при получении данных ключа.")
+            await smart_edit_message(message_to_edit, "❌ Произошла ошибка при получении данных ключа.")
 
     @user_router.callback_query(F.data.startswith("switch_server_"))
     @registration_required
@@ -1855,9 +2061,10 @@ def get_user_router() -> Router:
             await callback.answer("Другие серверы отсутствуют.", show_alert=True)
             return
 
-        await callback.message.edit_text(
+        await smart_edit_message(
+            callback.message,
             "Выберите новый сервер (локацию) для этого ключа:",
-            reply_markup=keyboards.create_host_selection_keyboard(hosts, action=f"switch_{key_id}")
+            keyboards.create_host_selection_keyboard(hosts, action=f"switch_{key_id}")
         )
 
     @user_router.callback_query(F.data.startswith("select_host_switch_"))
@@ -1899,7 +2106,8 @@ def get_user_router() -> Router:
             now_dt = datetime.now()
             expiry_timestamp_ms_exact = int((now_dt + timedelta(days=1)).timestamp() * 1000)
 
-        await callback.message.edit_text(
+        await smart_edit_message(
+            callback.message,
             f"⏳ Переношу ключ на сервер \"{new_host_name}\"..."
         )
 
@@ -1910,10 +2118,12 @@ def get_user_router() -> Router:
                 new_host_name,
                 email,
                 days_to_add=None,
-                expiry_timestamp_ms=expiry_timestamp_ms_exact
+                expiry_timestamp_ms=expiry_timestamp_ms_exact,
+                telegram_id=callback.from_user.id,
             )
             if not result:
-                await callback.message.edit_text(
+                await smart_edit_message(
+                    callback.message,
                     f"❌ Не удалось перенести ключ на сервер \"{new_host_name}\". Попробуйте позже."
                 )
                 return
@@ -1943,26 +2153,30 @@ def get_user_router() -> Router:
                     all_user_keys = get_user_keys(callback.from_user.id)
                     key_number = next((i + 1 for i, k in enumerate(all_user_keys) if k['key_id'] == key_id), 0)
                     final_text = get_key_info_text(key_number, expiry_date, created_date, connection_string)
-                    await callback.message.edit_text(
-                        text=final_text,
-                        reply_markup=keyboards.create_key_info_keyboard(key_id)
+                    await smart_edit_message(
+                        callback.message,
+                        final_text,
+                        keyboards.create_key_info_keyboard(key_id)
                     )
                 else:
 
-                    await callback.message.edit_text(
+                    await smart_edit_message(
+                        callback.message,
                         f"✅ Готово! Ключ перенесён на сервер \"{new_host_name}\".\n"
                         "Обновите подписку/конфиг в клиенте, если требуется.",
-                        reply_markup=keyboards.create_back_to_menu_keyboard()
+                        keyboards.create_back_to_menu_keyboard()
                     )
             except Exception:
-                await callback.message.edit_text(
+                await smart_edit_message(
+                    callback.message,
                     f"✅ Готово! Ключ перенесён на сервер \"{new_host_name}\".\n"
                     "Обновите подписку/конфиг в клиенте, если требуется.",
-                    reply_markup=keyboards.create_back_to_menu_keyboard()
+                    keyboards.create_back_to_menu_keyboard()
                 )
         except Exception as e:
             logger.error(f"Error switching key {key_id} to host {new_host_name}: {e}", exc_info=True)
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 "❌ Произошла ошибка при переносе ключа. Попробуйте позже."
             )
 
@@ -1995,10 +2209,12 @@ def get_user_router() -> Router:
         key_id = int(callback.data.split("_")[2])
 
         intro_text = get_setting("howto_intro_text") or "Выберите вашу платформу для инструкции по подключению VLESS:"
-        await callback.message.edit_text(
+        howto_image = get_setting("howto_image")
+        await smart_edit_message(
+            callback.message,
             intro_text,
-            reply_markup=keyboards.create_howto_vless_keyboard_key(key_id),
-            disable_web_page_preview=True
+            keyboards.create_howto_vless_keyboard_key(key_id),
+            howto_image
         )
     
     @user_router.callback_query(F.data.startswith("howto_vless"))
@@ -2007,10 +2223,12 @@ def get_user_router() -> Router:
         await callback.answer()
 
         intro_text = get_setting("howto_intro_text") or "Выберите вашу платформу для инструкции по подключению VLESS:"
-        await callback.message.edit_text(
+        howto_image = get_setting("howto_image")
+        await smart_edit_message(
+            callback.message,
             intro_text,
-            reply_markup=keyboards.create_howto_vless_keyboard(),
-            disable_web_page_preview=True
+            keyboards.create_howto_vless_keyboard(),
+            howto_image
         )
 
     @user_router.callback_query(F.data == "howto_android")
@@ -2048,10 +2266,12 @@ def get_user_router() -> Router:
             return
 
         try:
-            await callback.message.edit_text(
+            howto_image = get_setting("howto_image")
+            await smart_edit_message(
+                callback.message,
                 text,
-                reply_markup=markup,
-                disable_web_page_preview=True
+                markup,
+                howto_image
             )
         except TelegramBadRequest as exc:
             error_message = getattr(exc, "message", str(exc))
@@ -2077,10 +2297,12 @@ def get_user_router() -> Router:
             "5. <b>Подключитесь к VPN:</b> Включите главный переключатель в V2RayTun. Возможно, потребуется разрешить создание VPN-подключения.\n"
             "6. <b>Проверьте подключение:</b> После подключения проверьте свой IP-адрес, например, на https://whatismyipaddress.com/. Он должен отличаться от вашего реального IP."
         )
-        await callback.message.edit_text(
+        howto_image = get_setting("howto_image")
+        await smart_edit_message(
+            callback.message,
             text,
-            reply_markup=keyboards.create_howto_vless_keyboard(),
-            disable_web_page_preview=True
+            keyboards.create_howto_vless_keyboard(),
+            howto_image
         )
 
     @user_router.callback_query(F.data == "howto_windows")
@@ -2122,10 +2344,12 @@ def get_user_router() -> Router:
             return
 
         try:
-            await callback.message.edit_text(
+            howto_image = get_setting("howto_image")
+            await smart_edit_message(
+                callback.message,
                 text,
-                reply_markup=markup,
-                disable_web_page_preview=True
+                markup,
+                howto_image
             )
         except TelegramBadRequest as exc:
             error_message = getattr(exc, "message", str(exc))
@@ -2154,25 +2378,33 @@ def get_user_router() -> Router:
             "8. <b>Подключитесь к VPN:</b> Нажмите «Подключить» (Connect).\n"
             "9. <b>Проверьте подключение:</b> Откройте браузер и проверьте IP на https://whatismyipaddress.com/. Он должен отличаться от вашего реального IP."
         )
-        await callback.message.edit_text(
+        await smart_edit_message(
+            callback.message,
             text,
-            reply_markup=keyboards.create_howto_vless_keyboard(),
-            disable_web_page_preview=True
+            keyboards.create_howto_vless_keyboard()
         )
 
     @user_router.callback_query(F.data == "buy_new_key")
     @registration_required
     async def buy_new_key_handler(callback: types.CallbackQuery):
         await callback.answer()
-        hosts = get_all_hosts()
-        if not hosts:
-            await callback.message.edit_text("❌ В данный момент нет доступных серверов для покупки.")
-            return
-        
-        await callback.message.edit_text(
-            "Выберите сервер, на котором хотите приобрести ключ:",
-            reply_markup=keyboards.create_host_selection_keyboard(hosts, action="new")
-        )
+        try:
+            hosts = rw_repo.get_all_hosts() or []
+            if not hosts:
+                await smart_edit_message(callback.message, "❌ Серверы не найдены. Обратитесь к администратору.", keyboards.create_back_to_menu_keyboard())
+                return
+                return
+            
+            await smart_edit_message(
+                callback.message, 
+                "🌍 Выберите сервер для покупки ключа:", 
+                keyboards.create_host_selection_keyboard(hosts, action="new"),
+                get_setting("buy_server_image")
+            )
+        except Exception as e:
+            logger.error(f"Error in buy_new_key_handler: {e}")
+            await smart_edit_message(callback.message, "❌ Произошла ошибка при загрузке серверов. Попробуйте позже.")
+
 
     @user_router.callback_query(F.data.startswith("select_host_new_"))
     @registration_required
@@ -2181,11 +2413,14 @@ def get_user_router() -> Router:
         host_name = callback.data[len("select_host_new_"):]
         plans = get_plans_for_host(host_name)
         if not plans:
-            await callback.message.edit_text(f"❌ Для сервера \"{host_name}\" не настроены тарифы.")
+            await smart_edit_message(callback.message, f"❌ Для сервера \"{host_name}\" не настроены тарифы.")
             return
-        await callback.message.edit_text(
+        buy_plan_image = get_setting("buy_plan_image")
+        await smart_edit_message(
+            callback.message,
             "Выберите тариф для нового ключа:", 
-            reply_markup=keyboards.create_plans_keyboard(plans, action="new", host_name=host_name)
+            keyboards.create_plans_keyboard(plans, action="new", host_name=host_name),
+            buy_plan_image
         )
 
     @user_router.callback_query(F.data.startswith("extend_key_"))
@@ -2196,36 +2431,40 @@ def get_user_router() -> Router:
         try:
             key_id = int(callback.data.split("_")[2])
         except (IndexError, ValueError):
-            await callback.message.edit_text("❌ Произошла ошибка. Неверный формат ключа.")
+            await smart_edit_message(callback.message, "❌ Произошла ошибка. Неверный формат ключа.")
             return
 
         key_data = rw_repo.get_key_by_id(key_id)
 
         if not key_data or key_data['user_id'] != callback.from_user.id:
-            await callback.message.edit_text("❌ Ошибка: Ключ не найден или не принадлежит вам.")
+            await smart_edit_message(callback.message, "❌ Ошибка: Ключ не найден или не принадлежит вам.")
             return
         
         host_name = key_data.get('host_name')
         if not host_name:
-            await callback.message.edit_text("❌ Ошибка: У этого ключа не указан сервер. Обратитесь в поддержку.")
+            await smart_edit_message(callback.message, "❌ Ошибка: У этого ключа не указан сервер. Обратитесь в поддержку.")
             return
 
         plans = get_plans_for_host(host_name)
 
         if not plans:
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 f"❌ Извините, для сервера \"{host_name}\" в данный момент не настроены тарифы для продления."
             )
             return
 
-        await callback.message.edit_text(
+        extend_plan_image = get_setting("extend_plan_image")
+        await smart_edit_message(
+            callback.message,
             f"Выберите тариф для продления ключа на сервере \"{host_name}\":",
-            reply_markup=keyboards.create_plans_keyboard(
+            keyboards.create_plans_keyboard(
                 plans=plans,
                 action="extend",
                 host_name=host_name,
                 key_id=key_id
-            )
+            ),
+            extend_plan_image
         )
 
     @user_router.callback_query(F.data.startswith("buy_"))
@@ -2239,14 +2478,21 @@ def get_user_router() -> Router:
         plan_id = int(parts[-3])
         host_name = "_".join(parts[:-3])
 
+        # Полная очистка state перед записью новых данных
+        # Это предотвращает использование старых данных из предыдущего выбора
+        await state.clear()
+
         await state.update_data(
             action=action, key_id=key_id, plan_id=plan_id, host_name=host_name
         )
         
-        await callback.message.edit_text(
+        enter_email_image = get_setting("enter_email_image")
+        await smart_edit_message(
+            callback.message,
             "📧 Пожалуйста, введите ваш email для отправки чека об оплате.\n\n"
             "Если вы не хотите указывать почту, нажмите кнопку ниже.",
-            reply_markup=keyboards.create_skip_email_keyboard()
+            keyboards.create_skip_email_keyboard(),
+            enter_email_image
         )
         await state.set_state(PaymentProcess.waiting_for_email)
 
@@ -2260,18 +2506,20 @@ def get_user_router() -> Router:
         if action == 'new':
             host_name = data.get('host_name') or ''
             if not host_name:
-                await callback.message.edit_text(
+                await smart_edit_message(
+                    callback.message,
                     "❌ Не удалось определить сервер. Вернитесь в меню.",
-                    reply_markup=keyboards.create_back_to_menu_keyboard()
+                    keyboards.create_back_to_menu_keyboard()
                 )
                 return
             plans = get_plans_for_host(host_name)
             if not plans:
-                await callback.message.edit_text(f"❌ Для сервера \"{host_name}\" не настроены тарифы.")
+                await smart_edit_message(callback.message, f"❌ Для сервера \"{host_name}\" не настроены тарифы.")
                 return
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 "Выберите тариф для нового ключа:",
-                reply_markup=keyboards.create_plans_keyboard(plans, action="new", host_name=host_name)
+                keyboards.create_plans_keyboard(plans, action="new", host_name=host_name)
             )
             return
 
@@ -2281,28 +2529,31 @@ def get_user_router() -> Router:
             except Exception:
                 key_id = 0
             if key_id <= 0:
-                await callback.message.edit_text(
+                await smart_edit_message(
+                    callback.message,
                     "❌ Не удалось определить ключ для продления.",
-                    reply_markup=keyboards.create_back_to_menu_keyboard()
+                    keyboards.create_back_to_menu_keyboard()
                 )
                 return
             key_data = rw_repo.get_key_by_id(key_id)
             if not key_data or key_data.get('user_id') != callback.from_user.id:
-                await callback.message.edit_text("❌ Ошибка: Ключ не найден или не принадлежит вам.")
+                await smart_edit_message(callback.message, "❌ Ошибка: Ключ не найден или не принадлежит вам.")
                 return
             host_name = key_data.get('host_name')
             if not host_name:
-                await callback.message.edit_text("❌ Ошибка: У этого ключа не указан сервер. Обратитесь в поддержку.")
+                await smart_edit_message(callback.message, "❌ Ошибка: У этого ключа не указан сервер. Обратитесь в поддержку.")
                 return
             plans = get_plans_for_host(host_name)
             if not plans:
-                await callback.message.edit_text(
+                await smart_edit_message(
+                    callback.message,
                     f"❌ Извините, для сервера \"{host_name}\" в данный момент не настроены тарифы для продления."
                 )
                 return
-            await callback.message.edit_text(
+            await smart_edit_message(
+                callback.message,
                 f"Выберите тариф для продления ключа на сервере \"{host_name}\":",
-                reply_markup=keyboards.create_plans_keyboard(
+                keyboards.create_plans_keyboard(
                     plans=plans,
                     action="extend",
                     host_name=host_name,
@@ -2389,48 +2640,42 @@ def get_user_router() -> Router:
 
         show_balance_btn = main_balance >= float(final_price)
 
-        try:
-            await message.edit_text(
-                message_text,
-                reply_markup=keyboards.create_payment_method_keyboard(
-                    payment_methods=PAYMENT_METHODS,
-                    action=data.get('action'),
-                    key_id=data.get('key_id'),
-                    show_balance=show_balance_btn,
-                    main_balance=main_balance,
-                    price=float(final_price),
-                    promo_applied=bool(data.get('promo_code')),
-                )
-            )
-        except TelegramBadRequest:
-            await message.answer(
-                message_text,
-                reply_markup=keyboards.create_payment_method_keyboard(
-                    payment_methods=PAYMENT_METHODS,
-                    action=data.get('action'),
-                    key_id=data.get('key_id'),
-                    show_balance=show_balance_btn,
-                    main_balance=main_balance,
-                    price=float(final_price)
-                )
-            )
+        payment_method_image = get_setting("payment_method_image")
+        await smart_edit_message(
+            message,
+            message_text,
+            keyboards.create_payment_method_keyboard(
+                payment_methods=PAYMENT_METHODS,
+                action=data.get('action'),
+                key_id=data.get('key_id'),
+                show_balance=show_balance_btn,
+                main_balance=main_balance,
+                price=float(final_price),
+                promo_applied=bool(data.get('promo_code')),
+            ),
+            payment_method_image
+        )
         await state.set_state(PaymentProcess.waiting_for_payment_method)
         
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "back_to_email_prompt")
     async def back_to_email_prompt_handler(callback: types.CallbackQuery, state: FSMContext):
-        await callback.message.edit_text(
+        enter_email_image = get_setting("enter_email_image")
+        await smart_edit_message(
+            callback.message,
             "📧 Пожалуйста, введите ваш email для отправки чека об оплате.\n\n"
             "Если вы не хотите указывать почту, нажмите кнопку ниже.",
-            reply_markup=keyboards.create_skip_email_keyboard()
+            keyboards.create_skip_email_keyboard(),
+            enter_email_image
         )
         await state.set_state(PaymentProcess.waiting_for_email)
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "enter_promo_code")
     async def prompt_promo_code(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
-        await callback.message.edit_text(
+        await smart_edit_message(
+            callback.message,
             "🎟 Введите промокод. Напишите 'отмена', чтобы вернуться без изменений:",
-            reply_markup=keyboards.create_cancel_keyboard("cancel_promo")
+            keyboards.create_cancel_keyboard("cancel_promo")
         )
         await state.set_state(PaymentProcess.waiting_for_promo_code)
 
@@ -2479,7 +2724,7 @@ def get_user_router() -> Router:
     async def create_yookassa_payment_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю ссылку на оплату...")
         
-        # Ensure YooKassa configuration is set
+        
         yookassa_shop_id = get_setting("yookassa_shop_id")
         yookassa_secret_key = get_setting("yookassa_secret_key")
         
@@ -2495,10 +2740,25 @@ def get_user_router() -> Router:
         user_data = get_user(callback.from_user.id)
         
         plan_id = data.get('plan_id')
+        
+        # Валидация plan_id
+        if not plan_id:
+            logger.error(f"[PAYMENT_BUG] Missing plan_id for user {callback.from_user.id}")
+            await callback.message.answer(
+                "❌ Произошла ошибка при обработке тарифа.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
+            await state.clear()
+            return
+        
         plan = get_plan_by_id(plan_id)
 
         if not plan:
-            await callback.message.answer("Произошла ошибка при выборе тарифа.")
+            logger.error(f"[PAYMENT_BUG] Invalid plan_id={plan_id} for user {callback.from_user.id}")
+            await callback.message.answer(
+                "❌ Выбранный тариф не найден.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
             await state.clear()
             return
 
@@ -2576,9 +2836,12 @@ def get_user_router() -> Router:
             
             await state.clear()
             
-            await callback.message.edit_text(
+            payment_image = get_setting("payment_image")
+            await smart_edit_message(
+                callback.message,
                 "Нажмите на кнопку ниже для оплаты:",
-                reply_markup=keyboards.create_payment_keyboard(payment.confirmation.confirmation_url)
+                keyboards.create_payment_keyboard(payment.confirmation.confirmation_url),
+                payment_image
             )
         except Exception as e:
             logger.error(f"Failed to create YooKassa payment: {e}", exc_info=True)
@@ -2593,7 +2856,19 @@ def get_user_router() -> Router:
         user_data = get_user(callback.from_user.id)
         
         plan_id = data.get('plan_id')
-        user_id = data.get('user_id', callback.from_user.id)
+        
+        # Валидация plan_id
+        if not plan_id:
+            logger.error(f"[PAYMENT_BUG] Missing plan_id for user {callback.from_user.id}")
+            await smart_edit_message(
+                callback.message,
+                "❌ Произошла ошибка при обработке тарифа.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
+            await state.clear()
+            return
+        
+        user_id = callback.from_user.id
         customer_email = data.get('customer_email')
         host_name = data.get('host_name')
         action = data.get('action')
@@ -2602,25 +2877,21 @@ def get_user_router() -> Router:
         cryptobot_token = get_setting('cryptobot_token')
         if not cryptobot_token:
             logger.error(f"Attempt to create Crypto Pay invoice failed for user {user_id}: cryptobot_token is not set.")
-            await callback.message.edit_text("❌ Оплата криптовалютой временно недоступна. (Администратор не указал токен).")
+            await smart_edit_message(callback.message, "❌ Оплата криптовалютой временно недоступна. (Администратор не указал токен).")
             await state.clear()
             return
 
         plan = get_plan_by_id(plan_id)
         if not plan:
-            logger.error(f"Attempt to create Crypto Pay invoice failed for user {user_id}: Plan with id {plan_id} not found.")
-            await callback.message.edit_text("❌ Произошла ошибка при выборе тарифа.")
+            logger.error(f"[PAYMENT_BUG] Invalid plan_id={plan_id} for user {user_id}")
+            await smart_edit_message(
+                callback.message,
+                "❌ Выбранный тариф не найден.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
             await state.clear()
             return
         
-        plan_id = data.get('plan_id')
-        plan = get_plan_by_id(plan_id)
-
-        if not plan:
-            await callback.message.answer("Произошла ошибка при выборе тарифа.")
-            await state.clear()
-            return
-
         base_price = Decimal(str(plan['price']))
         price_rub_decimal = base_price
 
@@ -2652,13 +2923,16 @@ def get_user_router() -> Router:
         
         if result:
             pay_url, invoice_id = result
-            await callback.message.edit_text(
+            payment_image = get_setting("payment_image")
+            await smart_edit_message(
+                callback.message,
                 "Нажмите на кнопку ниже для оплаты:",
-                reply_markup=keyboards.create_cryptobot_payment_keyboard(pay_url, invoice_id)
+                keyboards.create_cryptobot_payment_keyboard(pay_url, invoice_id),
+                payment_image
             )
             await state.clear()
         else:
-            await callback.message.edit_text("❌ Не удалось создать счёт в CryptoBot. Попробуйте другой способ оплаты.")
+            await smart_edit_message(callback.message, "❌ Не удалось создать счёт в CryptoBot. Попробуйте другой способ оплаты.")
 
     @user_router.callback_query(F.data.startswith("check_crypto_invoice:"))
     async def check_crypto_invoice_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
@@ -2756,7 +3030,7 @@ def get_user_router() -> Router:
         plan = get_plan_by_id(data.get('plan_id'))
         
         if not wallet_address or not plan:
-            await callback.message.edit_text("❌ Оплата через TON временно недоступна.")
+            await smart_edit_message(callback.message, "❌ Оплата через TON временно недоступна.")
             await state.clear()
             return
 
@@ -2768,7 +3042,7 @@ def get_user_router() -> Router:
         ton_usdt_rate = await get_ton_usdt_rate()
 
         if not usdt_rub_rate or not ton_usdt_rate:
-            await callback.message.edit_text("❌ Не удалось получить курс TON. Попробуйте позже.")
+            await smart_edit_message(callback.message, "❌ Не удалось получить курс TON. Попробуйте позже.")
             await state.clear()
             return
 
@@ -2822,11 +3096,31 @@ def get_user_router() -> Router:
         await callback.answer()
         data = await state.get_data()
         user_id = callback.from_user.id
-        plan = get_plan_by_id(data.get('plan_id'))
-        if not plan:
-            await callback.message.edit_text("❌ Ошибка: Тариф не найден.")
+        
+        plan_id = data.get('plan_id')
+        
+        # Валидация plan_id
+        if not plan_id:
+            logger.error(f"[PAYMENT_BUG] Missing plan_id for user {user_id}")
+            await smart_edit_message(
+                callback.message,
+                "❌ Произошла ошибка при обработке тарифа.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
             await state.clear()
             return
+        
+        plan = get_plan_by_id(plan_id)
+        if not plan:
+            logger.error(f"[PAYMENT_BUG] Invalid plan_id={plan_id} for user {user_id}")
+            await smart_edit_message(
+                callback.message,
+                "❌ Выбранный тариф не найден.\n"
+                "Пожалуйста, выберите тариф заново."
+            )
+            await state.clear()
+            return
+        
         months = int(plan['months'])
         price = float(data.get('final_price', plan['price']))
 
@@ -3171,7 +3465,8 @@ async def process_successful_payment(bot: Bot, metadata: dict):
         result = await remnawave_api.create_or_update_key_on_host(
             host_name=host_name,
             email=candidate_email,
-            days_to_add=int(months * 30)
+            days_to_add=int(months * 30),
+            telegram_id=user_id,
         )
         if not result:
             await processing_message.edit_text("❌ Не удалось создать/обновить ключ на панели Remnawave.")

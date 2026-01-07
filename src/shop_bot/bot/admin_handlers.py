@@ -47,7 +47,7 @@ from shop_bot.data_manager.database import (
     set_referral_balance_all,
 )
 from shop_bot.data_manager import backup_manager
-from shop_bot.bot.handlers import show_main_menu
+from shop_bot.bot.handlers import show_main_menu, smart_edit_message
 from shop_bot.modules.remnawave_api import create_or_update_key_on_host, delete_client_on_host
 
 logger = logging.getLogger(__name__)
@@ -130,13 +130,11 @@ def get_admin_router() -> Router:
         except Exception as e:
             logger.warning(f"Не удалось создать динамическую админ-клавиатуру, используем статическую: {e}")
             keyboard = keyboards.create_admin_menu_keyboard()
+
         if edit_message:
-            try:
-                await message.edit_text(text, reply_markup=keyboard)
-            except Exception:
-                pass
+            await smart_edit_message(message, text, keyboard)
         else:
-            await message.answer(text, reply_markup=keyboard)
+            await smart_edit_message(message, text, keyboard)
 
     async def show_admin_promo_menu(message: types.Message, edit_message: bool = False):
         text = (

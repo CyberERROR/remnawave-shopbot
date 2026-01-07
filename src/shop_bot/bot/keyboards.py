@@ -521,7 +521,7 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
 def create_key_info_keyboard(key_id: int, connection_string: str | None = None) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     if connection_string:
-        builder.button(text="💻 Личный кабинет", web_app=WebAppInfo(url=connection_string))
+        builder.button(text="📲 Подключиться", web_app=WebAppInfo(url=connection_string))
     builder.button(text="➕ Продлить этот ключ", callback_data=f"extend_key_{key_id}")
     builder.button(text="📱 Показать QR-код", callback_data=f"show_qr_{key_id}")
     builder.button(text="📖 Инструкция", callback_data=f"howto_vless_{key_id}")
