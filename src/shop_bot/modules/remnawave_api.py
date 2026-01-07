@@ -277,12 +277,24 @@ async def ensure_user(
     description: str | None = None,
     tag: str | None = None,
     username: str | None = None,
+    telegram_id: int | str | None = None,
+    force_expiry: bool = False,
 ) -> dict[str, Any]:
     if not email:
         raise RemnawaveAPIError("email is required for ensure_user")
     if not squad_uuid:
         raise RemnawaveAPIError("squad_uuid is required for ensure_user")
 
+    # Получаем настройки хоста из БД
+    squad = rw_repo.get_squad(host_name)
+    hwid_enabled = bool(squad.get("remnawave_hwid_enabled")) if squad else False
+    hwid_limit = int(squad.get("remnawave_limit_hwid") or 0) if squad else 0
+    
+    # Получаем лимит трафика из настроек хоста (в GB, конвертируем в байты)
+    traffic_limit_gb = int(squad.get("remnawave_limit_traffic") or 0) if squad else 0
+    if traffic_limit_gb > 0:
+        # Переопределяем traffic_limit_bytes если задан лимит в GB
+        traffic_limit_bytes = traffic_limit_gb * 1024 * 1024 * 1024  # GB -> bytes
 
     email = _normalize_email_for_remnawave(email)
     current = await get_user_by_email(email, host_name=host_name)
@@ -294,15 +306,18 @@ async def ensure_user(
     path: str
 
     if current:
-        current_expire = current.get("expireAt")
-        if current_expire:
-            try:
-                current_dt = datetime.fromisoformat(current_expire.replace("Z", "+00:00"))
-                if current_dt > expire_at:
-                    expire_iso = _to_iso(current_dt)
-            except ValueError:
-                pass
-
+        # Защита от случайного уменьшения срока при покупке новых тарифов
+        # НО если force_expiry=True (из админки), то используем переданную дату
+        if not force_expiry:
+            current_expire = current.get("expireAt")
+            if current_expire:
+                try:
+                    current_dt = datetime.fromisoformat(current_expire.replace("Z", "+00:00"))
+                    if current_dt > expire_at:
+                        expire_iso = _to_iso(current_dt)
+                except ValueError:
+                    pass
+        
         logger.info(
             "Remnawave: найден пользователь %s (%s) на '%s' — обновляю срок до %s",
             email,
@@ -317,8 +332,15 @@ async def ensure_user(
             "expireAt": expire_iso,
             "activeInternalSquads": [squad_uuid],
             "email": email,
-            "hwidDeviceLimit": 2,
         }
+
+        # Добавляем hwidDeviceLimit только если включено
+        if hwid_enabled and hwid_limit > 0:
+            payload["hwidDeviceLimit"] = hwid_limit
+
+        # Добавляем Telegram ID в контактную информацию
+        if telegram_id:
+            payload["telegramId"] = int(telegram_id)
 
         if traffic_limit_bytes is not None:
             payload["trafficLimitBytes"] = traffic_limit_bytes
@@ -345,8 +367,15 @@ async def ensure_user(
             "expireAt": expire_iso,
             "activeInternalSquads": [squad_uuid],
             "email": email,
-            "hwidDeviceLimit": 2,
         }
+
+        # Добавляем hwidDeviceLimit только если включено
+        if hwid_enabled and hwid_limit > 0:
+            payload["hwidDeviceLimit"] = hwid_limit
+
+        # Добавляем Telegram ID в контактную информацию
+        if telegram_id:
+            payload["telegramId"] = int(telegram_id)
 
         if traffic_limit_bytes is not None:
             payload["trafficLimitBytes"] = traffic_limit_bytes
@@ -471,6 +500,8 @@ async def create_or_update_key_on_host(
     *,
     description: str | None = None,
     tag: str | None = None,
+    telegram_id: int | str | None = None,
+    force_expiry: bool = False,
 ) -> dict | None:
     """Legacy совместимость: создаёт/обновляет пользователя Remnawave и возвращает данные по ключу."""
     try:
@@ -489,7 +520,21 @@ async def create_or_update_key_on_host(
             days = days_to_add if days_to_add is not None else int(rw_repo.get_setting('default_extension_days') or 30)
             if days <= 0:
                 days = 1
-            target_dt = datetime.now(timezone.utc) + timedelta(days=days)
+            
+            
+            current_user = await get_user_by_email(email, host_name=host_name)
+            if current_user:
+                current_expire = current_user.get("expireAt")
+                if current_expire:
+                    try:
+                        base_dt = datetime.fromisoformat(current_expire.replace("Z", "+00:00")) 
+                        target_dt = base_dt + timedelta(days=days)
+                    except Exception:
+                        target_dt = datetime.now(timezone.utc) + timedelta(days=days)
+                else:
+                    target_dt = datetime.now(timezone.utc) + timedelta(days=days)
+            else:
+                target_dt = datetime.now(timezone.utc) + timedelta(days=days)
 
         traffic_limit_bytes = squad.get('default_traffic_limit_bytes')
         traffic_limit_strategy = squad.get('default_traffic_strategy') or 'NO_RESET'
@@ -504,6 +549,8 @@ async def create_or_update_key_on_host(
             description=description,
             tag=tag,
             username=email.split('@')[0] if email else None,
+            telegram_id=telegram_id,
+            force_expiry=force_expiry,  
         )
 
         subscription_url = extract_subscription_url(user_payload) or ''
