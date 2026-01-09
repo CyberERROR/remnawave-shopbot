@@ -17,7 +17,8 @@ dependencies = [
     "pytonconnect==0.3.2",
     "paramiko==3.5.0",
     "colorama==0.4.6",
-    "psutil==5.9.8"
+    "psutil==5.9.8",
+    "setuptools>=65.0.0"
 ]
 
 [project.optional-dependencies]
