@@ -1,6 +1,15 @@
 # 🛍️ Remnawave ShopBot
 
 > **Telegram-бот для полностью автоматизированной продажи VPN-конфигураций с веб-панелью управления**
+> 
+<div align="center">
+   
+### <img src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Telegram_Messenger.png" width="22" height="22" alt="Telegram"> Наш Telegram
+[Присоединяйтесь к сообществу](https://t.me/+YV_BO1cmGWw5OTdi)
+
+</div>
+
+---
 
 <div align="center">
 
