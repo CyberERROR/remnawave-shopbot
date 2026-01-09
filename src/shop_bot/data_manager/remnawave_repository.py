@@ -277,7 +277,6 @@ _LEGACY_FORWARDERS = (
 
     "get_users_paginated",
     "get_keys_counts_for_users",
-    "get_referral_counts_for_users",
     "get_user_tickets",
     "insert_host_speedtest",
     "initialize_db",
