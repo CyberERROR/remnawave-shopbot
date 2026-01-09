@@ -19,8 +19,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 COPY . /app/project/
 WORKDIR /app/project
 
-# Обновляем pip/wheel и ставим зависимости проекта
-RUN /app/.venv/bin/pip install --no-cache-dir -U pip wheel \
+# Обновляем pip/wheel/setuptools и ставим зависимости проекта
+RUN /app/.venv/bin/pip install --no-cache-dir -U pip wheel setuptools \
     && /app/.venv/bin/pip install --no-cache-dir -e .
 
 # Запуск через python из venv (важно, чтобы импортировался psutil из окружения)
