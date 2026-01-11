@@ -476,7 +476,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo ""
         
         run_with_animated_spinner "Пересборка контейнеров" \
-            sudo bash -c "docker-compose down --remove-orphans 2>/dev/null || true; docker-compose up -d --build" || {
+            sudo bash -c "cd $(pwd) && docker-compose down --remove-orphans 2>/dev/null || true; docker-compose up -d --build" || {
             log_error "Не удалось пересобрать контейнеры"
             exit 1
         }
@@ -633,7 +633,7 @@ show_docker_images
 echo ""
 
 run_with_animated_spinner "Сборка и запуск Docker контейнеров" \
-    sudo bash -c "if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans 2>/dev/null || true; fi; docker-compose up -d --build" || {
+    sudo bash -c "cd $(pwd) && if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans 2>/dev/null || true; fi; docker-compose up -d --build" || {
     log_error "Не удалось запустить Docker контейнеры"
     exit 1
 }
