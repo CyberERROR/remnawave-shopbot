@@ -473,7 +473,8 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo ""
         
         CURRENT_DIR=$(pwd -P)
-        DOCKER_CMD="cd \"$CURRENT_DIR\" && docker-compose down --remove-orphans 2>/dev/null || true; docker-compose up -d --build"
+        COMPOSE_FILE="$CURRENT_DIR/docker-compose.yml"
+        DOCKER_CMD="docker-compose -f \"$COMPOSE_FILE\" --project-directory \"$CURRENT_DIR\" down --remove-orphans 2>/dev/null || true; docker-compose -f \"$COMPOSE_FILE\" --project-directory \"$CURRENT_DIR\" up -d --build"
         
         run_with_animated_spinner "Пересборка контейнеров" \
             sudo bash -c "$DOCKER_CMD" || {
@@ -486,7 +487,6 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo -e "${GREEN}┃ ОБНОВЛЕНИЕ ЗАВЕРШЕНО! ┃${NC}"
         echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
         echo ""
-        echo -e " ${BOLD}Каталог установки:${NC} ${CURRENT_DIR}"
         echo -e " ${BOLD}Адрес панели:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/login"
         echo -e " ${BOLD}Данные входа:${NC} ${CYAN}admin${NC} / ${CYAN}admin${NC}"
         echo -e " ${BOLD}Webhook URL:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
@@ -494,6 +494,9 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo -e " ${BOLD}SSL Сертификаты:${NC}"
         echo -e " Публичный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
         echo -e " Приватный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
+        echo ""
+        echo -e "${YELLOW}${BOLD}⚠ ДЛЯ УПРАВЛЕНИЯ БОТОМ ВРУЧНУЮ ВЫПОЛНИТЕ:${NC}"
+        echo -e "${CYAN}cd ${CURRENT_DIR}${NC}"
         echo ""
         
         show_footer
@@ -645,7 +648,8 @@ show_docker_images
 echo ""
 
 CURRENT_DIR=$(pwd -P)
-DOCKER_CMD="cd \"$CURRENT_DIR\" && if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans 2>/dev/null || true; fi; docker-compose up -d --build"
+COMPOSE_FILE="$CURRENT_DIR/docker-compose.yml"
+DOCKER_CMD="if [ -n \"\$(docker-compose -f \"$COMPOSE_FILE\" --project-directory \"$CURRENT_DIR\" ps -q 2>/dev/null)\" ]; then docker-compose -f \"$COMPOSE_FILE\" --project-directory \"$CURRENT_DIR\" down --remove-orphans 2>/dev/null || true; fi; docker-compose -f \"$COMPOSE_FILE\" --project-directory \"$CURRENT_DIR\" up -d --build"
 
 run_with_animated_spinner "Сборка и запуск Docker контейнеров" \
     sudo bash -c "$DOCKER_CMD" || {
@@ -669,6 +673,9 @@ echo ""
 echo -e " ${BOLD}SSL Сертификаты:${NC}"
 echo -e " Публичный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
 echo -e " Приватный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
+echo ""
+echo -e "${YELLOW}${BOLD}⚠ ДЛЯ УПРАВЛЕНИЯ БОТОМ ВРУЧНУЮ ВЫПОЛНИТЕ:${NC}"
+echo -e "${CYAN}cd ${CURRENT_DIR}${NC}"
 echo ""
 
 echo -e "${YELLOW} ⚠ Пожалуйста, смените пароль сразу после входа!${NC}"
