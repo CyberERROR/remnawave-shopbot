@@ -329,56 +329,68 @@ show_docker_images() {
     fi
 }
 
+cleanup_old_installation() {
+    log_warn "Обнаружена остаток старой установки (конфигурация найдена, каталог удалён)."
+    log_info "Удаление старой конфигурации для чистой переустановки..."
+    
+    run_with_spinner "Удаление символической ссылки" sudo rm -f "$NGINX_LINK" || true
+    run_with_spinner "Удаление конфигурации Nginx" sudo rm -f "$NGINX_CONF" || true
+    
+    log_success "Старая конфигурация удалена. Переходим к новой установке."
+    echo ""
+}
+
 # --- Начало выполнения ---
 
 show_header
 ensure_sudo_refresh
 
-# Режим обновления
+# Проверка наличия конфигурации и каталога
 if [[ -f "$NGINX_CONF" ]]; then
-    log_info "Обнаружена существующая конфигурация."
-    
-    if [[ ! -d "$PROJECT_DIR" ]]; then
-        log_error "Каталог проекта не найден ($PROJECT_DIR). Удалите $NGINX_CONF для чистой установки."
-        exit 1
+    if [[ -d "$PROJECT_DIR" ]]; then
+        # Режим обновления: конфигурация и каталог существуют
+        log_info "Обнаружена существующая конфигурация."
+        
+        cd "$PROJECT_DIR"
+        
+        # Получаем параметры из существующей конфигурации
+        DOMAIN=$(get_domain_from_nginx)
+        YOOKASSA_PORT=$(get_port_from_nginx)
+        
+        run_with_animated_spinner "Получение обновлений из Git" git pull --ff-only || {
+            log_error "Не удалось обновить репозиторий"
+            exit 1
+        }
+        
+        echo ""
+        show_docker_images
+        echo ""
+        
+        run_with_animated_spinner "Пересборка контейнеров" \
+            sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
+            log_error "Не удалось пересобрать контейнеры"
+            exit 1
+        }
+        
+        echo ""
+        echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
+        echo -e "${GREEN}┃                  ОБНОВЛЕНИЕ ЗАВЕРШЕНО!                       ┃${NC}"
+        echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
+        echo ""
+        echo -e " ${BOLD}Адрес панели:${NC}     https://${DOMAIN}:${YOOKASSA_PORT}/login"
+        echo -e " ${BOLD}Данные входа:${NC}     ${CYAN}admin${NC} / ${CYAN}admin${NC}"
+        echo -e " ${BOLD}Webhook URL:${NC}      https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
+        echo ""
+        echo -e " ${BOLD}SSL Сертификаты:${NC}"
+        echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
+        echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
+        echo ""
+        show_footer
+        exit 0
+    else
+        # Конфигурация существует, но каталога нет - очищаем и переустанавливаем
+        cleanup_old_installation
     fi
-    
-    cd "$PROJECT_DIR"
-    
-    # Получаем параметры из существующей конфигурации
-    DOMAIN=$(get_domain_from_nginx)
-    YOOKASSA_PORT=$(get_port_from_nginx)
-    
-    run_with_animated_spinner "Получение обновлений из Git" git pull --ff-only || {
-        log_error "Не удалось обновить репозиторий"
-        exit 1
-    }
-    
-    echo ""
-    show_docker_images
-    echo ""
-    
-    run_with_animated_spinner "Пересборка контейнеров" \
-        sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
-        log_error "Не удалось пересобрать контейнеры"
-        exit 1
-    }
-    
-    echo ""
-    echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
-    echo -e "${GREEN}┃                  ОБНОВЛЕНИЕ ЗАВЕРШЕНО!                       ┃${NC}"
-    echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
-    echo ""
-    echo -e " ${BOLD}Адрес панели:${NC}     https://${DOMAIN}:${YOOKASSA_PORT}/login"
-    echo -e " ${BOLD}Данные входа:${NC}     ${CYAN}admin${NC} / ${CYAN}admin${NC}"
-    echo -e " ${BOLD}Webhook URL:${NC}      https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
-    echo ""
-    echo -e " ${BOLD}SSL Сертификаты:${NC}"
-    echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
-    echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
-    echo ""
-    show_footer
-    exit 0
 fi
 
 # Режим установки
