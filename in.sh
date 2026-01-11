@@ -2,7 +2,6 @@
 
 set -Eeuo pipefail
 
-# Цветовая палитра
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -12,19 +11,15 @@ PURPLE='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-# Настройки проекта
 REPO_URL="https://github.com/CyberERROR/remnawave-shopbot.git"
 PROJECT_DIR="remnawave-shopbot"
 NGINX_CONF="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
 NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
 
-# Инициализация переменных
 USER_DOMAIN_INPUT=""
 DOMAIN=""
 EMAIL=""
 YOOKASSA_PORT=""
-
-# --- Функции отображения ---
 
 show_header() {
     clear
@@ -63,7 +58,6 @@ log_input() {
     echo -ne "${CYAN}${BOLD}[?]${NC} $1"
 }
 
-# Функция спиннера с информацией о процессе
 run_with_spinner() {
     local message="$1"
     shift
@@ -88,7 +82,6 @@ run_with_spinner() {
     fi
 }
 
-# Функция спиннера с анимацией для долгих операций
 run_with_animated_spinner() {
     local message="$1"
     shift
@@ -141,8 +134,6 @@ on_error() {
 }
 
 trap 'on_error $LINENO' ERR
-
-# --- Утилиты ---
 
 sanitize_domain() {
     if [[ -z "${1:-}" ]]; then
@@ -216,8 +207,6 @@ get_port_from_nginx() {
         grep "listen" "$NGINX_CONF" 2>/dev/null | head -n1 | awk '{print $2}' | sed 's/;//' || true
     fi
 }
-
-# --- Основные этапы ---
 
 ensure_sudo_refresh() {
     if ! sudo -v 2>/dev/null; then
@@ -445,8 +434,6 @@ manual_cleanup() {
     done
 }
 
-# --- Начало выполнения ---
-
 show_header
 ensure_sudo_refresh
 
@@ -472,11 +459,24 @@ if [[ -f "$NGINX_CONF" ]]; then
         }
         
         echo ""
+        
+        if [[ ! -f "docker-compose.yml" ]] && [[ ! -f "docker-compose.yaml" ]]; then
+            log_warn "Файл docker-compose.yml не найден. Пробуем получить через git pull..."
+            git pull || true
+            if [[ ! -f "docker-compose.yml" ]] && [[ ! -f "docker-compose.yaml" ]]; then
+                log_error "Критическая ошибка: отсутствует docker-compose.yml. Переустановите бота."
+                exit 1
+            fi
+        fi
+
         show_docker_images
         echo ""
         
+        CURRENT_DIR=$(pwd)
+        DOCKER_CMD="cd \"$CURRENT_DIR\" && docker-compose down --remove-orphans 2>/dev/null || true; docker-compose up -d --build"
+        
         run_with_animated_spinner "Пересборка контейнеров" \
-            sudo bash -c "cd $(pwd) && docker-compose down --remove-orphans 2>/dev/null || true; docker-compose up -d --build" || {
+            sudo bash -c "$DOCKER_CMD" || {
             log_error "Не удалось пересобрать контейнеры"
             exit 1
         }
@@ -628,12 +628,26 @@ configure_nginx "$DOMAIN" "$YOOKASSA_PORT"
 
 echo ""
 
+if [[ ! -f "docker-compose.yml" ]] && [[ ! -f "docker-compose.yaml" ]]; then
+    log_warn "Файл docker-compose.yml не найден после клонирования. Пробуем обновить..."
+    git pull || true
+    if [[ ! -f "docker-compose.yml" ]] && [[ ! -f "docker-compose.yaml" ]]; then
+        log_error "Файл конфигурации Docker не найден в $(pwd)."
+        log_error "Возможно, репозиторий пуст или произошла ошибка при клонировании."
+        log_error "Попробуйте удалить папку $PROJECT_DIR вручную и запустить скрипт снова."
+        exit 1
+    fi
+fi
+
 show_docker_images
 
 echo ""
 
+CURRENT_DIR=$(pwd)
+DOCKER_CMD="cd \"$CURRENT_DIR\" && if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans 2>/dev/null || true; fi; docker-compose up -d --build"
+
 run_with_animated_spinner "Сборка и запуск Docker контейнеров" \
-    sudo bash -c "cd $(pwd) && if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans 2>/dev/null || true; fi; docker-compose up -d --build" || {
+    sudo bash -c "$DOCKER_CMD" || {
     log_error "Не удалось запустить Docker контейнеры"
     exit 1
 }
