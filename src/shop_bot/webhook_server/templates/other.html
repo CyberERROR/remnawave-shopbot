@@ -88,213 +88,273 @@
         <p class="text-white/50 text-xs mt-4" id="result-time">-</p>
     </div>
 
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 class="text-xl font-bold text-white mb-4">Создать рассылку</h3>
+    <div
+        class="relative overflow-hidden rounded-2xl bg-[#102219]/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 hover:border-primary/20 hover:shadow-primary/5 mb-8 group">
 
-        <form id="broadcast-form">
-            <!-- Текст сообщения -->
-            <div class="mb-6">
-                <label class="block text-white/70 text-sm font-medium mb-2">Текст сообщения</label>
-                <textarea id="broadcast-text" rows="6"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="Введите текст сообщения..."></textarea>
-                <p class="text-white/50 text-xs mt-1">
-                    Поддерживаются HTML теги: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;s&gt;, &lt;code&gt;, &lt;pre&gt;,
-                    &lt;a href=""&gt;
-                </p>
-                <button type="button" id="btn-preview"
-                    class="mt-2 px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-base">visibility</span>
-                    Предпросмотр
-                </button>
+        <div
+            class="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none group-hover:bg-primary/30 transition-all duration-500">
+        </div>
+
+        <div class="p-5 sm:p-6 relative z-10">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="p-2 rounded-lg bg-primary/10 text-primary">
+                    <span class="material-symbols-outlined text-2xl">campaign</span>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-white leading-tight">Создать рассылку</h2>
+                    <p class="text-xs text-white/50 font-medium">Массовая отправка сообщений пользователям</p>
+                </div>
             </div>
 
-            <!-- Медиа и Кнопки в 2 колонки -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Медиа -->
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Медиа (опционально)</label>
-                    <div class="flex gap-2 items-start">
-                        <button type="button" id="btn-upload-media"
-                            class="px-4 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-base">upload</span>
-                            Прикрепить фото/видео/GIF
+            <form id="broadcast-form">
+
+                <div class="mb-6 relative group/input">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-[10px] uppercase tracking-wider text-white/40 font-bold ml-1">Текст
+                            сообщения</label>
+                        <button type="button" id="btn-preview"
+                            class="text-xs text-primary hover:text-primary/80 font-bold flex items-center gap-1 transition-colors">
+                            <span class="material-symbols-outlined text-sm">visibility</span>
+                            Предпросмотр
                         </button>
-                        <input type="file" id="media-input" accept="image/*,video/*,.gif" class="hidden" />
                     </div>
-                    <div id="media-preview" class="mt-4 hidden">
-                        <div class="relative inline-block">
-                            <img id="media-preview-img" src=""
-                                class="max-w-xs max-h-64 rounded-lg border border-white/10 hidden" />
-                            <video id="media-preview-video" controls
-                                class="max-w-xs max-h-64 rounded-lg border border-white/10 hidden"></video>
-                            <button type="button" id="btn-remove-media"
-                                class="absolute top-2 right-2 px-2 py-1 rounded bg-red-500/80 text-white text-sm hover:bg-red-500">
-                                <span class="material-symbols-outlined text-base">close</span>
+
+                    <textarea id="broadcast-text" rows="6"
+                        class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner resize-y min-h-[120px]"
+                        placeholder="Введите текст сообщения..."></textarea>
+
+                    <div class="flex items-center gap-2 mt-2 px-1">
+                        <span class="text-[10px] text-white/30 font-mono">HTML OK:</span>
+                        <div class="flex gap-1">
+                            <span
+                                class="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/50 font-mono border border-white/5">&lt;b&gt;</span>
+                            <span
+                                class="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/50 font-mono border border-white/5">&lt;i&gt;</span>
+                            <span
+                                class="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/50 font-mono border border-white/5">&lt;a&gt;</span>
+                            <span
+                                class="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/50 font-mono border border-white/5">&lt;code&gt;</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+                    <div class="bg-black/20 rounded-xl p-4 border border-white/5">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-3">Медиа</label>
+
+                        <div class="flex flex-col gap-3">
+                            <input type="file" id="media-input" accept="image/*,video/*,.gif" class="hidden" />
+                            <button type="button" id="btn-upload-media"
+                                class="w-full border-2 border-dashed border-white/10 rounded-lg p-4 hover:border-primary/40 hover:bg-primary/5 transition-all group/upload text-center">
+                                <span
+                                    class="material-symbols-outlined text-2xl text-white/30 mb-1 group-hover/upload:text-primary transition-colors">cloud_upload</span>
+                                <p class="text-xs text-white/50 group-hover/upload:text-white/80 transition-colors">
+                                    Нажмите для выбора файла</p>
+                                <p class="text-[10px] text-white/20 mt-1">IMG, VIDEO, GIF</p>
                             </button>
+
+                            <div id="media-preview"
+                                class="hidden relative rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                                <img id="media-preview-img" src="" class="w-full h-48 object-cover hidden" />
+                                <video id="media-preview-video" controls class="w-full h-48 bg-black hidden"></video>
+                                <button type="button" id="btn-remove-media"
+                                    class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white hover:bg-red-500/80 hover:text-white flex items-center justify-center transition-all backdrop-blur-sm border border-white/10">
+                                    <span class="material-symbols-outlined text-sm">close</span>
+                                </button>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-3">Кнопки</label>
+
+                        <div id="buttons-list"
+                            class="space-y-2 mb-3 flex-1 overflow-y-auto max-h-[200px] pr-1 custom-scrollbar"></div>
+
+                        <button type="button" id="btn-add-button"
+                            class="w-full py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-white/70 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2 mt-auto">
+                            <span class="material-symbols-outlined text-base">add_circle</span>
+                            Добавить кнопку
+                        </button>
                     </div>
                 </div>
 
-                <!-- Кнопки -->
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Кнопки (опционально)</label>
-                    <p class="text-white/50 text-xs mb-2">URL должен начинаться с http:// или https://</p>
-                    <div id="buttons-list" class="space-y-2 mb-2"></div>
-                    <button type="button" id="btn-add-button"
-                        class="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-base">add</span>
-                        Добавить кнопку
-                    </button>
-                </div>
-            </div>
+                <div class="mb-8">
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-3 ml-1">Аудитория</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 md:grid-rows-3 md:grid-flow-col gap-3">
 
-            <!-- Кому отправить - 2 колонки -->
-            <div class="mb-6">
-                <label class="block text-white/70 text-sm font-medium mb-3">Кому отправить</label>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <!-- Тестовый режим -->
-                    <label class="relative block cursor-pointer group">
-                        <input type="radio" name="mode" value="test" class="peer sr-only" />
-                        <div
-                            class="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)] peer-checked:[&_.radio-dot]:opacity-100">
-                            <span class="text-xl">⚙️</span>
-                            <span
-                                class="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Тестовый
-                                режим (админ)</span>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="mode" value="all" checked class="peer sr-only" />
                             <div
-                                class="ml-auto w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-colors">
+                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
                                 <div
-                                    class="radio-dot w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 transition-opacity">
+                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
+                                    <span class="material-symbols-outlined text-xl">groups</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Все пользователи
+                                    </div>
+                                    <div class="text-[10px] text-white/40">Массовая рассылка</div>
+                                </div>
+                                <div
+                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
+                                    <div
+                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </label>
+                        </label>
 
-                    <!-- С активным ключом -->
-                    <label class="relative block cursor-pointer group">
-                        <input type="radio" name="mode" value="with_keys" class="peer sr-only" />
-                        <div
-                            class="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)] peer-checked:[&_.radio-dot]:opacity-100">
-                            <span class="text-xl">🔑</span>
-                            <span class="text-white/70 text-sm font-medium group-hover:text-white transition-colors">С
-                                активным ключом</span>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="mode" value="with_keys" class="peer sr-only" />
                             <div
-                                class="ml-auto w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-colors">
+                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
                                 <div
-                                    class="radio-dot w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 transition-opacity">
+                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
+                                    <span class="material-symbols-outlined text-xl">vpn_key</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Активные ключи</div>
+                                    <div class="text-[10px] text-white/40">Пользователи с подпиской</div>
+                                </div>
+                                <div
+                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
+                                    <div
+                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </label>
+                        </label>
 
-                    <!-- С истёкшим ключом -->
-                    <label class="relative block cursor-pointer group">
-                        <input type="radio" name="mode" value="expired_keys" class="peer sr-only" />
-                        <div
-                            class="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)] peer-checked:[&_.radio-dot]:opacity-100">
-                            <span class="text-xl">⏰</span>
-                            <span class="text-white/70 text-sm font-medium group-hover:text-white transition-colors">С
-                                истёкшим ключом</span>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="mode" value="expired_keys" class="peer sr-only" />
                             <div
-                                class="ml-auto w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-colors">
+                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
                                 <div
-                                    class="radio-dot w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 transition-opacity">
+                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
+                                    <span class="material-symbols-outlined text-xl">timer_off</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Истекшие ключи</div>
+                                    <div class="text-[10px] text-white/40">Напоминание о продлении</div>
+                                </div>
+                                <div
+                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
+                                    <div
+                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </label>
+                        </label>
 
-                    <!-- Без пробного -->
-                    <label class="relative block cursor-pointer group">
-                        <input type="radio" name="mode" value="without_trial" class="peer sr-only" />
-                        <div
-                            class="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)] peer-checked:[&_.radio-dot]:opacity-100">
-                            <span class="text-xl">🎁</span>
-                            <span class="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Без
-                                пробного</span>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="mode" value="without_trial" class="peer sr-only" />
                             <div
-                                class="ml-auto w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-colors">
+                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
                                 <div
-                                    class="radio-dot w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 transition-opacity">
+                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
+                                    <span class="material-symbols-outlined text-xl">new_releases</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Исп. пробный</div>
+                                    <div class="text-[10px] text-white/40">Потенциальные клиенты</div>
+                                </div>
+                                <div
+                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
+                                    <div
+                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </label>
+                        </label>
 
-                    <!-- Не использовали пробный -->
-                    <label class="relative block cursor-pointer group">
-                        <input type="radio" name="mode" value="not_used_trial" class="peer sr-only" />
-                        <div
-                            class="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)] peer-checked:[&_.radio-dot]:opacity-100">
-                            <span class="text-xl">🎁</span>
-                            <span class="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Не
-                                использовали пробный</span>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="mode" value="not_used_trial" class="peer sr-only" />
                             <div
-                                class="ml-auto w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-colors">
+                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
                                 <div
-                                    class="radio-dot w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 transition-opacity">
+                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
+                                    <span class="material-symbols-outlined text-xl">history_toggle_off</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Не исп. пробный</div>
+                                    <div class="text-[10px] text-white/40">Зарегистрировались, но не активировали</div>
+                                </div>
+                                <div
+                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
+                                    <div
+                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </label>
+                        </label>
 
-                    <!-- Отправить всем -->
-                    <label class="relative block cursor-pointer group">
-                        <input type="radio" name="mode" value="all" checked class="peer sr-only" />
-                        <div
-                            class="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)] peer-checked:[&_.radio-dot]:opacity-100">
-                            <span class="text-xl">👥</span>
-                            <span
-                                class="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Отправить
-                                всем</span>
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="mode" value="test" class="peer sr-only" />
                             <div
-                                class="ml-auto w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-colors">
+                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
                                 <div
-                                    class="radio-dot w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 transition-opacity">
+                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
+                                    <span class="material-symbols-outlined text-xl">build</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Тестовый режим</div>
+                                    <div class="text-[10px] text-white/40">Только администраторам</div>
+                                </div>
+                                <div
+                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
+                                    <div
+                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </label>
-                </div>
-            </div>
-
-            <button type="submit" id="btn-send"
-                class="px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors flex items-center gap-2">
-                <span class="material-symbols-outlined text-base">send</span>
-                Отправить рассылку
-            </button>
-        </form>
-
-        <!-- Прогресс-бар рассылки -->
-        <div id="broadcast-progress-container" class="mt-6 hidden">
-            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <h4 class="text-white font-medium">Отправка рассылки...</h4>
-                    <span id="broadcast-progress-percent" class="text-primary font-bold">0%</span>
-                </div>
-
-                <!-- Прогресс бар -->
-                <div class="w-full bg-white/10 rounded-full h-3 overflow-hidden mb-3">
-                    <div id="broadcast-progress-bar"
-                        class="h-full bg-gradient-to-r from-primary to-green-400 rounded-full transition-all duration-300 ease-out"
-                        style="width: 0%">
+                        </label>
                     </div>
                 </div>
 
-                <!-- Статистика -->
-                <div class="grid grid-cols-3 gap-3 text-center text-sm">
-                    <div>
-                        <p class="text-white/50">Отправлено</p>
-                        <p class="text-green-400 font-bold" id="broadcast-progress-sent">0</p>
+                <button type="submit" id="btn-send"
+                    class="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary/90 to-primary text-background-dark font-bold text-sm uppercase tracking-wide shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 group">
+                    <span
+                        class="material-symbols-outlined text-lg group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform">send</span>
+                    Отправить рассылку
+                </button>
+            </form>
+
+            <div id="broadcast-progress-container" class="mt-6 hidden animate-fade-in">
+                <div class="bg-black/40 border border-white/5 rounded-xl p-4 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary animate-pulse">wifi_tethering</span>
+                            <h4 class="text-white font-bold text-sm">Отправка...</h4>
+                        </div>
+                        <span id="broadcast-progress-percent" class="text-primary font-mono font-bold">0%</span>
                     </div>
-                    <div>
-                        <p class="text-white/50">Ошибок</p>
-                        <p class="text-red-400 font-bold" id="broadcast-progress-failed">0</p>
+
+                    <div class="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mb-4">
+                        <div id="broadcast-progress-bar"
+                            class="h-full bg-gradient-to-r from-primary to-green-400 rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]"
+                            style="width: 0%">
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-white/50">Пропущено</p>
-                        <p class="text-yellow-400 font-bold" id="broadcast-progress-skipped">0</p>
+
+                    <div class="flex divide-x divide-white/10 bg-white/5 rounded-lg border border-white/5">
+                        <div class="flex-1 py-2 px-1 text-center">
+                            <p class="text-[10px] text-white/40 uppercase font-bold tracking-wider mb-0.5">Отправлено
+                            </p>
+                            <p class="text-green-400 font-mono font-bold text-sm" id="broadcast-progress-sent">0</p>
+                        </div>
+                        <div class="flex-1 py-2 px-1 text-center">
+                            <p class="text-[10px] text-white/40 uppercase font-bold tracking-wider mb-0.5">Ошибок</p>
+                            <p class="text-red-400 font-mono font-bold text-sm" id="broadcast-progress-failed">0</p>
+                        </div>
+                        <div class="flex-1 py-2 px-1 text-center">
+                            <p class="text-[10px] text-white/40 uppercase font-bold tracking-wider mb-0.5">Пропущено</p>
+                            <p class="text-yellow-400 font-mono font-bold text-sm" id="broadcast-progress-skipped">0</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -303,110 +363,152 @@
 </section>
 
 <section id="tab-promo" class="tab-content hidden">
-    <!-- Форма создания промокода -->
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
-        <h3 class="text-xl font-bold text-white mb-4">Создать промокод</h3>
 
-        <form id="promo-create-form">
-            <!-- Способ создания и код -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Способ создания</label>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="code_mode" value="auto" checked
-                                class="w-4 h-4 text-primary focus:ring-primary/50" />
-                            <span class="text-white/70 text-sm">🎲 Генерировать автоматически</span>
+    <div
+        class="relative overflow-hidden rounded-2xl bg-[#102219]/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 hover:border-primary/20 hover:shadow-primary/5 mb-8 group">
+
+        <div
+            class="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none group-hover:bg-primary/30 transition-all duration-500">
+        </div>
+
+        <div class="p-5 sm:p-6 relative z-10">
+            <form id="promo-create-form" autocomplete="off">
+
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg bg-primary/10 text-primary">
+                            <span class="material-symbols-outlined text-2xl">local_activity</span>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white leading-tight">Создать промокод</h2>
+                            <p class="text-xs text-white/50 font-medium">Скидки и специальные предложения</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/40 p-1 rounded-xl flex w-full sm:w-auto overflow-hidden relative shadow-inner border border-white/5"
+                        id="promo_mode_switch">
+                        <div class="absolute inset-y-1 w-[calc(50%-4px)] bg-primary rounded-lg shadow-lg shadow-primary/20 transition-all duration-300 ease-out"
+                            id="promo_mode_indicator"></div>
+
+                        <label class="relative z-10 flex-1 sm:flex-none cursor-pointer">
+                            <input type="radio" name="code_mode" value="auto" checked class="peer sr-only">
+                            <div class="px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-[#102219] w-full sm:w-36 text-center peer-checked:text-[#102219] text-white/60 hover:text-white peer-checked:hover:text-[#102219]"
+                                onclick="movePromoIndicator(0)">
+                                Случайный
+                            </div>
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="code_mode" value="manual"
-                                class="w-4 h-4 text-primary focus:ring-primary/50" />
-                            <span class="text-white/70 text-sm">✍️ Ввести вручную</span>
+                        <label class="relative z-10 flex-1 sm:flex-none cursor-pointer">
+                            <input type="radio" name="code_mode" value="manual" class="peer sr-only">
+                            <div class="px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-white/60 w-full sm:w-36 text-center hover:text-white peer-checked:text-[#102219]"
+                                onclick="movePromoIndicator(1)">
+                                Свой код
+                            </div>
                         </label>
                     </div>
                 </div>
 
-                <div id="manual-code-field" class="hidden">
-                    <label class="block text-white/70 text-sm font-medium mb-2">Код промокода</label>
-                    <input type="text" name="code"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 uppercase"
-                        placeholder="PROMO2025" />
-                    <p class="text-white/50 text-xs mt-1">Будет преобразован в верхний регистр</p>
-                </div>
-            </div>
-
-            <!-- Тип и значение скидки -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Тип скидки *</label>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="discount_type" value="percent" checked
-                                class="w-4 h-4 text-primary focus:ring-primary/50" />
-                            <span class="text-white/70 text-sm">% Процентная скидка</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="discount_type" value="fixed"
-                                class="w-4 h-4 text-primary focus:ring-primary/50" />
-                            <span class="text-white/70 text-sm">₽ Фиксированная скидка</span>
-                        </label>
+                <div id="manual-code-field" class="mode-section hidden mb-4">
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Код</label>
+                    <div class="relative">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-colors">tag</span>
+                        <input type="text" name="code"
+                            class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-inner uppercase font-mono"
+                            placeholder="PROMO2025" />
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Значение скидки *</label>
-                    <input type="number" name="discount_value" step="0.01" min="0" required
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="10" />
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <div class="relative group/input lg:col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Скидка</label>
+                        <div class="flex">
+                            <input type="number" name="discount_value" step="0.01" min="0" required
+                                class="w-full bg-black/20 border border-white/10 rounded-l-xl border-r-0 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-inner"
+                                placeholder="10" />
+                            <div class="relative min-w-[90px]">
+                                <select name="discount_type"
+                                    class="w-full h-full bg-black/30 border border-white/10 rounded-r-xl pl-3 pr-8 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/50 cursor-pointer appearance-none text-center font-bold hover:bg-black/40 transition-colors">
+                                    <option value="percent">%</option>
+                                    <option value="fixed">RUB</option>
+                                </select>
+                                <span
+                                    class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-white/40 text-lg pointer-events-none">expand_more</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative group/input lg:col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Всего
+                            активаций</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">groups</span>
+                            <input type="number" name="usage_limit_total" min="1"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                                placeholder="∞" />
+                        </div>
+                    </div>
+
+                    <div class="relative group/input lg:col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Лимит
+                            на юзера</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">person</span>
+                            <input type="number" name="usage_limit_per_user" min="1"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                                placeholder="1" />
+                        </div>
+                    </div>
+
+                    <div class="relative group/input lg:col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Период
+                            действия с</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">event_available</span>
+                            <input type="datetime-local" name="valid_from" id="promo_valid_from"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-2 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                                placeholder="Начало" />
+                        </div>
+                    </div>
+
+                    <div class="relative group/input lg:col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">до</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">event_busy</span>
+                            <input type="datetime-local" name="valid_until" id="promo_valid_until"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-2 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                                placeholder="Конец" />
+                        </div>
+                    </div>
+
+                    <div class="col-span-1 md:col-span-2 lg:col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Описание</label>
+                        <input type="text" name="description" placeholder="Заметка для администратора..."
+                            class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner" />
+                    </div>
                 </div>
-            </div>
 
-            <!-- Лимиты и даты - 4 колонки на больших экранах -->
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Общий лимит</label>
-                    <input type="number" name="usage_limit_total" min="1"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="∞" />
-                </div>
-
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Лимит/польз.</label>
-                    <input type="number" name="usage_limit_per_user" min="1"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="∞" />
-                </div>
-
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Действует с</label>
-                    <input type="datetime-local" name="valid_from"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Действует до</label>
-                    <input type="datetime-local" name="valid_until"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-            </div>
-
-            <!-- Описание -->
-            <div class="mb-4">
-                <label class="block text-white/70 text-sm font-medium mb-2">Описание</label>
-                <textarea name="description" rows="2"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    placeholder="Промокод для новых клиентов..."></textarea>
-            </div>
-
-            <button type="submit"
-                class="px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors flex items-center gap-2">
-                <span class="material-symbols-outlined text-base">add</span>
-                Создать промокод
-            </button>
-        </form>
+                <button type="submit"
+                    class="mt-6 w-full py-3.5 rounded-xl bg-gradient-to-r from-primary/90 to-primary text-background-dark font-bold text-sm uppercase tracking-wide shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 group">
+                    <span
+                        class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">add_circle</span>
+                    Создать промокод
+                </button>
+            </form>
+        </div>
     </div>
 
-    <!-- Таблица промокодов -->
     <div class="bg-white/5 border border-white/10 rounded-lg p-6">
         <h3 class="text-xl font-bold text-white mb-4">Существующие промокоды</h3>
 
@@ -436,7 +538,6 @@
     </div>
 </section>
 
-<!-- Модальное окно редактирования промокода -->
 <div id="editPromoModal" class="modal-overlay">
     <div class="modal-content">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
@@ -522,7 +623,6 @@
     </div>
 </div>
 
-<!-- Модальное окно развертывания ноды Remnawave -->
 <div id="deployNodeModal" class="modal-overlay">
     <div class="modal-content max-w-4xl">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
@@ -535,7 +635,7 @@
             </button>
         </div>
         <div class="p-6 max-h-[70vh] overflow-y-auto">
-            <!-- Прогресс шагов -->
+
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-white/70 text-sm font-medium">Шаг <span id="deploy-current-step">1</span> из
@@ -549,7 +649,6 @@
                 </div>
             </div>
 
-            <!-- Шаг 1: Установка Docker -->
             <div id="deploy-step-1" class="deploy-step">
                 <div class="bg-white/5 border border-white/10 rounded-lg p-4 mb-4">
                     <h6 class="text-white font-medium mb-2 flex items-center gap-2">
@@ -574,7 +673,6 @@
                 </div>
             </div>
 
-            <!-- Шаг 2: Создание директории -->
             <div id="deploy-step-2" class="deploy-step hidden">
                 <div class="bg-white/5 border border-white/10 rounded-lg p-4 mb-4">
                     <h6 class="text-white font-medium mb-2 flex items-center gap-2">
@@ -592,7 +690,6 @@
                 </div>
             </div>
 
-            <!-- Шаг 3: Создание docker-compose.yml -->
             <div id="deploy-step-3" class="deploy-step hidden">
                 <div class="bg-white/5 border border-white/10 rounded-lg p-4 mb-4">
                     <h6 class="text-white font-medium mb-2 flex items-center gap-2">
@@ -618,7 +715,6 @@
                 </div>
             </div>
 
-            <!-- Шаг 4: Запуск контейнеров -->
             <div id="deploy-step-4" class="deploy-step hidden">
                 <div class="bg-white/5 border border-white/10 rounded-lg p-4 mb-4">
                     <h6 class="text-white font-medium mb-2 flex items-center gap-2">
@@ -636,7 +732,6 @@
                 </div>
             </div>
 
-            <!-- Шаг 5: Управление -->
             <div id="deploy-step-5" class="deploy-step hidden">
                 <div class="bg-white/5 border border-white/10 rounded-lg p-4 mb-4">
                     <h6 class="text-white font-medium mb-2 flex items-center gap-2">
@@ -681,7 +776,6 @@
                 </div>
             </div>
 
-            <!-- Консоль вывода -->
             <div class="bg-black/80 border border-white/10 rounded-lg p-4">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-white/70 text-sm font-medium">Вывод команд</span>
@@ -698,7 +792,6 @@
     </div>
 </div>
 
-<!-- Модальное окно управления SWAP -->
 <div id="swapModal" class="modal-overlay">
     <div class="modal-content max-w-md">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
@@ -717,7 +810,6 @@
                 <p class="text-white/50 text-sm">Получение информации о SWAP...</p>
             </div>
 
-            <!-- State: Not Installed -->
             <div id="swap-install-state" class="hidden">
                 <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
                     <p class="text-yellow-300 text-sm flex items-center gap-2">
@@ -737,10 +829,9 @@
                 </form>
             </div>
 
-            <!-- State: Installed (Manage) -->
             <div id="swap-manage-state" class="hidden">
                 <div class="grid grid-cols-2 gap-4 mb-6">
-                    <!-- Size -->
+
                     <div class="bg-white/5 rounded-lg p-3 border border-white/10">
                         <p class="text-white/50 text-xs mb-1">Размер</p>
                         <p class="text-xl font-bold text-white flex items-center gap-2">
@@ -748,7 +839,7 @@
                             <span id="swap-display-size">-</span>
                         </p>
                     </div>
-                    <!-- Swappiness -->
+
                     <div class="bg-white/5 rounded-lg p-3 border border-white/10">
                         <p class="text-white/50 text-xs mb-1">Swappiness</p>
                         <p class="text-xl font-bold text-white flex items-center gap-2">
@@ -756,7 +847,7 @@
                             <span id="swap-display-swappiness">-</span> %
                         </p>
                     </div>
-                    <!-- SWAP Used -->
+
                     <div class="bg-white/5 rounded-lg p-3 border border-white/10">
                         <p class="text-white/50 text-xs mb-1">Использовано (SWAP)</p>
                         <p class="text-xl font-bold text-white flex items-center gap-2">
@@ -764,7 +855,7 @@
                             <span id="swap-display-used">-</span>
                         </p>
                     </div>
-                    <!-- RAM Used -->
+
                     <div class="bg-white/5 rounded-lg p-3 border border-white/10">
                         <p class="text-white/50 text-xs mb-1">Использовано (RAM)</p>
                         <p class="text-xl font-bold text-white flex items-center gap-2">
@@ -775,7 +866,7 @@
                 </div>
 
                 <div class="space-y-4">
-                    <!-- Resize -->
+
                     <form id="swap-resize-form" class="bg-white/5 rounded-lg p-3 border border-white/10">
                         <div class="flex items-center gap-2 mb-2">
                             <label class="text-white/70 text-xs font-medium">Изменить размер (MB)</label>
@@ -803,7 +894,6 @@
                         </div>
                     </form>
 
-                    <!-- Swappiness -->
                     <form id="swap-swappiness-form" class="bg-white/5 rounded-lg p-3 border border-white/10">
                         <div class="flex items-center gap-2 mb-2">
                             <label class="text-white/70 text-xs font-medium">Swappiness (0-100%)</label>
@@ -837,7 +927,6 @@
                         </div>
                     </form>
 
-                    <!-- Delete -->
                     <button type="button" id="btn-swap-delete"
                         class="w-full px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 border border-red-500/30 transition-colors flex items-center justify-center gap-2 mt-4">
                         <span class="material-symbols-outlined">delete_forever</span>
@@ -849,7 +938,6 @@
     </div>
 </div>
 
-<!-- Модальное окно подтверждения удаления -->
 <div id="confirmDeleteModal" class="modal-overlay" style="display: none;">
     <div class="modal-content max-w-lg">
         <div class="p-6">
@@ -909,7 +997,6 @@
     </div>
 </div>
 
-<!-- Универсальное модальное окно подтверждения -->
 <div id="confirmModal" class="modal-overlay" style="display: none;">
     <div class="modal-content max-w-md">
         <div class="p-6">
@@ -947,23 +1034,31 @@
 </section>
 
 <section id="tab-servers" class="tab-content hidden">
-    <!-- Серверы Remnawave - компактный блок сверху -->
+
     <div class="mb-6">
         <div class="bg-white/5 border border-white/10 rounded-xl p-5">
-            <div class="flex items-center justify-between mb-4">
+            <div id="remna-hosts-header"
+                class="flex items-center justify-between mb-4 cursor-pointer select-none hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 -my-1 transition-colors">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                         <span class="material-symbols-outlined text-blue-400 text-xl">dns</span>
                     </div>
                     <div>
                         <h3 class="text-white font-bold text-lg">Серверы Remnawave</h3>
-                        <p class="text-white/50 text-xs">Панели управления нодами</p>
+                        <p class="text-white/50 text-xs">Управление Remnawave</p>
                     </div>
                 </div>
-                <span class="px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 text-sm font-bold"
-                    id="remna-hosts-count">0</span>
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 text-sm font-bold"
+                        id="remna-hosts-count">0</span>
+                    <button type="button" id="btn-toggle-remna-hosts"
+                        class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                        title="Развернуть/свернуть">
+                        <span class="material-symbols-outlined text-xl">expand_more</span>
+                    </button>
+                </div>
             </div>
-            <div id="remna-hosts-list">
+            <div id="remna-hosts-list" class="hidden">
                 <div class="text-center py-6 text-white/40">
                     <span class="material-symbols-outlined text-3xl mb-2">dns</span>
                     <p class="text-sm">Загрузка...</p>
@@ -972,7 +1067,6 @@
         </div>
     </div>
 
-    <!-- SSH-цели - сетка снизу -->
     <div class="bg-white/5 border border-white/10 rounded-xl p-5">
         <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-3">
@@ -981,7 +1075,7 @@
                 </div>
                 <div>
                     <h3 class="text-white font-bold text-lg">SSH-цели</h3>
-                    <p class="text-white/50 text-xs">Серверы для развертывания нод</p>
+                    <p class="text-white/50 text-xs">Управление нодами</p>
                 </div>
             </div>
             <span class="px-3 py-1.5 rounded-full bg-yellow-500/20 text-yellow-300 text-sm font-bold"
@@ -1024,7 +1118,6 @@
     </div>
 </section>
 
-<!-- Модальное окно управления WARP -->
 <div id="warpModal" class="modal-overlay" style="z-index: 50;">
     <div class="modal-content max-w-2xl">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
@@ -1037,13 +1130,12 @@
             </button>
         </div>
         <div class="p-6">
-            <!-- Loading State -->
+
             <div id="warp-loading" class="text-center py-8">
                 <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">progress_activity</span>
                 <p class="text-white/50">Проверка статуса...</p>
             </div>
 
-            <!-- Install State -->
             <div id="warp-install-state" class="hidden">
                 <div class="bg-white/5 border border-white/10 rounded-lg p-6 text-center mb-4">
                     <span class="material-symbols-outlined text-6xl text-white/20 mb-4">download</span>
@@ -1060,9 +1152,8 @@
                 </div>
             </div>
 
-            <!-- Manage State -->
             <div id="warp-manage-state" class="hidden">
-                <!-- Status & Actions -->
+
                 <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
                     <div class="flex items-center gap-4">
                         <div id="warp-status-indicator" class="w-4 h-4 rounded-full bg-gray-500"></div>
@@ -1087,7 +1178,6 @@
                     </div>
                 </div>
 
-                <!-- Tabs -->
                 <div class="flex gap-1 mb-4 border-b border-white/10">
                     <button
                         class="px-4 py-2 text-primary border-b-2 border-primary font-medium text-sm transition-colors"
@@ -1098,7 +1188,6 @@
                         id="btn-tab-warp-systemd" onclick="switchWarpTab('systemd')">Systemd Config</button>
                 </div>
 
-                <!-- Config Tab -->
                 <div id="warp-content-config">
                     <form id="warp-config-form">
                         <div class="grid grid-cols-2 gap-4 mb-4">
@@ -1120,7 +1209,6 @@
                             </div>
                         </div>
 
-                        <!-- Info Table -->
                         <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
                             <h6 class="text-blue-300 text-xs font-bold mb-2 flex items-center gap-1">
                                 <span class="material-symbols-outlined text-sm">info</span> Рекомендации ОЗУ
@@ -1202,7 +1290,6 @@
                     </form>
                 </div>
 
-                <!-- JSON Tab -->
                 <div id="warp-content-json" class="hidden">
                     <p class="text-white/50 text-sm mb-2">Для Remnawave Профилей (Outbound):</p>
                     <textarea readonly
@@ -1297,7 +1384,6 @@
                 </div>
             </div>
 
-            <!-- Console Output -->
             <div id="warp-logs-container"
                 class="mt-4 hidden bg-black/80 border border-white/10 rounded-lg overflow-hidden">
                 <div class="px-3 py-1 bg-white/5 text-xs text-white/50 border-b border-white/5">Лог операций</div>
@@ -1312,7 +1398,7 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // ================= GLOBALS & ELEMENTS =================
+
         const tabs = document.querySelectorAll('.tab-btn');
         const contents = document.querySelectorAll('.tab-content');
         const logsContainer = document.getElementById('logs-container');
@@ -1321,11 +1407,10 @@
 
         let logEventSource = null;
 
-        // ================= UNIVERSAL CONFIRM DIALOG =================
         window.showConfirm = function ({
             title = 'Подтверждение',
             message = 'Вы уверены?',
-            type = 'warning', // 'info', 'warning', 'danger'
+            type = 'warning',
             confirmText = 'Подтвердить',
             cancelText = 'Отмена',
             onConfirm = null
@@ -1339,7 +1424,6 @@
                 const confirmBtn = document.getElementById('btn-confirm-ok');
                 const cancelBtn = document.getElementById('btn-confirm-cancel');
 
-                // Настройка стиля в зависимости от типа
                 const styles = {
                     info: {
                         iconBg: 'bg-blue-500/20',
@@ -1363,7 +1447,6 @@
 
                 const style = styles[type] || styles.warning;
 
-                // Применяем стили
                 iconContainer.className = `w-16 h-16 rounded-full flex items-center justify-center ${style.iconBg}`;
                 icon.className = `material-symbols-outlined text-4xl ${style.iconColor}`;
                 icon.textContent = style.iconName;
@@ -1380,11 +1463,9 @@
 
                 confirmBtn.className = `flex-1 px-6 py-3 rounded-lg font-bold transition-colors ${style.btnBg}`;
 
-                // Показываем модальное окно
                 modal.style.display = 'flex';
                 setTimeout(() => confirmBtn.focus(), 100);
 
-                // Обработчики
                 const handleConfirm = async () => {
                     modal.style.display = 'none';
                     cleanup();
@@ -1415,7 +1496,6 @@
             });
         };
 
-        // ================= LOGGING FUNCTIONS =================
         function updateLogStatus(connected) {
             if (!logsStatus) return;
             if (connected) {
@@ -1432,10 +1512,8 @@
             line.textContent = text;
             logsContainer.appendChild(line);
 
-            // Auto scroll to bottom
             logsContainer.scrollTop = logsContainer.scrollHeight;
 
-            // Limit lines to prevent memory issues (keep last 1000)
             if (logsContainer.children.length > 1000) {
                 logsContainer.removeChild(logsContainer.firstChild);
             }
@@ -1465,9 +1543,8 @@
             };
         }
 
-        // ================= TAB FUNCTIONS =================
         function handleTabSwitch(tabId) {
-            // Logs Logic
+
             if (tabId !== 'logs' && logEventSource) {
                 logEventSource.close();
                 logEventSource = null;
@@ -1496,7 +1573,6 @@
             handleTabSwitch(tabId);
         }
 
-        // ================= EVENT LISTENERS =================
         tabs.forEach(btn => {
             btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
         });
@@ -1534,8 +1610,35 @@
             });
         }
 
-        // ================= INITIALIZATION =================
-        // Priority: 1. URL Hash, 2. LocalStorage, 3. Default 'broadcast'
+        const btnToggleRemnaHosts = document.getElementById('btn-toggle-remna-hosts');
+        const remnaHostsHeader = document.getElementById('remna-hosts-header');
+        const remnaHostsList = document.getElementById('remna-hosts-list');
+
+        function toggleRemnaHosts() {
+            if (!remnaHostsList) return;
+
+            remnaHostsList.classList.toggle('hidden');
+            const icon = btnToggleRemnaHosts?.querySelector('.material-symbols-outlined');
+            if (icon) {
+                if (remnaHostsList.classList.contains('hidden')) {
+                    icon.textContent = 'expand_more';
+                } else {
+                    icon.textContent = 'expand_less';
+                }
+            }
+        }
+
+        if (btnToggleRemnaHosts) {
+            btnToggleRemnaHosts.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleRemnaHosts();
+            });
+        }
+
+        if (remnaHostsHeader) {
+            remnaHostsHeader.addEventListener('click', toggleRemnaHosts);
+        }
+
         let initialTab = location.hash.slice(1);
         if (!initialTab) {
             initialTab = localStorage.getItem('remnawave_other_active_tab');
@@ -1548,7 +1651,6 @@
 
         switchTab(initialTab);
 
-        // ================= OTHER LOGIC =================
         let uploadedMediaFilename = null;
         let buttons = [];
 
@@ -1587,11 +1689,10 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            // Client-side file size validation (50MB limit)
-            const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+            const maxSize = 50 * 1024 * 1024;
             if (file.size > maxSize) {
                 window.showToast('danger', `Файл слишком большой. Максимальный размер: 50 МБ. Размер вашего файла: ${(file.size / 1024 / 1024).toFixed(2)} МБ`);
-                e.target.value = ''; // Clear the input
+                e.target.value = '';
                 return;
             }
 
@@ -1612,14 +1713,13 @@
 
                 loading.remove();
 
-                // Handle HTTP errors before trying to parse JSON
                 if (!resp.ok) {
                     if (resp.status === 413) {
                         window.showToast('danger', 'Файл слишком большой для загрузки. Максимальный размер: 50 МБ');
                     } else {
                         window.showToast('danger', `Ошибка сервера: ${resp.status} ${resp.statusText}`);
                     }
-                    e.target.value = ''; // Clear the input
+                    e.target.value = '';
                     return;
                 }
 
@@ -1678,9 +1778,9 @@
                 const item = document.createElement('div');
                 item.className = 'flex gap-2';
                 item.innerHTML = `
-                    <input type="text" value="${btn.text}" placeholder="Текст кнопки" class="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-white text-sm" data-idx="${idx}" data-field="text" />
-                    <input type="url" value="${btn.url}" placeholder="https://..." class="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-white text-sm" data-idx="${idx}" data-field="url" />
-                    <button type="button" class="px-3 py-2 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30" data-remove="${idx}">
+                    <input type="text" value="${btn.text}" placeholder="Текст кнопки" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="text" />
+                    <input type="url" value="${btn.url}" placeholder="https://..." class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="url" />
+                    <button type="button" class="px-2.5 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors" data-remove="${idx}">
                         <span class="material-symbols-outlined text-base">delete</span>
                     </button>
                 `;
@@ -1784,7 +1884,6 @@
                     body: formData
                 });
 
-                // Проверка на таймаут или другие ошибки сервера
                 if (!resp.ok) {
                     if (resp.status === 504) {
                         window.showToast('warning', 'Рассылка запущена, но сервер не успел ответить вовремя. Проверьте результаты через несколько минут.');
@@ -1796,7 +1895,6 @@
                     return;
                 }
 
-                // Проверка что ответ - JSON
                 const contentType = resp.headers.get("content-type");
                 if (!contentType || !contentType.includes("application/json")) {
                     window.showToast('danger', 'Сервер вернул некорректный ответ');
@@ -1807,12 +1905,10 @@
 
                 const data = await resp.json();
 
-                // Проверяем новый формат ответа с task_id
                 if (data.ok && data.task_id) {
-                    // Показываем прогресс-бар
+
                     document.getElementById('broadcast-progress-container').classList.remove('hidden');
 
-                    // Функция опроса статуса
                     const pollStatus = async (taskId) => {
                         try {
                             const statusResp = await fetch(`/other/broadcast/status/${taskId}`);
@@ -1823,14 +1919,12 @@
 
                             const progress = statusData.progress;
 
-                            // Обновление прогресс-бара
                             document.getElementById('broadcast-progress-bar').style.width = `${progress.progress}%`;
                             document.getElementById('broadcast-progress-percent').textContent = `${progress.progress}%`;
                             document.getElementById('broadcast-progress-sent').textContent = progress.sent || 0;
                             document.getElementById('broadcast-progress-failed').textContent = progress.failed || 0;
                             document.getElementById('broadcast-progress-skipped').textContent = progress.skipped || 0;
 
-                            // Если рассылка завершена
                             if (progress.status === 'completed') {
                                 setTimeout(() => {
                                     document.getElementById('broadcast-progress-container').classList.add('hidden');
@@ -1850,7 +1944,7 @@
                                     }
                                 }, 2000);
                             } else {
-                                // Продолжаем опрос
+
                                 setTimeout(() => pollStatus(taskId), 2000);
                             }
                         } catch (e) {
@@ -1858,15 +1952,13 @@
                         }
                     };
 
-                    // Обновляем кнопку
                     btn.innerHTML = '<span class="material-symbols-outlined text-base">schedule</span> Рассылка выполняется...';
 
-                    // Первый опрос сразу
                     pollStatus(data.task_id);
 
                     window.showToast('info', `Запущена рассылка для ${data.total_users} пользователей`);
                 } else if (data.ok && data.results) {
-                    // Старый формат ответа (на всякий случай)
+
                     btn.disabled = false;
                     btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
                     window.showToast('success', `Рассылка завершена! Отправлено: ${data.results.sent}, Ошибок: ${data.results.failed}, Пропущено: ${data.results.skipped}`);
@@ -1891,21 +1983,57 @@
             }
         });
 
-        // ==================== Промокоды ====================
+        window.movePromoIndicator = function (index) {
+            const indicator = document.getElementById('promo_mode_indicator');
+            const wrapper = document.getElementById('promo_mode_switch');
+            const manualField = document.getElementById('manual-code-field');
 
-        // Переключение между авто/ручным вводом кода
-        document.querySelectorAll('input[name="code_mode"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const manualField = document.getElementById('manual-code-field');
-                if (e.target.value === 'manual') {
+            if (indicator) {
+                indicator.style.transform = `translateX(${index * 100}%)`;
+            }
+
+            if (wrapper) {
+                const modeDivs = wrapper.querySelectorAll('label > div');
+                modeDivs.forEach((div, i) => {
+
+                    if (i === index) {
+                        div.classList.remove('text-white/60', 'hover:text-white');
+                        div.classList.add('text-[#102219]');
+                    } else {
+                        div.classList.add('text-white/60', 'hover:text-white');
+                        div.classList.remove('text-[#102219]');
+                    }
+                });
+            }
+
+            if (manualField) {
+                if (index === 1) {
                     manualField.classList.remove('hidden');
                 } else {
                     manualField.classList.add('hidden');
                 }
-            });
-        });
+            }
 
-        // Загрузка списка промокодов
+            const radios = document.getElementsByName('code_mode');
+            if (radios[index]) {
+                radios[index].checked = true;
+            }
+        };
+
+        if (window.flatpickr) {
+            const commonConfig = {
+                enableTime: true,
+                time_24hr: true,
+                dateFormat: 'Y-m-d H:i',
+                minuteIncrement: 5,
+                locale: flatpickr.l10ns.ru || 'ru',
+                disableMobile: "true"
+            };
+
+            flatpickr("#promo_valid_from", commonConfig);
+            flatpickr("#promo_valid_until", commonConfig);
+        }
+
         async function loadPromos() {
             try {
                 const resp = await fetch('/other/promo/list');
@@ -1919,7 +2047,6 @@
             }
         }
 
-        // Отрисовка таблицы промокодов
         function renderPromos(promos) {
             const tbody = document.getElementById('promo-table-body');
 
@@ -1971,14 +2098,12 @@
             }).join('');
         }
 
-        // Создание промокода
         document.getElementById('promo-create-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const formData = new FormData(e.target);
             formData.append('csrf_token', window.getCsrfToken());
 
-            // Если авто-режим, удаляем код из formData
             const codeMode = formData.get('code_mode');
             if (codeMode === 'auto') {
                 formData.delete('code');
@@ -2005,7 +2130,6 @@
             }
         });
 
-        // Toggle промокода
         window.togglePromo = async function (code) {
             try {
                 const resp = await fetch(`/other/promo/toggle/${code}`, {
@@ -2028,7 +2152,6 @@
             }
         };
 
-        // Редактирование промокода
         window.editPromo = async function (code) {
             try {
                 const resp = await fetch('/other/promo/list');
@@ -2038,7 +2161,6 @@
                     const promo = data.promos.find(p => p.code === code);
                     if (!promo) return;
 
-                    // Заполняем форму
                     document.getElementById('edit-promo-code').value = promo.code;
                     document.getElementById('edit-code-display').value = promo.code;
 
@@ -2068,7 +2190,6 @@
             }
         };
 
-        // Сохранение изменений
         document.getElementById('promo-edit-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -2103,7 +2224,6 @@
             }
         });
 
-        // Удаление промокода
         window.deletePromo = async function (code) {
             const confirmed = await window.showConfirm({
                 title: 'Удаление промокода',
@@ -2135,7 +2255,6 @@
             }
         };
 
-        // Загрузка промокодов при переключении на вкладку
         const promoTab = document.querySelector('[data-tab="promo"]');
         if (promoTab) {
             promoTab.addEventListener('click', () => {
@@ -2143,11 +2262,8 @@
             });
         }
 
-        // ==================== Сервера ====================
-
         let serversAutoRefresh = null;
 
-        // Загрузка списка серверов
         async function loadServers() {
             try {
                 const resp = await fetch('/other/servers/list');
@@ -2162,7 +2278,6 @@
             }
         }
 
-        // Отрисовка серверов Remnawave
         function renderHosts(hosts) {
             const listEl = document.getElementById('remna-hosts-list');
             const countEl = document.getElementById('remna-hosts-count');
@@ -2179,7 +2294,6 @@
                 return;
             }
 
-            // Горизонтальный grid для Remna_hosts
             listEl.innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                     ${hosts.map((host, idx) => `
@@ -2230,13 +2344,11 @@
                 </div>
             `;
 
-            // Загружаем uptime для каждого хоста
             hosts.forEach((host, idx) => {
                 loadUptime('host', host.host_name, idx);
             });
         }
 
-        // Отрисовка SSH-целей
         function renderSshTargets(targets) {
             const listEl = document.getElementById('ssh-targets-list');
             const countEl = document.getElementById('ssh-targets-count');
@@ -2253,7 +2365,6 @@
                 return;
             }
 
-            // Адаптивная сетка для SSH-целей (1-4 колонки)
             listEl.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     ${targets.map((target, idx) => `
@@ -2323,13 +2434,11 @@
                 </div>
             `;
 
-            // Загружаем uptime для каждой цели
             targets.forEach((target, idx) => {
                 loadUptime('ssh', target.target_name, idx);
             });
         }
 
-        // Загрузка uptime для сервера
         async function loadUptime(type, name, idx) {
             const uptimeEl = type === 'host' ? document.getElementById(`host-uptime-${idx}`) : document.getElementById(`target-uptime-${idx}`);
             const statusEl = type === 'host' ? document.getElementById(`host-status-${idx}`) : document.getElementById(`target-status-${idx}`);
@@ -2389,17 +2498,14 @@
             }
         }
 
-        // Обновление uptime для хоста
         window.refreshHostUptime = function (name, idx) {
             loadUptime('host', name, idx);
         };
 
-        // Обновление uptime для SSH-цели
         window.refreshTargetUptime = function (name, idx) {
             loadUptime('ssh', name, idx);
         };
 
-        // Перезагрузка сервера
         window.rebootServer = async function (type, name) {
             const typeName = type === 'host' ? 'сервер' : 'SSH-цель';
 
@@ -2423,7 +2529,7 @@
 
                 if (data.ok) {
                     window.showToast('success', `Команда перезагрузки отправлена на ${name}`);
-                    // Обновляем список через 5 секунд
+
                     setTimeout(() => {
                         loadServers();
                     }, 5000);
@@ -2436,13 +2542,11 @@
             }
         };
 
-        // Загрузка серверов при переключении на вкладку
         const serversTab = document.querySelector('[data-tab="servers"]');
         if (serversTab) {
             serversTab.addEventListener('click', () => {
                 loadServers();
 
-                // Автообновление каждые 60 секунд
                 if (serversAutoRefresh) {
                     clearInterval(serversAutoRefresh);
                 }
@@ -2451,8 +2555,6 @@
                 }, 60000);
             });
         }
-
-        // ==================== Развертывание Ноды Remnawave ====================
 
         let currentDeployTarget = null;
         let currentDeployStep = 1;
@@ -2465,19 +2567,15 @@
             document.getElementById('deploy-output').textContent = 'Проверка состояния...';
             document.getElementById('docker-compose-content').value = '';
 
-            // Сброс шагов
             for (let i = 1; i <= 5; i++) {
                 document.getElementById(`deploy-step-${i}`).classList.add('hidden');
             }
 
-            // Показываем первый шаг по умолчанию
             updateDeployStep(1);
             openModal('deployNodeModal');
 
-            // Привязываем обработчики
             setupDeployHandlers();
 
-            // Проверяем состояние развертывания
             try {
                 appendDeployOutput('[INFO] Проверка текущего состояния развертывания...');
 
@@ -2491,7 +2589,6 @@
                 if (data.ok && data.status) {
                     const status = data.status;
 
-                    // Выводим статус
                     if (status.docker_installed) {
                         appendDeployOutput('[✓] Docker установлен');
                     } else {
@@ -2510,11 +2607,9 @@
                         appendDeployOutput('[✗] Файл docker-compose.yml не найден');
                     }
 
-                    // Переходим к рекомендуемому шагу
                     const suggestedStep = status.suggested_step || 1;
                     appendDeployOutput(`[INFO] Переход к шагу ${suggestedStep}...`);
 
-                    // Если шаг 5 (все готово), загружаем docker-compose.yml
                     if (suggestedStep === 5) {
                         appendDeployOutput('[SUCCESS] Нода уже развернута! Можете управлять ею.');
                         try {
@@ -2541,7 +2636,7 @@
         };
 
         function setupDeployHandlers() {
-            // Шаг 1: Установка Docker
+
             document.getElementById('btn-install-docker').onclick = async function () {
                 await executeDeployStep('install-docker', this, async () => {
                     const resp = await fetch(`/other/servers/deploy/install-docker/${encodeURIComponent(currentDeployTarget)}`, {
@@ -2560,7 +2655,6 @@
                 }, 2);
             };
 
-            // Шаг 2: Создание директории
             document.getElementById('btn-create-directory').onclick = async function () {
                 await executeDeployStep('create-directory', this, async () => {
                     const resp = await fetch(`/other/servers/deploy/create-directory/${encodeURIComponent(currentDeployTarget)}`, {
@@ -2576,7 +2670,6 @@
                 }, 3);
             };
 
-            // Шаг 3: Сохранение docker-compose.yml
             document.getElementById('btn-save-compose').onclick = async function () {
                 const content = document.getElementById('docker-compose-content').value.trim();
                 if (!content) {
@@ -2602,7 +2695,6 @@
                 }, 4);
             };
 
-            // Шаг 4: Запуск контейнеров
             document.getElementById('btn-start-containers').onclick = async function () {
                 await executeDeployStep('start-containers', this, async () => {
                     const formData = new FormData();
@@ -2622,7 +2714,6 @@
                 }, 5);
             };
 
-            // Шаг 5: Управление нодой
             document.getElementById('btn-view-compose').onclick = async function () {
                 try {
                     const resp = await fetch(`/other/servers/deploy/view-compose/${encodeURIComponent(currentDeployTarget)}`);
@@ -2641,7 +2732,6 @@
                 }
             };
 
-            // Кнопка "Назад к управлению" в шаге 3
             document.getElementById('btn-cancel-compose').onclick = function () {
                 updateDeployStep(5);
                 window.showToast('info', 'Изменения не сохранены');
@@ -2728,15 +2818,12 @@
                 document.getElementById('deploy-output').textContent = 'Ожидание действий...';
             };
 
-            // Полное удаление ноды и Docker
-            // Полное удаление ноды и Docker
             document.getElementById('btn-remove-all').onclick = function () {
-                // Показываем кастомное модальное окно подтверждения
+
                 showDeleteConfirmation(currentDeployTarget);
             };
         }
 
-        // Функция показа кастомного модального окна подтверждения удаления
         function showDeleteConfirmation(serverName) {
             const modal = document.getElementById('confirmDeleteModal');
             const input = document.getElementById('confirm-delete-input');
@@ -2744,30 +2831,25 @@
             const cancelBtn = document.getElementById('btn-cancel-delete');
             const serverNameSpan = document.getElementById('confirm-server-name');
 
-            // Устанавливаем название сервера
             serverNameSpan.textContent = serverName;
             input.value = '';
             confirmBtn.disabled = true;
 
-            // Показываем модальное окно
             modal.style.display = 'flex';
             setTimeout(() => input.focus(), 100);
 
-            // Валидация ввода в реальном времени
             const validateInput = () => {
                 confirmBtn.disabled = input.value !== serverName;
             };
 
             input.oninput = validateInput;
 
-            // Обработчик Enter
             input.onkeypress = (e) => {
                 if (e.key === 'Enter' && !confirmBtn.disabled) {
                     confirmBtn.click();
                 }
             };
 
-            // Обработчик отмены
             const closeConfirmModal = () => {
                 modal.style.display = 'none';
                 input.value = '';
@@ -2777,17 +2859,14 @@
 
             cancelBtn.onclick = closeConfirmModal;
 
-            // Обработчик подтверждения удаления
             confirmBtn.onclick = async () => {
                 if (input.value !== serverName) {
                     window.showToast('warning', 'Название сервера не совпадает');
                     return;
                 }
 
-                // Закрываем модальное окно подтверждения
                 closeConfirmModal();
 
-                // Выполняем удаление
                 const btn = document.getElementById('btn-remove-all');
                 btn.disabled = true;
                 const originalHtml = btn.innerHTML;
@@ -2812,7 +2891,6 @@
                         if (data.output) appendDeployOutput(data.output);
                         window.showToast('success', 'Нода и Docker успешно удалены');
 
-                        // Закрываем модальное окно через 2 секунды
                         setTimeout(() => {
                             closeModal('deployNodeModal');
                         }, 2000);
@@ -2859,7 +2937,6 @@
             } catch (e) {
                 console.error('Deploy step error:', e);
 
-                // Проверяем специфичные ошибки
                 if (e.message && e.message.includes('TIMEOUT_504')) {
                     const cleanMessage = e.message.replace('TIMEOUT_504: ', '');
                     appendDeployOutput('[WARNING] ' + cleanMessage);
@@ -2881,15 +2958,12 @@
         function updateDeployStep(step) {
             currentDeployStep = step;
 
-            // Скрываем все шаги
             for (let i = 1; i <= 5; i++) {
                 document.getElementById(`deploy-step-${i}`).classList.add('hidden');
             }
 
-            // Показываем текущий шаг
             document.getElementById(`deploy-step-${step}`).classList.remove('hidden');
 
-            // Обновляем индикаторы прогресса
             document.getElementById('deploy-current-step').textContent = step;
             document.getElementById('deploy-progress-bar').style.width = `${step * 20}%`;
 
@@ -2917,8 +2991,6 @@
             output.scrollTop = output.scrollHeight;
         }
 
-
-        // ==================== WARP Wizard ====================
         let currentWarpTarget = null;
 
         window.openWarpWizard = function (targetName) {
@@ -2928,7 +3000,6 @@
             openModal('warpModal');
             checkWarpStatus(targetName);
 
-            // Reset state
             document.getElementById('warp-logs').textContent = '';
             document.getElementById('warp-logs-container').classList.add('hidden');
             switchWarpTab('config');
@@ -2981,7 +3052,6 @@
                     if (data.status.installed) {
                         document.getElementById('warp-manage-state').classList.remove('hidden');
 
-                        // Update status indicator
                         const indicator = document.getElementById('warp-status-indicator');
                         const text = document.getElementById('warp-status-text');
 
@@ -2990,7 +3060,6 @@
                             text.textContent = 'Активен (Running)';
                             text.className = 'text-green-400 font-bold';
 
-                            // Show STOP button
                             const btnToggle = document.getElementById('btn-warp-toggle');
                             if (btnToggle) {
                                 btnToggle.title = 'Остановить сервис';
@@ -3003,7 +3072,6 @@
                             text.textContent = 'Остановлен (Inactive)';
                             text.className = 'text-red-400 font-bold';
 
-                            // Show START button
                             const btnToggle = document.getElementById('btn-warp-toggle');
                             if (btnToggle) {
                                 btnToggle.title = 'Запустить сервис';
@@ -3013,7 +3081,6 @@
                             }
                         }
 
-                        // Fill inputs
                         document.getElementById('warp-memory-max').value = data.status.memory_max || '800M';
                         document.getElementById('warp-memory-high').value = data.status.memory_high || '1G';
                     } else {
@@ -3176,9 +3243,6 @@
             }
         };
 
-
-
-        // Handlers
         document.getElementById('btn-warp-install').onclick = async function () {
             const btn = this;
             btn.disabled = true;
@@ -3252,13 +3316,13 @@
         if (btnToggle) {
             btnToggle.onclick = async function () {
                 const btn = this;
-                const action = btn.dataset.action; // 'start' or 'stop'
+                const action = btn.dataset.action;
                 const icon = btn.querySelector('.material-symbols-outlined');
 
                 if (!action) return;
 
                 btn.disabled = true;
-                if (icon) icon.classList.add('animate-spin'); // Optional: spin logic or change checking
+                if (icon) icon.classList.add('animate-spin');
 
                 try {
                     const resp = await fetch(`/other/servers/warp/${action}/${encodeURIComponent(currentWarpTarget)}`, {
@@ -3344,7 +3408,6 @@
             logs.scrollTop = logs.scrollHeight;
         }
 
-        // ==================== SWAP Manager ====================
         let currentSwapTarget = null;
 
         window.openSwapModal = function (targetName) {
@@ -3360,7 +3423,7 @@
             document.getElementById('swap-manage-state').classList.add('hidden');
 
             try {
-                // Используем uptime endpoint т.к. он возвращает инфу по SWAP
+
                 const resp = await fetch(`/other/servers/uptime/ssh/${encodeURIComponent(targetName)}`);
                 const data = await resp.json();
 
@@ -3368,7 +3431,7 @@
 
                 if (data.ok) {
                     if (data.swap_total > 0) {
-                        // Installed
+
                         document.getElementById('swap-manage-state').classList.remove('hidden');
                         document.getElementById('swap-display-size').textContent = `${data.swap_total} MB`;
                         document.getElementById('swap-display-swappiness').textContent = data.swappiness;
@@ -3378,7 +3441,7 @@
                         document.getElementById('swap-resize-input').value = data.swap_total;
                         document.getElementById('swap-swappiness-input').value = data.swappiness;
                     } else {
-                        // Not Installed
+
                         document.getElementById('swap-install-state').classList.remove('hidden');
                     }
                 } else {
@@ -3392,7 +3455,6 @@
             }
         }
 
-        // Install SWAP
         document.getElementById('swap-install-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-swap-install');
@@ -3411,7 +3473,7 @@
                 if (data.ok) {
                     window.showToast('success', 'SWAP успешно установлен');
                     checkSwapStatus(currentSwapTarget);
-                    // Обновляем список серверов фоном, чтобы обновилась плашка (хотя там надо ждать)
+
                     loadServers();
                 } else {
                     window.showToast('danger', data.error || 'Ошибка установки');
@@ -3424,7 +3486,6 @@
             }
         });
 
-        // Resize SWAP
         document.getElementById('swap-resize-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-swap-resize');
@@ -3457,7 +3518,6 @@
             }
         });
 
-        // Update Swappiness
         document.getElementById('swap-swappiness-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-swap-swappiness');
@@ -3488,7 +3548,6 @@
             }
         });
 
-        // Delete SWAP
         document.getElementById('btn-swap-delete').onclick = async function () {
             if (!await window.showConfirm({ title: 'Удаление SWAP', message: 'Вы уверены? Это может повлиять на стабильность системы.', type: 'danger', confirmText: 'Удалить' })) return;
 
@@ -3518,6 +3577,7 @@
         };
 
     });
+
 </script>
 
 {% endblock %}

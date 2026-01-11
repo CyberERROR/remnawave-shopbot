@@ -18,7 +18,6 @@ RESULTS_FILE = os.path.join(UPLOAD_FOLDER, 'total.json')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Хранилище прогресса рассылок (thread-safe)
 broadcast_progress = {}
 broadcast_lock = threading.Lock()
 
@@ -67,7 +66,6 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
     skipped = 0
     total = len(users)
     
-    # Инициализация прогресса
     if task_id:
         with broadcast_lock:
             broadcast_progress[task_id] = {
@@ -88,7 +86,7 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
         is_banned = user.get('is_banned', False)
         if is_banned:
             skipped += 1
-            # Обновление прогресса
+            
             if task_id:
                 with broadcast_lock:
                     if task_id in broadcast_progress:
@@ -152,7 +150,6 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
             logger.warning(f"Failed to send broadcast to {user_id}: {e}")
             failed += 1
         
-        # Обновление прогресса каждые 10 сообщений или в конце
         if task_id and ((index + 1) % 10 == 0 or (index + 1) == total):
             with broadcast_lock:
                 if task_id in broadcast_progress:
@@ -163,7 +160,6 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
                         'progress': int((index + 1) / total * 100)
                     })
     
-    # Финальное обновление
     if task_id:
         with broadcast_lock:
             if task_id in broadcast_progress:
@@ -279,7 +275,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 builder.adjust(1)
                 keyboard = builder.as_markup() if builder.export() else None
             
-            # Проверка наличия медиа файла
             media_path = None
             media_type = None
             if media_filename:
@@ -452,16 +447,13 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not loop or not loop.is_running():
                 return jsonify({'ok': False, 'error': 'Event loop not available'}), 500
             
-            # Генерация уникального ID задачи
             task_id = str(uuid.uuid4())
             
-            # Запуск рассылки в фоне (не ждем результата)
             asyncio.run_coroutine_threadsafe(
                 send_broadcast_async(bot, all_users, text, media_path, media_type, buttons, mode, task_id),
                 loop
             )
             
-            # Сразу возвращаем task_id
             return jsonify({
                 'ok': True,
                 'task_id': task_id,
@@ -499,8 +491,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             logger.error(f"Error deleting media: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
     
-    # ==================== Промокоды ====================
-    
     @flask_app.route('/other/promo/list')
     @login_required
     def promo_list():
@@ -528,12 +518,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             valid_until = request.form.get('valid_until')
             description = request.form.get('description', '')
             
-            # Генерация кода если не указан
             if not code:
                 chars = string.ascii_uppercase + string.digits
                 code = ''.join(random.choice(chars) for _ in range(8))
             
-            # Валидация
             if not discount_value:
                 return jsonify({'ok': False, 'error': 'Discount value is required'}), 400
             
@@ -545,7 +533,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if discount_value <= 0:
                 return jsonify({'ok': False, 'error': 'Discount must be positive'}), 400
             
-            # Подготовка параметров
             discount_percent = discount_value if discount_type == 'percent' else None
             discount_amount = discount_value if discount_type == 'fixed' else None
             
@@ -555,11 +542,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             valid_from_dt = datetime.fromisoformat(valid_from) if valid_from else None
             valid_until_dt = datetime.fromisoformat(valid_until) if valid_until else None
             
-            # Получаем ID админа
             admin_id = rw_repo.get_setting('admin_telegram_id')
             created_by = int(admin_id) if admin_id else None
             
-            # Создаем промокод
             success = rw_repo.create_promo_code(
                 code=code,
                 discount_percent=discount_percent,
@@ -618,12 +603,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
         try:
             from datetime import datetime
             
-            # Проверяем существование
             existing = rw_repo.get_promo_code(code)
             if not existing:
                 return jsonify({'ok': False, 'error': 'Promo code not found'}), 404
             
-            # Удаляем старый и создаем новый с теми же параметрами
             discount_type = request.form.get('discount_type', 'percent')
             discount_value = request.form.get('discount_value')
             usage_limit_total = request.form.get('usage_limit_total')
@@ -640,10 +623,8 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             except ValueError:
                 return jsonify({'ok': False, 'error': 'Invalid discount value'}), 400
             
-            # Удаляем старый
             rw_repo.delete_promo_code(code)
             
-            # Создаем новый
             discount_percent = discount_value if discount_type == 'percent' else None
             discount_amount = discount_value if discount_type == 'fixed' else None
             
@@ -674,8 +655,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
         except Exception as e:
             logger.error(f"Error updating promo code: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
-    
-    # ==================== Сервера ====================
     
     def execute_ssh_command(host, port, username, password, command, timeout=10):
         """Выполнение SSH команды на удаленном сервере"""
@@ -738,7 +717,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def server_uptime(server_type, name):
         try:
             if server_type == 'host':
-                # Получаем хост из БД
+                
                 hosts = rw_repo.list_squads(active_only=False)
                 server = next((h for h in hosts if h.get('host_name') == name), None)
                 if not server:
@@ -749,7 +728,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 username = server.get('ssh_user', 'root')
                 password = server.get('ssh_password')
             elif server_type == 'ssh':
-                # Получаем SSH-цель из БД
+                
                 ssh_targets = rw_repo.get_all_ssh_targets()
                 server = next((t for t in ssh_targets if t.get('target_name') == name), None)
                 if not server:
@@ -765,11 +744,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Получаем системную информацию: uptime, CPU, RAM, SWAP
-            # Команда объединяет несколько метрик через &&
-            # Получаем системную информацию: uptime, CPU, RAM, SWAP
-            # Используем разделитель '___' чтобы точно знать где какая метрика
-            # Для каждой команды добавляем fallback, чтобы цепочка не прерывалась
             delimiter = "___"
             command = (
                 f"cat /proc/uptime || echo '0 0'; echo '{delimiter}'; "
@@ -779,49 +753,80 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 f"free -m | grep Swap | awk '{{print $3 \" \" $2}}' || echo '0 0'; echo '{delimiter}'; "
                 f"cat /proc/sys/vm/swappiness || echo '-1'"
             )
-            result = execute_ssh_command(host, port, username, password, command)
+            result = execute_ssh_command(host, port, username, password, command, timeout=20)
             
             if result['ok']:
                 try:
-                    parts = result['output'].strip().split(delimiter)
+                    output_raw = result['output'].strip()
+                    logger.debug(f"Raw system info output for {name}: {repr(output_raw)}")
+                    parts = output_raw.split(delimiter)
                     
-                    # 1. Uptime
-                    uptime_str = parts[0].strip().split()[0]
-                    uptime_seconds = float(uptime_str) if uptime_str else 0
+                    if len(parts) < 6:
+                        logger.error(f"Insufficient parts in output for {name}. Expected 6, got {len(parts)}. Parts: {parts}")
+                        return jsonify({'ok': False, 'error': f'Incomplete system info (got {len(parts)}/6 parts)'}), 500
                     
-                    # 2. CPU
-                    cpu_str = parts[1].strip().replace(',', '.') # Fix for some locales
-                    cpu_usage = float(cpu_str) if cpu_str else 0.0
+                    uptime_parts = parts[0].strip().split()
+                    if len(uptime_parts) > 0 and uptime_parts[0]:
+                        try:
+                            uptime_seconds = float(uptime_parts[0])
+                        except (ValueError, IndexError):
+                            logger.warning(f"Failed to parse uptime from '{parts[0]}' for {name}")
+                            uptime_seconds = 0
+                    else:
+                        uptime_seconds = 0
                     
-                    # 3. Cores
+                    cpu_str = parts[1].strip().replace(',', '.').replace('%', '') 
+                    try:
+                        cpu_usage = float(cpu_str) if cpu_str and cpu_str != '' else 0.0
+                    except ValueError:
+                        logger.warning(f"Failed to parse CPU from '{parts[1]}' for {name}")
+                        cpu_usage = 0.0
+                    
                     cores_str = parts[2].strip()
-                    cpu_cores = int(cores_str) if cores_str.isdigit() else 1
+                    if cores_str.isdigit():
+                        cpu_cores = int(cores_str)
+                    else:
+                        logger.warning(f"Failed to parse cores from '{parts[2]}' for {name}")
+                        cpu_cores = 1
                     
-                    # 4. RAM
                     ram_str = parts[3].strip().split()
                     if len(ram_str) >= 2:
-                        ram_used = int(ram_str[0])
-                        ram_total = int(ram_str[1])
+                        try:
+                            ram_used = int(ram_str[0])
+                            ram_total = int(ram_str[1])
+                        except (ValueError, IndexError):
+                            logger.warning(f"Failed to parse RAM from '{parts[3]}' for {name}")
+                            ram_used = 0
+                            ram_total = 0
                     else:
                         ram_used = 0
                         ram_total = 0
                     ram_percent = (ram_used / ram_total * 100) if ram_total > 0 else 0
                     
-                    # 5. SWAP
                     swap_str = parts[4].strip().split()
                     if len(swap_str) >= 2:
-                        swap_used = int(swap_str[0])
-                        swap_total = int(swap_str[1])
+                        try:
+                            swap_used = int(swap_str[0])
+                            swap_total = int(swap_str[1])
+                        except (ValueError, IndexError):
+                            logger.warning(f"Failed to parse SWAP from '{parts[4]}' for {name}")
+                            swap_used = 0
+                            swap_total = 0
                     else:
-                        # Fallback parsing logic if grep Swap failed but Swap exists in summary 
-                        # (rare, usually means no swap line)
+                        
                         swap_used = 0
                         swap_total = 0
                     swap_percent = (swap_used / swap_total * 100) if swap_total > 0 else 0
                     
-                    # 6. Swappiness
                     swappiness_str = parts[5].strip()
-                    swappiness = int(swappiness_str) if swappiness_str.replace('-','').isdigit() else -1
+                    if swappiness_str and swappiness_str.replace('-','').isdigit():
+                        try:
+                            swappiness = int(swappiness_str)
+                        except ValueError:
+                            logger.warning(f"Failed to parse swappiness from '{parts[5]}' for {name}")
+                            swappiness = -1
+                    else:
+                        swappiness = -1
 
                     return jsonify({
                         'ok': True,
@@ -839,9 +844,16 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     })
                 except Exception as parse_error:
                     logger.exception(f"Failed to parse system info for {name}. Output was: {result['output']}")
-                    return jsonify({'ok': False, 'error': 'Failed to parse system info'}), 500
+                    return jsonify({'ok': False, 'error': f'Failed to parse system info: {str(parse_error)}'}), 500
             else:
-                return jsonify({'ok': False, 'error': result['error']}), 500
+                
+                error_msg = result.get('error', 'Unknown error')
+                if 'timed out' in error_msg.lower() or 'timeout' in error_msg.lower():
+                    logger.warning(f"SSH timeout for {server_type}/{name}: {error_msg}")
+                    return jsonify({'ok': False, 'error': 'Server connection timeout', 'details': error_msg}), 503
+                else:
+                    logger.error(f"SSH command failed for {server_type}/{name}: {error_msg}")
+                    return jsonify({'ok': False, 'error': error_msg}), 503
         except Exception as e:
             logger.error(f"Error getting uptime for {server_type}/{name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
@@ -892,11 +904,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Выполняем перезагрузку
             logger.info(f"Rebooting server {server_type}/{name} ({host}:{port})")
             result = execute_ssh_command(host, port, username, password, 'sudo reboot', timeout=5)
             
-            # reboot может не вернуть результат, т.к. сервер перезагружается
             return jsonify({
                 'ok': True,
                 'message': f'Reboot command sent to {name}'
@@ -904,8 +914,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
         except Exception as e:
             logger.error(f"Error rebooting {server_type}/{name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
-    
-    # ==================== Развертывание Ноды Remnawave ====================
     
     @flask_app.route('/other/servers/deploy/check-status/<name>', methods=['GET'])
     @login_required
@@ -932,7 +940,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 'suggested_step': 1
             }
             
-            # Проверка Docker
             logger.info(f"Checking Docker on {name} ({host}:{port})")
             docker_check = execute_ssh_command(
                 host, port, username, password,
@@ -941,7 +948,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             )
             status['docker_installed'] = docker_check['ok']
             
-            # Проверка директории
             if status['docker_installed']:
                 dir_check = execute_ssh_command(
                     host, port, username, password,
@@ -950,7 +956,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 )
                 status['directory_exists'] = 'exists' in dir_check.get('output', '')
                 
-                # Проверка docker-compose.yml
                 if status['directory_exists']:
                     compose_check = execute_ssh_command(
                         host, port, username, password,
@@ -959,7 +964,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     )
                     status['compose_file_exists'] = 'exists' in compose_check.get('output', '')
             
-            # Определяем рекомендуемый шаг
             if not status['docker_installed']:
                 status['suggested_step'] = 1
             elif not status['directory_exists']:
@@ -967,7 +971,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             elif not status['compose_file_exists']:
                 status['suggested_step'] = 3
             else:
-                status['suggested_step'] = 5  # Все готово, переходим к управлению
+                status['suggested_step'] = 5  
             
             return jsonify({
                 'ok': True,
@@ -995,12 +999,11 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Устанавливаем Docker
             logger.info(f"Installing Docker on {name} ({host}:{port})")
             result = execute_ssh_command(
                 host, port, username, password,
                 'sudo curl -fsSL https://get.docker.com | sh',
-                timeout=300  # 5 минут на установку
+                timeout=300  
             )
             
             if result['ok']:
@@ -1037,7 +1040,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Создаем директорию
             logger.info(f"Creating directory on {name} ({host}:{port})")
             result = execute_ssh_command(
                 host, port, username, password,
@@ -1083,10 +1085,8 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Экранируем содержимое для безопасной передачи
             safe_content = content.replace("'", "'\\''")
             
-            # Сохраняем файл
             logger.info(f"Saving docker-compose.yml on {name} ({host}:{port})")
             result = execute_ssh_command(
                 host, port, username, password,
@@ -1127,7 +1127,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Читаем файл
             logger.info(f"Reading docker-compose.yml from {name} ({host}:{port})")
             result = execute_ssh_command(
                 host, port, username, password,
@@ -1155,7 +1154,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def deploy_manage_containers(name):
         """Управление контейнерами (start, restart, logs)"""
         try:
-            action = request.form.get('action', 'start')  # start, restart, logs
+            action = request.form.get('action', 'start')  
             
             ssh_targets = rw_repo.get_all_ssh_targets()
             server = next((t for t in ssh_targets if t.get('target_name') == name), None)
@@ -1170,7 +1169,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Выбираем команду на основе действия
             if action == 'start':
                 command = 'cd /opt/remnanode && docker compose up -d'
                 timeout = 120
@@ -1178,13 +1176,12 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 command = 'cd /opt/remnanode && docker compose restart remnanode'
                 timeout = 60
             elif action == 'logs':
-                # Убираем -f (follow) чтобы команда завершалась
+                
                 command = 'cd /opt/remnanode && docker compose logs -t --tail=100 remnanode'
                 timeout = 30
             else:
                 return jsonify({'ok': False, 'error': 'Invalid action'}), 400
             
-            # Выполняем команду
             logger.info(f"Managing containers on {name} ({host}:{port}) - action: {action}")
             result = execute_ssh_command(host, port, username, password, command, timeout=timeout)
             
@@ -1222,7 +1219,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Полная команда удаления с проверками
             command = (
                 '('
                 'if [ -f /opt/remnanode/docker-compose.yml ]; then '
@@ -1240,7 +1236,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             logger.warning(f"REMOVING ALL Docker and node data on {name} ({host}:{port})")
             result = execute_ssh_command(host, port, username, password, command, timeout=180)
             
-            # Проверяем результат
             if result.get('output') and 'Cleanup completed' in result.get('output', ''):
                 return jsonify({
                     'ok': True,
@@ -1263,8 +1258,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
         except Exception as e:
             logger.error(f"Error removing all on {name}: {e}", exc_info=True)
             return jsonify({'ok': False, 'error': str(e)}), 500
-    # ==================== Просмотр Логов ====================
-
+    
     @flask_app.route('/other/logs/stream')
     @login_required
     def logs_stream():
@@ -1276,7 +1270,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             import socket
             import http.client
             
-            # 1. Windows Simulation
             if os.name == 'nt':
                 yield f"data: [INFO] --- Windows Logs Simulation Mode ---\n\n"
                 while True:
@@ -1284,14 +1277,12 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     time.sleep(2)
                 return
 
-            # 2. Попытка через Docker CLI (если установлен)
             cli_cmd = None
             if shutil.which('docker-compose'):
                 cli_cmd = ['docker-compose', 'logs', '-f', '--tail=100']
             elif shutil.which('docker'):
                 cli_cmd = ['docker', 'compose', 'logs', '-f', '--tail=100']
             
-            # Если есть CLI, пробуем запустить
             if cli_cmd and os.path.exists('/root/remnawave-shopbot'):
                 yield f"data: [INFO] Docker CLI found. Trying to stream via command...\n\n"
                 try:
@@ -1307,53 +1298,45 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                         if line: yield f"data: {line.rstrip()}\n\n"
                     process.stdout.close()
                     yield f"data: [EXIT] CLI process exited.\n\n"
-                    return # Если CLI отработал (или упал), выходим, не пробуем сокет (чтобы не дублировать)
+                    return 
                 except Exception as e:
                     yield f"data: [WARN] CLI failed: {e}. Trying Docker Socket...\n\n"
             
-            # 3. Попытка через Docker Socket (напрямую через socket, без aiohttp для синхронного генератора)
             socket_path = '/var/run/docker.sock'
             if os.path.exists(socket_path):
                 yield f"data: [INFO] Docker socket found at {socket_path}. Connecting...\n\n"
                 try:
-                    # Узнаем ID текущего контейнера (если мы в контейнере)
+                    
                     hostname = socket.gethostname()
                     
-                    # Соединяемся с сокетом
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     sock.connect(socket_path)
                     
-                    # HTTP запрос к Docker API
-                    # GET /containers/{hostname}/logs?stdout=1&stderr=1&follow=1&tail=100
                     request = f"GET /containers/{hostname}/logs?stdout=1&stderr=1&follow=1&tail=100 HTTP/1.1\r\nHost: localhost\r\n\r\n"
                     sock.sendall(request.encode('ascii'))
                     
-                    # Читаем ответ (простой парсинг чанков)
                     fp = sock.makefile('rb')
                     
-                    # Пропускаем заголовки
                     while True:
                         line = fp.readline()
                         if line in (b'\r\n', b'\n', b''): break
                         
-                    # Читаем поток фреймов Docker (Header: [STREAM_TYPE, 0, 0, SIZE] + Body)
                     while True:
-                        # Docker attach protocol header is 8 bytes
+                        
                         header = fp.read(8)
                         if not header or len(header) < 8: break
                         
-                        # payload size is last 4 bytes big endian
                         import struct
-                        # stream_type = header[0] (0=stdin, 1=stdout, 2=stderr)
+                        
                         payload_size = struct.unpack('>I', header[4:])[0]
                         
                         if payload_size > 0:
                             payload = fp.read(payload_size)
                             if not payload: break
-                            # Декодируем и отправляем
+                            
                             try:
                                 text = payload.decode('utf-8', errors='replace')
-                                # Разбиваем на строки, так как payload может содержать несколько
+                                
                                 for line in text.splitlines():
                                     yield f"data: {line}\n\n"
                             except:
@@ -1367,7 +1350,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             else:
                  yield f"data: [WARN] Docker socket not found at {socket_path}.\n\n"
 
-            # 4. Fallback: лог-файл (если есть)
             log_files = ['logs/bot.log', 'bot.log']
             found_log = False
             for log_file in log_files:
@@ -1376,17 +1358,12 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     yield f"data: [INFO] Reading local log file: {log_file} (tail mode)\n\n"
                     try:
                         from collections import deque
-                        # Сначала читаем последние 100 строк для контекста
+                        
                         with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
-                            # deque(f, 100) эффективно читает файл и оставляет только последние 100 строк
+                            
                             for line in deque(f, 100):
                                 yield f"data: {line.strip()}\n\n"
                             
-                            # Теперь переходим в режим tail -f
-                            # Нужно переоткрыть или искать позицию, но проще переоткрыть и сделать seek
-                            # Однако файл мог измениться. 
-                            # Надежнее: запомнить позицию где остановились? 
-                            # deque прочел весь файл. Значит мы в конце.
                             f.seek(0, os.SEEK_END)
                             
                             while True:
@@ -1414,12 +1391,11 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             
             cleared_any = False
             
-            # 1. Очистка локальных файлов (приоритет для контейнеров без доступа к хосту)
             log_files = ['logs/bot.log', 'bot.log']
             for log_file in log_files:
                 if os.path.exists(log_file):
                     try:
-                        # Truncate file to 0 bytes
+                        
                         with open(log_file, 'w', encoding='utf-8') as f:
                             pass
                         logger.info(f"Cleared local log file: {log_file}")
@@ -1430,9 +1406,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if cleared_any:
                 return jsonify({'ok': True, 'message': 'Local logs cleared successfully'})
 
-            # 2. Очистка Docker логов (если локальных нет, пробуем system command)
-            # Внимание: для выполнения может потребоваться sudo или права root
-            # truncate -s 0 /var/lib/docker/containers/*/*-json.log
             cmd = "truncate -s 0 /var/lib/docker/containers/*/*-json.log"
             
             if os.name == 'nt':
@@ -1457,7 +1430,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
         try:
             import subprocess
             
-            # 1. Check for docker-compose
             cmd = None
             try:
                 subprocess.run(["docker-compose", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -1470,7 +1442,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     pass
             
             if not cmd:
-                # Fallback: Process Suicide (Docker should restart us)
+                
                 logger.warning("Docker CLI not found. Falling back to process exit.")
                 
                 def suicide():
@@ -1483,15 +1455,12 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 threading.Thread(target=suicide).start()
                 return jsonify({'ok': True, 'message': 'Перезапускаем процесс...'})
 
-            # 2. Execute
             proc = subprocess.Popen(cmd, shell=True) 
             return jsonify({'ok': True, 'message': 'Перезапуск бота отправлен. Пожалуйста, подождите 10-20 секунд.'})
 
         except Exception as e:
             logger.error(f"Error restarting bot: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
-
-    # ==================== Управление WARP (socks) ====================
 
     @flask_app.route('/other/servers/warp/status/<name>', methods=['GET'])
     @login_required
@@ -1510,9 +1479,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
-            
-            # Проверяем сервис wireproxy и наличие бинарника
-            # Используем systemctl cat для получения полной конфигурации (включая overrides)
             
             command = (
                 "systemctl is-active wireproxy; "
@@ -1539,15 +1505,13 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     service_exists = 'SERVICE_EXISTS' in result['output']
                     binary_exists = 'BINARY_FOUND' in result['output']
                     
-                    # Считаем установленным если есть сервис ИЛИ бинарник
                     status['active'] = is_active
                     status['service_exists'] = service_exists
                     status['binary_exists'] = binary_exists
                     status['installed'] = service_exists or binary_exists
                     
-                    # Парсинг памяти (берем последние найденные значения, т.к. cat выводит base + override)
                     import re
-                    # Ищем все совпадения
+                    
                     all_max = re.findall(r'MemoryMax=([^\s]+)', result['output'])
                     all_high = re.findall(r'MemoryHigh=([^\s]+)', result['output'])
                     
@@ -1578,36 +1542,14 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Команда установки с авто-ответами: 1 (install), 1 (ipv4), 40000 (port)
-            # Используем printf для передачи ответов в скрипт
-            # Меню скрипта:
-            # 1. Install WARP-Socks5
-            # ...
-            # Select: 1
-            # ...
-            # 1. IPv4 only
-            # ...
-            # Select: 1
-            # ...
-            # Port: 40000
-            
-            # Внимание: скрипт может обновляться, но следуем инструкции юзера (1,1,40000)
             install_cmd = "printf '1\\n1\\n40000\\n' | bash <(curl -fsSL https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh) w"
             
             logger.info(f"Installing WARP on {name} ({host}:{port})")
             
-            # Увеличенный таймаут т.к. установка может занять время
             result = execute_ssh_command(host, port, username, password, install_cmd, timeout=300)
             
-            # Применение дефолтного конфига сразу после установки
             if result['ok'] or "Socks5 configured" in result['output']:
                 try:
-                    # Создание drop-in override для сервиса
-                    # Environment="WG_LOG_LEVEL=error"
-                    # StandardOutput=null
-                    # StandardError=journal
-                    # MemoryMax=800M
-                    # MemoryHigh=1G
                     
                     config_cmd = (
                         "mkdir -p /etc/systemd/system/wireproxy.service.d && "
@@ -1661,8 +1603,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            # Команда удаления: u (uninstall), y (confirm)
-            # bash <(...) u -> prompts for confirm (y/n)
             uninstall_cmd = "printf 'y\\n' | bash <(curl -fsSL https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh) u"
             
             logger.info(f"Uninstalling WARP on {name}")
@@ -1850,8 +1790,6 @@ MemoryHigh={memory_high}
             logger.error(f"Error stopping WARP on {name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
 
-    # ==================== Управление SWAP ====================
-
     @flask_app.route('/other/servers/swap/install/<name>', methods=['POST'])
     @login_required
     def swap_install(name):
@@ -1874,13 +1812,6 @@ MemoryHigh={memory_high}
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
 
-            # Команды установки swap
-            # 1. fallocate
-            # 2. chmod
-            # 3. mkswap
-            # 4. swapon
-            # 5. fstab
-            
             cmd = (
                 f"fallocate -l {size_mb}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count={size_mb}; "
                 "chmod 600 /swapfile; "
@@ -1959,12 +1890,6 @@ MemoryHigh={memory_high}
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
 
-            # Объединяем удаление и установку
-            # Безопасное изменение размера:
-            # 1. Проверяем, подключен ли swap. Если да - пробуем отключить.
-            # 2. Если отключение не удалось (например, не хватает RAM) - прерываем операцию.
-            # 3. Если удалось - удаляем и создаем новый.
-            
             cmd = (
                 "if grep -q '/swapfile' /proc/swaps; then "
                 "  swapoff /swapfile || exit 1; "
@@ -2011,10 +1936,6 @@ MemoryHigh={memory_high}
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
 
-            # Применяем на лету и сохраняем
-            # 1. sysctl vm.swappiness=XX
-            # 2. echo "vm.swappiness=XX" >> /etc/sysctl.conf (или заменяем если есть)
-            
             cmd = (
                 f"sysctl vm.swappiness={swappiness}; "
                 f"if grep -q 'vm.swappiness' /etc/sysctl.conf; then "

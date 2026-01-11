@@ -3,7 +3,6 @@
 
 {% block content %}
 <style>
-    /* -------- DESKTOP STYLES (Unchanged) -------- */
     @media (min-width: 769px) {
         .desktop-table {
             display: block;
@@ -18,10 +17,7 @@
         }
     }
 
-    /* -------- MOBILE MESSENGER STYLES (iOS-like) -------- */
     @media (max-width: 768px) {
-
-        /* Hide PC Header/Table */
         .hidden-on-mobile {
             display: none !important;
         }
@@ -34,31 +30,26 @@
             display: block;
         }
 
-        /* App Bar / Header */
         .mobile-app-header {
             position: sticky;
             top: 0;
             z-index: 100;
-            /* Glass dark background */
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
             padding: 10px 16px;
             margin: -16px -16px 0 -16px;
-            /* Negative margin to span full width */
             margin-bottom: 0;
         }
 
         .mobile-header-title {
             font-size: 20px;
-            /* iOS Large Title size approx */
             font-weight: 700;
             color: #fff;
             margin-bottom: 12px;
             margin-top: 4px;
         }
 
-        /* Filter Pills / Segmented Control feel */
         .mobile-filter-scroll {
             display: flex;
             gap: 8px;
@@ -81,7 +72,6 @@
             white-space: nowrap;
             transition: all 0.2s ease;
             background: rgba(255, 255, 255, 0.08);
-            /* Subtle pill background */
             color: rgba(255, 255, 255, 0.6);
             -webkit-tap-highlight-color: transparent;
         }
@@ -92,12 +82,10 @@
             font-weight: 600;
         }
 
-        /* Messenger List Layout */
         .messenger-list {
             display: flex;
             flex-direction: column;
             margin: 0 -16px;
-            /* Span full width */
             padding-bottom: 20px;
             background: transparent;
         }
@@ -117,7 +105,6 @@
             background-color: rgba(255, 255, 255, 0.05);
         }
 
-        /* Avatar Circle */
         .messenger-avatar {
             width: 50px;
             height: 50px;
@@ -129,7 +116,6 @@
             font-size: 20px;
             font-weight: 600;
             color: #fff;
-            /* Black text on green usually, but white on dark green contrast */
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             margin-right: 12px;
             flex-shrink: 0;
@@ -138,10 +124,8 @@
 
         .messenger-avatar.closed {
             background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
-            /* Gray for closed */
         }
 
-        /* Status indicator on avatar (optional, maybe keep it clean) */
         .avatar-badge {
             position: absolute;
             bottom: 0;
@@ -150,19 +134,50 @@
             height: 14px;
             background: #13ec80;
             border: 2px solid #000;
-            /* Match background */
             border-radius: 50%;
+        }
+
+        @keyframes blink-yellow {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes blink-yellow-inline {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.2;
+            }
         }
 
         .avatar-badge.yellow {
             background: #eab308;
+            animation: blink-yellow 1s infinite alternate;
         }
 
-        /* Message Body */
+        .avatar-badge.red {
+            background: #ef4444;
+        }
+
+        .blink-dot {
+            background: #eab308;
+            animation: blink-yellow 1s infinite alternate;
+        }
+
         .messenger-body {
             flex: 1;
             min-width: 0;
-            /* Enable truncation */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -226,7 +241,6 @@
             font-weight: 500;
         }
 
-        /* Mobile Pagination */
         .mobile-pagination {
             display: flex;
             align-items: center;
@@ -244,7 +258,6 @@
     }
 </style>
 
-<!-- Mobile App Header (sticky) -->
 <div class="mobile-app-header">
     <div class="mobile-header-title">Поддержка</div>
     <div class="mobile-filter-scroll">
@@ -263,7 +276,6 @@
     </div>
 </div>
 
-<!-- Desktop Header (hidden on mobile) -->
 <div class="mb-6 hidden md:block hidden-on-mobile">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -288,22 +300,21 @@
 </div>
 
 {% if tickets %}
-<!-- Mobile View: Messenger Layout -->
 <div class="mobile-view">
     <div class="messenger-list">
         {% for ticket in tickets %}
         <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}" class="messenger-item">
-            <!-- Avatar with Initials -->
             <div class="messenger-avatar {% if ticket.status != 'open' %}closed{% endif %}">
                 {{ ticket.username[0]|upper if ticket.username else 'U' }}
 
-                <!-- Status Badge on Avatar (Green if Admin sent last in open ticket, Yellow if User sent) -->
                 {% if ticket.status == 'open' %}
                 {% if ticket.last_sender == 'admin' %}
                 <div class="avatar-badge"></div>
                 {% elif ticket.last_sender == 'user' %}
                 <div class="avatar-badge yellow"></div>
                 {% endif %}
+                {% else %}
+                <div class="avatar-badge red"></div>
                 {% endif %}
             </div>
 
@@ -326,7 +337,6 @@
                         {% endif %}
                     </span>
 
-                    <!-- Right side icon for status -->
                     <div class="messenger-status-icon">
                         {% if ticket.status == 'closed' %}
                         <span class="material-symbols-outlined text-white/30" style="font-size: 18px;">check</span>
@@ -354,7 +364,6 @@
     {% endif %}
 </div>
 
-<!-- Desktop View: Table (Unchanged mainly, simplified wrapper) -->
 <div class="desktop-table">
     <div class="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
         <div class="overflow-x-auto">

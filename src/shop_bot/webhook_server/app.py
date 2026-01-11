@@ -46,7 +46,7 @@ from shop_bot.data_manager.remnawave_repository import (
 
     get_users_paginated, get_keys_counts_for_users,
 
-    get_all_ssh_targets, get_ssh_target, create_ssh_target, update_ssh_target_fields, delete_ssh_target,
+    get_all_ssh_targets, get_ssh_target, create_ssh_target, update_ssh_target_fields, delete_ssh_target, rename_ssh_target,
     get_user
 )
 from shop_bot.data_manager.database import (
@@ -337,6 +337,20 @@ def create_webhook_app(bot_controller_instance):
             open_tickets_count = 0
             closed_tickets_count = 0
             all_tickets_count = 0
+        
+        # Read project info from os.json
+        project_info = None
+        try:
+            # Get path to os.json (static directory)
+            static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+            os_json_path = os.path.join(static_dir, 'os.json')
+            with open(os_json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                project_info = data.get('project', {})
+        except Exception as e:
+            logger.error(f"Failed to read os.json: {e}")
+            project_info = {}
+        
         return {
             "bot_status": bot_status,
             "all_settings_ok": all_settings_ok,
@@ -346,6 +360,7 @@ def create_webhook_app(bot_controller_instance):
             "closed_tickets_count": closed_tickets_count,
             "all_tickets_count": all_tickets_count,
             "brand_title": settings.get('panel_brand_title') or 'Remnawave Control',
+            "project_info": project_info,
         }
 
     @flask_app.route('/brand-title', methods=['POST'])
@@ -2016,6 +2031,9 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/admin/ssh-targets/<target_name>/update', methods=['POST'])
     @login_required
     def update_ssh_target_route(target_name: str):
+        # Получаем новое имя цели (если есть)
+        new_target_name = (request.form.get('new_target_name') or '').strip() if 'new_target_name' in request.form else None
+        
         ssh_host = (request.form.get('ssh_host') or '').strip() if 'ssh_host' in request.form else None
         ssh_port_raw = (request.form.get('ssh_port') or '').strip() if 'ssh_port' in request.form else None
         ssh_user = (request.form.get('ssh_user') or '').strip() if 'ssh_user' in request.form else None
@@ -2026,8 +2044,19 @@ def create_webhook_app(bot_controller_instance):
             ssh_port = int(ssh_port_raw) if ssh_port_raw else None
         except Exception:
             ssh_port = None
+        
+        # Сначала переименовываем цель, если нужно
+        actual_target_name = target_name
+        if new_target_name and new_target_name != target_name:
+            rename_ok = rename_ssh_target(target_name, new_target_name)
+            if not rename_ok:
+                flash('Не удалось переименовать SSH-цель. Возможно, цель с таким именем уже существует.', 'danger')
+                return redirect(request.referrer or url_for('settings_page', tab='hosts'))
+            actual_target_name = new_target_name
+        
+        # Затем обновляем остальные поля
         ok = update_ssh_target_fields(
-            target_name,
+            actual_target_name,
             ssh_host=ssh_host,
             ssh_port=ssh_port,
             ssh_user=ssh_user,

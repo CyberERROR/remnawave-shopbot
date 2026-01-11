@@ -1414,6 +1414,50 @@ def delete_ssh_target(target_name: str) -> bool:
         logging.error(f"Не удалось удалить SSH-цель '{target_name}': {e}")
         return False
 
+def rename_ssh_target(old_target_name: str, new_target_name: str) -> bool:
+    """Переименовать SSH-цель. Также обновляет все связанные записи speedtest."""
+    try:
+        old_name = normalize_host_name(old_target_name)
+        new_name = normalize_host_name(new_target_name)
+        
+        if old_name == new_name:
+            # Имя не изменилось
+            return True
+            
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            
+            # Проверяем, существует ли старая цель
+            cursor.execute("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (old_name,))
+            if cursor.fetchone() is None:
+                logging.warning(f"rename_ssh_target: старая цель не найдена '{old_name}'")
+                return False
+            
+            # Проверяем, не занято ли новое имя
+            cursor.execute("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (new_name,))
+            if cursor.fetchone() is not None:
+                logging.warning(f"rename_ssh_target: новое имя уже занято '{new_name}'")
+                return False
+            
+            # Обновляем имя в speedtest_ssh_targets
+            cursor.execute(
+                "UPDATE speedtest_ssh_targets SET target_name = ? WHERE TRIM(target_name) = TRIM(?)",
+                (new_name, old_name)
+            )
+            
+            # Обновляем все связанные записи в host_speedtests
+            cursor.execute(
+                "UPDATE host_speedtests SET host_name = ? WHERE TRIM(host_name) = TRIM(?)",
+                (new_name, old_name)
+            )
+            
+            conn.commit()
+            logging.info(f"SSH-цель переименована: '{old_name}' → '{new_name}'")
+            return True
+    except sqlite3.Error as e:
+        logging.error(f"Не удалось переименовать SSH-цель '{old_target_name}' → '{new_target_name}': {e}")
+        return False
+
 def get_admin_stats() -> dict:
     """Return aggregated statistics for the admin dashboard.
     Includes:

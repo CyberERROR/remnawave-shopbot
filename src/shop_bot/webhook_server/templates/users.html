@@ -2,7 +2,6 @@
 {% block title %}Управление Пользователями{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
 <div class="mb-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -18,7 +17,6 @@
     </div>
 </div>
 
-<!-- Users Table -->
 <div class="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
     <div class="overflow-x-auto">
         <table id="users-table" class="w-full text-left">
@@ -42,7 +40,6 @@
     </div>
 </div>
 
-<!-- Pagination -->
 {% if total_pages and total_pages > 1 %}
 <div class="flex justify-center mt-4 gap-2" id="users-pagination"
     data-src="{{ url_for('users_pagination_partial', page=current_page, q=q, per_page=per_page) }}">
@@ -50,7 +47,6 @@
 </div>
 {% endif %}
 
-<!-- Balance Modal -->
 <div id="balanceModal" class="modal-overlay">
     <div class="modal-content">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
@@ -82,7 +78,6 @@
     </div>
 </div>
 
-<!-- Message Modal -->
 <div id="messageModal" class="modal-overlay">
     <div class="modal-content">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
@@ -112,7 +107,6 @@
     </div>
 </div>
 
-<!-- User Details Modal -->
 <div id="userDetailsModal" class="modal-overlay modal-xl">
     <div class="modal-content">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
@@ -127,9 +121,7 @@
                 <p class="text-white/50 mt-2">Загрузка...</p>
             </div>
             <div id="udm-content" class="hidden">
-                <!-- Basic Info & Referrals -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <!-- Basic Info -->
                     <div class="bg-white/5 border border-white/10 rounded-lg p-4">
                         <h4 class="text-white font-bold mb-4">Основная информация</h4>
                         <table class="w-full text-sm">
@@ -170,7 +162,6 @@
                             </tbody>
                         </table>
                     </div>
-                    <!-- Referral Info -->
                     <div class="bg-white/5 border border-white/10 rounded-lg p-4">
                         <h4 class="text-white font-bold mb-4">Реферальная система</h4>
                         <table class="w-full text-sm">
@@ -196,7 +187,6 @@
                     </div>
                 </div>
 
-                <!-- Subscriptions -->
                 <div class="mb-6">
                     <div class="bg-white/5 border border-white/10 rounded-lg">
                         <div class="p-4 border-b border-white/10">
@@ -207,7 +197,6 @@
                     </div>
                 </div>
 
-                <!-- Payment History -->
                 <div class="mb-6">
                     <div class="bg-white/5 border border-white/10 rounded-lg">
                         <div class="p-4 border-b border-white/10">
@@ -228,7 +217,6 @@
                     </div>
                 </div>
 
-                <!-- Balance History -->
                 <div>
                     <div class="bg-white/5 border border-white/10 rounded-lg">
                         <div class="p-4 border-b border-white/10">
@@ -262,7 +250,6 @@
         const tbody = document.getElementById('users-tbody');
         if (!input || !table || !tbody) return;
 
-        // Open keys state
         const LS_KEY = 'users_open_keys_ids';
         function loadOpenSet() {
             try {
@@ -332,7 +319,6 @@
         input.addEventListener('input', applyFilter);
         input.addEventListener('search', applyFilter);
 
-        // Server search with debounce
         let searchTimeout = null;
         input.addEventListener('input', () => {
             clearTimeout(searchTimeout);
@@ -351,7 +337,6 @@
             }, 400);
         });
 
-        // Keys toggle
         table.addEventListener('click', function (e) {
             const btn = e.target.closest('[data-toggle="keys"]');
             if (!btn) return;
@@ -366,7 +351,6 @@
             }
         });
 
-        // Balance modal
         table.addEventListener('click', async function (e) {
             const btn = e.target.closest('.btn-user-balance-sign');
             if (!btn) return;
@@ -375,7 +359,6 @@
             const balance = btn.getAttribute('data-balance') || '0.00';
             const sign = btn.getAttribute('data-sign') || '';
 
-            // Fetch referrals
             let refs = [];
             try {
                 const resp = await fetch(`{{ url_for('user_referrals_json', user_id=0) }}`.replace('/0/', `/${uid}/`), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
@@ -397,7 +380,6 @@
             openModal('balanceModal');
         });
 
-        // Balance form submit
         document.getElementById('bm-form')?.addEventListener('submit', async function (e) {
             e.preventDefault();
             const form = this;
@@ -419,7 +401,6 @@
             } catch (_) { showToast('danger', 'Ошибка сети'); }
         });
 
-        // Message modal
         table.addEventListener('click', function (e) {
             const btn = e.target.closest('.btn-user-message');
             if (!btn) return;
@@ -431,7 +412,6 @@
             openModal('messageModal');
         });
 
-        // Message form submit
         document.getElementById('mm-form')?.addEventListener('submit', async function (e) {
             e.preventDefault();
             const form = this;
@@ -452,7 +432,6 @@
             } catch (_) { showToast('danger', 'Ошибка сети'); }
         });
 
-        // User details modal
         table.addEventListener('click', async function (e) {
             const btn = e.target.closest('.btn-user-details');
             if (!btn) return;
@@ -469,28 +448,24 @@
                 const data = await resp.json();
 
                 if (data && data.ok) {
-                    // Basic info
                     document.getElementById('udm-telegram-id').textContent = data.user.telegram_id || 'N/A';
                     document.getElementById('udm-username').textContent = '@' + (data.user.username || 'N/A');
                     document.getElementById('udm-registration').textContent = data.user.registration_date || 'N/A';
                     document.getElementById('udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' RUB';
                     document.getElementById('udm-total-months').textContent = (data.user.total_months || 0) + ' мес.';
 
-                    // Trial toggle
                     const trialToggle = document.getElementById('udm-trial-toggle');
                     const trialLabel = document.getElementById('udm-trial-label');
                     trialToggle.checked = data.user.trial_used || false;
                     trialToggle.setAttribute('data-user-id', uid);
                     trialLabel.textContent = data.user.trial_used ? 'Использовано' : 'Не использовано';
 
-                    // Referral info
                     document.getElementById('udm-ref-code').textContent = data.user.referral_code || 'N/A';
                     document.getElementById('udm-ref-count').textContent = data.user.referral_count || '0';
                     document.getElementById('udm-referred-by').textContent = data.user.referred_by?.username ?
                         `@${data.user.referred_by.username} (#${data.user.referred_by.telegram_id})` : 'Не приглашён';
                     document.getElementById('udm-balance').textContent = (data.user.balance || 0).toFixed(2) + ' RUB';
 
-                    // Subscriptions
                     const subsStats = document.getElementById('udm-subs-stats');
                     const subsList = document.getElementById('udm-subs-list');
                     subsStats.textContent = data.subs_stats ?
@@ -515,7 +490,6 @@
                     </div>
                 `).join('') : '<div class="p-4 text-center text-white/50">Нет подписок</div>';
 
-                    // Payment history
                     const paymentHistory = document.getElementById('udm-payment-history');
                     paymentHistory.innerHTML = data.payment_history?.length ? data.payment_history.map(p => `
                     <tr><td class="px-4 py-2 text-white">${p.date || 'N/A'}</td>
@@ -523,7 +497,6 @@
                     <td class="px-4 py-2 text-white">${(p.amount || 0).toFixed(2)} RUB</td></tr>
                 `).join('') : '<tr><td colspan="3" class="px-4 py-4 text-center text-white/50">Нет данных</td></tr>';
 
-                    // Balance history
                     const balanceHistory = document.getElementById('udm-balance-history');
                     balanceHistory.innerHTML = data.balance_history?.length ? data.balance_history.map(t => `
                     <tr><td class="px-4 py-2 text-white">${t.date || 'N/A'}</td>
@@ -543,7 +516,6 @@
             }
         });
 
-        // Trial toggle handler
         document.addEventListener('change', async function (e) {
             if (e.target?.id !== 'udm-trial-toggle') return;
             const toggle = e.target;
@@ -570,11 +542,9 @@
             }
         });
 
-        // Initialize
         restoreOpenedKeys();
     })();
 
-    // Copy to clipboard function
     function copyToClipboard(text, element) {
         navigator.clipboard.writeText(text).then(() => {
             const originalBg = element.className;

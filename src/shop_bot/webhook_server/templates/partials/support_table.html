@@ -1,3 +1,16 @@
+<style>
+    @keyframes blink-urgent {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.15;
+        }
+    }
+</style>
 {% for ticket in tickets %}
 <tr class="hover:bg-white/5">
     <td class="px-4 py-3 whitespace-nowrap text-sm text-white">#{{ ticket.ticket_id }}</td>
@@ -16,20 +29,15 @@
                 style="width: 8px; height: 8px; border-radius: 50%; background: #13ec80; display: inline-block;"></span>
             {% elif ticket.last_sender == 'user' %}
             <span
-                style="width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; display: inline-block;"></span>
+                style="width: 8px; height: 8px; border-radius: 50%; background: #eab308; display: inline-block; animation: blink-urgent 0.7s ease-in-out infinite;"></span>
             {% endif %}
         </span>
         {% else %}
         <span
             class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-white/50">
             Закрыт
-            {% if ticket.last_sender == 'admin' %}
             <span
-                style="width: 8px; height: 8px; border-radius: 50%; background: #13ec80; display: inline-block;"></span>
-            {% elif ticket.last_sender == 'user' %}
-            <span
-                style="width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; display: inline-block;"></span>
-            {% endif %}
+                style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
         </span>
         {% endif %}
     </td>

@@ -1987,9 +1987,9 @@ def get_user_router() -> Router:
     @user_router.callback_query(F.data.startswith("show_key_"))
     @registration_required
     async def show_key_handler(callback: types.CallbackQuery):
+        await callback.answer()
         key_id_to_show = int(callback.data.split("_")[2])
         msg = await smart_edit_message(callback.message, "Загружаю информацию о ключе...")
-        
         
         message_to_edit = msg if msg else callback.message
 
@@ -2378,10 +2378,12 @@ def get_user_router() -> Router:
             "8. <b>Подключитесь к VPN:</b> Нажмите «Подключить» (Connect).\n"
             "9. <b>Проверьте подключение:</b> Откройте браузер и проверьте IP на https://whatismyipaddress.com/. Он должен отличаться от вашего реального IP."
         )
+        howto_image = get_setting("howto_image")
         await smart_edit_message(
             callback.message,
             text,
-            keyboards.create_howto_vless_keyboard()
+            keyboards.create_howto_vless_keyboard(),
+            howto_image
         )
 
     @user_router.callback_query(F.data == "buy_new_key")
@@ -2392,7 +2394,6 @@ def get_user_router() -> Router:
             hosts = rw_repo.get_all_hosts() or []
             if not hosts:
                 await smart_edit_message(callback.message, "❌ Серверы не найдены. Обратитесь к администратору.", keyboards.create_back_to_menu_keyboard())
-                return
                 return
             
             await smart_edit_message(

@@ -511,7 +511,8 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
             expiry_date = datetime.fromisoformat(key['expiry_date'])
             status_icon = "✅" if expiry_date > datetime.now() else "❌"
             host_name = key.get('host_name', 'Неизвестный хост')
-            button_text = f"{status_icon} Ключ #{i+1} ({host_name}) (до {expiry_date.strftime('%d.%m.%Y')})"
+            days_remaining = (expiry_date - datetime.now()).days
+            button_text = f"{status_icon} Ключ #{i+1} ({host_name}) ({days_remaining} дней)"
             builder.button(text=button_text, callback_data=f"show_key_{key['key_id']}")
     builder.button(text=(get_setting("btn_buy_key_text") or "🛒 Купить ключ"), callback_data="buy_new_key")
     builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")

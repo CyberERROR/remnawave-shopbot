@@ -3,7 +3,6 @@
 
 {% block content %}
 <style>
-    /* -------- DESKTOP STYLES (Unchanged) -------- */
     @media (min-width: 769px) {
         .desktop-view {
             display: block;
@@ -14,12 +13,7 @@
         }
     }
 
-    /* -------- MOBILE CHAT STYLES (WhatsApp/Telegram-like) -------- */
     @media (max-width: 768px) {
-        .desktop-view {
-            display: none;
-        }
-
         .mobile-chat-view {
             display: flex;
             flex-direction: column;
@@ -31,13 +25,10 @@
             right: 0;
             bottom: 0;
             background: #000000;
-            /* Deep black/dark background */
             background-image: radial-gradient(circle at 50% 0%, #1a2c24 0%, #000000 70%);
-            /* Subtle green glow at top */
             z-index: 9999;
         }
 
-        /* Fixed Header */
         .mobile-chat-header {
             display: flex;
             align-items: center;
@@ -127,7 +118,6 @@
             justify-content: center;
         }
 
-        /* Dropdown Menu */
         .mobile-dropdown-menu {
             position: absolute;
             top: 100%;
@@ -170,7 +160,6 @@
             color: #ef4444;
         }
 
-        /* Chat Area */
         .mobile-chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -181,7 +170,6 @@
             padding-bottom: 20px;
         }
 
-        /* Message Bubbles - Glassmorphism */
         .message-bubble {
             max-width: 85%;
             padding: 12px 14px;
@@ -193,20 +181,15 @@
             backdrop-filter: blur(5px);
         }
 
-        /* Admin Messages (Me) - Primary Green Glass */
         .message-bubble.admin {
             align-self: flex-end;
             background: rgba(19, 236, 128, 0.1);
-            /* Primary 10% opacity */
             border: 1px solid rgba(19, 236, 128, 0.25);
-            /* Primary Border */
             color: #13ec80;
-            /* Primary Text */
             border-bottom-right-radius: 4px;
             box-shadow: 0 4px 15px rgba(19, 236, 128, 0.05);
         }
 
-        /* User Messages (Other) - White Glass */
         .message-bubble.user {
             align-self: flex-start;
             background: rgba(255, 255, 255, 0.05);
@@ -215,7 +198,6 @@
             border-bottom-left-radius: 4px;
         }
 
-        /* Timestamps */
         .message-time {
             font-size: 10px;
             display: block;
@@ -232,7 +214,6 @@
             color: rgba(255, 255, 255, 0.4);
         }
 
-        /* Input Area */
         .mobile-chat-input-area {
             background: #000000;
             background-image: radial-gradient(circle at 50% 0%, #1a2c24 0%, #000000 70%);
@@ -257,7 +238,6 @@
             resize: none;
             line-height: 1.4;
             overflow-y: auto;
-            /* Enable scroll if content exceeds max-height */
         }
 
         .mobile-input:focus {
@@ -286,9 +266,7 @@
     }
 </style>
 
-<!-- ================= MOBILE VIEW ================= -->
 <div class="mobile-chat-view">
-    <!-- Header -->
     <div class="mobile-chat-header">
         <a href="{{ url_for('support_list_page') }}" class="mobile-back-btn">
             <span class="material-symbols-outlined">arrow_back_ios_new</span>
@@ -314,14 +292,12 @@
             </div>
         </div>
 
-        <!-- 3 Dots Menu -->
         <div class="mobile-header-actions">
             <button type="button" class="mobile-menu-btn" onclick="toggleMobileMenu(event)">
                 <span class="material-symbols-outlined">more_vert</span>
             </button>
 
             <div class="mobile-dropdown-menu" id="mobileMenu">
-                <!-- Toggle Status Action -->
                 <form method="post"
                     onsubmit="return confirm(`{% if ticket.status == 'open' %}Закрыть этот тикет?{% else %}Открыть этот тикет?{% endif %}`)">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -338,7 +314,6 @@
                     {% endif %}
                 </form>
 
-                <!-- Delete Action -->
                 <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
                     onsubmit="return confirm('Удалить этот тикет навсегда?')"
                     style="border-top: 1px solid rgba(255,255,255,0.05);">
@@ -352,7 +327,6 @@
         </div>
     </div>
 
-    <!-- Messages -->
     <div class="mobile-chat-messages" id="mobile-chat-box">
         {% for m in messages %}
         <div class="message-bubble {% if m.sender == 'admin' %}admin{% else %}user{% endif %}">
@@ -366,7 +340,6 @@
         {% endfor %}
     </div>
 
-    <!-- Input -->
     <form method="post" class="mobile-chat-input-area">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <textarea name="message" class="mobile-input" rows="1" placeholder="Сообщение..." {% if ticket.status=='closed'
@@ -378,6 +351,7 @@
         </button>
     </form>
 </div>
+
 <script>
     function toggleMobileMenu(event) {
         event.stopPropagation();
@@ -385,7 +359,6 @@
         menu.classList.toggle('show');
     }
 
-    // Close menu when clicking anywhere else
     document.addEventListener('click', function (event) {
         const menu = document.getElementById('mobileMenu');
         const btn = document.querySelector('.mobile-menu-btn');
@@ -394,7 +367,6 @@
         }
     });
 
-    // Auto-scroll to bottom on mobile load
     document.addEventListener("DOMContentLoaded", function () {
         if (window.innerWidth <= 768) {
             const chatBox = document.getElementById('mobile-chat-box');
@@ -402,7 +374,6 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 
-            // Auto-expand textarea
             const textarea = document.querySelector('.mobile-input');
             if (textarea) {
                 textarea.addEventListener('input', function () {
@@ -414,9 +385,7 @@
     });
 </script>
 
-<!-- ================= DESKTOP VIEW (Original) ================= -->
 <div id="ticket-root" class="desktop-view" data-ticket-id="{{ ticket.ticket_id }}">
-    <!-- Page Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
             <h2 class="text-2xl font-bold text-white">Тикет #{{ ticket.ticket_id }}</h2>
@@ -430,7 +399,6 @@
         </a>
     </div>
 
-    <!-- Status -->
     <div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
         <div class="flex items-center gap-3 mb-4">
             <span class="text-white font-medium">Статус:</span>
@@ -452,7 +420,6 @@
             {% endif %}
         </div>
 
-        <!-- Chat Messages -->
         <div id="chat-box" class="space-y-4 max-h-[500px] overflow-y-auto mb-6">
             {% for m in messages %}
             <div class="flex {% if m.sender == 'admin' %}justify-end{% else %}justify-start{% endif %}">
@@ -475,7 +442,6 @@
             {% endfor %}
         </div>
 
-        <!-- Reply Form -->
         <form method="post" id="reply-form" class="space-y-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <textarea id="reply-text" name="message" rows="3" placeholder="Введите ответ..."
@@ -501,7 +467,6 @@
             </div>
         </form>
 
-        <!-- Delete Form -->
         <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
             data-confirm="Удалить тикет #{{ ticket.ticket_id }}? Это действие необратимо." class="mt-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
