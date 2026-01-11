@@ -331,13 +331,40 @@ show_docker_images() {
 
 cleanup_old_installation() {
     log_warn "Обнаружена остаток старой установки (конфигурация найдена, каталог удалён)."
-    log_info "Удаление старой конфигурации для чистой переустановки..."
-    
-    run_with_spinner "Удаление символической ссылки" sudo rm -f "$NGINX_LINK" || true
-    run_with_spinner "Удаление конфигурации Nginx" sudo rm -f "$NGINX_CONF" || true
-    
-    log_success "Старая конфигурация удалена. Переходим к новой установке."
     echo ""
+    
+    REPLY=""
+    while true; do
+        log_input "Удалить старую конфигурацию и выполнить чистую установку? (y/n, default: y): "
+        read -r -n1 REPLY < /dev/tty || true
+        echo ""
+        
+        # Если пользователь просто нажал Enter, берём default (y)
+        if [[ -z "$REPLY" ]]; then
+            REPLY="y"
+        fi
+        
+        case "$REPLY" in
+            [yY]) 
+                log_info "Удаление старой конфигурации для чистой переустановки..."
+                run_with_spinner "Удаление символической ссылки" sudo rm -f "$NGINX_LINK" || true
+                run_with_spinner "Удаление конфигурации Nginx" sudo rm -f "$NGINX_CONF" || true
+                log_success "Старая конфигурация удалена. Переходим к новой установке."
+                echo ""
+                return 0
+                ;;
+            [nN]) 
+                log_error "Установка отменена пользователем."
+                log_info "Для ручного удаления конфигурации выполните:"
+                echo -e "  ${CYAN}sudo rm -f $NGINX_LINK${NC}"
+                echo -e "  ${CYAN}sudo rm -f $NGINX_CONF${NC}"
+                exit 1
+                ;;
+            *) 
+                log_warn "Введите 'y' или 'n'"
+                ;;
+        esac
+    done
 }
 
 # --- Начало выполнения ---
@@ -388,7 +415,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         show_footer
         exit 0
     else
-        # Конфигурация существует, но каталога нет - очищаем и переустанавливаем
+        # Конфигурация существует, но каталога нет - спрашиваем и очищаем
         cleanup_old_installation
     fi
 fi
@@ -540,4 +567,4 @@ echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privke
 echo ""
 echo -e "${YELLOW} ⚠  Пожалуйста, смените пароль сразу после входа!${NC}"
 echo ""
-show_footer 
+show_footer
