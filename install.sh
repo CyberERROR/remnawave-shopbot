@@ -14,7 +14,6 @@ NC='\033[0m'
 # Настройки проекта
 REPO_URL="https://github.com/CyberERROR/remnawave-shopbot.git"
 PROJECT_DIR="remnawave-shopbot"
-PROJECT_DIR_FULL="$(pwd)/$PROJECT_DIR"
 NGINX_CONF="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
 NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
 
@@ -435,7 +434,6 @@ if [[ -f "$NGINX_CONF" ]]; then
         log_info "Обнаружена существующая конфигурация."
         
         cd "$PROJECT_DIR"
-        PROJECT_DIR_FULL="$(pwd)"
         
         # Получаем параметры из существующей конфигурации
         DOMAIN=$(get_domain_from_nginx)
@@ -451,7 +449,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo ""
         
         run_with_animated_spinner "Пересборка контейнеров" \
-            sudo bash -c "cd '$PROJECT_DIR_FULL' && docker-compose down --remove-orphans && docker-compose up -d --build" || {
+            sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
             log_error "Не удалось пересобрать контейнеры"
             exit 1
         }
@@ -494,7 +492,6 @@ else
     log_warn "Каталог проекта уже существует, пропускаем клонирование"
 fi
 cd "$PROJECT_DIR"
-PROJECT_DIR_FULL="$(pwd)"
 
 echo ""
 
@@ -605,7 +602,7 @@ show_docker_images
 echo ""
 
 run_with_animated_spinner "Сборка и запуск Docker контейнеров" \
-    sudo bash -c "cd '$PROJECT_DIR_FULL' && if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans; fi; docker-compose up -d --build" || {
+    sudo bash -c "if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans; fi; docker-compose up -d --build" || {
     log_error "Не удалось запустить Docker контейнеры"
     exit 1
 }
