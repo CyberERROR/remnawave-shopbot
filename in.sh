@@ -540,4 +540,4 @@ echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privke
 echo ""
 echo -e "${YELLOW} ⚠  Пожалуйста, смените пароль сразу после входа!${NC}"
 echo ""
-show_footer
+show_footer 
