@@ -14,6 +14,7 @@ NC='\033[0m'
 # Настройки проекта
 REPO_URL="https://github.com/CyberERROR/remnawave-shopbot.git"
 PROJECT_DIR="remnawave-shopbot"
+WORK_DIR="/root/remnawave-shopbot"
 NGINX_CONF="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
 NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
 
@@ -503,12 +504,17 @@ ensure_services
 ensure_certbot_nginx
 
 log_info "Клонирование и подготовка проекта..."
-if [[ ! -d "./.git" ]]; then
-    run_with_animated_spinner "Клонирование репозитория" git clone "$REPO_URL" . || {
+if [[ ! -f "docker-compose.yml" ]]; then
+    run_with_animated_spinner "Клонирование репозитория в $WORK_DIR" git clone "$REPO_URL" "$WORK_DIR" || {
         log_error "Не удалось клонировать репозиторий в $WORK_DIR"
         exit 1
     }
     log_success "Репозиторий успешно клонирован в $WORK_DIR"
+    
+    cd "$WORK_DIR" || {
+        log_error "Не удалось перейти в директорию $WORK_DIR"
+        exit 1
+    }
 else
     log_warn "Репозиторий уже существует в $WORK_DIR, пропускаем клонирование"
 fi
