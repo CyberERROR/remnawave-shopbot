@@ -110,7 +110,7 @@ run_with_animated_spinner() {
     local exit_code=$?
     
     tput cnorm 2>/dev/null || true
-    printf " \b\b\b"
+    printf "   \b\b\b"
     
     if [ $exit_code -eq 0 ]; then
         echo -e "${GREEN}${BOLD}OK${NC}"
@@ -472,7 +472,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         show_docker_images
         echo ""
         
-        CURRENT_DIR=$(pwd)
+        CURRENT_DIR=$(pwd -P)
         DOCKER_CMD="cd \"$CURRENT_DIR\" && docker-compose down --remove-orphans 2>/dev/null || true; docker-compose up -d --build"
         
         run_with_animated_spinner "Пересборка контейнеров" \
@@ -486,6 +486,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo -e "${GREEN}┃ ОБНОВЛЕНИЕ ЗАВЕРШЕНО! ┃${NC}"
         echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
         echo ""
+        echo -e " ${BOLD}Каталог установки:${NC} ${CURRENT_DIR}"
         echo -e " ${BOLD}Адрес панели:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/login"
         echo -e " ${BOLD}Данные входа:${NC} ${CYAN}admin${NC} / ${CYAN}admin${NC}"
         echo -e " ${BOLD}Webhook URL:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
@@ -643,7 +644,7 @@ show_docker_images
 
 echo ""
 
-CURRENT_DIR=$(pwd)
+CURRENT_DIR=$(pwd -P)
 DOCKER_CMD="cd \"$CURRENT_DIR\" && if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans 2>/dev/null || true; fi; docker-compose up -d --build"
 
 run_with_animated_spinner "Сборка и запуск Docker контейнеров" \
@@ -659,6 +660,7 @@ echo -e "${GREEN}┃ УСТАНОВКА ЗАВЕРШЕНА! ┃${NC}"
 echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
 echo ""
 
+echo -e " ${BOLD}Каталог установки:${NC} ${CURRENT_DIR}"
 echo -e " ${BOLD}Адрес панели:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/login"
 echo -e " ${BOLD}Данные входа:${NC} ${CYAN}admin${NC} / ${CYAN}admin${NC}"
 echo -e " ${BOLD}Webhook URL:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
