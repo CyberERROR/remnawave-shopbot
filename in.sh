@@ -302,14 +302,12 @@ server {
     listen [::]:$port ssl http2;
     server_name $domain;
 
-    # SSL
     ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
 
-    # Proxy
     location / {
         proxy_pass http://localhost:8080;
         proxy_set_header Host \$host;
@@ -434,6 +432,35 @@ manual_cleanup() {
     done
 }
 
+finish_and_enter() {
+    local dir="$1"
+    
+    echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
+    echo -e "${GREEN}┃ УСТАНОВКА ЗАВЕРШЕНА! ┃${NC}"
+    echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
+    echo ""
+    echo -e " ${BOLD}Каталог установки:${NC} ${dir}"
+    echo -e " ${BOLD}Адрес панели:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/login"
+    echo -e " ${BOLD}Данные входа:${NC} ${CYAN}admin${NC} / ${CYAN}admin${NC}"
+    echo -e " ${BOLD}Webhook URL:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
+    echo ""
+    echo -e " ${BOLD}SSL Сертификаты:${NC}"
+    echo -e " Публичный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
+    echo -e " Приватный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
+    echo ""
+    echo -e "${YELLOW} ⚠ Пожалуйста, смените пароль сразу после входа!${NC}"
+    echo ""
+    
+    show_footer
+    
+    if [[ -d "$dir" ]] && [[ -t 0 ]]; then
+        echo -e "${BLUE}[INFO]${NC} Входим в директорию проекта... Теперь вы можете использовать docker-compose."
+        cd "$dir"
+        exec $SHELL
+    fi
+    exit 0
+}
+
 show_header
 ensure_sudo_refresh
 
@@ -483,24 +510,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         }
         
         echo ""
-        echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
-        echo -e "${GREEN}┃ ОБНОВЛЕНИЕ ЗАВЕРШЕНО! ┃${NC}"
-        echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
-        echo ""
-        echo -e " ${BOLD}Адрес панели:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/login"
-        echo -e " ${BOLD}Данные входа:${NC} ${CYAN}admin${NC} / ${CYAN}admin${NC}"
-        echo -e " ${BOLD}Webhook URL:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
-        echo ""
-        echo -e " ${BOLD}SSL Сертификаты:${NC}"
-        echo -e " Публичный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
-        echo -e " Приватный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
-        echo ""
-        echo -e "${YELLOW}${BOLD}⚠ ДЛЯ УПРАВЛЕНИЯ БОТОМ ВРУЧНУЮ ВЫПОЛНИТЕ:${NC}"
-        echo -e "${CYAN}cd ${CURRENT_DIR}${NC}"
-        echo ""
-        
-        show_footer
-        exit 0
+        finish_and_enter "$CURRENT_DIR"
     else
         cleanup_old_installation
     fi
@@ -658,27 +668,4 @@ run_with_animated_spinner "Сборка и запуск Docker контейне�
 }
 
 echo ""
-
-echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
-echo -e "${GREEN}┃ УСТАНОВКА ЗАВЕРШЕНА! ┃${NC}"
-echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
-echo ""
-
-echo -e " ${BOLD}Каталог установки:${NC} ${CURRENT_DIR}"
-echo -e " ${BOLD}Адрес панели:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/login"
-echo -e " ${BOLD}Данные входа:${NC} ${CYAN}admin${NC} / ${CYAN}admin${NC}"
-echo -e " ${BOLD}Webhook URL:${NC} https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
-echo ""
-
-echo -e " ${BOLD}SSL Сертификаты:${NC}"
-echo -e " Публичный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
-echo -e " Приватный: ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
-echo ""
-echo -e "${YELLOW}${BOLD}⚠ ДЛЯ УПРАВЛЕНИЯ БОТОМ ВРУЧНУЮ ВЫПОЛНИТЕ:${NC}"
-echo -e "${CYAN}cd ${CURRENT_DIR}${NC}"
-echo ""
-
-echo -e "${YELLOW} ⚠ Пожалуйста, смените пароль сразу после входа!${NC}"
-echo ""
-
-show_footer
+finish_and_enter "$CURRENT_DIR"
