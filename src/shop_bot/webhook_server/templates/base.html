@@ -42,6 +42,7 @@
             },
         }
     </script>
+
     <style>
         .max-w-7xl {
             max-width: 90rem !important;
@@ -55,7 +56,6 @@
                 'opsz' 24
         }
 
-        /* Modal styles */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -98,7 +98,6 @@
             }
         }
 
-        /* Toast styles */
         .toast-container {
             position: fixed;
             top: 1rem;
@@ -146,7 +145,6 @@
             }
         }
 
-        /* Soft select */
         .soft-select {
             position: relative;
         }
@@ -197,14 +195,12 @@
             color: #13ec80;
         }
 
-        /* Hide native select */
         .soft-select select {
             position: absolute;
             opacity: 0;
             pointer-events: none;
         }
 
-        /* Status dot animation */
         @keyframes pulse {
 
             0%,
@@ -239,6 +235,10 @@
                         <button type="button" id="brand-edit" class="text-white/40 hover:text-white transition-colors"
                             title="Сменить название">
                             <span class="material-symbols-outlined text-lg">edit</span>
+                        </button>
+                        <button type="button" id="about-info-btn"
+                            class="text-white/40 hover:text-white transition-colors" title="О проекте">
+                            <span class="material-symbols-outlined text-lg">info</span>
                         </button>
                     </div>
                     <div class="flex items-center gap-3">
@@ -365,10 +365,8 @@
         </main>
     </div>
 
-    <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Brand Edit Modal -->
     <div id="brandModal" class="modal-overlay">
         <div class="modal-content p-6">
             <div class="flex items-center justify-between mb-4">
@@ -388,7 +386,81 @@
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
+    <div id="aboutModal" class="modal-overlay">
+        <div class="modal-content p-6" style="max-width: 500px;">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">info</span>
+                    О проекте - V1.3.0
+                </h3>
+                <button onclick="closeModal('aboutModal')"
+                    class="text-white/50 hover:text-white text-2xl transition-colors">&times;</button>
+            </div>
+
+            <div class="space-y-4">
+                <a href="https://github.com/CyberERROR/remnawave-shopbot" target="_blank"
+                    class="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group">
+                    <div
+                        class="flex-shrink-0 w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center group-hover:bg-primary/30 transition-colors">
+                        <span class="material-symbols-outlined text-primary">code</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-medium">Репозиторий / Обновления</p>
+                        <p class="text-white/50 text-sm truncate">github.com/CyberERROR/remnawave-shopbot</p>
+                    </div>
+                    <span
+                        class="material-symbols-outlined text-white/30 group-hover:text-white/50 transition-colors">arrow_forward</span>
+                </a>
+
+                <a href="https://github.com/CyberERROR/remnawave-shopbot/releases" target="_blank"
+                    class="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group">
+                    <div
+                        class="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
+                        <span class="material-symbols-outlined text-blue-400">new_releases</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-medium">Релизы</p>
+                        <p class="text-white/50 text-sm truncate">github.com/CyberERROR/.../releases</p>
+                    </div>
+                    <span
+                        class="material-symbols-outlined text-white/30 group-hover:text-white/50 transition-colors">arrow_forward</span>
+                </a>
+
+                <a href="https://t.me/+gwNP6nFYuYo4MDUy" target="_blank"
+                    class="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group">
+                    <div
+                        class="flex-shrink-0 w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center group-hover:bg-cyan-500/30 transition-colors">
+                        <span class="material-symbols-outlined text-cyan-400">groups</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-medium">Telegram группа</p>
+                        <p class="text-white/50 text-sm truncate">Сообщество и поддержка</p>
+                    </div>
+                    <span
+                        class="material-symbols-outlined text-white/30 group-hover:text-white/50 transition-colors">arrow_forward</span>
+                </a>
+
+                <a href="https://github.com/CyberERROR" target="_blank"
+                    class="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group">
+                    <div
+                        class="flex-shrink-0 w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
+                        <span class="material-symbols-outlined text-purple-400">person</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-medium">Разработчик</p>
+                        <p class="text-white/50 text-sm truncate">github.com/CyberERROR</p>
+                    </div>
+                    <span
+                        class="material-symbols-outlined text-white/30 group-hover:text-white/50 transition-colors">arrow_forward</span>
+                </a>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-white/10 text-center">
+                <p class="text-white/40 text-sm">© By tweopi</p>
+            </div>
+        </div>
+    </div>
+
     <div id="confirmationModal" class="modal-overlay">
         <div class="modal-content p-6" style="max-width: 400px;">
             <h3 class="text-lg font-bold text-white mb-3">Подтверждение</h3>
@@ -402,16 +474,13 @@
         </div>
     </div>
 
-    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <script id="flash-messages" type="application/json">{{ messages|tojson }}</script>
     {% endif %}
     {% endwith %}
 
-    <!-- Global Scripts -->
     <script>
-        // Toast utility
         window.showToast = function (type, message, duration = 4000) {
             const container = document.getElementById('toast-container');
             if (!container) return;
@@ -431,7 +500,6 @@
             }, duration);
         };
 
-        // Show flash messages on load
         document.addEventListener('DOMContentLoaded', function () {
             const flashEl = document.getElementById('flash-messages');
             if (flashEl) {
@@ -447,7 +515,6 @@
             }
         });
 
-        // Modal utility
         window.openModal = function (modalId) {
             const modal = document.getElementById(modalId);
             if (modal) modal.classList.add('open');
@@ -458,28 +525,23 @@
             if (modal) modal.classList.remove('open');
         };
 
-        // Close modal on overlay click
         document.addEventListener('click', function (e) {
             if (e.target.classList.contains('modal-overlay')) {
                 e.target.classList.remove('open');
             }
         });
 
-        // Close modal on Escape
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
             }
         });
 
-        // CSRF token getter
         window.getCsrfToken = function () {
             const meta = document.querySelector('meta[name="csrf-token"]');
             return meta ? meta.getAttribute('content') : '';
         };
 
-        // Confirm dialog for forms with data-confirm
-        // Global Confirmation Modal Logic
         let confirmCallback = null;
 
         window.showConfirmModal = function (message, onConfirm) {
@@ -489,7 +551,6 @@
 
             if (msgEl) msgEl.textContent = message;
 
-            // Clone button to remove old listeners
             const newBtn = btn.cloneNode(true);
             btn.parentNode.replaceChild(newBtn, btn);
 
@@ -501,7 +562,6 @@
             openModal('confirmationModal');
         };
 
-        // Confirm dialog for forms with data-confirm
         document.addEventListener('submit', function (e) {
             const form = e.target;
             const confirmMsg = form.getAttribute('data-confirm');
@@ -513,7 +573,6 @@
             }
         });
 
-        // Soft-select helper
         window.initSoftSelect = function (selectId, placeholder) {
             const sel = document.getElementById(selectId);
             const wrap = document.querySelector(`.soft-select[data-target="${selectId}"]`);
@@ -557,7 +616,6 @@
             });
         };
 
-        // Refresh container by ID (for AJAX updates)
         window.refreshContainerById = async function (id) {
             const el = document.getElementById(id);
             if (!el) return;
@@ -572,7 +630,6 @@
             } catch (e) { }
         };
 
-        // Brand title edit functionality
         (function () {
             const titleEl = document.getElementById('brand-title');
             const editBtn = document.getElementById('brand-edit');
@@ -611,7 +668,15 @@
             }
         })();
 
-        // Restart Bot Logic
+        (function () {
+            const aboutBtn = document.getElementById('about-info-btn');
+            if (!aboutBtn) return;
+
+            aboutBtn.addEventListener('click', () => {
+                openModal('aboutModal');
+            });
+        })();
+
         (function () {
             const btn = document.getElementById('btn-restart-bot');
             if (!btn) return;
@@ -623,22 +688,20 @@
             });
 
             async function executeRestart() {
-
                 try {
                     const fd = new FormData();
                     fd.append('csrf_token', getCsrfToken());
 
                     const resp = await fetch('/other/restart', {
                         method: 'POST',
-                        headers: { 'X-CSRFToken': getCsrfToken() }, // Add header for safety
-                        body: fd // Keep body for old handling if any
+                        headers: { 'X-CSRFToken': getCsrfToken() },
+                        body: fd
                     });
 
                     const data = await resp.json();
 
                     if (data.ok) {
                         showToast('success', data.message || 'Перезагрузка...');
-                        // Отключаем кнопку чтобы не спамили
                         btn.disabled = true;
                         btn.classList.add('opacity-50');
                     } else {
