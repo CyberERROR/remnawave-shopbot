@@ -335,7 +335,7 @@ cleanup_old_installation() {
     
     REPLY=""
     while true; do
-        log_input "Удалить старую конфигурацию и выполнить чистую установку? (y/n, default: y): "
+        log_input "Выберите действие [Y]es/[N]o/[M]anual (default: Y): "
         read -r -n1 REPLY < /dev/tty || true
         echo ""
         
@@ -344,24 +344,79 @@ cleanup_old_installation() {
             REPLY="y"
         fi
         
-        case "$REPLY" in
-            [yY]) 
+        case "${REPLY,,}" in
+            y) 
                 log_info "Удаление старой конфигурации для чистой переустановки..."
                 run_with_spinner "Удаление символической ссылки" sudo rm -f "$NGINX_LINK" || true
                 run_with_spinner "Удаление конфигурации Nginx" sudo rm -f "$NGINX_CONF" || true
-                log_success "Старая конфигурация удалена. Переходим к новой установке."
-                echo ""
-                return 0
+                
+                # Проверяем что всё удалилось
+                if [[ ! -f "$NGINX_CONF" ]] && [[ ! -L "$NGINX_LINK" ]]; then
+                    log_success "Старая конфигурация удалена. Переходим к новой установке."
+                    echo ""
+                    return 0
+                else
+                    log_error "Не удалось удалить конфигурацию. Попробуйте ручное удаление."
+                    manual_cleanup
+                    return 0
+                fi
                 ;;
-            [nN]) 
+            n) 
                 log_error "Установка отменена пользователем."
-                log_info "Для ручного удаления конфигурации выполните:"
-                echo -e "  ${CYAN}sudo rm -f $NGINX_LINK${NC}"
-                echo -e "  ${CYAN}sudo rm -f $NGINX_CONF${NC}"
                 exit 1
                 ;;
+            m) 
+                manual_cleanup
+                return 0
+                ;;
             *) 
-                log_warn "Введите 'y' или 'n'"
+                log_warn "Введите Y (автоматически), N (отмена) или M (ручное удаление)"
+                ;;
+        esac
+    done
+}
+
+manual_cleanup() {
+    echo ""
+    log_warn "Переходим в режим ручного удаления конфигурации."
+    echo ""
+    log_info "Выполните следующие команды:"
+    echo -e "  ${CYAN}sudo rm -f $NGINX_LINK${NC}"
+    echo -e "  ${CYAN}sudo rm -f $NGINX_CONF${NC}"
+    echo ""
+    
+    REPLY=""
+    while true; do
+        log_input "Вы удалили конфигурацию вручную? (Y/n): "
+        read -r -n1 REPLY < /dev/tty || true
+        echo ""
+        
+        # Если пользователь просто нажал Enter, берём default (y)
+        if [[ -z "$REPLY" ]]; then
+            REPLY="y"
+        fi
+        
+        case "${REPLY,,}" in
+            y)
+                # Проверяем что конфигурация действительно удалена
+                if [[ ! -f "$NGINX_CONF" ]] && [[ ! -L "$NGINX_LINK" ]]; then
+                    log_success "Конфигурация удалена успешно. Переходим к новой установке."
+                    echo ""
+                    return 0
+                else
+                    log_error "Конфигурация всё ещё существует:"
+                    [[ -f "$NGINX_CONF" ]] && echo -e "  ${CYAN}$NGINX_CONF${NC}"
+                    [[ -L "$NGINX_LINK" ]] && echo -e "  ${CYAN}$NGINX_LINK${NC}"
+                    log_warn "Пожалуйста, удалите эти файлы и попробуйте снова."
+                    exit 1
+                fi
+                ;;
+            n)
+                log_error "Конфигурация не удалена. Установка отменена."
+                exit 1
+                ;;
+            *)
+                log_warn "Введите Y (да) или N (нет)"
                 ;;
         esac
     done
