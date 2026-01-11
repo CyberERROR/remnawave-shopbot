@@ -175,6 +175,12 @@ curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/in
 cd /root/remnawave-shopbot && docker-compose down && docker-compose up -d --build
 ```
 
+### 🗑 Полное удаление
+```bash
+# Запустить скрипт удаления (полностью удаляет бота и связанные контейнеры)
+curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/uninstall.sh | bash
+```
+
 ---
 
 ## ⚙️ Первичная конфигурация
