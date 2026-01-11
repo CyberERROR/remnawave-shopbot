@@ -13,10 +13,9 @@ NC='\033[0m'
 
 # Настройки проекта
 REPO_URL="https://github.com/CyberERROR/remnawave-shopbot.git"
-PROJECT_DIR="remnawave-shopbot"
 WORK_DIR="/root/remnawave-shopbot"
-NGINX_CONF="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
-NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
+NGINX_CONF="/etc/nginx/sites-available/remnawave-shopbot.conf"
+NGINX_LINK="/etc/nginx/sites-enabled/remnawave-shopbot.conf"
 
 # Инициализация переменных
 USER_DOMAIN_INPUT=""
@@ -447,13 +446,11 @@ show_header
 ensure_sudo_refresh
 ensure_work_directory
 
-# Проверка наличия конфигурации и каталога
+# Проверка наличия конфигурации и репозитория
 if [[ -f "$NGINX_CONF" ]]; then
-    if [[ -d "$PROJECT_DIR" ]]; then
-        # Режим обновления: конфигурация и каталог существуют
+    if [[ -f "docker-compose.yml" ]]; then
+        # Режим обновления: конфигурация и репозиторий существуют
         log_info "Обнаружена существующая конфигурация."
-        
-        cd "$PROJECT_DIR"
         
         # Получаем параметры из существующей конфигурации
         DOMAIN=$(get_domain_from_nginx)
@@ -490,7 +487,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         show_footer
         exit 0
     else
-        # Конфигурация существует, но каталога нет - спрашиваем и очищаем
+        # Конфигурация существует, но репозитория нет - спрашиваем и очищаем
         cleanup_old_installation
     fi
 fi
@@ -505,16 +502,11 @@ ensure_certbot_nginx
 
 log_info "Клонирование и подготовка проекта..."
 if [[ ! -f "docker-compose.yml" ]]; then
-    run_with_animated_spinner "Клонирование репозитория в $WORK_DIR" git clone "$REPO_URL" "$WORK_DIR" || {
+    run_with_animated_spinner "Клонирование репозитория в $WORK_DIR" git clone "$REPO_URL" . || {
         log_error "Не удалось клонировать репозиторий в $WORK_DIR"
         exit 1
     }
     log_success "Репозиторий успешно клонирован в $WORK_DIR"
-    
-    cd "$WORK_DIR" || {
-        log_error "Не удалось перейти в директорию $WORK_DIR"
-        exit 1
-    }
 else
     log_warn "Репозиторий уже существует в $WORK_DIR, пропускаем клонирование"
 fi
