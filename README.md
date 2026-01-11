@@ -172,7 +172,7 @@ truncate -s 0 /var/lib/docker/containers/*/*-json.log
 curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash
 
 # Пересоздать контейнеры с новым кодом
-docker-compose down && docker-compose up -d --build
+cd /root/remnawave-shopbot && docker-compose down && docker-compose up -d --build
 ```
 
 ---
