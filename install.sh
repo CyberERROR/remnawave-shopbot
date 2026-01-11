@@ -62,6 +62,7 @@ log_input() {
     echo -ne "${CYAN}${BOLD}[?]${NC} $1"
 }
 
+# Функция спиннера с информацией о процессе
 run_with_spinner() {
     local message="$1"
     shift
@@ -72,6 +73,7 @@ run_with_spinner() {
     local temp_log
     temp_log=$(mktemp)
     
+    # Запускаем команду
     if "${cmd[@]}" > "$temp_log" 2>&1; then
         echo -e "${GREEN}${BOLD}OK${NC}"
         rm -f "$temp_log"
@@ -87,6 +89,7 @@ run_with_spinner() {
     fi
 }
 
+# Функция спиннера с анимацией для долгих операций
 run_with_animated_spinner() {
     local message="$1"
     shift
@@ -141,6 +144,8 @@ on_error() {
 }
 trap 'on_error $LINENO' ERR
 
+# --- Утилиты ---
+
 sanitize_domain() {
     if [[ -z "${1:-}" ]]; then
         echo ""
@@ -190,6 +195,26 @@ get_port_from_nginx() {
     if [[ -f "$NGINX_CONF" ]]; then
         grep "listen" "$NGINX_CONF" | head -n1 | awk '{print $2}' | sed 's/;//'
     fi
+}
+
+# --- Основные этапы ---
+
+ensure_work_directory() {
+    if [[ -d "$WORK_DIR" ]]; then
+        log_success "Рабочая директория существует: $WORK_DIR"
+    else
+        log_info "Создание рабочей директории: $WORK_DIR"
+        run_with_spinner "Создание директории" mkdir -p "$WORK_DIR" || {
+            log_error "Не удалось создать директорию $WORK_DIR"
+            exit 1
+        }
+        log_success "Рабочая директория создана"
+    fi
+    
+    cd "$WORK_DIR" || {
+        log_error "Не удалось перейти в директорию $WORK_DIR"
+        exit 1
+    }
 }
 
 ensure_sudo_refresh() {
@@ -332,6 +357,7 @@ cleanup_old_installation() {
         read -r -n1 REPLY < /dev/tty || true
         echo ""
         
+        # Если пользователь просто нажал Enter, берём default (y)
         if [[ -z "$REPLY" ]]; then
             REPLY="y"
         fi
@@ -342,6 +368,7 @@ cleanup_old_installation() {
                 run_with_spinner "Удаление символической ссылки" sudo rm -f "$NGINX_LINK" || true
                 run_with_spinner "Удаление конфигурации Nginx" sudo rm -f "$NGINX_CONF" || true
                 
+                # Проверяем что всё удалилось
                 if [[ ! -f "$NGINX_CONF" ]] && [[ ! -L "$NGINX_LINK" ]]; then
                     log_success "Старая конфигурация удалена. Переходим к новой установке."
                     echo ""
@@ -382,12 +409,14 @@ manual_cleanup() {
         read -r -n1 REPLY < /dev/tty || true
         echo ""
         
+        # Если пользователь просто нажал Enter, берём default (y)
         if [[ -z "$REPLY" ]]; then
             REPLY="y"
         fi
         
         case "${REPLY,,}" in
             y)
+                # Проверяем что конфигурация действительно удалена
                 if [[ ! -f "$NGINX_CONF" ]] && [[ ! -L "$NGINX_LINK" ]]; then
                     log_success "Конфигурация удалена успешно. Переходим к новой установке."
                     echo ""
@@ -411,18 +440,21 @@ manual_cleanup() {
     done
 }
 
+# --- Начало выполнения ---
+
 show_header
 ensure_sudo_refresh
+ensure_work_directory
 
+# Проверка наличия конфигурации и каталога
 if [[ -f "$NGINX_CONF" ]]; then
     if [[ -d "$PROJECT_DIR" ]]; then
+        # Режим обновления: конфигурация и каталог существуют
         log_info "Обнаружена существующая конфигурация."
         
-        cd "$PROJECT_DIR" || {
-            log_error "Не удалось перейти в директорию проекта ($PROJECT_DIR)"
-            exit 1
-        }
+        cd "$PROJECT_DIR"
         
+        # Получаем параметры из существующей конфигурации
         DOMAIN=$(get_domain_from_nginx)
         YOOKASSA_PORT=$(get_port_from_nginx)
         
@@ -457,10 +489,12 @@ if [[ -f "$NGINX_CONF" ]]; then
         show_footer
         exit 0
     else
+        # Конфигурация существует, но каталога нет - спрашиваем и очищаем
         cleanup_old_installation
     fi
 fi
 
+# Режим установки
 log_info "Инициализация процесса установки..."
 echo ""
 
@@ -469,23 +503,19 @@ ensure_services
 ensure_certbot_nginx
 
 log_info "Клонирование и подготовка проекта..."
-if [[ ! -d "$PROJECT_DIR/.git" ]]; then
-    run_with_animated_spinner "Клонирование репозитория" git clone "$REPO_URL" "$PROJECT_DIR" || {
-        log_error "Не удалось клонировать репозиторий"
+if [[ ! -d "./.git" ]]; then
+    run_with_animated_spinner "Клонирование репозитория" git clone "$REPO_URL" . || {
+        log_error "Не удалось клонировать репозиторий в $WORK_DIR"
         exit 1
     }
-    log_success "Репозиторий успешно клонирован"
+    log_success "Репозиторий успешно клонирован в $WORK_DIR"
 else
-    log_warn "Каталог проекта уже существует, пропускаем клонирование"
+    log_warn "Репозиторий уже существует в $WORK_DIR, пропускаем клонирование"
 fi
-
-cd "$PROJECT_DIR" || {
-    log_error "Не удалось перейти в директорию проекта ($PROJECT_DIR)"
-    exit 1
-}
 
 echo ""
 
+# Ввод домена с повторой
 DOMAIN=""
 while [[ -z "$DOMAIN" ]]; do
     log_input "Введите ваш домен (без http/s): "
@@ -503,6 +533,7 @@ while [[ -z "$DOMAIN" ]]; do
     fi
 done
 
+# Ввод Email с повторой
 EMAIL=""
 while [[ -z "$EMAIL" ]]; do
     log_input "Введите Email для SSL (Let's Encrypt): "
@@ -515,6 +546,7 @@ done
 
 echo ""
 
+# Проверка IP
 SERVER_IP=$(get_server_ip || true)
 DOMAIN_IP=$(resolve_domain_ip "$DOMAIN" || true)
 
@@ -545,6 +577,7 @@ fi
 
 echo ""
 
+# Firewall
 if command -v ufw >/dev/null 2>&1 && sudo ufw status 2>/dev/null | grep -q 'Status: active'; then
     run_with_spinner "Открытие портов UFW (80, 443, 1488, 8443)" \
         sudo bash -c "ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 1488/tcp && ufw allow 8443/tcp" || {
@@ -554,6 +587,7 @@ fi
 
 echo ""
 
+# SSL сертификаты
 if [[ -d "/etc/letsencrypt/live/${DOMAIN}" ]]; then
     log_success "SSL сертификаты уже существуют для $DOMAIN"
 else
