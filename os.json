@@ -1,5 +1,5 @@
 {
-    "_comment": "Конфигурация проекта. Измените значения ниже для обновления информации в модальном окне 'О проекте'",
+    "_comment": "Конфигурация проекта.",
     "project": {
         "version": "1.3.0",
         "name": "Remnawave Shopbot",
@@ -7,7 +7,8 @@
             "repository": "https://github.com/CyberERROR/remnawave-shopbot",
             "releases": "https://github.com/CyberERROR/remnawave-shopbot/releases",
             "telegram": "https://t.me/+gwNP6nFYuYo4MDUy",
-            "developer": "https://github.com/CyberERROR"
+            "developer": "https://github.com/CyberERROR",
+            "update": "https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/refs/heads/main/os.json"
         },
         "author": "tweopi"
     }
