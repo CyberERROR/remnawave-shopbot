@@ -14,6 +14,7 @@ NC='\033[0m'
 # Настройки проекта
 REPO_URL="https://github.com/CyberERROR/remnawave-shopbot.git"
 PROJECT_DIR="remnawave-shopbot"
+PROJECT_PATH="/root/$PROJECT_DIR"
 NGINX_CONF="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
 NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
 
@@ -323,9 +324,9 @@ EOF
 }
 
 show_docker_images() {
-    if command -v docker >/dev/null 2>&1 && [[ -f "docker-compose.yml" ]]; then
+    if command -v docker >/dev/null 2>&1 && [[ -f "$PROJECT_PATH/docker-compose.yml" ]]; then
         echo -e "${BLUE}${BOLD}[INFO]${NC} Docker контейнеры в проекте:"
-        docker-compose config --services 2>/dev/null | sed 's/^/  - /' || true
+        cd "$PROJECT_PATH" && docker-compose config --services 2>/dev/null | sed 's/^/  - /' || true
     fi
 }
 
@@ -429,11 +430,11 @@ ensure_sudo_refresh
 
 # Проверка наличия конфигурации и каталога
 if [[ -f "$NGINX_CONF" ]]; then
-    if [[ -d "$PROJECT_DIR" ]]; then
+    if [[ -d "$PROJECT_PATH" ]]; then
         # Режим обновления: конфигурация и каталог существуют
         log_info "Обнаружена существующая конфигурация."
         
-        cd "$PROJECT_DIR"
+        cd "$PROJECT_PATH"
         
         # Получаем параметры из существующей конфигурации
         DOMAIN=$(get_domain_from_nginx)
@@ -449,7 +450,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo ""
         
         run_with_animated_spinner "Пересборка контейнеров" \
-            sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
+            sudo bash -c "cd $PROJECT_PATH && docker-compose down --remove-orphans && docker-compose up -d --build" || {
             log_error "Не удалось пересобрать контейнеры"
             exit 1
         }
@@ -483,15 +484,15 @@ ensure_packages
 ensure_services
 ensure_certbot_nginx
 
-if [[ ! -d "$PROJECT_DIR/.git" ]]; then
-    run_with_animated_spinner "Клонирование репозитория" git clone "$REPO_URL" "$PROJECT_DIR" || {
+if [[ ! -d "$PROJECT_PATH/.git" ]]; then
+    run_with_animated_spinner "Клонирование репозитория" git clone "$REPO_URL" "$PROJECT_PATH" || {
         log_error "Не удалось клонировать репозиторий"
         exit 1
     }
 else
     log_warn "Каталог проекта уже существует, пропускаем клонирование"
 fi
-cd "$PROJECT_DIR"
+cd "$PROJECT_PATH"
 
 echo ""
 
@@ -601,8 +602,8 @@ echo ""
 show_docker_images
 echo ""
 
-run_with_animated_spinner "Сборка и запуск Docker контейнеров" \
-    sudo bash -c "if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans; fi; docker-compose up -d --build" || {
+run_with_animated_spinner "Сборка и запуск Docker контейнеры" \
+    sudo bash -c "cd $PROJECT_PATH && if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans; fi; docker-compose up -d --build" || {
     log_error "Не удалось запустить Docker контейнеры"
     exit 1
 }
