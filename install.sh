@@ -449,7 +449,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo ""
         
         run_with_animated_spinner "Пересборка контейнеров" \
-            sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
+            sudo bash -c "cd $PROJECT_DIR && docker-compose down --remove-orphans && docker-compose up -d --build" || {
             log_error "Не удалось пересобрать контейнеры"
             exit 1
         }
@@ -466,7 +466,6 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo -e " ${BOLD}SSL Сертификаты:${NC}"
         echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
         echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
-        echo -e "#bildupd"
         echo ""
         show_footer
         exit 0
@@ -603,7 +602,7 @@ show_docker_images
 echo ""
 
 run_with_animated_spinner "Сборка и запуск Docker контейнеров" \
-    sudo bash -c "if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans; fi; docker-compose up -d --build" || {
+    sudo bash -c "cd $PROJECT_DIR && if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans; fi; docker-compose up -d --build" || {
     log_error "Не удалось запустить Docker контейнеры"
     exit 1
 }
@@ -620,7 +619,6 @@ echo ""
 echo -e " ${BOLD}SSL Сертификаты:${NC}"
 echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
 echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
-echo -e "#bildupd"
 echo ""
 echo -e "${YELLOW} ⚠  Пожалуйста, смените пароль сразу после входа!${NC}"
 echo ""
