@@ -33,6 +33,15 @@ show_header() {
     echo ""
 }
 
+show_footer() {
+    echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}Репозиторий:${NC}  https://github.com/CyberERROR/remnawave-shopbot"
+    echo -e "${CYAN}Telegram:${NC}      https://t.me/+7hUhNxAdzBpjNWRi"
+    echo -e "${CYAN}Разработчик:${NC}   https://github.com/CyberERROR"
+    echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+}
+
 log_info() {
     echo -e "${BLUE}${BOLD}[INFO]${NC} $1"
 }
@@ -176,6 +185,18 @@ resolve_domain_ip() {
     return 1
 }
 
+get_domain_from_nginx() {
+    if [[ -f "$NGINX_CONF" ]]; then
+        grep "server_name" "$NGINX_CONF" | awk '{print $2}' | sed 's/;//' | head -n1
+    fi
+}
+
+get_port_from_nginx() {
+    if [[ -f "$NGINX_CONF" ]]; then
+        grep "listen" "$NGINX_CONF" | head -n1 | awk '{print $2}' | sed 's/;//'
+    fi
+}
+
 # --- Основные этапы ---
 
 ensure_sudo_refresh() {
@@ -301,6 +322,13 @@ EOF
     }
 }
 
+show_docker_images() {
+    if command -v docker >/dev/null 2>&1 && [[ -f "docker-compose.yml" ]]; then
+        echo -e "${BLUE}${BOLD}[INFO]${NC} Docker контейнеры в проекте:"
+        docker-compose config --services 2>/dev/null | sed 's/^/  - /' || true
+    fi
+}
+
 # --- Начало выполнения ---
 
 show_header
@@ -317,10 +345,18 @@ if [[ -f "$NGINX_CONF" ]]; then
     
     cd "$PROJECT_DIR"
     
+    # Получаем параметры из существующей конфигурации
+    DOMAIN=$(get_domain_from_nginx)
+    YOOKASSA_PORT=$(get_port_from_nginx)
+    
     run_with_animated_spinner "Получение обновлений из Git" git pull --ff-only || {
         log_error "Не удалось обновить репозиторий"
         exit 1
     }
+    
+    echo ""
+    show_docker_images
+    echo ""
     
     run_with_animated_spinner "Пересборка контейнеров" \
         sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
@@ -329,7 +365,19 @@ if [[ -f "$NGINX_CONF" ]]; then
     }
     
     echo ""
-    log_success "Обновление завершено!"
+    echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
+    echo -e "${GREEN}┃                  ОБНОВЛЕНИЕ ЗАВЕРШЕНО!                       ┃${NC}"
+    echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
+    echo ""
+    echo -e " ${BOLD}Адрес панели:${NC}     https://${DOMAIN}:${YOOKASSA_PORT}/login"
+    echo -e " ${BOLD}Данные входа:${NC}     ${CYAN}admin${NC} / ${CYAN}admin${NC}"
+    echo -e " ${BOLD}Webhook URL:${NC}      https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
+    echo ""
+    echo -e " ${BOLD}SSL Сертификаты:${NC}"
+    echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
+    echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
+    echo ""
+    show_footer
     exit 0
 fi
 
@@ -456,6 +504,9 @@ echo ""
 configure_nginx "$DOMAIN" "$YOOKASSA_PORT"
 
 echo ""
+show_docker_images
+echo ""
+
 run_with_animated_spinner "Сборка и запуск Docker контейнеров" \
     sudo bash -c "if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans; fi; docker-compose up -d --build" || {
     log_error "Не удалось запустить Docker контейнеры"
@@ -471,5 +522,10 @@ echo -e " ${BOLD}Адрес панели:${NC}     https://${DOMAIN}:${YOOKASSA_
 echo -e " ${BOLD}Данные входа:${NC}     ${CYAN}admin${NC} / ${CYAN}admin${NC}"
 echo -e " ${BOLD}Webhook URL:${NC}      https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
 echo ""
+echo -e " ${BOLD}SSL Сертификаты:${NC}"
+echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
+echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
+echo ""
 echo -e "${YELLOW} ⚠  Пожалуйста, смените пароль сразу после входа!${NC}"
 echo ""
+show_footer
