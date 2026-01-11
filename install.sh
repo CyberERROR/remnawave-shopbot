@@ -466,6 +466,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         echo -e " ${BOLD}SSL Сертификаты:${NC}"
         echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
         echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
+        echo -e "#bildupd"
         echo ""
         show_footer
         exit 0
@@ -619,6 +620,7 @@ echo ""
 echo -e " ${BOLD}SSL Сертификаты:${NC}"
 echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
 echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
+echo -e "#bildupd"
 echo ""
 echo -e "${YELLOW} ⚠  Пожалуйста, смените пароль сразу после входа!${NC}"
 echo ""
