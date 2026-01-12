@@ -13,11 +13,14 @@
 [![Stars](https://img.shields.io/github/stars/CyberERROR/remnawave-shopbot?label=stars&style=flat-square)](https://github.com/CyberERROR/remnawave-shopbot/stargazers)
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue?style=flat-square)](https://www.python.org/downloads/)
 
-[Установка](#-быстрая-установка-под-ключ) • [Документация](#⚙️-первичная-конфигурация) • [Платёжные системы](#-платёжные-системы) • [Скриншоты](#-скриншоты) • [Поддержка](#-техническая-поддержка)
-
+[Установка](#️-быстрая-установка-под-ключ) • [Документация](#️-первичная-конфигурация) • [Платёжные системы](#-платёжные-системы) • [Скриншоты](#️-скриншоты) • [Поддержка](#-техническая-поддержка)
 </div>
 
 ---
+
+<p align="center">
+<img width="1344" height="768" alt="Generated Image January 12, 2026 - 9_18AM" src="https://github.com/user-attachments/assets/0bcb78da-8c45-42b9-ba78-93ab1905c85f" />
+</p>
 
 <div align="center">
    
