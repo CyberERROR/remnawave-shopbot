@@ -11,9 +11,20 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 REPO_URL="https://github.com/CyberERROR/remnawave-shopbot.git"
-PROJECT_DIR="remnawave-shopbot"
-NGINX_CONF="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
-NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
+PROJECT_NAME="remnawave-shopbot"
+
+# === ИСПРАВЛЕНИЕ ПУТИ ===
+# Скрипт теперь всегда ищет папку в домашней директории пользователя (/root/remnawave-shopbot),
+# даже если вы запускаете установщик из другого места.
+PROJECT_DIR="$HOME/$PROJECT_NAME"
+
+# На всякий случай проверяем текущую папку, если вдруг установили в нестандартное место
+if [[ ! -d "$PROJECT_DIR" ]] && [[ -d "./$PROJECT_NAME" ]]; then
+    PROJECT_DIR="$(pwd)/$PROJECT_NAME"
+fi
+
+NGINX_CONF="/etc/nginx/sites-available/${PROJECT_NAME}.conf"
+NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_NAME}.conf"
 
 USER_DOMAIN_INPUT=""
 DOMAIN=""
@@ -317,108 +328,40 @@ show_docker_images() {
     fi
 }
 
-cleanup_old_installation() {
-    log_warn "Обнаружена остаток старой установки (конфигурация найдена, каталог удалён)."
-    echo ""
-    
-    REPLY=""
-    while true; do
-        log_input "Выберите действие [Y]es/[N]o/[M]anual (default: Y): "
-        read -r -n1 REPLY < /dev/tty || true
-        echo ""
-        
-        if [[ -z "$REPLY" ]]; then
-            REPLY="y"
-        fi
-        
-        case "${REPLY,,}" in
-            y) 
-                log_info "Удаление старой конфигурации для чистой переустановки..."
-                run_with_spinner "Удаление символической ссылки" sudo rm -f "$NGINX_LINK" || true
-                run_with_spinner "Удаление конфигурации Nginx" sudo rm -f "$NGINX_CONF" || true
-                
-                if [[ ! -f "$NGINX_CONF" ]] && [[ ! -L "$NGINX_LINK" ]]; then
-                    log_success "Старая конфигурация удалена. Переходим к новой установке."
-                    echo ""
-                    return 0
-                else
-                    log_error "Не удалось удалить конфигурацию. Попробуйте ручное удаление."
-                    manual_cleanup
-                    return 0
-                fi
-                ;;
-            n) 
-                log_error "Установка отменена пользователем."
-                exit 1
-                ;;
-            m) 
-                manual_cleanup
-                return 0
-                ;;
-            *) 
-                log_warn "Введите Y (автоматически), N (отмена) или M (ручное удаление)"
-                ;;
-        esac
-    done
-}
-
-manual_cleanup() {
-    echo ""
-    log_warn "Переходим в режим ручного удаления конфигурации."
-    echo ""
-    log_info "Выполните следующие команды:"
-    echo -e "  ${CYAN}sudo rm -f $NGINX_LINK${NC}"
-    echo -e "  ${CYAN}sudo rm -f $NGINX_CONF${NC}"
-    echo ""
-    
-    REPLY=""
-    while true; do
-        log_input "Вы удалили конфигурацию вручную? (Y/n): "
-        read -r -n1 REPLY < /dev/tty || true
-        echo ""
-        
-        if [[ -z "$REPLY" ]]; then
-            REPLY="y"
-        fi
-        
-        case "${REPLY,,}" in
-            y)
-                if [[ ! -f "$NGINX_CONF" ]] && [[ ! -L "$NGINX_LINK" ]]; then
-                    log_success "Конфигурация удалена успешно. Переходим к новой установке."
-                    echo ""
-                    return 0
-                else
-                    log_error "Конфигурация всё ещё существует:"
-                    [[ -f "$NGINX_CONF" ]] && echo -e "  ${CYAN}$NGINX_CONF${NC}"
-                    [[ -L "$NGINX_LINK" ]] && echo -e "  ${CYAN}$NGINX_LINK${NC}"
-                    log_warn "Пожалуйста, удалите эти файлы и попробуйте снова."
-                    exit 1
-                fi
-                ;;
-            n)
-                log_error "Конфигурация не удалена. Установка отменена."
-                exit 1
-                ;;
-            *)
-                log_warn "Введите Y (да) или N (нет)"
-                ;;
-        esac
-    done
-}
-
 show_header
 ensure_sudo_refresh
 
 if [[ -f "$NGINX_CONF" ]]; then
+    
+    # 1. Проверяем, существует ли папка по ожидаемому пути
+    if [[ ! -d "$PROJECT_DIR" ]]; then
+        log_warn "Конфигурация Nginx найдена, но папка с ботом отсутствует по пути: $PROJECT_DIR"
+        
+        # 2. Попытка автоматического восстановления (клон)
+        log_info "Запуск автоматического восстановления файлов..."
+        ensure_packages
+        
+        run_with_animated_spinner "Восстановление репозитория" git clone "$REPO_URL" "$PROJECT_DIR" || {
+            log_error "Критическая ошибка: не удалось клонировать репозиторий в $PROJECT_DIR."
+            exit 1
+        }
+    fi
+    
+    # 3. Теперь папка должна существовать
     if [[ -d "$PROJECT_DIR" ]]; then
-        log_info "Обнаружена существующая конфигурация."
+        log_info "Режим обновления активен. Путь: $PROJECT_DIR"
         
         cd "$PROJECT_DIR"
         
         DOMAIN=$(get_domain_from_nginx)
         YOOKASSA_PORT=$(get_port_from_nginx)
         
-        run_with_animated_spinner "Получение обновлений из Git" \
+        if [[ -z "$DOMAIN" ]]; then
+            log_error "Не удалось прочитать домен из конфигурации Nginx. Возможно, файл поврежден."
+            exit 1
+        fi
+        
+        run_with_animated_spinner "Обновление файлов (Hard Reset)" \
             bash -c "git fetch origin main && git reset --hard origin/main" || {
             log_error "Не удалось обновить репозиторий"
             exit 1
@@ -428,6 +371,8 @@ if [[ -f "$NGINX_CONF" ]]; then
         show_docker_images
         echo ""
         
+        ensure_services
+        
         run_with_animated_spinner "Пересборка контейнеров" \
             sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
             log_error "Не удалось пересобрать контейнеры"
@@ -436,25 +381,19 @@ if [[ -f "$NGINX_CONF" ]]; then
         
         echo ""
         echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
-        echo -e "${GREEN}┃                  ОБНОВЛЕНИЕ ЗАВЕРШЕНО!                       ┃${NC}"
+        echo -e "${GREEN}┃           ОБНОВЛЕНИЕ / ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО!             ┃${NC}"
         echo -e "${GREEN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${NC}"
         echo ""
         echo -e " ${BOLD}Адрес панели:${NC}     https://${DOMAIN}:${YOOKASSA_PORT}/login"
         echo -e " ${BOLD}Данные входа:${NC}     ${CYAN}admin${NC} / ${CYAN}admin${NC}"
         echo -e " ${BOLD}Webhook URL:${NC}      https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook"
         echo ""
-        echo -e " ${BOLD}SSL Сертификаты:${NC}"
-        echo -e "   Публичный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/fullchain.pem${NC}"
-        echo -e "   Приватный:  ${YELLOW}/etc/letsencrypt/live/${DOMAIN}/privkey.pem${NC}"
-        echo ""
         show_footer
         exit 0
-    else
-        cleanup_old_installation
     fi
 fi
 
-log_info "Инициализация процесса установки..."
+log_info "Инициализация процесса чистой установки..."
 echo ""
 
 ensure_packages
@@ -467,7 +406,7 @@ if [[ ! -d "$PROJECT_DIR/.git" ]]; then
         exit 1
     }
 else
-    log_warn "Каталог проекта уже существует, пропускаем клонирование"
+    log_warn "Каталог проекта уже существует ($PROJECT_DIR), пропускаем клонирование"
 fi
 cd "$PROJECT_DIR"
 
