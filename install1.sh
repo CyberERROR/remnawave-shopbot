@@ -418,8 +418,9 @@ if [[ -f "$NGINX_CONF" ]]; then
         DOMAIN=$(get_domain_from_nginx)
         YOOKASSA_PORT=$(get_port_from_nginx)
         
-        run_with_animated_spinner "Принудительное обновление из Git" bash -c "git fetch --all && git reset --hard origin/main && git clean -fd" || {
-            log_error "Не удалось принудительно обновить репозиторий"
+        run_with_animated_spinner "Получение обновлений из Git" \
+            bash -c "git fetch origin main && git reset --hard origin/main" || {
+            log_error "Не удалось обновить репозиторий"
             exit 1
         }
         
@@ -547,7 +548,11 @@ else
     
     run_with_animated_spinner "Получение сертификата (может занять время)" \
         sudo bash -c "certbot --nginx -d $DOMAIN --email $EMAIL --agree-tos --non-interactive --redirect --no-eff-email 2>&1" || {
-        log_error "Не удалось получить SSL сертификат. Проверьте настройки DNS."
+        log_error "Не удалось получить SSL сертификат. Проверьте:"
+        log_error "  - Домен правильно указан"
+        log_error "  - Домен указывает на этот сервер ($SERVER_IP)"
+        log_error "  - Порты 80 и 443 открыты"
+        log_error "  - Email правильный"
         exit 1
     }
 fi
