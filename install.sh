@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Цветовая палитра
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -11,19 +10,15 @@ PURPLE='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-# Настройки проекта
 REPO_URL="https://github.com/CyberERROR/remnawave-shopbot.git"
 PROJECT_DIR="remnawave-shopbot"
 NGINX_CONF="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
 NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
 
-# Инициализация переменных
 USER_DOMAIN_INPUT=""
 DOMAIN=""
 EMAIL=""
 YOOKASSA_PORT=""
-
-# --- Функции отображения ---
 
 show_header() {
     clear
@@ -62,7 +57,6 @@ log_input() {
     echo -ne "${CYAN}${BOLD}[?]${NC} $1"
 }
 
-# Функция спиннера с информацией о процессе
 run_with_spinner() {
     local message="$1"
     shift
@@ -73,7 +67,6 @@ run_with_spinner() {
     local temp_log
     temp_log=$(mktemp)
     
-    # Запускаем команду
     if "${cmd[@]}" > "$temp_log" 2>&1; then
         echo -e "${GREEN}${BOLD}OK${NC}"
         rm -f "$temp_log"
@@ -89,7 +82,6 @@ run_with_spinner() {
     fi
 }
 
-# Функция спиннера с анимацией для долгих операций
 run_with_animated_spinner() {
     local message="$1"
     shift
@@ -144,8 +136,6 @@ on_error() {
 }
 trap 'on_error $LINENO' ERR
 
-# --- Утилиты ---
-
 sanitize_domain() {
     if [[ -z "${1:-}" ]]; then
         echo ""
@@ -196,8 +186,6 @@ get_port_from_nginx() {
         grep "listen" "$NGINX_CONF" | head -n1 | awk '{print $2}' | sed 's/;//'
     fi
 }
-
-# --- Основные этапы ---
 
 ensure_sudo_refresh() {
     if ! sudo -v; then
@@ -339,7 +327,6 @@ cleanup_old_installation() {
         read -r -n1 REPLY < /dev/tty || true
         echo ""
         
-        # Если пользователь просто нажал Enter, берём default (y)
         if [[ -z "$REPLY" ]]; then
             REPLY="y"
         fi
@@ -350,7 +337,6 @@ cleanup_old_installation() {
                 run_with_spinner "Удаление символической ссылки" sudo rm -f "$NGINX_LINK" || true
                 run_with_spinner "Удаление конфигурации Nginx" sudo rm -f "$NGINX_CONF" || true
                 
-                # Проверяем что всё удалилось
                 if [[ ! -f "$NGINX_CONF" ]] && [[ ! -L "$NGINX_LINK" ]]; then
                     log_success "Старая конфигурация удалена. Переходим к новой установке."
                     echo ""
@@ -391,14 +377,12 @@ manual_cleanup() {
         read -r -n1 REPLY < /dev/tty || true
         echo ""
         
-        # Если пользователь просто нажал Enter, берём default (y)
         if [[ -z "$REPLY" ]]; then
             REPLY="y"
         fi
         
         case "${REPLY,,}" in
             y)
-                # Проверяем что конфигурация действительно удалена
                 if [[ ! -f "$NGINX_CONF" ]] && [[ ! -L "$NGINX_LINK" ]]; then
                     log_success "Конфигурация удалена успешно. Переходим к новой установке."
                     echo ""
@@ -422,25 +406,20 @@ manual_cleanup() {
     done
 }
 
-# --- Начало выполнения ---
-
 show_header
 ensure_sudo_refresh
 
-# Проверка наличия конфигурации и каталога
 if [[ -f "$NGINX_CONF" ]]; then
     if [[ -d "$PROJECT_DIR" ]]; then
-        # Режим обновления: конфигурация и каталог существуют
         log_info "Обнаружена существующая конфигурация."
         
         cd "$PROJECT_DIR"
         
-        # Получаем параметры из существующей конфигурации
         DOMAIN=$(get_domain_from_nginx)
         YOOKASSA_PORT=$(get_port_from_nginx)
         
-        run_with_animated_spinner "Получение обновлений из Git" git pull --ff-only || {
-            log_error "Не удалось обновить репозиторий"
+        run_with_animated_spinner "Принудительное обновление из Git" bash -c "git fetch --all && git reset --hard origin/main && git clean -fd" || {
+            log_error "Не удалось принудительно обновить репозиторий"
             exit 1
         }
         
@@ -470,12 +449,10 @@ if [[ -f "$NGINX_CONF" ]]; then
         show_footer
         exit 0
     else
-        # Конфигурация существует, но каталога нет - спрашиваем и очищаем
         cleanup_old_installation
     fi
 fi
 
-# Режим установки
 log_info "Инициализация процесса установки..."
 echo ""
 
@@ -495,7 +472,6 @@ cd "$PROJECT_DIR"
 
 echo ""
 
-# Ввод домена с повторой
 DOMAIN=""
 while [[ -z "$DOMAIN" ]]; do
     log_input "Введите ваш домен (без http/s): "
@@ -513,7 +489,6 @@ while [[ -z "$DOMAIN" ]]; do
     fi
 done
 
-# Ввод Email с повторой
 EMAIL=""
 while [[ -z "$EMAIL" ]]; do
     log_input "Введите Email для SSL (Let's Encrypt): "
@@ -526,7 +501,6 @@ done
 
 echo ""
 
-# Проверка IP
 SERVER_IP=$(get_server_ip || true)
 DOMAIN_IP=$(resolve_domain_ip "$DOMAIN" || true)
 
@@ -557,7 +531,6 @@ fi
 
 echo ""
 
-# Firewall
 if command -v ufw >/dev/null 2>&1 && sudo ufw status 2>/dev/null | grep -q 'Status: active'; then
     run_with_spinner "Открытие портов UFW (80, 443, 1488, 8443)" \
         sudo bash -c "ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 1488/tcp && ufw allow 8443/tcp" || {
@@ -567,7 +540,6 @@ fi
 
 echo ""
 
-# SSL сертификаты
 if [[ -d "/etc/letsencrypt/live/${DOMAIN}" ]]; then
     log_success "SSL сертификаты уже существуют для $DOMAIN"
 else
@@ -575,11 +547,7 @@ else
     
     run_with_animated_spinner "Получение сертификата (может занять время)" \
         sudo bash -c "certbot --nginx -d $DOMAIN --email $EMAIL --agree-tos --non-interactive --redirect --no-eff-email 2>&1" || {
-        log_error "Не удалось получить SSL сертификат. Проверьте:"
-        log_error "  - Домен правильно указан"
-        log_error "  - Домен указывает на этот сервер ($SERVER_IP)"
-        log_error "  - Порты 80 и 443 открыты"
-        log_error "  - Email правильный"
+        log_error "Не удалось получить SSL сертификат. Проверьте настройки DNS."
         exit 1
     }
 fi
