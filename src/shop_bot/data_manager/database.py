@@ -230,6 +230,8 @@ def initialize_db():
                     is_active INTEGER DEFAULT 1,
                     sort_order INTEGER DEFAULT 0,
                     metadata TEXT,
+                    hwid_limit INTEGER DEFAULT 0,
+                    traffic_limit_gb INTEGER DEFAULT 0,
                     FOREIGN KEY (host_name) REFERENCES xui_hosts (host_name)
                 )
             ''')
