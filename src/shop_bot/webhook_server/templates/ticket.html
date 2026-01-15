@@ -3,9 +3,14 @@
 
 {% block content %}
 <style>
+    /* ========== DESKTOP VIEW ========== */
     @media (min-width: 769px) {
-        .desktop-view {
-            display: block;
+        .desktop-chat-view {
+            display: flex;
+            flex-direction: column;
+            margin: 0 auto;
+            height: calc(95vh - 200px);
+            min-height: 500px;
         }
 
         .mobile-chat-view {
@@ -13,7 +18,526 @@
         }
     }
 
+    /* Шапка тикета */
+    .ticket-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    .ticket-info {
+        flex: 1;
+    }
+
+    .ticket-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .ticket-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 14px;
+    }
+
+    .ticket-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .ticket-meta-item .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    .ticket-actions {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-back .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    /* Dropdown Actions */
+    .dropdown-wrapper {
+        position: relative;
+    }
+
+    .dropdown-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .dropdown-toggle:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        min-width: 200px;
+        background: #1a2f24;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.2s ease;
+        z-index: 100;
+        overflow: hidden;
+    }
+
+    .dropdown-wrapper.open .dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: #e2e8f0;
+        text-decoration: none;
+        background: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .dropdown-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .dropdown-item .material-symbols-outlined {
+        font-size: 20px;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .dropdown-item.success .material-symbols-outlined {
+        color: #13ec80;
+    }
+
+    .dropdown-item.danger {
+        color: #ef4444;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .dropdown-item.danger .material-symbols-outlined {
+        color: #ef4444;
+    }
+
+    /* Статус тикета */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .status-badge.open {
+        background: rgba(19, 236, 128, 0.15);
+        color: #13ec80;
+    }
+
+    .status-badge.closed {
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    .status-badge.open .status-dot {
+        animation: pulse-status 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-status {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.4;
+        }
+    }
+
+    /* Область чата */
+    .chat-container {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .chat-messages {
+        padding: 24px;
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    /* Custom scrollbar */
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 3px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: rgba(19, 236, 128, 0.3);
+        border-radius: 3px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: rgba(19, 236, 128, 0.5);
+    }
+
+    .message-row {
+        display: flex;
+    }
+
+    .message-row.admin {
+        justify-content: flex-end;
+    }
+
+    .message-row.user {
+        justify-content: flex-start;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        padding: 14px 18px;
+        border-radius: 16px;
+        position: relative;
+    }
+
+    .message-row.admin .message-bubble {
+        background: rgba(19, 236, 128, 0.12);
+        border: 1px solid rgba(19, 236, 128, 0.25);
+        border-bottom-right-radius: 4px;
+    }
+
+    .message-row.user .message-bubble {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom-left-radius: 4px;
+    }
+
+    .message-sender {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .message-row.admin .message-sender {
+        color: #13ec80;
+    }
+
+    .message-row.user .message-sender {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .message-text {
+        color: #fff;
+        font-size: 15px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .message-time {
+        font-size: 11px;
+        margin-top: 8px;
+        text-align: right;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+    }
+
+    .message-row.admin .message-time {
+        color: rgba(19, 236, 128, 0.5);
+    }
+
+    .message-row.user .message-time {
+        color: rgba(255, 255, 255, 0.35);
+    }
+
+    .time-info-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .time-info-icon {
+        font-size: 14px;
+        opacity: 0.6;
+        cursor: help;
+    }
+
+    .time-tooltip {
+        position: absolute;
+        bottom: calc(100% + 6px);
+        right: 0;
+        background: #1a2f24;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 11px;
+        color: #fff;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(4px);
+        transition: all 0.15s ease;
+        z-index: 10;
+        pointer-events: none;
+    }
+
+    .time-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        right: 10px;
+        border: 5px solid transparent;
+        border-top-color: #1a2f24;
+    }
+
+    .time-info-wrapper:hover .time-tooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .empty-chat {
+        text-align: center;
+        padding: 60px 20px;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .empty-chat .material-symbols-outlined {
+        font-size: 48px;
+        margin-bottom: 12px;
+        color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Форма ответа */
+    .reply-form {
+        padding: 16px 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+        flex-shrink: 0;
+    }
+
+    .reply-input-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+    }
+
+    .reply-textarea {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 12px 16px;
+        color: #fff;
+        font-size: 15px;
+        font-family: inherit;
+        resize: none;
+        min-height: 44px;
+        max-height: 150px;
+        line-height: 1.4;
+        transition: border-color 0.2s, height 0.1s;
+        overflow-y: auto;
+    }
+
+    .reply-textarea:focus {
+        outline: none;
+        border-color: rgba(19, 236, 128, 0.5);
+    }
+
+    .reply-textarea:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Custom scrollbar for textarea */
+    .reply-textarea::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .reply-textarea::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 3px;
+    }
+
+    .reply-textarea::-webkit-scrollbar-thumb {
+        background: rgba(19, 236, 128, 0.3);
+        border-radius: 3px;
+    }
+
+    .reply-textarea::-webkit-scrollbar-thumb:hover {
+        background: rgba(19, 236, 128, 0.5);
+    }
+
+    .reply-hints {
+        display: flex;
+        gap: 16px;
+        margin-top: 10px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.35);
+    }
+
+    .reply-hints kbd {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 10px;
+        margin: 0 2px;
+    }
+
+    .reply-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        background: #13ec80;
+        color: #102219;
+        font-size: 14px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+        height: 44px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #10d070;
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-secondary.danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+    }
+
+    .btn-secondary.danger:hover {
+        background: rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-secondary.success {
+        background: rgba(19, 236, 128, 0.15);
+        color: #13ec80;
+    }
+
+    .btn-secondary.success:hover {
+        background: rgba(19, 236, 128, 0.25);
+    }
+
+    /* ========== MOBILE VIEW ========== */
     @media (max-width: 768px) {
+        .desktop-chat-view {
+            display: none;
+        }
+
         .mobile-chat-view {
             display: flex;
             flex-direction: column;
@@ -24,83 +548,88 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: #000000;
-            background-image: radial-gradient(circle at 50% 0%, #1a2c24 0%, #000000 70%);
+            background: #0a0f0c;
+            background-image: radial-gradient(ellipse at 50% 0%, rgba(19, 236, 128, 0.08) 0%, transparent 60%);
             z-index: 9999;
         }
 
         .mobile-chat-header {
             display: flex;
             align-items: center;
-            padding: 8px 16px;
-            background: rgba(20, 20, 20, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            padding: 10px 12px;
+            background: rgba(10, 15, 12, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            z-index: 100;
-            min-height: 64px;
             flex-shrink: 0;
+            min-height: 60px;
         }
 
         .mobile-back-btn {
-            margin-right: 8px;
-            color: #94a3b8;
-            display: flex;
-            align-items: center;
+            color: #13ec80;
             text-decoration: none;
             padding: 8px;
-            margin-left: -8px;
+            margin: -8px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .mobile-back-btn .material-symbols-outlined {
+            font-size: 24px;
         }
 
         .mobile-user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            background: #334155;
+            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
-            font-weight: 600;
-            color: #e2e8f0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
             margin-right: 12px;
             flex-shrink: 0;
         }
 
+        .mobile-user-avatar.closed {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+        }
+
         .mobile-header-info {
             flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            overflow: hidden;
-            line-height: 1.2;
+            min-width: 0;
         }
 
         .mobile-header-name {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 700;
-            color: #f1f5f9;
+            color: #fff;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .mobile-header-subject {
+        .mobile-header-status {
             font-size: 12px;
-            color: rgba(255, 255, 255, 0.7);
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            line-height: 1.25;
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 6px;
             margin-top: 2px;
         }
 
-        .mobile-header-status {
-            font-size: 11px;
-            color: #94a3b8;
-            margin-top: 1px;
+        .mobile-header-status.open {
+            color: #13ec80;
+        }
+
+        .mobile-header-status .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
         }
 
         .mobile-header-actions {
@@ -109,57 +638,78 @@
         }
 
         .mobile-menu-btn {
-            color: #94a3b8;
+            color: rgba(255, 255, 255, 0.7);
             background: none;
             border: none;
             padding: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
         }
 
         .mobile-dropdown-menu {
             position: absolute;
-            top: 100%;
+            top: calc(100% + 8px);
             right: 0;
-            margin-top: 8px;
-            background: #1e293b;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            width: 200px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
+            min-width: 200px;
+            background: #1a2f24;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px) scale(0.95);
+            transition: all 0.2s ease;
             z-index: 1000;
+            overflow: hidden;
         }
 
         .mobile-dropdown-menu.show {
-            display: flex;
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
         }
 
         .mobile-menu-item {
-            padding: 12px 16px;
-            color: #e2e8f0;
-            text-decoration: none;
-            font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            padding: 14px 18px;
+            font-size: 15px;
+            color: #e2e8f0;
+            text-decoration: none;
             background: none;
             border: none;
             width: 100%;
             text-align: left;
+            cursor: pointer;
+            transition: background 0.15s;
         }
 
         .mobile-menu-item:active {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .mobile-menu-item .material-symbols-outlined {
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .mobile-menu-item.success .material-symbols-outlined {
+            color: #13ec80;
         }
 
         .mobile-menu-item.danger {
             color: #ef4444;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
+        .mobile-menu-item.danger .material-symbols-outlined {
+            color: #ef4444;
+        }
+
+        /* Сообщения мобильная версия */
         .mobile-chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -167,128 +717,194 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            padding-bottom: 20px;
+            overscroll-behavior: contain;
         }
 
-        .message-bubble {
+        /* Custom scrollbar for mobile chat */
+        .mobile-chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .mobile-chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .mobile-chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(19, 236, 128, 0.25);
+            border-radius: 2px;
+        }
+
+        .mobile-message {
             max-width: 85%;
-            padding: 12px 14px;
+            padding: 12px 16px;
             border-radius: 18px;
             position: relative;
-            font-size: 15px;
-            line-height: 1.5;
-            word-wrap: break-word;
-            backdrop-filter: blur(5px);
         }
 
-        .message-bubble.admin {
+        .mobile-message.admin {
             align-self: flex-end;
-            background: rgba(19, 236, 128, 0.1);
-            border: 1px solid rgba(19, 236, 128, 0.25);
-            color: #13ec80;
-            border-bottom-right-radius: 4px;
-            box-shadow: 0 4px 15px rgba(19, 236, 128, 0.05);
+            background: rgba(19, 236, 128, 0.12);
+            border: 1px solid rgba(19, 236, 128, 0.2);
+            border-bottom-right-radius: 6px;
         }
 
-        .message-bubble.user {
+        .mobile-message.user {
             align-self: flex-start;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #e2e8f0;
-            border-bottom-left-radius: 4px;
+            border-bottom-left-radius: 6px;
         }
 
-        .message-time {
+        .mobile-message-text {
+            font-size: 15px;
+            line-height: 1.45;
+            color: #fff;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .mobile-message.admin .mobile-message-text {
+            color: #c8fce4;
+        }
+
+        .mobile-message-time {
             font-size: 10px;
-            display: block;
-            text-align: right;
             margin-top: 6px;
-            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
         }
 
-        .message-bubble.admin .message-time {
-            color: rgba(19, 236, 128, 0.6);
+        .mobile-message.admin .mobile-message-time {
+            color: rgba(19, 236, 128, 0.5);
         }
 
-        .message-bubble.user .message-time {
-            color: rgba(255, 255, 255, 0.4);
+        .mobile-message.user .mobile-message-time {
+            color: rgba(255, 255, 255, 0.35);
         }
 
+        .mobile-time-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .mobile-time-icon {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        .mobile-empty-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.3);
+            padding: 40px 20px;
+        }
+
+        .mobile-empty-chat .material-symbols-outlined {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* Форма ввода мобильная */
         .mobile-chat-input-area {
-            background: #000000;
-            background-image: radial-gradient(circle at 50% 0%, #1a2c24 0%, #000000 70%);
+            background: rgba(10, 15, 12, 0.98);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
             padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
             display: flex;
             align-items: flex-end;
-            gap: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            gap: 12px;
             flex-shrink: 0;
-            padding-bottom: max(12px, env(safe-area-inset-bottom));
         }
 
         .mobile-input {
             flex: 1;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 10px 16px;
+            border-radius: 22px;
+            padding: 12px 18px;
             color: #fff;
             font-size: 16px;
-            max-height: 200px;
+            max-height: 120px;
             resize: none;
             line-height: 1.4;
-            overflow-y: auto;
+            transition: border-color 0.2s;
         }
 
         .mobile-input:focus {
             outline: none;
-            border-color: #13ec80;
+            border-color: rgba(19, 236, 128, 0.5);
+        }
+
+        .mobile-input:disabled {
+            opacity: 0.4;
+        }
+
+        /* Custom scrollbar for mobile input */
+        .mobile-input::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .mobile-input::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .mobile-input::-webkit-scrollbar-thumb {
+            background: rgba(19, 236, 128, 0.25);
+            border-radius: 2px;
         }
 
         .mobile-send-btn {
-            width: 44px;
-            height: 44px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
             background: #13ec80;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #000;
+            color: #0a0f0c;
             border: none;
             flex-shrink: 0;
-            transition: opacity 0.2s;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
         .mobile-send-btn:disabled {
-            opacity: 0.5;
-            background: #334155;
+            opacity: 0.3;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .mobile-send-btn .material-symbols-outlined {
+            font-size: 22px;
         }
     }
 </style>
 
+<!-- ========== MOBILE VIEW ========== -->
 <div class="mobile-chat-view">
     <div class="mobile-chat-header">
         <a href="{{ url_for('support_list_page') }}" class="mobile-back-btn">
-            <span class="material-symbols-outlined">arrow_back_ios_new</span>
+            <span class="material-symbols-outlined">arrow_back_ios</span>
         </a>
 
-        <div class="mobile-user-avatar">
-            {{ ticket.user_id|string|first|upper }}
+        <div class="mobile-user-avatar {% if ticket.status != 'open' %}closed{% endif %}">
+            {{ ticket.username[0]|upper if ticket.username else (ticket.user_id|string)[0] }}
         </div>
 
         <div class="mobile-header-info">
             <div class="mobile-header-name">
                 {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
             </div>
-            <div class="mobile-header-subject">
-                {{ ticket.subject or 'Без темы' }}
-            </div>
-            <div class="mobile-header-status">
-                {% if ticket.status == 'open' %}
-                <span style="color: #13ec80;">Открыт</span>
-                {% else %}
-                Закрыт
-                {% endif %}
+            <div class="mobile-header-status {% if ticket.status == 'open' %}open{% endif %}">
+                <span class="dot"></span>
+                {% if ticket.status == 'open' %}Открыт{% else %}Закрыт{% endif %}
+                • #{{ ticket.ticket_id }}
             </div>
         </div>
 
@@ -298,29 +914,29 @@
             </button>
 
             <div class="mobile-dropdown-menu" id="mobileMenu">
-                <form method="post"
-                    onsubmit="return confirm(`{% if ticket.status == 'open' %}Закрыть этот тикет?{% else %}Открыть этот тикет?{% endif %}`)">
+                <form method="post">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     {% if ticket.status == 'open' %}
-                    <button type="submit" name="action" value="close" class="mobile-menu-item">
+                    <button type="submit" name="action" value="close" class="mobile-menu-item"
+                        onclick="return confirm('Закрыть этот тикет?')">
                         <span class="material-symbols-outlined">check_circle</span>
                         Закрыть тикет
                     </button>
                     {% else %}
-                    <button type="submit" name="action" value="open" class="mobile-menu-item">
-                        <span class="material-symbols-outlined">restart_alt</span>
+                    <button type="submit" name="action" value="open" class="mobile-menu-item success"
+                        onclick="return confirm('Открыть этот тикет?')">
+                        <span class="material-symbols-outlined">refresh</span>
                         Открыть тикет
                     </button>
                     {% endif %}
                 </form>
 
                 <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
-                    onsubmit="return confirm('Удалить этот тикет навсегда?')"
-                    style="border-top: 1px solid rgba(255,255,255,0.05);">
+                    onsubmit="return confirm('Удалить тикет #{{ ticket.ticket_id }} навсегда? Это действие необратимо.')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <button type="submit" class="mobile-menu-item danger">
-                        <span class="material-symbols-outlined">delete</span>
-                        Удалить тикет
+                        <span class="material-symbols-outlined">delete_forever</span>
+                        Удалить навсегда
                     </button>
                 </form>
             </div>
@@ -329,22 +945,33 @@
 
     <div class="mobile-chat-messages" id="mobile-chat-box">
         {% for m in messages %}
-        <div class="message-bubble {% if m.sender == 'admin' %}admin{% else %}user{% endif %}">
-            {{ m.content }}
-            <span class="message-time">{{ m.created_at.split(' ')[1][:5] }}</span>
+        <div class="mobile-message {% if m.sender == 'admin' %}admin{% else %}user{% endif %}">
+            <div class="mobile-message-text">{{ m.content }}</div>
+            <div class="mobile-message-time">
+                <span class="mobile-time-wrapper" data-timestamp="{{ m.created_at }}" data-relative=""
+                    onclick="toggleMobileTime(this)">
+                    <span class="mobile-time-text">{{ m.created_at.split(' ')[1][:5] }}</span>
+                    <span class="material-symbols-outlined mobile-time-icon">schedule</span>
+                </span>
+            </div>
         </div>
         {% else %}
-        <div style="text-align: center; color: #555; margin-top: 40px;">
-            История сообщений пуста
+        <div class="mobile-empty-chat">
+            <span class="material-symbols-outlined">chat_bubble_outline</span>
+            <div>Сообщений пока нет</div>
         </div>
         {% endfor %}
     </div>
 
     <form method="post" class="mobile-chat-input-area">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <textarea name="message" class="mobile-input" rows="1" placeholder="Сообщение..." {% if ticket.status=='closed'
-            %}disabled{% endif %}></textarea>
-
+        <textarea name="message" class="mobile-input" rows="1" placeholder="Введите сообщение..." {% if
+            ticket.status=='closed' %}disabled{% endif %}></textarea>
+        <button type="button" class="mobile-send-btn ai-generate-btn" onclick="generateGeminiResponse()"
+            title="Сгенерировать ответ" style="background: rgba(255, 255, 255, 0.1); color: #fff; margin-right: 8px;" {%
+            if ticket.status=='closed' %}disabled{% endif %}>
+            <span class="material-symbols-outlined">auto_awesome</span>
+        </button>
         <button type="submit" name="action" value="reply" class="mobile-send-btn" {% if ticket.status=='closed'
             %}disabled{% endif %}>
             <span class="material-symbols-outlined">send</span>
@@ -359,6 +986,58 @@
         menu.classList.toggle('show');
     }
 
+    // Mobile relative time format
+    function formatMobileRelativeTime(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
+        if (!parts) return dateStr;
+
+        // Server returns UTC, so we parse it as UTC
+        const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5]));
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMin = Math.floor(diffMs / 60000);
+        const diffHour = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHour / 24);
+
+        if (diffDay >= 1) {
+            return diffDay + ' д.';
+        } else if (diffHour >= 1) {
+            return diffHour + ' ч.';
+        } else if (diffMin >= 1) {
+            return diffMin + ' мин.';
+        } else {
+            return 'сейчас';
+        }
+    }
+
+    // Toggle mobile time between relative and full
+    function toggleMobileTime(el) {
+        const textEl = el.querySelector('.mobile-time-text');
+        const timestamp = el.getAttribute('data-timestamp');
+        const isRelative = el.getAttribute('data-relative') === 'true';
+
+        if (isRelative) {
+            // Show full timestamp
+            textEl.textContent = timestamp;
+            el.setAttribute('data-relative', 'false');
+        } else {
+            // Show relative
+            textEl.textContent = formatMobileRelativeTime(timestamp);
+            el.setAttribute('data-relative', 'true');
+        }
+    }
+
+    // Initialize mobile relative times
+    document.querySelectorAll('.mobile-time-wrapper').forEach(el => {
+        const timestamp = el.getAttribute('data-timestamp');
+        const textEl = el.querySelector('.mobile-time-text');
+        if (timestamp && textEl) {
+            textEl.textContent = formatMobileRelativeTime(timestamp);
+            el.setAttribute('data-relative', 'true');
+        }
+    });
+
     document.addEventListener('click', function (event) {
         const menu = document.getElementById('mobileMenu');
         const btn = document.querySelector('.mobile-menu-btn');
@@ -368,113 +1047,346 @@
     });
 
     document.addEventListener("DOMContentLoaded", function () {
+        // Scroll to bottom
         if (window.innerWidth <= 768) {
             const chatBox = document.getElementById('mobile-chat-box');
             if (chatBox) {
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 
+            // Auto-resize textarea
             const textarea = document.querySelector('.mobile-input');
             if (textarea) {
                 textarea.addEventListener('input', function () {
                     this.style.height = 'auto';
-                    this.style.height = (this.scrollHeight) + 'px';
+                    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
                 });
             }
+        } else {
+            const chatBox = document.getElementById('desktop-chat-box');
+            if (chatBox) {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+    });
+
+    // Desktop dropdown - init after DOM ready
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.dropdown-wrapper').forEach(wrapper => {
+            const toggle = wrapper.querySelector('.dropdown-toggle');
+            if (toggle) {
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Close others first
+                    document.querySelectorAll('.dropdown-wrapper.open').forEach(w => {
+                        if (w !== wrapper) w.classList.remove('open');
+                    });
+                    wrapper.classList.toggle('open');
+                });
+            }
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.dropdown-wrapper')) {
+            document.querySelectorAll('.dropdown-wrapper.open').forEach(w => w.classList.remove('open'));
         }
     });
 </script>
 
-<div id="ticket-root" class="desktop-view" data-ticket-id="{{ ticket.ticket_id }}">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-            <h2 class="text-2xl font-bold text-white">Тикет #{{ ticket.ticket_id }}</h2>
-            <p class="text-white/50 text-sm">Пользователь: {{ ticket.user_id }} • Тема: {{ ticket.subject or 'Без темы'
-                }}</p>
+<script>
+    async function generateGeminiResponse() {
+        const ticketRoot = document.getElementById('ticket-root');
+        // For mobile optimization, ticket-root might not be visible/present simply, 
+        // but the ID is on the desktop view logic.
+        // Let's get ticket ID more robustly.
+        // We can use url pattern or a data attribute on a common element.
+        // The desktop view has id="ticket-root" data-ticket-id="...".
+        // Let's ensure we get it.
+        let ticketId = null;
+        if (ticketRoot) {
+            ticketId = ticketRoot.getAttribute('data-ticket-id');
+        }
+        // Fallback if desktop view is hidden (mobile)
+        if (!ticketId) {
+            // Extract from URL /support/<id> if possible, or render it into a JS variable
+            // Let's look at the template rendering.
+            // We can just add a global var or hidden input.
+            // Or try to parse URL path.
+            const match = window.location.pathname.match(/\/support\/(\d+)/);
+            if (match) ticketId = match[1];
+        }
+
+        if (!ticketId) {
+            alert("Не удалось определить ID тикета");
+            return;
+        }
+
+        const btn = event.currentTarget;
+        const icon = btn.querySelector('.material-symbols-outlined');
+        const originalIcon = icon.textContent;
+
+        // Set loading state
+        icon.textContent = 'hourglass_empty';
+        icon.classList.add('spin'); // Assuming we might want an animation, but let's just change icon
+        btn.disabled = true;
+
+        try {
+            // Capture current text from the active input
+            let currentText = '';
+            const mobileInput = document.querySelector('.mobile-input');
+            const desktopInput = document.querySelector('.reply-textarea');
+
+            if (mobileInput && window.getComputedStyle(mobileInput).display !== 'none' && mobileInput.offsetParent !== null) {
+                currentText = mobileInput.value;
+            } else if (desktopInput) {
+                currentText = desktopInput.value;
+            } else if (mobileInput) {
+                currentText = mobileInput.value;
+            }
+
+            const response = await fetch('/admin/gemini/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                },
+                body: JSON.stringify({
+                    ticket_id: ticketId,
+                    current_text: currentText
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.ok) {
+                // Find textarea (mobile or desktop)
+                // If on mobile view, likely .mobile-input
+                // If on desktop view, likely .reply-textarea
+                // We can try to set both or detect visibility.
+                const mobileInput = document.querySelector('.mobile-input');
+                const desktopInput = document.querySelector('.reply-textarea');
+
+                if (mobileInput && window.getComputedStyle(mobileInput).display !== 'none' && mobileInput.offsetParent !== null) {
+                    mobileInput.value = data.response;
+                    // Trigger input event to resize
+                    mobileInput.dispatchEvent(new Event('input'));
+                } else if (desktopInput) {
+                    desktopInput.value = data.response;
+                    // Trigger input event to resize
+                    desktopInput.dispatchEvent(new Event('input'));
+                    desktopInput.focus();
+                } else if (mobileInput) {
+                    // Fallback
+                    mobileInput.value = data.response;
+                }
+            } else {
+                alert('Ошибка генерации: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        } catch (e) {
+            alert('Ошибка сети: ' + e.message);
+        } finally {
+            // Restore button state
+            icon.textContent = originalIcon;
+            btn.disabled = false;
+        }
+    }
+</script>
+
+<!-- ========== DESKTOP VIEW ========== -->
+<div class="desktop-chat-view" id="ticket-root" data-ticket-id="{{ ticket.ticket_id }}">
+    <div class="ticket-header">
+        <div class="ticket-info">
+            <div class="ticket-title">
+                Тикет #{{ ticket.ticket_id }}
+                {% if ticket.status == 'open' %}
+                <span class="status-badge open">
+                    <span class="status-dot"></span>
+                    Открыт
+                </span>
+                {% else %}
+                <span class="status-badge closed">Закрыт</span>
+                {% endif %}
+            </div>
+            <div class="ticket-meta">
+                <div class="ticket-meta-item">
+                    <span class="material-symbols-outlined">person</span>
+                    {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
+                </div>
+                <div class="ticket-meta-item">
+                    <span class="material-symbols-outlined">label</span>
+                    {{ ticket.subject or 'Без темы' }}
+                </div>
+                <div class="ticket-meta-item">
+                    <span class="material-symbols-outlined">schedule</span>
+                    {{ ticket.updated_at or ticket.created_at }}
+                </div>
+            </div>
         </div>
-        <a href="{{ url_for('support_list_page') }}"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">
-            <span class="material-symbols-outlined text-base">arrow_back</span>
-            К списку
-        </a>
+
+        <div class="ticket-actions">
+            <a href="{{ url_for('support_list_page') }}" class="btn-back">
+                <span class="material-symbols-outlined">arrow_back</span>
+                К списку
+            </a>
+
+            <div class="dropdown-wrapper">
+                <button type="button" class="dropdown-toggle">
+                    <span class="material-symbols-outlined">more_vert</span>
+                </button>
+                <div class="dropdown-menu">
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        {% if ticket.status == 'open' %}
+                        <button type="submit" name="action" value="close" class="dropdown-item"
+                            onclick="return confirm('Закрыть этот тикет?')">
+                            <span class="material-symbols-outlined">check_circle</span>
+                            Закрыть тикет
+                        </button>
+                        {% else %}
+                        <button type="submit" name="action" value="open" class="dropdown-item success"
+                            onclick="return confirm('Открыть этот тикет?')">
+                            <span class="material-symbols-outlined">refresh</span>
+                            Открыть тикет
+                        </button>
+                        {% endif %}
+                    </form>
+                    <form method="post"
+                        action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" class="dropdown-item danger"
+                            onclick="return confirm('Удалить тикет #{{ ticket.ticket_id }} навсегда? Это действие необратимо.')">
+                            <span class="material-symbols-outlined">delete_forever</span>
+                            Удалить навсегда
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
-        <div class="flex items-center gap-3 mb-4">
-            <span class="text-white font-medium">Статус:</span>
-            {% if ticket.status == 'open' %}
-            <span
-                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
-                <span class="relative flex h-2 w-2">
-                    <span
-                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                </span>
-                Открыт
-            </span>
-            {% else %}
-            <span
-                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/50 text-sm font-medium">
-                Закрыт
-            </span>
-            {% endif %}
-        </div>
-
-        <div id="chat-box" class="space-y-4 max-h-[500px] overflow-y-auto mb-6">
+    <div class="chat-container">
+        <div class="chat-messages" id="desktop-chat-box">
             {% for m in messages %}
-            <div class="flex {% if m.sender == 'admin' %}justify-end{% else %}justify-start{% endif %}">
-                <div
-                    class="max-w-[80%] {% if m.sender == 'admin' %}bg-primary/20 border-primary/30{% else %}bg-white/5 border-white/10{% endif %} border rounded-lg p-4">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span
-                            class="text-sm font-medium {% if m.sender == 'admin' %}text-primary{% else %}text-white{% endif %}">
-                            {{ 'Админ' if m.sender == 'admin' else 'Пользователь' }}
-                        </span>
-                        <span class="text-xs text-white/50">{{ m.created_at }}</span>
+            <div class="message-row {% if m.sender == 'admin' %}admin{% else %}user{% endif %}">
+                <div class="message-bubble">
+                    <div class="message-sender">
+                        {{ 'Вы' if m.sender == 'admin' else 'Пользователь' }}
                     </div>
-                    <div class="text-white whitespace-pre-wrap">{{ m.content }}</div>
+                    <div class="message-text">{{ m.content }}</div>
+                    <div class="message-time">
+                        <span class="time-info-wrapper">
+                            <span class="msg-relative-time" data-timestamp="{{ m.created_at }}">{{ m.created_at
+                                }}</span>
+                            <span class="material-symbols-outlined time-info-icon">info</span>
+                            <span class="time-tooltip">{{ m.created_at }}</span>
+                        </span>
+                    </div>
                 </div>
             </div>
             {% else %}
-            <div class="text-center py-8 text-white/50">
-                Сообщений пока нет.
+            <div class="empty-chat">
+                <span class="material-symbols-outlined">chat_bubble_outline</span>
+                <p>Сообщений пока нет</p>
             </div>
             {% endfor %}
         </div>
 
-        <form method="post" id="reply-form" class="space-y-4">
+        <form method="post" class="reply-form" id="replyForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <textarea id="reply-text" name="message" rows="3" placeholder="Введите ответ..."
-                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                {% if ticket.status=='closed' %}disabled{% endif %}></textarea>
-            <div class="flex flex-wrap gap-3">
-                <button type="submit" name="action" value="reply"
-                    class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 disabled:opacity-50"
-                    {% if ticket.status=='closed' %}disabled{% endif %}>
-                    Ответить
+            <div class="reply-input-row">
+                <textarea name="message" class="reply-textarea" id="replyTextarea" placeholder="Введите ответ..."
+                    rows="1" {% if ticket.status=='closed' %}disabled{% endif %}></textarea>
+                <button type="button" class="btn-secondary" onclick="generateGeminiResponse()"
+                    title="Сгенерировать ответ" {% if ticket.status=='closed' %}disabled{% endif %}>
+                    <span class="material-symbols-outlined">auto_awesome</span>
                 </button>
-                {% if ticket.status == 'open' %}
-                <button type="submit" name="action" value="close"
-                    class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30">
-                    Закрыть тикет
+                <button type="submit" name="action" value="reply" class="btn-primary" id="replyBtn" {% if
+                    ticket.status=='closed' %}disabled{% endif %}>
+                    <span class="material-symbols-outlined">send</span>
                 </button>
-                {% else %}
-                <button type="submit" name="action" value="open"
-                    class="px-4 py-2 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary/30">
-                    Открыть тикет
-                </button>
-                {% endif %}
             </div>
-        </form>
-
-        <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
-            data-confirm="Удалить тикет #{{ ticket.ticket_id }}? Это действие необратимо." class="mt-4">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit"
-                class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30">
-                Удалить тикет
-            </button>
+            <div class="reply-hints">
+                <span><kbd>Enter</kbd> или <kbd>Shift</kbd>+<kbd>Enter</kbd> — новая строка</span>
+                <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — отправить</span>
+            </div>
         </form>
     </div>
 </div>
+
+<script>
+    (function () {
+        const textarea = document.getElementById('replyTextarea');
+        const form = document.getElementById('replyForm');
+
+        if (textarea && form) {
+            // Auto-grow textarea
+            function autoGrow() {
+                textarea.style.height = 'auto';
+                const newHeight = Math.min(textarea.scrollHeight, 150);
+                textarea.style.height = newHeight + 'px';
+            }
+
+            textarea.addEventListener('input', autoGrow);
+
+            // Ctrl+Enter to submit
+            textarea.addEventListener('keydown', function (e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    if (textarea.value.trim()) {
+                        form.submit();
+                    }
+                }
+            });
+        }
+    })();
+
+    // Relative time for messages
+    function formatMessageRelativeTime(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
+        if (!parts) return dateStr;
+
+        // Server returns UTC, so we parse it as UTC
+        const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5]));
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHour / 24);
+        const diffMonth = Math.floor(diffDay / 30);
+        const diffYear = Math.floor(diffDay / 365);
+
+        function pluralize(n, one, few, many) {
+            n = Math.abs(n) % 100;
+            if (n >= 11 && n <= 19) return many;
+            n = n % 10;
+            if (n === 1) return one;
+            if (n >= 2 && n <= 4) return few;
+            return many;
+        }
+
+        if (diffYear >= 1) {
+            return diffYear + ' ' + pluralize(diffYear, 'год', 'года', 'лет') + ' назад';
+        } else if (diffMonth >= 1) {
+            return diffMonth + ' ' + pluralize(diffMonth, 'месяц', 'месяца', 'месяцев') + ' назад';
+        } else if (diffDay >= 1) {
+            return diffDay + ' ' + pluralize(diffDay, 'день', 'дня', 'дней') + ' назад';
+        } else if (diffHour >= 1) {
+            return diffHour + ' ' + pluralize(diffHour, 'час', 'часа', 'часов') + ' назад';
+        } else if (diffMin >= 1) {
+            return diffMin + ' ' + pluralize(diffMin, 'минуту', 'минуты', 'минут') + ' назад';
+        } else {
+            return 'только что';
+        }
+    }
+
+    document.querySelectorAll('.msg-relative-time').forEach(el => {
+        const timestamp = el.getAttribute('data-timestamp');
+        if (timestamp) {
+            el.textContent = formatMessageRelativeTime(timestamp);
+        }
+    });
+</script>
 {% endblock %}

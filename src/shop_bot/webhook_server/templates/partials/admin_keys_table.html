@@ -20,6 +20,13 @@
     </td>
     <td class="px-4 py-3 whitespace-nowrap">
         <div class="flex items-center gap-1.5">
+            {% if k.user_id %}
+            <a href="{{ url_for('users_page', q=k.user_id) }}"
+                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white/50 hover:bg-white/20 hover:text-white transition-colors"
+                title="Профиль">
+                <span class="material-symbols-outlined text-base">person</span>
+            </a>
+            {% endif %}
             <button type="button"
                 class="btn-edit-comment inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white/70 hover:bg-white/20"
                 data-key-id="{{ k.key_id }}" data-current-comment="{{ (k.comment or k.description or '')|e }}"

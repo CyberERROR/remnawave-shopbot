@@ -21,6 +21,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
+# --- GLOBAL TIME CONFIGURATION ---
+# Force MSK (UTC+3)
+os.environ['TZ'] = 'Etc/GMT-3'
+if hasattr(time, 'tzset'):
+    time.tzset()
+
+def get_msk_time():
+    """Returns current time in MSK (UTC+3)"""
+    return datetime.now(timezone.utc) + timedelta(hours=3)
+# ---------------------------------
+
 from shop_bot.modules import remnawave_api
 from shop_bot.bot import handlers
 from shop_bot.bot import keyboards
@@ -55,7 +66,9 @@ from shop_bot.data_manager.database import (
 )
 from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id
 import sqlite3
-from .other import register_other_routes
+from .modules.other import register_other_routes
+from .modules.update import register_update_routes
+from .modules.gemini import register_gemini_routes
 
 _bot_controller = None
 _support_bot_controller = SupportBotController()
@@ -337,12 +350,10 @@ def create_webhook_app(bot_controller_instance):
             open_tickets_count = 0
             closed_tickets_count = 0
             all_tickets_count = 0
-        
-        # Read project info from os.json
+
         project_info = None
-        try:
-            # Get path to os.json (static directory)
-            static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+        try: 
+            static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'modules')
             os_json_path = os.path.join(static_dir, 'os.json')
             with open(os_json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -409,9 +420,23 @@ def create_webhook_app(bot_controller_instance):
         transactions, total_transactions = get_paginated_transactions(page=page, per_page=per_page)
         total_pages = ceil(total_transactions / per_page)
         
+        
         chart_data = get_daily_stats_for_charts(days=30)
         common_data = get_common_template_data()
         
+        trials_page = request.args.get('trials_page', 1, type=int)
+        trials_per_page = 10
+        recent_trials = []
+        trials_total = 0
+        trials_total_pages = 1
+        
+        try:
+            recent_trials, trials_total = rw_repo.get_paginated_trials(page=trials_page, per_page=trials_per_page)
+            trials_total_pages = ceil(trials_total / trials_per_page)
+        except Exception:
+            recent_trials = []
+            trials_total = 0
+
         return render_template(
             'dashboard.html',
             hosts=hosts,
@@ -419,6 +444,11 @@ def create_webhook_app(bot_controller_instance):
             stats=stats,
             chart_data=chart_data,
             transactions=transactions,
+            
+            recent_trials=recent_trials,
+            trials_current_page=trials_page,
+            trials_total_pages=trials_total_pages,
+            
             current_page=page,
             total_pages=total_pages,
             **common_data
@@ -452,7 +482,35 @@ def create_webhook_app(bot_controller_instance):
         page = request.args.get('page', 1, type=int)
         per_page = 8
         transactions, total_transactions = get_paginated_transactions(page=page, per_page=per_page)
+        
+        if request.args.get('ajax_pagination'):
+            total_pages = ceil(total_transactions / per_page)
+            return jsonify({
+                "html": render_template('partials/dashboard_transactions.html', transactions=transactions),
+                "current_page": page,
+                "total_pages": total_pages
+            })
+            
         return render_template('partials/dashboard_transactions.html', transactions=transactions)
+
+    @flask_app.route('/dashboard/trials.partial')
+    @login_required
+    def dashboard_trials_partial():
+        page = request.args.get('page', 1, type=int)
+        per_page = 10
+        recent_trials, total_trials = rw_repo.get_paginated_trials(page=page, per_page=per_page)
+        
+        if request.args.get('ajax_pagination'):
+            trials_total_pages = ceil(total_trials / per_page)
+            return jsonify({
+                "html": render_template('partials/dashboard_trials.html', recent_trials=recent_trials),
+                "current_page": page,
+                "total_pages": trials_total_pages
+            })
+            
+        return render_template('partials/dashboard_trials.html', recent_trials=recent_trials)
+        return render_template('partials/dashboard_trials.html', recent_trials=recent_trials)
+
 
     @flask_app.route('/dashboard/charts.json')
     @login_required
@@ -520,23 +578,34 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/monitor/clear-metrics', methods=['POST'])
     @login_required
     def monitor_clear_metrics():
-        """Удаление всех старых замеров из resource_metrics"""
+        """Удаление всех старых замеров из resource_metrics и host_speedtests"""
         try:
             from shop_bot.data_manager.database import DB_FILE
             import sqlite3
             
             conn = sqlite3.connect(DB_FILE)
             cursor = conn.cursor()
+            
+            # Delete resource_metrics
             cursor.execute("DELETE FROM resource_metrics")
-            deleted_count = cursor.rowcount
+            deleted_metrics = cursor.rowcount
+            
+            # Delete host_speedtests
+            cursor.execute("DELETE FROM host_speedtests")
+            deleted_speedtests = cursor.rowcount
+            
             conn.commit()
+            
+            # Run VACUUM to reclaim space
+            cursor.execute("VACUUM")
+            
             conn.close()
             
-            logger.info(f"Cleared {deleted_count} records from resource_metrics")
+            logger.info(f"Cleared metrics: {deleted_metrics} resources, {deleted_speedtests} speedtests. VACUUM executed.")
             return jsonify({
                 "ok": True, 
-                "message": f"Удалено записей: {deleted_count}",
-                "deleted_count": deleted_count
+                "message": f"Очищено: {deleted_metrics} метрик, {deleted_speedtests} тестов. БД сжата.",
+                "deleted_count": deleted_metrics + deleted_speedtests
             })
         except Exception as e:
             logger.error(f"Error clearing metrics: {e}")
@@ -739,70 +808,67 @@ def create_webhook_app(bot_controller_instance):
             
             
             payment_history = []
+            balance_history = []
+            
             try:
                 with sqlite3.connect(DB_FILE) as conn:
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
-                    
-                    cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = ?", (user_id,))
-                    total_count = cursor.fetchone()[0]
-                    logger.info(f"Total transactions for user {user_id}: {total_count}")
                     
                     cursor.execute("""
                         SELECT created_date, amount_rub, metadata, status, payment_method
                         FROM transactions
                         WHERE user_id = ? 
                         AND LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
-                        AND (payment_method IS NULL OR LOWER(payment_method) != 'balance')
                         ORDER BY created_date DESC
-                        LIMIT 50
+                        LIMIT 100
                     """, (user_id,))
                     rows = cursor.fetchall()
-                    logger.info(f"Payment history rows for user {user_id}: {len(rows)}")
                     
                     for row in rows:
-                        plan_name = 'N/A'
+                        pm = (row['payment_method'] or '').lower()
+                        meta = {}
                         try:
-                            metadata = json.loads(row['metadata'] or '{}')
-                            plan_name = metadata.get('plan_name', 'N/A')
-                        except Exception:
+                            meta = json.loads(row['metadata'] or '{}')
+                        except:
                             pass
-                        payment_history.append({
-                            'date': row['created_date'],
-                            'plan': plan_name,
-                            'amount': float(row['amount_rub'] or 0)
-                        })
+                            
+                        action = meta.get('action')
+                        host_name = meta.get('host_name') or 'N/A'
+                        plan_name = meta.get('plan_name') or 'N/A'
+                        
+                        # Logic for Balance History: Top-ups OR Balance Payments
+                        if action == 'topup':
+                            balance_history.append({
+                                'date': row['created_date'],
+                                'type': 'Пополнение',
+                                'amount': float(row['amount_rub'] or 0),
+                                'status': row['status'],
+                                'plan': '—',
+                                'host': '—'
+                            })
+                        elif pm == 'balance':
+                            balance_history.append({
+                                'date': row['created_date'],
+                                'type': 'Оплата подписки',
+                                'amount': float(row['amount_rub'] or 0) * -1, # Show as negative for spending? Or just amount. User asked for "amount user topped up... and all transactions from balance". Usually spending is negative or just listed as type. Let's keep positive but type clarifies.
+                                'status': row['status'],
+                                'plan': plan_name,
+                                'host': host_name
+                            })
+                            
+                        # Logic for Payment History: External Purchases (Not topup, Not balance)
+                        if pm != 'balance' and action != 'topup':
+                            payment_history.append({
+                                'date': row['created_date'],
+                                'plan': plan_name,
+                                'host': host_name,
+                                'type': row['payment_method'] or 'N/A',
+                                'amount': float(row['amount_rub'] or 0)
+                            })
+
             except Exception as e:
-                logger.error(f"Failed to get payment history for user {user_id}: {e}")
-            
-            
-            balance_history = []
-            try:
-                with sqlite3.connect(DB_FILE) as conn:
-                    conn.row_factory = sqlite3.Row
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT created_date, amount_rub, payment_method, status
-                        FROM transactions
-                        WHERE user_id = ?
-                        ORDER BY created_date DESC
-                        LIMIT 50
-                    """, (user_id,))
-                    rows = cursor.fetchall()
-                    logger.info(f"Balance history rows for user {user_id}: {len(rows)}")
-                    
-                    for row in rows:
-                        transaction_type = row['payment_method'] or 'N/A'
-                        if row['payment_method'] == 'balance':
-                            transaction_type = 'Баланс'
-                        balance_history.append({
-                            'date': row['created_date'],
-                            'type': transaction_type,
-                            'amount': float(row['amount_rub'] or 0),
-                            'status': row['status']
-                        })
-            except Exception as e:
-                logger.error(f"Failed to get balance history for user {user_id}: {e}")
+                logger.error(f"Failed to get history for user {user_id}: {e}")
             
             subscriptions = []
             subs_stats = {
@@ -842,12 +908,15 @@ def create_webhook_app(bot_controller_instance):
                     status_text = f"Осталось дней: {days_left}" if not is_expired else "ИСТЕК"
                     
                     subscriptions.append({
+                        "key_id": key.get('key_id'),
                         "key": key.get('subscription_url') or key.get('access_url') or 'N/A',
+                        "host_name": key.get('host_name') or 'N/A',
                         "status_text": status_text,
                         "expire_date": expire_date_fmt,
                         "is_expired": is_expired,
                         "email": key.get('email') or key.get('key_email') or 'N/A',
-                        "remnawave_user_uuid": key.get('remnawave_user_uuid') or 'N/A'
+                        "remnawave_user_uuid": key.get('remnawave_user_uuid') or 'N/A',
+                        "comment": key.get('comment') or key.get('description') or ''
                     })
                     
             except Exception as e:
@@ -1511,70 +1580,7 @@ def create_webhook_app(bot_controller_instance):
         return redirect(request.referrer or url_for('settings_page'))
 
 
-    @flask_app.route('/admin/hosts/hwid-limit/update', methods=['POST'])
-    @login_required
-    def update_host_hwid_limit_route():
-        host_name = (request.form.get('host_name') or '').strip()
-        # Используем getlist для корректной обработки чекбокса с hidden input
-        hwid_enabled = 1 if '1' in request.form.getlist('hwid_enabled') else 0
-        hwid_limit_raw = (request.form.get('hwid_limit') or '0').strip()
-        
-        try:
-            hwid_limit = int(hwid_limit_raw)
-            if hwid_limit < 0:
-                hwid_limit = 0
-        except Exception:
-            hwid_limit = 0
-        
-        # Обновляем настройки в БД
-        try:
-            with sqlite3.connect(DB_FILE) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE xui_hosts SET remnawave_hwid_enabled = ?, remnawave_limit_hwid = ? WHERE host_name = ?",
-                    (hwid_enabled, hwid_limit, host_name)
-                )
-                conn.commit()
-                ok = cursor.rowcount > 0
-        except Exception as e:
-            logger.error(f"Failed to update HWID limit for host {host_name}: {e}")
-            ok = False
-        
-        flash('Настройки HWID лимита обновлены.' if ok else 'Не удалось обновить настройки HWID лимита.', 
-              'success' if ok else 'danger')
-        return redirect(request.referrer or url_for('settings_page'))
 
-
-    @flask_app.route('/admin/hosts/traffic-limit/update', methods=['POST'])
-    @login_required
-    def update_host_traffic_limit_route():
-        host_name = (request.form.get('host_name') or '').strip()
-        traffic_limit_raw = (request.form.get('traffic_limit') or '0').strip()
-        
-        try:
-            traffic_limit = int(traffic_limit_raw)
-            if traffic_limit < 0:
-                traffic_limit = 0
-        except Exception:
-            traffic_limit = 0
-        
-        # Обновляем настройки в БД
-        try:
-            with sqlite3.connect(DB_FILE) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE xui_hosts SET remnawave_limit_traffic = ? WHERE host_name = ?",
-                    (traffic_limit, host_name)
-                )
-                conn.commit()
-                ok = cursor.rowcount > 0
-        except Exception as e:
-            logger.error(f"Failed to update traffic limit for host {host_name}: {e}")
-            ok = False
-        
-        flash('Лимит трафика обновлен.' if ok else 'Не удалось обновить лимит трафика.', 
-              'success' if ok else 'danger')
-        return redirect(request.referrer or url_for('settings_page'))
 
     @flask_app.route('/admin/ssh-targets/<target_name>/speedtest/run', methods=['POST'])
     @login_required
@@ -2469,14 +2475,38 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/add-plan', methods=['POST'])
     @login_required
     def add_plan_route():
+        hwid_limit = int(request.form.get('hwid_limit') or 0)
+        traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
+        
         create_plan(
             host_name=request.form['host_name'],
             plan_name=request.form['plan_name'],
             months=int(request.form['months']),
-            price=float(request.form['price'])
+            price=float(request.form['price']),
+            hwid_limit=hwid_limit,
+            traffic_limit_gb=traffic_limit_gb
         )
         flash(f"Новый тариф для хоста '{request.form['host_name']}' добавлен.", 'success')
         return redirect(url_for('settings_page', tab='hosts'))
+
+    @flask_app.route('/api/add-plan', methods=['POST'])
+    @login_required
+    def add_plan_api():
+        try:
+            host_name = request.json.get('host_name')
+            plan_name = request.json.get('plan_name')
+            months = int(request.json.get('months'))
+            price = float(request.json.get('price'))
+            hwid_limit = int(request.json.get('hwid_limit') or 0)
+            traffic_limit_gb = int(request.json.get('traffic_limit_gb') or 0)
+            
+            create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb)
+            
+            plan = get_plans_for_host(host_name)[-1]
+            return jsonify({'ok': True, 'plan': plan})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
+
 
     @flask_app.route('/delete-plan/<int:plan_id>', methods=['POST'])
     @login_required
@@ -2491,6 +2521,10 @@ def create_webhook_app(bot_controller_instance):
         plan_name = (request.form.get('plan_name') or '').strip()
         months = request.form.get('months')
         price = request.form.get('price')
+        hwid_limit = int(request.form.get('hwid_limit') or 0)
+        traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
+        logger.info(f"DEBUG: update_plan_route id={plan_id} form={request.form} extracted hwid={hwid_limit} traffic={traffic_limit_gb}")
+
         try:
             months_int = int(months)
             price_float = float(price)
@@ -2502,12 +2536,41 @@ def create_webhook_app(bot_controller_instance):
             flash('Название тарифа не может быть пустым.', 'danger')
             return redirect(url_for('settings_page', tab='hosts'))
 
-        ok = update_plan(plan_id, plan_name, months_int, price_float)
+        ok = update_plan(
+            plan_id,
+            plan_name,
+            months_int,
+            price_float,
+            hwid_limit=hwid_limit,
+            traffic_limit_gb=traffic_limit_gb
+        )
         if ok:
             flash('Тариф обновлён.', 'success')
         else:
             flash('Не удалось обновить тариф (возможно, он не найден).', 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
+
+    @flask_app.route('/api/update-plan/<int:plan_id>', methods=['POST'])
+    @login_required
+    def update_plan_api(plan_id):
+        try:
+            plan_name = request.json.get('plan_name', '').strip()
+            months = int(request.json.get('months'))
+            price = float(request.json.get('price'))
+            hwid_limit = int(request.json.get('hwid_limit') or 0)
+            traffic_limit_gb = int(request.json.get('traffic_limit_gb') or 0)
+            
+            if not plan_name:
+                return jsonify({'ok': False, 'error': 'Название не может быть пустым'}), 400
+            
+            ok = update_plan(plan_id, plan_name, months, price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb)
+            if ok:
+                plan = get_plan_by_id(plan_id)
+                return jsonify({'ok': True, 'plan': plan})
+            else:
+                return jsonify({'ok': False, 'error': 'Тариф не найден'}), 404
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
 
     @csrf.exempt
     @flask_app.route('/yookassa-webhook', methods=['POST'])
@@ -3205,6 +3268,8 @@ def create_webhook_app(bot_controller_instance):
             return jsonify({'ok': False, 'error': str(e)}), 500
 
     register_other_routes(flask_app, login_required, get_common_template_data)
+    register_update_routes(flask_app, login_required)
+    register_gemini_routes(flask_app, login_required)
 
     return flask_app
 

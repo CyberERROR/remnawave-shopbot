@@ -4,23 +4,42 @@
         <div class="text-sm font-medium text-white">{{ tx.username or 'N/A' }}</div>
         <div class="text-xs text-white/50">{{ tx.user_id }}</div>
     </td>
-    <td class="px-4 py-3 whitespace-nowrap text-sm text-white">{{ tx.host_name }}</td>
-    <td class="px-4 py-3 whitespace-nowrap text-sm text-white">{{ tx.plan_name }}</td>
-    <td class="px-4 py-3 whitespace-nowrap text-sm text-white">{{ tx.amount_rub | round(2) }} RUB</td>
     <td class="px-4 py-3 whitespace-nowrap">
-        {% set method = tx.payment_method|lower if tx.payment_method else '' %}
-        <span class="px-2 py-1 rounded-full text-xs font-medium" style="
-            {% if method == 'yookassa' %}background: rgba(59, 130, 246, 0.2); color: #60a5fa;
-            {% elif method == 'cryptobot' %}background: rgba(234, 179, 8, 0.2); color: #facc15;
-            {% elif method == 'ton' %}background: rgba(6, 182, 212, 0.2); color: #22d3ee;
-            {% elif method == 'stars' %}background: rgba(168, 85, 247, 0.2); color: #c084fc;
-            {% elif method == 'balance' %}background: rgba(34, 197, 94, 0.2); color: #4ade80;
-            {% elif method == 'yoomoney' %}background: rgba(249, 115, 22, 0.2); color: #fb923c;
-            {% elif method == 'heleket' %}background: rgba(236, 72, 153, 0.2); color: #f472b6;
-            {% elif method == 'platega' %}background: rgba(99, 102, 241, 0.2); color: #818cf8;
-            {% else %}background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.7);{% endif %}
-        ">{{ tx.payment_method or 'N/A' }}</span>
+        <div class="text-sm text-white">{{ tx.plan_name }}</div>
+        <div class="text-xs text-white/50">{{ tx.host_name }}</div>
     </td>
-    <td class="px-4 py-3 whitespace-nowrap text-sm text-white/70">{{ tx.created_date.split(' ')[0] }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">
+        <div class="text-sm text-white">{{ tx.amount_rub | round(2) }} RUB</div>
+        <div class="mt-1">
+            {% set method = tx.payment_method|lower if tx.payment_method else '' %}
+            {% set badge_class %}
+            {% if method == 'yookassa' %}text-blue-400
+            {% elif method == 'cryptobot' %}text-yellow-400
+            {% elif method == 'ton' %}text-cyan-400
+            {% elif method == 'stars' %}text-purple-400
+            {% elif method == 'balance' %}text-green-400
+            {% elif method == 'yoomoney' %}text-orange-400
+            {% elif method == 'heleket' %}text-pink-400
+            {% elif method == 'platega' %}text-indigo-400
+            {% else %}text-white/50
+            {% endif %}
+            {% endset %}
+            <span class="text-[10px] uppercase font-bold tracking-wider {{ badge_class }}">
+                {{ tx.payment_method or 'N/A' }}
+            </span>
+        </div>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap">
+        <div class="text-sm text-white">{% if tx.created_date %}{{ tx.created_date.split(' ')[0] }}{% else %}N/A{% endif
+            %}</div>
+        <div class="text-xs text-white/50">{{ tx.created_date | relative_time }}</div>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap text-right">
+        <a href="{{ url_for('users_page', q=tx.user_id) }}"
+            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white/50 hover:bg-white/20 hover:text-white transition-colors"
+            title="Профиль">
+            <span class="material-symbols-outlined text-sm">person</span>
+        </a>
+    </td>
 </tr>
 {% endfor %}

@@ -563,77 +563,14 @@
                 </div>
 
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                    <!-- HWID Device Limit -->
-                    <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4">
-                        <h5 class="text-white font-medium mb-3">Лимит устройств (HWID Device Limit)</h5>
-                        <form action="{{ url_for('update_host_hwid_limit_route') }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
 
-                            <div class="mb-3">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="hidden" name="hwid_enabled" value="0" />
-                                    <input type="checkbox" name="hwid_enabled" value="1"
-                                        id="hwid-enabled-{{ host.host_name }}" {% if host.remnawave_hwid_enabled
-                                        %}checked{% endif %}
-                                        class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
-                                    <span class="text-white/70 text-sm">Включить ограничение устройств</span>
-                                </label>
-                                <p class="text-white/50 text-xs mt-1 ml-6">Если выключено, параметр hwidDeviceLimit не
-                                    будет
-                                    отправляться в API</p>
-                            </div>
-
-                            <div class="flex gap-2 items-end">
-                                <div class="flex-1">
-                                    <label class="block text-white/50 text-xs mb-1">Лимит устройств</label>
-                                    <input type="number" name="hwid_limit" value="{{ host.remnawave_limit_hwid or 0 }}"
-                                        min="0" placeholder="0"
-                                        class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
-                                    <p class="text-white/50 text-xs mt-1">Максимальное количество устройств для одного
-                                        пользователя (0 = без ограничений)</p>
-                                </div>
-                                <button type="submit"
-                                    class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm hover:bg-primary/30"
-                                    style="margin-bottom: 22px;">Сохранить</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Traffic Limit -->
-                    <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4">
-                        <h5 class="text-white font-medium mb-3">Лимит трафика (Traffic Limit)</h5>
-                        <form action="{{ url_for('update_host_traffic_limit_route') }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-
-                            <!-- Placeholder for alignment -->
-                            <div class="mb-3" style="height: 40px;"></div>
-
-                            <div class="flex gap-2 items-end">
-                                <div class="flex-1">
-                                    <label class="block text-white/50 text-xs mb-1">Лимит трафика (GB)</label>
-                                    <input type="number" name="traffic_limit"
-                                        value="{{ host.remnawave_limit_traffic or 0 }}" min="0" placeholder="0" step="1"
-                                        class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
-                                    <p class="text-white/50 text-xs mt-1">Лимит трафика в гигабайтах (0 = без
-                                        ограничений)
-                                    </p>
-                                </div>
-                                <button type="submit"
-                                    class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm hover:bg-primary/30"
-                                    style="margin-bottom: 22px;">Сохранить</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
 
 
                 <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4">
                     <h5 class="text-white font-medium mb-3">Тарифы</h5>
                     {% if host.plans %}
-                    <div class="grid gap-3 mb-4" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div id="plans-grid-{{ host.host_name }}" class="grid gap-3 mb-4"
+                        style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                         {% for plan in host.plans %}
                         <div
                             class="relative bg-white/5 border border-white/10 rounded-lg p-3 hover:border-primary/30 transition-colors group">
@@ -682,6 +619,20 @@
                                             placeholder="Цена" required
                                             class="bg-black/20 border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
                                     </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-[10px] text-white/50">HWID Limit</label>
+                                            <input type="number" name="hwid_limit" value="{{ plan.hwid_limit or 0 }}"
+                                                min="0" placeholder="0"
+                                                class="bg-black/20 border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-[10px] text-white/50">Traffic (GB)</label>
+                                            <input type="number" name="traffic_limit_gb"
+                                                value="{{ plan.traffic_limit_gb or 0 }}" min="0" placeholder="0"
+                                                class="bg-black/20 border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
+                                        </div>
+                                    </div>
                                     <div class="flex gap-2">
                                         <button type="submit"
                                             class="flex-1 px-2 py-1.5 rounded bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30">Сохранить</button>
@@ -706,6 +657,12 @@
                             class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-20" />
                         <input type="number" step="0.01" name="price" placeholder="Цена" required
                             class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-24" />
+                        <input type="number" name="hwid_limit" placeholder="HWID"
+                            class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-20"
+                            title="Лимит устройств (0=безлим)" />
+                        <input type="number" name="traffic_limit_gb" placeholder="GB"
+                            class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-20"
+                            title="Лимит трафика GB (0=безлим)" />
                         <button type="submit"
                             class="px-3 py-1.5 rounded bg-primary text-background-dark text-sm font-medium">+ Добавить
                             тариф</button>
@@ -1991,7 +1948,11 @@
             );
 
             if (hasSpecialAction) {
-                return; // Let these forms work normally (download/upload)
+                return;
+            }
+
+            if (form.action && (form.action.includes('add-plan') || form.action.includes('update-plan') || form.action.includes('delete-plan'))) {
+                return;
             }
 
             form.addEventListener('submit', function (e) {
@@ -2179,6 +2140,102 @@
                 const editForm = document.getElementById('edit-plan-' + planId);
                 if (editForm) {
                     editForm.classList.add('hidden');
+                }
+            });
+        });
+
+        document.querySelectorAll('form[action*="add-plan"]').forEach(form => {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const data = {
+                    host_name: formData.get('host_name'),
+                    plan_name: formData.get('plan_name'),
+                    months: formData.get('months'),
+                    price: formData.get('price'),
+                    hwid_limit: formData.get('hwid_limit'),
+                    traffic_limit_gb: formData.get('traffic_limit_gb')
+                };
+                try {
+                    const csrfToken = formData.get('csrf_token');
+                    const resp = await fetch('/api/add-plan', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await resp.json();
+                    if (result.ok) {
+                        showToast('Тариф добавлен');
+                        this.reset();
+                        setTimeout(() => location.reload(), 300);
+                    } else {
+                        showToast('Ошибка: ' + result.error, true);
+                    }
+                } catch (err) {
+                    showToast('Ошибка: ' + err.message, true);
+                }
+            });
+        });
+
+        document.querySelectorAll('form[action*="update-plan"]').forEach(form => {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const planId = this.action.match(/update-plan\/(\d+)/)[1];
+                const data = {
+                    plan_name: formData.get('plan_name'),
+                    months: formData.get('months'),
+                    price: formData.get('price'),
+                    hwid_limit: formData.get('hwid_limit'),
+                    traffic_limit_gb: formData.get('traffic_limit_gb')
+                };
+                try {
+                    const csrfToken = formData.get('csrf_token');
+                    const resp = await fetch('/api/update-plan/' + planId, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await resp.json();
+                    if (result.ok) {
+                        showToast('Тариф обновлён');
+                        const plan = result.plan;
+                        const card = this.closest('.relative');
+                        if (card) {
+                            const nameEl = card.querySelector('h6');
+                            const monthsEl = card.querySelector('p.text-white\\/50');
+                            const priceEl = card.querySelector('span.text-primary');
+                            if (nameEl) nameEl.textContent = plan.plan_name;
+                            if (monthsEl) monthsEl.textContent = plan.months + ' мес.';
+                            if (priceEl) priceEl.textContent = Math.round(plan.price) + '₽';
+                        }
+                        const editForm = document.getElementById('edit-plan-' + planId);
+                        if (editForm) editForm.classList.add('hidden');
+                    } else {
+                        showToast('Ошибка: ' + result.error, true);
+                    }
+                } catch (err) {
+                    showToast('Ошибка: ' + err.message, true);
+                }
+            });
+        });
+
+        document.querySelectorAll('form[action*="delete-plan"]').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const confirmMsg = this.getAttribute('data-confirm');
+                if (confirmMsg) {
+                    showConfirmModal(confirmMsg, () => {
+                        this.submit();
+                    });
+                } else {
+                    this.submit();
                 }
             });
         });

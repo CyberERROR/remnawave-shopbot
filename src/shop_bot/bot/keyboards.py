@@ -504,16 +504,56 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
     builder.adjust(1)
     return builder.as_markup()
 
+def get_declension(n, forms):
+    n = abs(n) % 100
+    n1 = n % 10
+    if n > 10 and n < 20: return forms[2]
+    if n1 > 1 and n1 < 5: return forms[1]
+    if n1 == 1: return forms[0]
+    return forms[2]
+
+def get_time_str(expiry_date: datetime) -> str:
+    diff = expiry_date - datetime.now()
+    total_seconds = int(diff.total_seconds())
+    
+    if total_seconds < 0:
+        return "(истек)"
+
+    minutes = total_seconds // 60
+    hours = minutes // 60
+    days = hours // 24
+    
+    if days >= 365:
+        years = int(round(days / 365.25))
+        word = get_declension(years, ['год', 'года', 'лет'])
+        return f"({years} {word})"
+    elif days >= 30:
+        months = int(round(days / 30.44))
+        return f"({months} мес)"
+    elif days >= 1:
+        word = get_declension(days, ['день', 'дня', 'дней'])
+        return f"({days} {word})"
+    elif hours >= 1:
+        return f"({hours} ч)"
+    else:
+        valid_min = max(1, minutes)
+        return f"({valid_min} мин)"
+
 def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+
     if keys:
         for i, key in enumerate(keys):
             expiry_date = datetime.fromisoformat(key['expiry_date'])
             status_icon = "✅" if expiry_date > datetime.now() else "❌"
             host_name = key.get('host_name', 'Неизвестный хост')
-            days_remaining = (expiry_date - datetime.now()).days
-            button_text = f"{status_icon} Ключ #{i+1} ({host_name}) ({days_remaining} дней)"
+            
+            time_str = get_time_str(expiry_date)
+
+            # button_text = f"{status_icon} Ключ #{i+1} ({host_name}) {time_str}"
+            button_text = f"{status_icon} #{i+1} ({host_name}) {time_str}"
             builder.button(text=button_text, callback_data=f"show_key_{key['key_id']}")
+            
     builder.button(text=(get_setting("btn_buy_key_text") or "🛒 Купить ключ"), callback_data="buy_new_key")
     builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     builder.adjust(1)

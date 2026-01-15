@@ -69,9 +69,11 @@
     </div>
 </section>
 
-<!-- Transactions Section -->
-<section class="mb-8">
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
+
+<!-- Transactions & Trials Section -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+    <!-- Recent Transactions -->
+    <div class="lg:col-span-2 bg-white/5 border border-white/10 rounded-lg p-6 flex flex-col">
         <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">Недавние транзакции</h2>
         {% if transactions %}
         <div class="overflow-x-auto">
@@ -80,11 +82,11 @@
                     <tr>
                         <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Пользователь
                         </th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Хост</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">План</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Цена</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Тип</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Услуга</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Сумма</th>
                         <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Дата</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-right">
+                            Действия</th>
                     </tr>
                 </thead>
                 <tbody id="dash-transactions" class="divide-y divide-white/10"
@@ -95,43 +97,70 @@
             </table>
         </div>
         {% if total_pages and total_pages > 1 %}
-        <div class="flex justify-center mt-4 gap-2">
+        <div id="transactions-pagination" class="flex justify-center mt-4 gap-1">
             {% set cp = current_page or 1 %}
             {% set tp = total_pages or 1 %}
-            {% set ns = namespace(last_m=1, last_d=1) %}
+
             {% if cp > 1 %}
-            <a href="{{ url_for('dashboard_page', page=cp - 1) }}"
-                class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">«</a>
+            <a href="{{ url_for('dashboard_page', page=cp - 1, trials_page=trials_current_page) }}"
+                class="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs">«</a>
             {% endif %}
-            <a href="{{ url_for('dashboard_page', page=1) }}"
-                class="px-3 py-1 rounded {% if 1 == cp %}bg-primary text-background-dark{% else %}bg-white/10 hover:bg-white/20 text-white{% endif %} text-sm">1</a>
-            {% for p in range(2, tp + 1) %}
-            {% set diff = (p - cp)|abs %}
-            {% set is_m = (p == tp) or (diff <= 1) %} {% set is_d=(p==tp) or (p <=4) or (p>= tp - 3) or (diff <= 2) %}
-                    {% if is_m or is_d %} {% set gap_m=is_m and (p - ns.last_m> 1) %}
-                    {% set gap_d = is_d and (p - ns.last_d > 1) %}
-                    {% if gap_m and gap_d %}
-                    <span class="px-1 text-white/50 text-sm">...</span>
-                    {% elif gap_d %}
-                    <span class="px-1 text-white/50 text-sm hidden md:inline-block">...</span>
-                    {% elif gap_m %}
-                    <span class="px-1 text-white/50 text-sm md:hidden">...</span>
-                    {% endif %}
-                    <a href="{{ url_for('dashboard_page', page=p) }}"
-                        class="px-3 py-1 rounded {% if p == cp %}bg-primary text-background-dark{% else %}bg-white/10 hover:bg-white/20 text-white{% endif %} text-sm {% if not is_m %}hidden md:inline-block{% endif %}">{{
-                        p }}</a>
-                    {% if is_m %}{% set ns.last_m = p %}{% endif %}
-                    {% if is_d %}{% set ns.last_d = p %}{% endif %}
-                    {% endif %}
-                    {% endfor %}
-                    {% if cp < tp %} <a href="{{ url_for('dashboard_page', page=cp + 1) }}"
-                        class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">»</a>
-                        {% endif %}
+
+            <span class="px-2 py-1 text-white/50 text-xs">{{ cp }} / {{ tp }}</span>
+
+            {% if cp < tp %} <a href="{{ url_for('dashboard_page', page=cp + 1, trials_page=trials_current_page) }}"
+                class="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs">»</a>
+                {% endif %}
         </div>
         {% endif %}
         {% else %}
         <p class="text-white/50">Пока нет транзакций для отображения.</p>
         {% endif %}
+    </div>
+
+    <!-- Recent Trials -->
+    <div class="bg-white/5 border border-white/10 rounded-lg p-6 flex flex-col h-fit">
+        <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">Недавние трайлы</h2>
+        {% if recent_trials %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-white/5">
+                    <tr>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Пользователь
+                        </th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Дата</th>
+                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-right">
+                            Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="dash-trials" class="divide-y divide-white/10"
+                    data-fetch-url="{{ url_for('dashboard_trials_partial', page=trials_current_page) }}"
+                    data-fetch-interval="10000">
+                    {% include 'partials/dashboard_trials.html' %}
+                </tbody>
+            </table>
+        </div>
+        {% if trials_total_pages and trials_total_pages > 1 %}
+        <div id="trials-pagination" class="flex justify-center mt-4 gap-1">
+            {% set cp = trials_current_page or 1 %}
+            {% set tp = trials_total_pages or 1 %}
+
+            {% if cp > 1 %}
+            <a href="{{ url_for('dashboard_page', trials_page=cp - 1, page=current_page) }}"
+                class="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs">«</a>
+            {% endif %}
+
+            <span class="px-2 py-1 text-white/50 text-xs">{{ cp }} / {{ tp }}</span>
+
+            {% if cp < tp %} <a href="{{ url_for('dashboard_page', trials_page=cp + 1, page=current_page) }}"
+                class="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs">»</a>
+                {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="text-white/50">Пока нет пробных периодов.</p>
+    {% endif %}
     </div>
 </section>
 
@@ -187,7 +216,108 @@
 {% block scripts %}
 <script id="chart-data" type="application/json">{{ chart_data | tojson }}</script>
 <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // AJAX Pagination Handler
+        async function handlePagination(e, type) {
+            if (e.target.tagName !== 'A') return;
+            e.preventDefault();
+
+            const btn = e.target;
+            if (btn.classList.contains('disabled')) return;
+
+            // Extract page number
+            const url = new URL(btn.href);
+            const paramName = type === 'transactions' ? 'page' : 'trials_page';
+            const page = url.searchParams.get(paramName);
+
+            if (!page) return; // Should not happen
+
+            const endpoint = type === 'transactions'
+                ? "{{ url_for('dashboard_transactions_partial') }}"
+                : "{{ url_for('dashboard_trials_partial') }}";
+
+            const qs = `?page=${page}&ajax_pagination=1`;
+
+            // Visual feedback (optional)
+            const containerId = `dash-${type}`;
+            const container = document.getElementById(containerId);
+            container.style.opacity = '0.5';
+
+            try {
+                const resp = await fetch(endpoint + qs);
+                if (!resp.ok) throw new Error('Network error');
+                const data = await resp.json();
+
+                // Update Table Content
+                container.innerHTML = data.html;
+
+                // Update Auto-refresh URL to keep refreshing the current page
+                // The auto-update script (if it exists) likely reads this attribute
+                container.dataset.fetchUrl = `${endpoint}?page=${page}`;
+
+                // Update Pagination Controls
+                updatePaginationUI(type, parseInt(data.current_page), parseInt(data.total_pages));
+
+            } catch (err) {
+                console.error('Pagination formatting failed', err);
+            } finally {
+                container.style.opacity = '1';
+            }
+        }
+
+        function updatePaginationUI(type, cp, tp) {
+            const container = document.getElementById(`${type}-pagination`);
+            if (!container) return; // Should handle if container needs to be created, but usually implies pages > 1
+
+            // If total pages became 1, hide container
+            if (tp <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            const paramName = type === 'transactions' ? 'page' : 'trials_page';
+
+            // We need to construct URLs that preserve the OTHER widget's page state
+            // But since we are doing AJAX, the URL in the address bar doesn't strictly matter for the *action*, 
+            // but it matters for the *href* we use to extract the page number next time.
+            // AND the user might want to copy-paste the URL.
+            // Ideally we also update window.history.pushState but let's stick to requirements "background loading".
+
+            // Simulating URL construction based on current location
+            const currentUrl = new URL(window.location.href);
+
+            if (cp > 1) {
+                currentUrl.searchParams.set(paramName, cp - 1);
+                html += `<a href="${currentUrl.toString()}" class="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs">«</a>`;
+            }
+
+            html += `<span class="px-2 py-1 text-white/50 text-xs">${cp} / ${tp}</span>`;
+
+            if (cp < tp) {
+                currentUrl.searchParams.set(paramName, cp + 1);
+                html += `<a href="${currentUrl.toString()}" class="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs">»</a>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Attach listeners
+        const txPag = document.getElementById('transactions-pagination');
+        if (txPag) {
+            txPag.addEventListener('click', (e) => handlePagination(e, 'transactions'));
+        }
+
+        const trPag = document.getElementById('trials-pagination');
+        if (trPag) {
+            trPag.addEventListener('click', (e) => handlePagination(e, 'trials'));
+        }
+    });
+
+    // Speedtest scripts...
     document.addEventListener('DOMContentLoaded', async () => {
+        // ... rest of existing scripts
+
         const CHART_DATA = JSON.parse(document.getElementById('chart-data')?.textContent || '{}');
 
         // Chart config

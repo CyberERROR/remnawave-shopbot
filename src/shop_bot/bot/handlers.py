@@ -82,6 +82,31 @@ CRYPTO_BOT_TOKEN = get_setting("cryptobot_token")
 
 logger = logging.getLogger(__name__)
 
+def safe_str(val):
+    if val is None:
+        return ""
+    return str(val)
+
+def get_transaction_comment(user: types.User, action_type: str, value: any) -> str:
+    """
+    Generates a standardized transaction comment.
+    
+    :param user: The Telegram user object.
+    :param action_type: 'new' (subscription), 'extend' (extension), or 'topup' (balance).
+    :param value: The number of months (int) for subs/extensions, or amount (float/Decimal) for top-ups.
+    """
+    user_id = user.id
+    username = f"@{user.username}" if user.username else "—"
+    first_name = user.first_name or "—"
+    
+    if action_type == 'new':
+        return f"Подписка на {value} мес. (ID: {user_id}, User: {username}, Имя: {first_name})"
+    elif action_type == 'extend':
+        return f"Продление на {value} мес. (ID: {user_id}, User: {username}, Имя: {first_name})"
+    elif action_type == 'topup':
+        return f"Пополнение баланса на {value} RUB (ID: {user_id}, User: {username}, Имя: {first_name})"
+    return f"Транзакция (ID: {user_id})"
+
 async def _create_heleket_payment_request(
     user_id: int,
     price: float,
@@ -829,7 +854,7 @@ def get_user_router() -> Router:
                 receipt = {
                     "customer": {"email": customer_email},
                     "items": [{
-                        "description": f"Пополнение баланса",
+                        "description": get_transaction_comment(callback.from_user, 'topup', price_str_for_api),
                         "quantity": "1.00",
                         "amount": {"value": price_str_for_api, "currency": "RUB"},
                         "vat_code": "1",
@@ -838,11 +863,13 @@ def get_user_router() -> Router:
                     }]
                 }
 
+            description_str = get_transaction_comment(callback.from_user, 'topup', price_str_for_api)
+
             payment_payload = {
                 "amount": {"value": price_str_for_api, "currency": "RUB"},
                 "confirmation": {"type": "redirect", "return_url": f"https://t.me/{TELEGRAM_BOT_USERNAME}"},
                 "capture": True,
-                "description": f"Пополнение баланса на {price_str_for_api} RUB",
+                "description": description_str,
                 "metadata": {
                     "user_id": user_id,
                     "price": price_float_for_metadata,
@@ -906,14 +933,17 @@ def get_user_router() -> Router:
             "payment_method": "Telegram Stars",
             "payment_id": payment_id,
         }
-        try:
-            ok = create_payload_pending(payment_id, user_id, float(price_rub), metadata)
-            logger.info(f"Создано ожидание Stars: ok={ok}, payment_id={payment_id}, user_id={user_id}, price_rub={price_rub}")
-        except Exception as e:
+        if not payment_id:
             logger.error(f"Не удалось создать ожидание для Stars payment_id={payment_id}: {e}", exc_info=True)
 
-        title = f"Подписка на {int(plan['months'])} мес."
-        description = f"Оплата подписки на {int(plan['months'])} мес."
+        description_str = get_transaction_comment(
+            callback.from_user, 
+            'new' if data.get('action') == 'new' else 'extend', 
+            int(plan['months'])
+        )
+
+        title = f"{'Подписка' if data.get('action') == 'new' else 'Продление'} на {int(plan['months'])} мес."
+        description = description_str
         try:
             await callback.message.answer_invoice(
                 title=title,
@@ -964,9 +994,11 @@ def get_user_router() -> Router:
         except Exception as e:
             logger.error(f"Не удалось создать ожидание для пополнения Stars payment_id={payment_id}: {e}", exc_info=True)
         try:
+            description_str = get_transaction_comment(callback.from_user, 'topup', f"{amount_rub:.2f}")
+
             await callback.message.answer_invoice(
                 title="Пополнение баланса",
-                description=f"Пополнение на {amount_rub:.2f} RUB",
+                description=description_str,
                 prices=[LabeledPrice(label="Пополнение", amount=stars_amount)],
                 payload=payment_id,
                 currency="XTR",
@@ -1041,18 +1073,17 @@ def get_user_router() -> Router:
         await process_successful_payment(bot, metadata)
 
 
-    def _build_yoomoney_link(receiver: str, amount_rub: Decimal, label: str) -> str:
+    def _build_yoomoney_link(receiver: str, amount_rub: Decimal, label: str, description: str) -> str:
         base = "https://yoomoney.ru/quickpay/confirm.xml"
         params = {
             "receiver": (receiver or "").strip(),
             "quickpay-form": "donate",
-            "targets": "Оплата подписки",
-            "formcomment": "Оплата подписки",
-            "short-dest": "Оплата подписки",
+            "targets": description[:50],  # yoomoney limit for targets is often short, but formcomment is longer
+            "formcomment": description,
+            "short-dest": description,
             "sum": f"{amount_rub:.2f}",
             "label": label,
             "successURL": f"https://t.me/{TELEGRAM_BOT_USERNAME}",
-
         }
         url = base + "?" + urlencode(params)
         return url
@@ -1115,7 +1146,14 @@ def get_user_router() -> Router:
             "payment_id": payment_id,
         }
         create_payload_pending(payment_id, user_id, float(price_rub), metadata)
-        pay_url = _build_yoomoney_link(wallet, price_rub, payment_id)
+
+        description_str = get_transaction_comment(
+            callback.from_user,
+            'new' if data.get('action') == 'new' else 'extend',
+            int(plan['months'])
+        )
+
+        pay_url = _build_yoomoney_link(wallet, price_rub, payment_id, description_str)
         payment_image = get_setting("payment_image")
         await smart_edit_message(
             callback.message,
@@ -1166,7 +1204,10 @@ def get_user_router() -> Router:
         
         logger.info(f"📝 Создаем ожидающую транзакцию: {payment_id}")
         create_payload_pending(payment_id, user_id, float(amount_rub), metadata)
-        pay_url = _build_yoomoney_link(wallet, amount_rub, payment_id)
+
+        description_str = get_transaction_comment(callback.from_user, 'topup', f"{amount_rub:.2f}")
+
+        pay_url = _build_yoomoney_link(wallet, amount_rub, payment_id, description_str)
         
         logger.info(f"🔗 Сгенерирован URL платежа для пользователя {user_id}: {amount_rub:.2f} RUB")
         payment_image = get_setting("payment_image")
@@ -1321,9 +1362,16 @@ def get_user_router() -> Router:
         try:
             create_payload_pending(payment_id, user_id, float(price_rub), metadata)
             platega = PlategaAPI(merchant_id, api_key)
+            
+            description_str = get_transaction_comment(
+                callback.from_user,
+                'new' if data.get('action') == 'new' else 'extend',
+                int(plan['months'])
+            )
+
             transaction_id, payment_url = await platega.create_payment(
                 amount=float(price_rub),
-                description=f"Оплата подписки на {int(plan['months'])} мес.",
+                description=description_str,
                 payment_id=payment_id,
                 return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
                 failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
@@ -1374,9 +1422,12 @@ def get_user_router() -> Router:
         try:
             create_payload_pending(payment_id, user_id, float(amount_rub), metadata)
             platega = PlategaAPI(merchant_id, api_key)
+            
+            description_str = get_transaction_comment(callback.from_user, 'topup', f"{amount_rub:.2f}")
+
             transaction_id, payment_url = await platega.create_payment(
                 amount=float(amount_rub),
-                description=f"Пополнение баланса на {amount_rub:.2f} RUB",
+                description=description_str,
                 payment_id=payment_id,
                 return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
                 failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}",
@@ -2805,10 +2856,11 @@ def get_user_router() -> Router:
 
             receipt = None
             if customer_email and is_valid_email(customer_email):
+
                 receipt = {
                     "customer": {"email": customer_email},
                     "items": [{
-                        "description": f"Подписка на {months} мес.",
+                        "description": get_transaction_comment(callback.from_user, 'new' if action == 'new' else 'extend', months),
                         "quantity": "1.00",
                         "amount": {"value": price_str_for_api, "currency": "RUB"},
                         "vat_code": "1",
@@ -2816,11 +2868,18 @@ def get_user_router() -> Router:
                         "payment_mode": "full_payment"
                     }]
                 }
+            
+            description_str = get_transaction_comment(
+                callback.from_user,
+                'new' if action == 'new' else 'extend',
+                months
+            )
+
             payment_payload = {
                 "amount": {"value": price_str_for_api, "currency": "RUB"},
                 "confirmation": {"type": "redirect", "return_url": f"https://t.me/{TELEGRAM_BOT_USERNAME}"},
                 "capture": True,
-                "description": f"Подписка на {months} мес.",
+                "description": description_str,
                 "metadata": {
                     "user_id": user_id, "months": months, "price": price_float_for_metadata, 
                     "action": action, "key_id": key_id, "host_name": host_name,
@@ -3188,7 +3247,7 @@ async def notify_admin_of_purchase(bot: Bot, metadata: dict):
             f"📦 Тариф: {plan_name} ({months} мес.)\n"
             f"💳 Метод: {payment_method_display}\n"
             f"💰 Сумма: {float(price):.2f} RUB\n"
-            f"⚙️ Действие: {'Новый ключ' if action == 'new' else 'Продление'}"
+            f"⚙️ Действие: {'Новый ключ ➕' if action == 'new' else 'Продление ♻️'}"
         )
 
         promo_code = (metadata.get('promo_code') or '').strip() if isinstance(metadata, dict) else ''
@@ -3462,12 +3521,27 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                 await processing_message.edit_text("❌ Не удалось найти ключ для продления.")
                 return
             candidate_email = existing_key['key_email']
+            
+        # Fetch plan limits if plan_id is available
+        hwid_limit = None
+        traffic_limit_gb = None
+        if plan_id:
+            try:
+                # get_plan_by_id is imported from remnawave_repository
+                plan = get_plan_by_id(plan_id) 
+                if plan:
+                    hwid_limit = int(plan['hwid_limit']) if plan.get('hwid_limit') is not None else 0
+                    traffic_limit_gb = int(plan['traffic_limit_gb']) if plan.get('traffic_limit_gb') is not None else 0
+            except Exception:
+                logger.warning(f"Could not fetch plan limits for plan_id={plan_id}")
 
         result = await remnawave_api.create_or_update_key_on_host(
             host_name=host_name,
             email=candidate_email,
             days_to_add=int(months * 30),
             telegram_id=user_id,
+            hwid_limit=hwid_limit,
+            traffic_limit_gb=traffic_limit_gb,
         )
         if not result:
             await processing_message.edit_text("❌ Не удалось создать/обновить ключ на панели Remnawave.")

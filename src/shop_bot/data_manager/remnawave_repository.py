@@ -714,3 +714,38 @@ def redeem_promo_code(code: str, user_id: int, *, applied_amount: float, order_i
             if str(e).startswith("FOREIGN KEY constraint failed"):
                 return None
             raise
+
+
+
+def get_paginated_trials(page: int = 1, per_page: int = 10) -> tuple[list[dict[str, Any]], int]:
+    offset = (page - 1) * per_page
+    
+    count_query = "SELECT COUNT(*) FROM vpn_keys WHERE key_email LIKE 'trial_%'"
+    
+    query = """
+        SELECT 
+            k.key_id, 
+            k.key_email, 
+            k.expire_at, 
+            k.created_at, 
+            u.telegram_id, 
+            u.username,
+            u.registration_date
+        FROM vpn_keys k
+        LEFT JOIN users u ON k.user_id = u.telegram_id
+        WHERE k.key_email LIKE 'trial_%'
+        ORDER BY k.created_at DESC
+        LIMIT ? OFFSET ?
+    """
+    
+    with _connect() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute(count_query)
+        total = cursor.fetchone()[0]
+        
+        cursor.execute(query, (per_page, offset))
+        items = [dict(row) for row in cursor.fetchall()]
+        
+        return items, total
+

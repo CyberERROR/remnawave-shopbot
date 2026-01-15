@@ -279,6 +279,7 @@ async def ensure_user(
     username: str | None = None,
     telegram_id: int | str | None = None,
     force_expiry: bool = False,
+    hwid_limit: int | None = None, # Added parameter
 ) -> dict[str, Any]:
     if not email:
         raise RemnawaveAPIError("email is required for ensure_user")
@@ -287,14 +288,9 @@ async def ensure_user(
 
     # Получаем настройки хоста из БД
     squad = rw_repo.get_squad(host_name)
-    hwid_enabled = bool(squad.get("remnawave_hwid_enabled")) if squad else False
-    hwid_limit = int(squad.get("remnawave_limit_hwid") or 0) if squad else 0
     
-    # Получаем лимит трафика из настроек хоста (в GB, конвертируем в байты)
-    traffic_limit_gb = int(squad.get("remnawave_limit_traffic") or 0) if squad else 0
-    if traffic_limit_gb > 0:
-        # Переопределяем traffic_limit_bytes если задан лимит в GB
-        traffic_limit_bytes = traffic_limit_gb * 1024 * 1024 * 1024  # GB -> bytes
+    # Determine effective HWID limit
+    effective_hwid_limit = hwid_limit
 
     email = _normalize_email_for_remnawave(email)
     current = await get_user_by_email(email, host_name=host_name)
@@ -306,8 +302,7 @@ async def ensure_user(
     path: str
 
     if current:
-        # Защита от случайного уменьшения срока при покупке новых тарифов
-        # НО если force_expiry=True (из админки), то используем переданную дату
+        # ... existing expiry logic ...
         if not force_expiry:
             current_expire = current.get("expireAt")
             if current_expire:
@@ -334,9 +329,10 @@ async def ensure_user(
             "email": email,
         }
 
-        # Добавляем hwidDeviceLimit только если включено
-        if hwid_enabled and hwid_limit > 0:
-            payload["hwidDeviceLimit"] = hwid_limit
+        # Apply HWID limit if enabled globally OR if we have a specific non-zero limit?
+        # Usually checking host_hwid_enabled is safer to avoid sending unsupported fields.
+        if effective_hwid_limit is not None:
+             payload["hwidDeviceLimit"] = effective_hwid_limit
 
         # Добавляем Telegram ID в контактную информацию
         if telegram_id:
@@ -369,9 +365,9 @@ async def ensure_user(
             "email": email,
         }
 
-        # Добавляем hwidDeviceLimit только если включено
-        if hwid_enabled and hwid_limit > 0:
-            payload["hwidDeviceLimit"] = hwid_limit
+        # Apply HWID limit
+        if effective_hwid_limit is not None:
+            payload["hwidDeviceLimit"] = effective_hwid_limit
 
         # Добавляем Telegram ID в контактную информацию
         if telegram_id:
@@ -502,6 +498,8 @@ async def create_or_update_key_on_host(
     tag: str | None = None,
     telegram_id: int | str | None = None,
     force_expiry: bool = False,
+    hwid_limit: int | None = None,  # Added
+    traffic_limit_gb: int | None = None,  # Added
 ) -> dict | None:
     """Legacy совместимость: создаёт/обновляет пользователя Remnawave и возвращает данные по ключу."""
     try:
@@ -536,21 +534,33 @@ async def create_or_update_key_on_host(
             else:
                 target_dt = datetime.now(timezone.utc) + timedelta(days=days)
 
-        traffic_limit_bytes = squad.get('default_traffic_limit_bytes')
+        # Default traffic strategy from host
         traffic_limit_strategy = squad.get('default_traffic_strategy') or 'NO_RESET'
+
+        # Resolve traffic limit:
+        # 1. if traffic_limit_gb is passed (from plan), convert to bytes
+        # 2. else no limit override
+        if traffic_limit_gb is not None and traffic_limit_gb > 0:
+             effective_traffic_bytes = traffic_limit_gb * 1024 * 1024 * 1024
+        elif traffic_limit_gb == 0 and traffic_limit_gb is not None:
+             # Explicitly set 0 means unlimited
+             effective_traffic_bytes = 0 
+        else:
+             effective_traffic_bytes = None
 
         user_payload = await ensure_user(
             host_name=host_name,
             email=email,
             squad_uuid=squad_uuid,
             expire_at=target_dt,
-            traffic_limit_bytes=traffic_limit_bytes,
+            traffic_limit_bytes=effective_traffic_bytes,
             traffic_limit_strategy=traffic_limit_strategy,
             description=description,
             tag=tag,
             username=email.split('@')[0] if email else None,
             telegram_id=telegram_id,
             force_expiry=force_expiry,  
+            hwid_limit=hwid_limit,
         )
 
         subscription_url = extract_subscription_url(user_payload) or ''

@@ -1,0 +1,28 @@
+{% for trial in recent_trials %}
+<tr class="hover:bg-white/5 transition-colors">
+    <td class="px-4 py-3 whitespace-nowrap">
+        <div class="text-sm font-medium text-white">
+            {% if trial.username %}
+            {{ trial.username }}
+            {% else %}
+            {{ trial.telegram_id }}
+            {% endif %}
+        </div>
+        {% if trial.username %}
+        <div class="text-xs text-white/50">{{ trial.telegram_id }}</div>
+        {% endif %}
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap">
+        <div class="text-sm text-white">{% if trial.created_at %}{{ trial.created_at.split(' ')[0] }}{% else %}N/A{%
+            endif %}</div>
+        <div class="text-xs text-white/50">{{ trial.created_at | relative_time }}</div>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap text-right">
+        <a href="{{ url_for('users_page', q=trial.telegram_id) }}"
+            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white/50 hover:bg-white/20 hover:text-white transition-colors"
+            title="Профиль">
+            <span class="material-symbols-outlined text-sm">person</span>
+        </a>
+    </td>
+</tr>
+{% endfor %}

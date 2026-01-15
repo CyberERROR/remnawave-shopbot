@@ -17,6 +17,46 @@
     </div>
 </div>
 
+<style>
+    /* Custom Scrollbar for Modal and Lists */
+    .custom-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background: rgba(19, 236, 128, 0.3);
+        border-radius: 3px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(19, 236, 128, 0.5);
+    }
+
+    /* Ensure modal content uses custom scroll */
+    .modal-content {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(19, 236, 128, 0.3) rgba(255, 255, 255, 0.05);
+    }
+
+    .modal-content::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .modal-content::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .modal-content::-webkit-scrollbar-thumb {
+        background: rgba(19, 236, 128, 0.3);
+        border-radius: 3px;
+    }
+</style>
+
 <div class="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
     <div class="overflow-x-auto">
         <table id="users-table" class="w-full text-left">
@@ -25,7 +65,8 @@
                     <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Telegram ID</th>
                     <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Username</th>
                     <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Статус</th>
-                    <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Активные ключи</th>
+                    <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-center">
+                        Активные ключи</th>
                     <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Баланс</th>
                     <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-right">Действия
                     </th>
@@ -107,6 +148,82 @@
     </div>
 </div>
 
+<!-- Key Comment Modal -->
+<div id="commentModal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-content">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold">Комментарий к ключу</h5>
+            <button onclick="closeModal('commentModal')" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <div id="commentModalLoading" class="hidden text-center py-4">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+            </div>
+            <div id="commentModalContent">
+                <input type="text" id="commentInput" placeholder="Введите комментарий"
+                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            </div>
+        </div>
+        <div class="p-4 border-t border-white/10 flex justify-end gap-2">
+            <button onclick="closeModal('commentModal')"
+                class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
+            <button id="commentSaveBtn"
+                class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Key Expiry Modal -->
+<div id="expiryModal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-content">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold">Изменить срок действия</h5>
+            <button onclick="closeModal('expiryModal')" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <label class="block text-white/70 text-sm mb-2">Сколько дней прибавить/убавить</label>
+            <input type="number" id="expiryDelta" placeholder="Например, 7 или -7"
+                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            <p class="text-white/50 text-sm mt-2">Положительное — продлить, отрицательное — сократить.</p>
+        </div>
+        <div class="p-4 border-t border-white/10 flex justify-end gap-2">
+            <button onclick="closeModal('expiryModal')"
+                class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
+            <button id="expirySaveBtn"
+                class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Revoke Key Confirmation Modal -->
+<div id="revokeConfirmModal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-content">
+        <div class="p-4 border-b border-red-500/30 flex items-center justify-between bg-red-500/10">
+            <h5 class="text-white font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-red-400">warning</span>
+                Подтверждение отзыва
+            </h5>
+            <button onclick="closeModal('revokeConfirmModal')" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="text-white mb-4">Вы уверены, что хотите отозвать этот ключ?</p>
+            <p class="text-red-400 text-sm">⚠️ Пользователь потеряет доступ к подписке (Полностью)!</p>
+        </div>
+        <div class="p-4 border-t border-white/10 flex justify-end gap-2">
+            <button onclick="closeModal('revokeConfirmModal')"
+                class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
+            <button id="revokeConfirmBtn"
+                class="px-4 py-2 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600">Отозвать</button>
+        </div>
+    </div>
+</div>
+
 <div id="userDetailsModal" class="modal-overlay modal-xl">
     <div class="modal-content">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
@@ -137,6 +254,10 @@
                                 <tr>
                                     <td class="py-2 text-white/70">Регистрация:</td>
                                     <td class="py-2 text-white" id="udm-registration"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 text-white/70">Баланс:</td>
+                                    <td class="py-2 text-white" id="udm-balance"></td>
                                 </tr>
                                 <tr>
                                     <td class="py-2 text-white/70">Потрачено всего:</td>
@@ -174,13 +295,25 @@
                                     <td class="py-2 text-white/70">Рефералов:</td>
                                     <td class="py-2 text-white" id="udm-ref-count"></td>
                                 </tr>
-                                <tr>
-                                    <td class="py-2 text-white/70">Приглашён:</td>
-                                    <td class="py-2 text-white" id="udm-referred-by"></td>
+                                <td class="py-2 text-white/70">Приглашён:</td>
+                                <td class="py-2 text-white" id="udm-referred-by"></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-2 text-white/70">Баланс:</td>
-                                    <td class="py-2 text-white" id="udm-balance"></td>
+                                    <td colspan="2" class="pt-4 border-t border-white/10 mt-2">
+                                        <div
+                                            class="text-white/70 mb-2 text-xs uppercase font-bold flex justify-between items-center">
+                                            <span>Приглашенные (<span id="udm-refs-total">0</span>)</span>
+                                        </div>
+                                        <div id="udm-referrals-container"
+                                            class="custom-scroll max-h-[140px] overflow-y-auto pr-1">
+                                            <ul id="udm-referrals-list" class="space-y-1 text-sm"></ul>
+                                        </div>
+                                        <button id="udm-refs-load-more"
+                                            class="w-full mt-2 py-1 flex items-center justify-center text-primary hover:bg-white/5 rounded transition-colors hidden"
+                                            title="Загрузить еще">
+                                            <span class="material-symbols-outlined">expand_more</span>
+                                        </button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -193,7 +326,7 @@
                             <h4 class="text-white font-bold">Подписки <span id="udm-subs-stats"
                                     class="text-white/50 text-sm font-normal"></span></h4>
                         </div>
-                        <div id="udm-subs-list" class="max-h-64 overflow-y-auto divide-y divide-white/10"></div>
+                        <div id="udm-subs-list" class="max-h-[450px] overflow-y-auto divide-y divide-white/10"></div>
                     </div>
                 </div>
 
@@ -202,13 +335,15 @@
                         <div class="p-4 border-b border-white/10">
                             <h4 class="text-white font-bold">История платежей</h4>
                         </div>
-                        <div class="overflow-x-auto">
+                        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
                             <table class="w-full text-sm">
-                                <thead class="bg-white/5">
+                                <thead class="bg-[#102219] sticky top-0 z-10">
                                     <tr>
-                                        <th class="px-4 py-2 text-left text-white/70">Дата</th>
-                                        <th class="px-4 py-2 text-left text-white/70">Тариф</th>
-                                        <th class="px-4 py-2 text-left text-white/70">Сумма</th>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Дата</td>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Тариф</td>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Хост</td>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Тип</td>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Сумма</td>
                                     </tr>
                                 </thead>
                                 <tbody id="udm-payment-history" class="divide-y divide-white/10"></tbody>
@@ -222,13 +357,15 @@
                         <div class="p-4 border-b border-white/10">
                             <h4 class="text-white font-bold">История транзакций баланса</h4>
                         </div>
-                        <div class="overflow-x-auto">
+                        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
                             <table class="w-full text-sm">
-                                <thead class="bg-white/5">
+                                <thead class="bg-[#102219] sticky top-0 z-10">
                                     <tr>
-                                        <th class="px-4 py-2 text-left text-white/70">Дата</th>
-                                        <th class="px-4 py-2 text-left text-white/70">Тип</th>
-                                        <th class="px-4 py-2 text-left text-white/70">Сумма</th>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Дата</td>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Тариф</td>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Хост</td>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Тип</td>
+                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Сумма</td>
                                     </tr>
                                 </thead>
                                 <tbody id="udm-balance-history" class="divide-y divide-white/10"></tbody>
@@ -470,39 +607,138 @@
                     const subsList = document.getElementById('udm-subs-list');
                     subsStats.textContent = data.subs_stats ?
                         `(Всего: ${data.subs_stats.total}, Активно: ${data.subs_stats.active}, Истекло: ${data.subs_stats.expired})` : '';
-                    subsList.innerHTML = data.subscriptions?.length ? data.subscriptions.map(sub => `
-                    <div class="p-4">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="${sub.is_expired ? 'text-red-400' : 'text-primary'} font-bold text-sm">${sub.status_text}</span>
-                            <span class="text-white/50 text-sm">Истекает: ${sub.expire_date}</span>
+                    subsList.innerHTML = data.subscriptions?.length ? data.subscriptions.map(sub => {
+                        // Duration Helper
+                        function formatDuration(dateStr) {
+                            if (!dateStr || sub.is_expired) return '';
+                            const d = new Date(dateStr);
+                            const now = new Date();
+                            const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+                            if (diffDays <= 0) return '';
+                            if (diffDays > 30) {
+                                const months = Math.round(diffDays / 30);
+                                return `(${months} мес.)`;
+                            }
+                            return '';
+                        }
+                        const durationText = formatDuration(sub.expire_date);
+
+                        return `
+                    <div class="p-2 relative bg-white/3 mb-4 border border-white/5 last:mb-0 shadow-lg shadow-black/20">
+                        <div class="flex items-center gap-2 mb-2 flex-wrap justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="${sub.is_expired ? 'text-red-400' : 'text-primary'} font-bold text-sm">${sub.status_text}</span>
+                                ${durationText ? `<span class="text-white/50 text-sm">${durationText}</span>` : ''}
+                                <span class="text-white/50 text-xs">до: ${sub.expire_date}</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-white/50 font-medium">
+                                ${sub.comment ? `<span class="italic max-w-[150px] truncate" title="${sub.comment.replace(/"/g, '&quot;')}">${sub.comment}</span>` : ''}
+                                <div class="bg-white/5 px-2 py-0.5 rounded">${sub.host_name}</div>
+                            </div>
                         </div>
-                        <div class="bg-white/5 rounded p-2 font-mono text-sm text-primary break-all mb-2">${sub.key}</div>
-                        <div class="flex gap-2 flex-wrap">
-                            <div class="bg-white/5 rounded px-2 py-1 text-xs text-white/70 cursor-pointer hover:bg-white/10 transition-colors" 
-                                 onclick="copyToClipboard('${sub.email}', this)" title="Нажмите для копирования">
-                                <span class="text-white/50">Email:</span> ${sub.email}
-                            </div>
-                            <div class="bg-white/5 rounded px-2 py-1 text-xs text-white/70 cursor-pointer hover:bg-white/10 transition-colors" 
-                                 onclick="copyToClipboard('${sub.remnawave_user_uuid}', this)" title="Нажмите для копирования">
-                                <span class="text-white/50">UUID:</span> ${sub.remnawave_user_uuid}
-                            </div>
+                        <div class="bg-white/5 rounded p-2 font-mono text-sm text-primary break-all mb-2 pr-2 relative flex items-center gap-2">
+                            <span class="flex-1">${sub.key}</span>
+                            <button onclick="copyToClipboard('${sub.key}', this)" 
+                                    class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors"
+                                    title="Скопировать ссылку">
+                                <span class="material-symbols-outlined text-sm">content_copy</span>
+                            </button>
+                            <button onclick="window.open('${sub.key}', '_blank')" 
+                                    class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors"
+                                    title="Открыть ссылку">
+                                <span class="material-symbols-outlined text-sm">open_in_new</span>
+                            </button>
+                        </div>
+
+                        <!-- Actions Row -->
+                        <div class="flex items-center gap-2 justify-between flex-wrap mt-2">
+                             <!-- Left: Email & UUID -->
+                             <div class="flex items-center gap-2 flex-wrap">
+                                <div class="bg-white/5 rounded px-2 py-1 text-xs text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1" 
+                                     onclick="copyToClipboard('${sub.email}', this)" title="Нажмите для копирования">
+                                    <span class="material-symbols-outlined text-[10px] opacity-50">content_copy</span>
+                                    <span class="text-white/50">Email:</span> ${sub.email}
+                                </div>
+                                <div class="bg-white/5 rounded px-2 py-1 text-xs text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1" 
+                                     onclick="copyToClipboard('${sub.remnawave_user_uuid}', this)" title="Нажмите для копирования">
+                                    <span class="material-symbols-outlined text-[10px] opacity-50">content_copy</span>
+                                    <span class="text-white/50">UUID:</span> ${sub.remnawave_user_uuid}
+                                </div>
+                             </div>
+
+                             <!-- Right: Buttons -->
+                             <div class="flex items-center gap-2 flex-shrink-0">
+                                  <button class="btn-user-edit-expiry w-8 h-8 flex items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors"
+                                          data-key-id="${sub.key_id}" title="Изменить срок">
+                                      <span class="material-symbols-outlined text-sm">schedule</span>
+                                  </button>
+                                  
+                                  <button class="btn-user-edit-comment w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                                          data-key-id="${sub.key_id}" data-current-comment="${(sub.comment || '').replace(/"/g, '&quot;')}" title="Комментарий">
+                                      <span class="material-symbols-outlined text-sm">comment</span>
+                                  </button>
+
+                                  <button class="btn-user-revoke-key w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                                          data-key-id="${sub.key_id}" title="Отозвать">
+                                      <span class="material-symbols-outlined text-sm">delete</span>
+                                  </button>
+                             </div>
                         </div>
                     </div>
-                `).join('') : '<div class="p-4 text-center text-white/50">Нет подписок</div>';
+                `}).join('') : '<div class="p-4 text-center text-white/50">Нет подписок</div>';
+
+                    function formatWithRelative(dateStr) {
+                        if (!dateStr) return 'N/A';
+                        try {
+                            const d = new Date(dateStr);
+                            const now = new Date();
+                            const diffMs = now - d;
+                            const diffMins = Math.floor(diffMs / 60000);
+                            const diffHours = Math.floor(diffMs / 3600000);
+                            const diffDays = Math.floor(diffMs / 86400000);
+
+                            let rel = '';
+                            if (diffMins < 60) rel = `(${diffMins}мин)`;
+                            else if (diffHours < 24) rel = `(${diffHours}ч)`;
+                            else if (diffDays < 30) rel = `(${diffDays}д)`;
+                            else if (diffDays < 365) rel = `(${Math.round(diffDays / 30)}мес)`;
+                            else rel = `(${Math.round(diffDays / 365)}г)`;
+
+                            // Format YYYY-MM-DD HH:MM:SS
+                            const Y = d.getFullYear();
+                            const M = String(d.getMonth() + 1).padStart(2, '0');
+                            const D = String(d.getDate()).padStart(2, '0');
+                            const h = String(d.getHours()).padStart(2, '0');
+                            const m = String(d.getMinutes()).padStart(2, '0');
+                            const s = String(d.getSeconds()).padStart(2, '0');
+
+                            return `${Y}-${M}-${D} ${h}:${m}:${s} <span class="text-white/50 text-xs">${rel}</span>`;
+                        } catch (e) {
+                            return dateStr;
+                        }
+                    }
 
                     const paymentHistory = document.getElementById('udm-payment-history');
                     paymentHistory.innerHTML = data.payment_history?.length ? data.payment_history.map(p => `
-                    <tr><td class="px-4 py-2 text-white">${p.date || 'N/A'}</td>
-                    <td class="px-4 py-2 text-white">${p.plan || 'N/A'}</td>
-                    <td class="px-4 py-2 text-white">${(p.amount || 0).toFixed(2)} RUB</td></tr>
-                `).join('') : '<tr><td colspan="3" class="px-4 py-4 text-center text-white/50">Нет данных</td></tr>';
+                    <tr>
+                        <td class="px-4 py-2 text-white whitespace-nowrap">${formatWithRelative(p.date)}</td>
+                        <td class="px-4 py-2 text-white">${p.plan || 'N/A'}</td>
+                        <td class="px-4 py-2 text-white">${p.host || 'N/A'}</td>
+                        <td class="px-4 py-2 text-white">${p.type || 'N/A'}</td>
+                        <td class="px-4 py-2 text-white">${(p.amount || 0).toFixed(2)} RUB</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="5" class="px-4 py-4 text-center text-white/50">Нет данных</td></tr>';
 
                     const balanceHistory = document.getElementById('udm-balance-history');
                     balanceHistory.innerHTML = data.balance_history?.length ? data.balance_history.map(t => `
-                    <tr><td class="px-4 py-2 text-white">${t.date || 'N/A'}</td>
-                    <td class="px-4 py-2 text-white">${t.type || 'N/A'}</td>
-                    <td class="px-4 py-2 text-white">${(t.amount || 0).toFixed(2)} RUB</td></tr>
-                `).join('') : '<tr><td colspan="3" class="px-4 py-4 text-center text-white/50">Нет данных</td></tr>';
+                    <tr>
+                        <td class="px-4 py-2 text-white whitespace-nowrap">${formatWithRelative(t.date)}</td>
+                        <td class="px-4 py-2 text-white">${t.plan || '—'}</td>
+                        <td class="px-4 py-2 text-white">${t.host || '—'}</td>
+                        <td class="px-4 py-2 text-white">${t.type || 'N/A'}</td>
+                        <td class="px-4 py-2 text-white">${(t.amount || 0).toFixed(2)} RUB</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="5" class="px-4 py-4 text-center text-white/50">Нет данных</td></tr>';
 
                     document.getElementById('udm-loading').classList.add('hidden');
                     document.getElementById('udm-content').classList.remove('hidden');
@@ -510,6 +746,87 @@
                     showToast('danger', 'Не удалось загрузить данные пользователя');
                     closeModal('userDetailsModal');
                 }
+
+                // Fetch Referrals
+                try {
+                    const refResp = await fetch(`{{ url_for('user_referrals_json', user_id=0) }}`.replace('/0/', `/${uid}/`), {
+                        headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+                    });
+                    const refData = await refResp.json();
+                    const refs = (refData && refData.ok) ? (refData.items || []) : [];
+
+                    document.getElementById('udm-refs-total').textContent = refs.length;
+
+                    const refsContainer = document.getElementById('udm-referrals-list');
+                    const loadMoreBtn = document.getElementById('udm-refs-load-more');
+                    refsContainer.innerHTML = '';
+
+                    let renderedCount = 0;
+                    const BATCH_SIZE_INITIAL = 3;
+                    const BATCH_SIZE_MORE = 10;
+
+                    function renderRefs(count) {
+                        const next = refs.slice(renderedCount, renderedCount + count);
+                        next.forEach(r => {
+                            const datePart = r.registration_date.split(' ')[0];
+                            // Calculate relative time
+                            let relTime = '';
+                            try {
+                                const d = new Date(r.registration_date);
+                                const now = new Date();
+                                const diffDays = Math.ceil((now - d) / (1000 * 60 * 60 * 24));
+                                if (diffDays < 30) relTime = `(${diffDays} дн.)`;
+                                else if (diffDays < 365) relTime = `(${Math.round(diffDays / 30)} мес.)`;
+                                else relTime = `(${Math.round(diffDays / 365)} г.)`;
+                            } catch (_) { }
+
+                            const li = document.createElement('li');
+                            li.className = 'bg-white/5 rounded px-2 py-1.5 flex justify-between items-center';
+
+                            li.innerHTML = `
+                                <div class="truncate flex items-center gap-2">
+                                    <div class="flex flex-col truncate">
+                                        <span class="text-white font-mono text-xs">#${r.telegram_id}</span>
+                                        <span class="text-white/70 truncate">@${r.username || 'N/A'}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-white/30 text-xs whitespace-nowrap text-right min-w-[80px]">
+                                        ${datePart}<br>
+                                        <span class="text-white/20">${relTime}</span>
+                                    </span>
+                                    <a href="{{ url_for('users_page') }}?q=${r.telegram_id}"
+                                       class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors"
+                                       title="Профиль" target="_blank">
+                                        <span class="material-symbols-outlined text-sm">person</span>
+                                    </a>
+                                </div>
+                            `;
+                            refsContainer.appendChild(li);
+                        });
+                        renderedCount += next.length;
+
+                        // Toggle load more button
+                        if (renderedCount < refs.length) {
+                            loadMoreBtn.classList.remove('hidden');
+                        } else {
+                            loadMoreBtn.classList.add('hidden');
+                        }
+                    }
+
+                    renderRefs(BATCH_SIZE_INITIAL);
+
+                    // Remove old listener to avoid duplicates if any (simple way: clone node or just reassign onclick)
+                    // Better: define handler outside or use a property.
+                    loadMoreBtn.onclick = (e) => {
+                        e.preventDefault();
+                        renderRefs(BATCH_SIZE_MORE);
+                    };
+
+                } catch (e) {
+                    console.error(e);
+                }
+
             } catch (_) {
                 showToast('danger', 'Ошибка сети');
                 closeModal('userDetailsModal');
@@ -541,6 +858,106 @@
                 showToast('danger', 'Ошибка сети');
             }
         });
+
+        // ========= Subscription Actions =========
+        let currentUserDetailsId = null; // Store user ID to refresh modal after update
+
+        // --- Expiry ---
+        let expiryKeyId = null;
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-user-edit-expiry');
+            if (!btn) return;
+            expiryKeyId = btn.getAttribute('data-key-id');
+            // Assuming this button is inside the modal, we can get current user ID from somewhere or store it differently
+            // But actually we have data-user-id on trial toggle or we can just look at modal content attributes if we added them.
+            // For now, let's rely on refreshContainerById NOT working for modal content directly, 
+            // instead we should re-fetch user details.
+            // Let's store uid in a global var when modal opens.
+            currentUserDetailsId = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+
+            document.getElementById('expiryDelta').value = '';
+            openModal('expiryModal');
+        });
+
+        document.getElementById('expirySaveBtn')?.addEventListener('click', async () => {
+            const delta = document.getElementById('expiryDelta').value;
+            if (!expiryKeyId || !delta) { showToast('warning', 'Введите количество дней'); return; }
+            try {
+                const fd = new FormData();
+                fd.append('csrf_token', '{{ csrf_token() }}'); // Using template var since JS is in template
+                fd.append('delta_days', delta);
+                const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0/', `/${expiryKeyId}/`);
+                const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+                if (resp.ok) {
+                    showToast('success', 'Срок обновлён');
+                    closeModal('expiryModal');
+                    // Refresh User Details Modal
+                    if (currentUserDetailsId) refreshUserDetails(currentUserDetailsId);
+                } else { showToast('danger', 'Ошибка'); }
+            } catch (_) { showToast('danger', 'Ошибка сети'); }
+        });
+
+        // --- Comment ---
+        let commentKeyId = null;
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-user-edit-comment');
+            if (!btn) return;
+            commentKeyId = btn.getAttribute('data-key-id');
+            currentUserDetailsId = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+
+            document.getElementById('commentInput').value = btn.getAttribute('data-current-comment') || '';
+            openModal('commentModal');
+        });
+
+        document.getElementById('commentSaveBtn')?.addEventListener('click', async () => {
+            const comment = document.getElementById('commentInput').value;
+            if (!commentKeyId) return;
+            try {
+                const fd = new FormData();
+                fd.append('csrf_token', '{{ csrf_token() }}');
+                fd.append('comment', comment);
+                const url = `{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0/', `/${commentKeyId}/`);
+                const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+                if (resp.ok) {
+                    showToast('success', 'Комментарий сохранён');
+                    closeModal('commentModal');
+                    if (currentUserDetailsId) refreshUserDetails(currentUserDetailsId);
+                } else { showToast('danger', 'Ошибка сохранения'); }
+            } catch (_) { showToast('danger', 'Ошибка сети'); }
+        });
+
+        // --- Revoke ---
+        let revokeKeyId = null;
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-user-revoke-key');
+            if (!btn) return;
+
+            revokeKeyId = btn.getAttribute('data-key-id');
+            currentUserDetailsId = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+            openModal('revokeConfirmModal');
+        });
+
+        document.getElementById('revokeConfirmBtn')?.addEventListener('click', async () => {
+            if (!revokeKeyId) return;
+
+            try {
+                const fd = new FormData();
+                fd.append('csrf_token', '{{ csrf_token() }}');
+                const url = `{{ url_for('delete_key_route', key_id=0) }}`.replace('/0/', `/${revokeKeyId}/`);
+                const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+                if (resp.ok) {
+                    showToast('success', 'Ключ отозван');
+                    closeModal('revokeConfirmModal');
+                    if (currentUserDetailsId) refreshUserDetails(currentUserDetailsId);
+                } else { showToast('danger', 'Ошибка удаления'); }
+            } catch (_) { showToast('danger', 'Ошибка сети'); }
+        });
+
+        // Helper to refresh modal content
+        async function refreshUserDetails(uid) {
+            const btn = document.querySelector(`.btn-user-details[data-uid="${uid}"]`);
+            if (btn) btn.click();
+        }
 
         restoreOpenedKeys();
     })();

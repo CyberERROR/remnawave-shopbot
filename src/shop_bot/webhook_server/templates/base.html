@@ -216,6 +216,24 @@
         .status-dot-animated {
             animation: pulse 2s ease-in-out infinite;
         }
+
+        @keyframes glow-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                filter: drop-shadow(0 0 5px rgba(19, 236, 128, 0.8));
+            }
+
+            50% {
+                opacity: 0.6;
+                filter: drop-shadow(0 0 15px rgba(19, 236, 128, 0.4));
+            }
+        }
+
+        .animate-glow-pulse {
+            animation: glow-pulse 1.5s infinite ease-in-out;
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -237,7 +255,7 @@
                             <span class="material-symbols-outlined text-lg">edit</span>
                         </button>
                         <button type="button" id="about-info-btn"
-                            class="text-white/40 hover:text-white transition-colors" title="О проекте">
+                            class="relative text-white/40 hover:text-white transition-colors" title="О проекте">
                             <span class="material-symbols-outlined text-lg">info</span>
                         </button>
                     </div>
@@ -395,6 +413,31 @@
                 </h3>
                 <button onclick="closeModal('aboutModal')"
                     class="text-white/50 hover:text-white text-2xl transition-colors">&times;</button>
+            </div>
+
+            <div id="update-notification"
+                class="hidden mb-6 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/50 shadow-[0_0_20px_rgba(19,236,128,0.15)] relative overflow-hidden group">
+                <div class="absolute inset-0 bg-primary/5 animate-pulse" style="animation-duration: 3s;"></div>
+                <div class="relative flex items-center gap-4">
+                    <div
+                        class="flex-shrink-0 w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30 shadow-inner">
+                        <span
+                            class="material-symbols-outlined text-primary text-2xl animate-[spin_4s_linear_infinite]">sync</span>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-white font-bold text-lg leading-tight mb-1">Доступно обновление!</h4>
+                        <div class="flex items-center gap-2 text-white/80 text-sm">
+                            <span>Доступна версия:</span>
+                            <span id="latest-version"
+                                class="font-mono bg-black/30 px-2 py-0.5 rounded text-primary font-bold border border-primary/20"></span>
+                        </div>
+                    </div>
+                    <a href="{{ project_info.links.repository }}" target="_blank"
+                        class="flex-shrink-0 bg-primary hover:bg-primary/90 text-background-dark font-bold py-2 px-4 rounded-lg text-sm transition-all shadow-[0_0_10px_rgba(19,236,128,0.4)] hover:shadow-[0_0_15px_rgba(19,236,128,0.6)] flex items-center gap-2">
+                        <span>Перейти</span>
+                        <span class="material-symbols-outlined text-lg">arrow_forward</span>
+                    </a>
+                </div>
             </div>
 
             <div class="space-y-4">
@@ -675,8 +718,47 @@
             const aboutBtn = document.getElementById('about-info-btn');
             if (!aboutBtn) return;
 
-            aboutBtn.addEventListener('click', () => {
+            async function checkForUpdates() {
+                try {
+                    const response = await fetch('/update/check', {
+                        method: 'GET',
+                        credentials: 'same-origin'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const updateNotification = document.getElementById('update-notification');
+                        const latestVersionSpan = document.getElementById('latest-version');
+
+                        if (data.update_available) {
+                            // Делаем иконку зеленой и добавляем пульсацию
+                            aboutBtn.classList.remove('text-white/40', 'hover:text-white');
+                            aboutBtn.classList.add('text-primary', 'animate-glow-pulse');
+
+                            if (updateNotification && latestVersionSpan) {
+                                latestVersionSpan.textContent = data.latest_version;
+                                updateNotification.classList.remove('hidden');
+                            }
+                        } else {
+                            // Возвращаем стандартные стили
+                            aboutBtn.classList.add('text-white/40', 'hover:text-white');
+                            aboutBtn.classList.remove('text-primary', 'animate-glow-pulse');
+
+                            if (updateNotification) {
+                                updateNotification.classList.add('hidden');
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Ошибка проверки обновлений:', e);
+                }
+            }
+
+            checkForUpdates();
+
+            aboutBtn.addEventListener('click', async () => {
                 openModal('aboutModal');
+                await checkForUpdates();
             });
         })();
 

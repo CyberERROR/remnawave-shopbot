@@ -3,8 +3,15 @@
 
 {% block content %}
 <style>
+    /* ========== ОБЩИЕ СТИЛИ ========== */
+    .support-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* ========== DESKTOP СТИЛИ ========== */
     @media (min-width: 769px) {
-        .desktop-table {
+        .desktop-view {
             display: block;
         }
 
@@ -17,12 +24,185 @@
         }
     }
 
-    @media (max-width: 768px) {
-        .hidden-on-mobile {
-            display: none !important;
-        }
+    /* Карточка статистики */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
 
-        .desktop-table {
+    .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .stat-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .stat-card.active {
+        background: rgba(19, 236, 128, 0.1);
+        border-color: rgba(19, 236, 128, 0.3);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .stat-icon.all {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-icon.open {
+        background: rgba(19, 236, 128, 0.15);
+    }
+
+    .stat-icon.closed {
+        background: rgba(239, 68, 68, 0.15);
+    }
+
+    .stat-icon .material-symbols-outlined {
+        font-size: 24px;
+    }
+
+    .stat-icon.all .material-symbols-outlined {
+        color: #fff;
+    }
+
+    .stat-icon.open .material-symbols-outlined {
+        color: #13ec80;
+    }
+
+    .stat-icon.closed .material-symbols-outlined {
+        color: #ef4444;
+    }
+
+    .stat-info {
+        flex: 1;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1;
+        margin-bottom: 4px;
+    }
+
+    .stat-label {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.5);
+        font-weight: 500;
+    }
+
+    /* Таблица тикетов */
+    .tickets-table-wrapper {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .tickets-table {
+        width: 100%;
+    }
+
+    .tickets-table thead {
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .tickets-table th {
+        padding: 14px 20px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .tickets-table tbody tr {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.2s ease;
+    }
+
+    .tickets-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .tickets-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tickets-table tbody tr.priority {
+        background: rgba(234, 179, 8, 0.05);
+    }
+
+    .tickets-table tbody tr.priority:hover {
+        background: rgba(234, 179, 8, 0.08);
+    }
+
+    .tickets-table td {
+        padding: 16px 20px;
+        vertical-align: middle;
+    }
+
+    /* Пагинация */
+    .pagination-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .pagination-info {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .pagination-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .pagination-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+    }
+
+    .pagination-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* ========== MOBILE СТИЛИ ========== */
+    @media (max-width: 768px) {
+        .desktop-view {
             display: none;
         }
 
@@ -34,20 +214,73 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            background: rgba(16, 34, 25, 0.95);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
-            padding: 10px 16px;
-            margin: -16px -16px 0 -16px;
-            margin-bottom: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px;
+            margin: -24px -24px 0 -24px;
+        }
+
+        .mobile-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
         }
 
         .mobile-header-title {
-            font-size: 20px;
-            font-weight: 700;
+            font-size: 28px;
+            font-weight: 800;
             color: #fff;
-            margin-bottom: 12px;
-            margin-top: 4px;
+            letter-spacing: -0.5px;
+        }
+
+        .mobile-stats-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mobile-stat-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .mobile-stat-badge.open {
+            background: rgba(19, 236, 128, 0.15);
+            color: #13ec80;
+        }
+
+        .mobile-stat-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .mobile-stat-badge.open .dot {
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
         }
 
         .mobile-filter-scroll {
@@ -56,7 +289,7 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
-            padding-bottom: 8px;
+            padding: 4px 0;
         }
 
         .mobile-filter-scroll::-webkit-scrollbar {
@@ -65,76 +298,101 @@
 
         .mobile-filter-btn {
             flex-shrink: 0;
-            padding: 8px 16px;
-            border-radius: 18px;
+            padding: 10px 18px;
+            border-radius: 12px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             white-space: nowrap;
             transition: all 0.2s ease;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
             color: rgba(255, 255, 255, 0.6);
-            -webkit-tap-highlight-color: transparent;
+            text-decoration: none;
+            border: 1px solid transparent;
         }
 
         .mobile-filter-btn.active {
-            background: #13ec80;
-            color: #000;
-            font-weight: 600;
+            background: rgba(19, 236, 128, 0.15);
+            color: #13ec80;
+            border-color: rgba(19, 236, 128, 0.3);
         }
 
-        .messenger-list {
-            display: flex;
-            flex-direction: column;
-            margin: 0 -16px;
-            padding-bottom: 20px;
-            background: transparent;
+        /* Список чатов */
+        .chat-list {
+            padding: 12px 0;
         }
 
-        .messenger-item {
+        .chat-item {
             display: flex;
             align-items: center;
-            padding: 10px 16px;
+            padding: 12px 16px;
+            margin: 0 -16px;
             text-decoration: none;
-            position: relative;
-            background: transparent;
             transition: background 0.2s;
-            -webkit-tap-highlight-color: transparent;
+            position: relative;
         }
 
-        .messenger-item:active {
-            background-color: rgba(255, 255, 255, 0.05);
+        .chat-item:active {
+            background: rgba(255, 255, 255, 0.05);
         }
 
-        .messenger-avatar {
-            width: 50px;
-            height: 50px;
+        .chat-item.priority {
+            background: rgba(234, 179, 8, 0.05);
+        }
+
+        .chat-item.priority::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 12px;
+            bottom: 12px;
+            width: 3px;
+            background: #eab308;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .chat-avatar {
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 20px;
-            font-weight: 600;
+            font-weight: 700;
             color: #fff;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-            margin-right: 12px;
+            margin-right: 14px;
             flex-shrink: 0;
             position: relative;
+            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
+            box-shadow: 0 4px 12px rgba(19, 236, 128, 0.25);
         }
 
-        .messenger-avatar.closed {
+        .chat-avatar.closed {
             background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
-        .avatar-badge {
+        .avatar-status {
             position: absolute;
-            bottom: 0;
-            right: 0;
+            bottom: 1px;
+            right: 1px;
             width: 14px;
             height: 14px;
-            background: #13ec80;
-            border: 2px solid #000;
             border-radius: 50%;
+            border: 2.5px solid #102219;
+        }
+
+        .avatar-status.green {
+            background: #13ec80;
+        }
+
+        .avatar-status.yellow {
+            background: #eab308;
+            animation: blink-yellow 1s ease-in-out infinite;
+        }
+
+        .avatar-status.red {
+            background: rgba(239, 68, 68, 0.5);
         }
 
         @keyframes blink-yellow {
@@ -145,60 +403,29 @@
             }
 
             50% {
-                opacity: 0.2;
+                opacity: 0.3;
             }
         }
 
-        @keyframes blink-yellow-inline {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.2;
-            }
-        }
-
-        .avatar-badge.yellow {
-            background: #eab308;
-            animation: blink-yellow 1s infinite alternate;
-        }
-
-        .avatar-badge.red {
-            background: #ef4444;
-        }
-
-        .blink-dot {
-            background: #eab308;
-            animation: blink-yellow 1s infinite alternate;
-        }
-
-        .messenger-body {
+        .chat-content {
             flex: 1;
             min-width: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding-right: 4px;
-            border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
-            padding-top: 14px;
-            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 6px 0 18px 0;
         }
 
-        .messenger-item:last-child .messenger-body {
+        .chat-item:last-child .chat-content {
             border-bottom: none;
         }
 
-        .messenger-row-top {
+        .chat-header {
             display: flex;
-            justify-content: space-between;
             align-items: baseline;
-            margin-bottom: 2px;
+            justify-content: space-between;
+            margin-bottom: 4px;
         }
 
-        .messenger-name {
+        .chat-name {
             font-size: 16px;
             font-weight: 600;
             color: #fff;
@@ -208,22 +435,21 @@
             max-width: 70%;
         }
 
-        .messenger-time {
-            font-size: 13px;
+        .chat-time {
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.4);
-            white-space: nowrap;
-            margin-left: 8px;
+            flex-shrink: 0;
         }
 
-        .messenger-row-bottom {
+        .chat-preview-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
         }
 
-        .messenger-preview {
+        .chat-preview {
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.5);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -231,35 +457,91 @@
             line-height: 1.4;
         }
 
-        .messenger-status-icon {
-            display: flex;
-            align-items: center;
-        }
-
-        .messenger-preview.highlight {
+        .chat-preview.highlight {
             color: #fff;
             font-weight: 500;
         }
 
+        .chat-badge {
+            background: #13ec80;
+            color: #000;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .chat-chevron {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 18px;
+        }
+
+        .closed-chat {
+            opacity: 0.55;
+        }
+
+        .closed-chat:active {
+            opacity: 0.75;
+        }
+
+        /* Мобильная пагинация */
         .mobile-pagination {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 16px;
-            padding: 20px;
+            gap: 20px;
+            padding: 24px 16px;
             color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
         }
 
         .mobile-pagination a {
             color: #13ec80;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
+            padding: 10px 20px;
+            background: rgba(19, 236, 128, 0.1);
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .mobile-pagination a:hover {
+            background: rgba(19, 236, 128, 0.2);
+        }
+
+        /* Пустое состояние */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            color: rgba(255, 255, 255, 0.15);
+            margin-bottom: 16px;
+        }
+
+        .empty-state-text {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 16px;
         }
     }
 </style>
 
+<!-- ========== MOBILE HEADER ========== -->
 <div class="mobile-app-header">
-    <div class="mobile-header-title">Поддержка</div>
+    <div class="mobile-header-top">
+        <div class="mobile-header-title">Поддержка</div>
+        <div class="mobile-stats-row">
+            {% if open_count > 0 %}
+            <div class="mobile-stat-badge open">
+                <span class="dot"></span>
+                {{ open_count }} открыт{{ 'о' if open_count == 1 else 'ых' }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
     <div class="mobile-filter-scroll">
         <a href="{{ url_for('support_list_page') }}"
             class="mobile-filter-btn {% if not filter_status %}active{% endif %}">
@@ -276,75 +558,143 @@
     </div>
 </div>
 
-<div class="mb-6 hidden md:block hidden-on-mobile">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold text-white">Поддержка</h2>
-            <p class="text-white/50 text-sm">Список обращений и их статусы</p>
+<!-- ========== DESKTOP VIEW ========== -->
+<div class="desktop-view">
+    <div class="support-container">
+        <!-- Заголовок -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Поддержка</h2>
+                <p class="text-white/50 text-sm mt-1">Управление обращениями пользователей</p>
+            </div>
+            <button onclick="openGeminiModal()"
+                class="w-12 h-12 rounded-xl flex items-center justify-center bg-white/5 hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+                title="Настройки AI-ассистента">
+                <span class="material-symbols-outlined" style="font-size: 24px;">settings</span>
+            </button>
         </div>
-        <div class="flex gap-2">
-            <a href="{{ url_for('support_list_page') }}"
-                class="px-4 py-2 rounded-lg text-sm font-medium {% if not filter_status %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
-                Все ({{ all_count }})
+
+        <!-- Статистика -->
+        <div class="stats-grid">
+            <a href="{{ url_for('support_list_page') }}" class="stat-card {% if not filter_status %}active{% endif %}">
+                <div class="stat-icon all">
+                    <span class="material-symbols-outlined">inbox</span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ all_count }}</div>
+                    <div class="stat-label">Все обращения</div>
+                </div>
             </a>
             <a href="{{ url_for('support_list_page', status='open') }}"
-                class="px-4 py-2 rounded-lg text-sm font-medium {% if filter_status == 'open' %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
-                Открытые ({{ open_count }})
+                class="stat-card {% if filter_status == 'open' %}active{% endif %}">
+                <div class="stat-icon open">
+                    <span class="material-symbols-outlined">mark_chat_unread</span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ open_count }}</div>
+                    <div class="stat-label">Открытые</div>
+                </div>
             </a>
             <a href="{{ url_for('support_list_page', status='closed') }}"
-                class="px-4 py-2 rounded-lg text-sm font-medium {% if filter_status == 'closed' %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
-                Закрытые ({{ closed_count }})
+                class="stat-card {% if filter_status == 'closed' %}active{% endif %}">
+                <div class="stat-icon closed">
+                    <span class="material-symbols-outlined">check_circle</span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ closed_count }}</div>
+                    <div class="stat-label">Закрытые</div>
+                </div>
             </a>
         </div>
+
+        {% if tickets %}
+        <!-- Таблица тикетов -->
+        <div class="tickets-table-wrapper">
+            <table class="tickets-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Пользователь</th>
+                        <th>Тема</th>
+                        <th>Статус</th>
+                        <th>Обновлен</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="support-tbody"
+                    data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
+                    data-fetch-interval="10000">
+                    {% include 'partials/support_table.html' %}
+                </tbody>
+            </table>
+
+            {% if total_pages > 1 %}
+            <div class="pagination-wrapper">
+                <div class="pagination-info">Страница {{ current_page }} из {{ total_pages }}</div>
+                <div class="pagination-buttons">
+                    {% if current_page > 1 %}
+                    <a href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}"
+                        class="pagination-btn">← Назад</a>
+                    {% endif %}
+                    {% if current_page < total_pages %} <a
+                        href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}"
+                        class="pagination-btn">Вперед →</a>
+                        {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="tickets-table-wrapper">
+            <div class="empty-state">
+                <span class="material-symbols-outlined empty-state-icon">forum</span>
+                <p class="empty-state-text">Обращений пока нет</p>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-{% if tickets %}
+<!-- ========== MOBILE VIEW ========== -->
 <div class="mobile-view">
-    <div class="messenger-list">
+    {% if tickets %}
+    <div class="chat-list">
         {% for ticket in tickets %}
-        <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}" class="messenger-item">
-            <div class="messenger-avatar {% if ticket.status != 'open' %}closed{% endif %}">
+        <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}"
+            class="chat-item {% if ticket.status == 'open' and ticket.last_sender == 'user' %}priority{% endif %}{% if ticket.status != 'open' %} closed-chat{% endif %}">
+            <div class="chat-avatar {% if ticket.status != 'open' %}closed{% endif %}">
                 {{ ticket.username[0]|upper if ticket.username else 'U' }}
-
                 {% if ticket.status == 'open' %}
                 {% if ticket.last_sender == 'admin' %}
-                <div class="avatar-badge"></div>
+                <div class="avatar-status green"></div>
                 {% elif ticket.last_sender == 'user' %}
-                <div class="avatar-badge yellow"></div>
+                <div class="avatar-status yellow"></div>
                 {% endif %}
                 {% else %}
-                <div class="avatar-badge red"></div>
+                <div class="avatar-status red"></div>
                 {% endif %}
             </div>
 
-            <div class="messenger-body">
-                <div class="messenger-row-top">
-                    <span class="messenger-name">
+            <div class="chat-content">
+                <div class="chat-header">
+                    <span class="chat-name">
                         {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
                     </span>
-                    <span class="messenger-time">
+                    <span class="chat-time mobile-relative-time"
+                        data-timestamp="{{ ticket.updated_at or ticket.created_at }}">
                         {{ (ticket.updated_at or ticket.created_at or "").split(' ')[1][:5] }}
                     </span>
                 </div>
-                <div class="messenger-row-bottom">
+                <div class="chat-preview-row">
                     <span
-                        class="messenger-preview {% if ticket.status == 'open' and ticket.last_sender == 'user' %}highlight{% endif %}">
+                        class="chat-preview {% if ticket.status == 'open' and ticket.last_sender == 'user' %}highlight{% endif %}">
                         {% if ticket.subject %}
                         {{ ticket.subject }}
                         {% else %}
                         Чат #{{ ticket.ticket_id }}
                         {% endif %}
                     </span>
-
-                    <div class="messenger-status-icon">
-                        {% if ticket.status == 'closed' %}
-                        <span class="material-symbols-outlined text-white/30" style="font-size: 18px;">check</span>
-                        {% else %}
-                        <span class="material-symbols-outlined text-primary/80"
-                            style="font-size: 18px;">chevron_right</span>
-                        {% endif %}
-                    </div>
+                    <span class="material-symbols-outlined chat-chevron">chevron_right</span>
                 </div>
             </div>
         </a>
@@ -354,60 +704,189 @@
     {% if total_pages > 1 %}
     <div class="mobile-pagination">
         {% if current_page > 1 %}
-        <a href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">Назад</a>
+        <a href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">← Назад</a>
         {% endif %}
         <span>{{ current_page }} / {{ total_pages }}</span>
         {% if current_page < total_pages %} <a
-            href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">Вперед</a>
+            href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">Вперед →</a>
             {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <span class="material-symbols-outlined empty-state-icon">forum</span>
+        <p class="empty-state-text">Обращений пока нет</p>
     </div>
     {% endif %}
 </div>
 
-<div class="desktop-table">
-    <div class="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead class="bg-white/5">
-                    <tr>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">ID</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Пользователь
-                        </th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Тема</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Статус</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Обновлен</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Действия</th>
-                    </tr>
-                </thead>
-                <tbody id="support-tbody" class="divide-y divide-white/10"
-                    data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
-                    data-fetch-interval="10000">
-                    {% include 'partials/support_table.html' %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+<!-- Gemini Settings Modal -->
+<div id="geminiModal"
+    class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeGeminiModal()"></div>
+    <div
+        class="relative bg-[#1a2c24] border border-white/10 rounded-2xl w-full max-w-md p-3 transform scale-95 transition-transform duration-300 shadow-2xl">
+        <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#13ec80]">smart_toy</span>
+            Настройки AI-ассистента
+        </h3>
 
-    {% if total_pages > 1 %}
-    <div class="flex items-center justify-between mt-4">
-        <div class="text-white/50 text-sm">Стр. {{ current_page }} из {{ total_pages }}</div>
-        <div class="flex gap-2">
-            {% if current_page > 1 %}
-            <a href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}"
-                class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">Назад</a>
-            {% endif %}
-            {% if current_page < total_pages %} <a
-                href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}"
-                class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm">Вперед</a>
-                {% endif %}
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Gemini API
+                    Key</label>
+                <div class="relative">
+                    <input type="password" id="geminiKeyInput"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-[#13ec80]/50 focus:bg-white/10 transition-all"
+                        placeholder="Введите API ключ...">
+                    <button onclick="toggleKeyVisibility()"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-xl" id="keyVisibilityIcon">visibility</span>
+                    </button>
+                </div>
+                <p class="mt-2 text-xs text-white/30">
+                    Ключ используется для автоматических ответов на обращения пользователей.
+                </p>
+
+                <div class="mt-3 p-3 rounded-lg bg-white/5 border border-white/5 text-xs text-white/60 leading-relaxed">
+                    <p class="mb-1">
+                        <span class="text-white/80 font-medium">Модель:</span> Используется бесплатная версия <code
+                            class="bg-black/30 px-1 py-0.5 rounded text-[#13ec80]">gemini-2.5-flash</code>.
+                    </p>
+                    <p>
+                        Получить ключ можно в <a href="https://aistudio.google.com/api-keys?hl=ru" target="_blank"
+                            class="text-[#13ec80] hover:underline font-medium">Google AI Studio</a>.
+                    </p>
+                </div>
+            </div>
+
+            <div class="pt-2 flex justify-end gap-3">
+                <button onclick="closeGeminiModal()"
+                    class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-all">
+                    Отмена
+                </button>
+                <button onclick="saveGeminiKey()"
+                    class="px-5 py-2.5 rounded-xl text-sm font-bold text-[#000] bg-[#13ec80] hover:bg-[#10c96d] transition-all shadow-lg shadow-[#13ec80]/20 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-lg">save</span>
+                    Сохранить
+                </button>
+            </div>
         </div>
     </div>
-    {% endif %}
 </div>
-{% else %}
-<div class="bg-white/5 border border-white/10 rounded-lg p-8 text-center" style="margin-top: 20px;">
-    <span class="material-symbols-outlined text-4xl text-white/30 mb-2">inbox</span>
-    <p class="text-white/50">Обращений пока нет.</p>
-</div>
-{% endif %}
+
+<script>
+    // Relative time conversion for mobile
+    function formatRelativeTimeMobile(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
+        if (!parts) return dateStr;
+
+        // Server returns UTC, parsing as UTC
+        const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5]));
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHour / 24);
+
+        if (diffDay >= 7) {
+            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+        } else if (diffDay >= 1) {
+            return diffDay + ' д.';
+        } else if (diffHour >= 1) {
+            return diffHour + ' ч.';
+        } else if (diffMin >= 1) {
+            return diffMin + ' мин.';
+        } else {
+            return 'сейчас';
+        }
+    }
+
+    document.querySelectorAll('.mobile-relative-time').forEach(el => {
+        const timestamp = el.getAttribute('data-timestamp');
+        if (timestamp) {
+            el.textContent = formatRelativeTimeMobile(timestamp);
+        }
+    });
+
+    // Gemini Modal Functions
+    const modal = document.getElementById('geminiModal');
+    const keyInput = document.getElementById('geminiKeyInput');
+
+    function openGeminiModal() {
+        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.querySelector('div.transform').classList.remove('scale-95');
+        modal.querySelector('div.transform').classList.add('scale-100');
+
+        // Load current key
+        fetch('/admin/gemini/key')
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.key) {
+                    keyInput.value = data.key;
+                }
+            })
+            .catch(err => console.error('Failed to load Gemini key:', err));
+    }
+
+    function closeGeminiModal() {
+        modal.classList.add('opacity-0');
+        modal.querySelector('div.transform').classList.remove('scale-100');
+        modal.querySelector('div.transform').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('pointer-events-none');
+        }, 300);
+    }
+
+    function toggleKeyVisibility() {
+        if (keyInput.type === 'password') {
+            keyInput.type = 'text';
+            document.getElementById('keyVisibilityIcon').textContent = 'visibility_off';
+        } else {
+            keyInput.type = 'password';
+            document.getElementById('keyVisibilityIcon').textContent = 'visibility';
+        }
+    }
+
+    function saveGeminiKey() {
+        const key = keyInput.value.trim();
+        const csrfToken = "{{ csrf_token() }}";
+
+        fetch('/admin/gemini/key', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ key: key })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) {
+                    // Show success feedback
+                    const btn = document.querySelector('button[onclick="saveGeminiKey()"]');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-lg">check</span> Сохранено';
+                    btn.classList.add('bg-white', 'text-black');
+
+                    setTimeout(() => {
+                        closeGeminiModal();
+                        // Reset button style after delay
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                            btn.classList.remove('bg-white', 'text-black');
+                        }, 300);
+                    }, 1000);
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(err => {
+                console.error('Error saving key:', err);
+                alert('Ошибка сети при сохранении ключа');
+            });
+    }
+</script>
 {% endblock %}

@@ -19,8 +19,32 @@
         </span>
         {% endif %}
     </td>
-    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ user.keys_count or 0 }}шт. / {{ user.total_months or 0
-        }}мес. / {{ user.referral_count or 0 }}реф.</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+        <div class="flex items-center justify-center gap-1.5 flex-wrap">
+            {% if (user.keys_count or 0) > 0 %}
+            <span
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
+                {{ user.keys_count }} шт.
+            </span>
+            {% else %}
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-white/10 text-white/50">
+                —
+            </span>
+            {% endif %}
+            {% if (user.total_months or 0) > 0 %}
+            <span
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
+                {{ user.total_months }} мес.
+            </span>
+            {% endif %}
+            {% if (user.referral_count or 0) > 0 %}
+            <span
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-400">
+                {{ user.referral_count }} реф.
+            </span>
+            {% endif %}
+        </div>
+    </td>
     <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ '%.2f'|format(user.balance or 0) }} RUB</td>
     <td class="px-6 py-4 whitespace-nowrap text-right">
         <div class="flex items-center justify-end gap-1.5 flex-wrap">

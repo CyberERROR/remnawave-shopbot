@@ -1393,6 +1393,64 @@
         </div>
     </div>
 </div>
+
+<div id="executeCommandModal" class="modal-overlay" style="z-index: 60;">
+    <div class="modal-content max-w-4xl">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-400">terminal</span>
+                Выполнить на сервере - <span id="exec-server-name"></span> (BETA)
+            </h5>
+            <button id="btn-close-exec-modal" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <div class="mb-4">
+                <label class="block text-white/70 text-sm font-medium mb-2">Введите команду:</label>
+                <form id="exec-command-form">
+                    <div class="flex gap-2">
+                        <input type="text" id="exec-command-input" placeholder="например: ls -la"
+                            class="flex-1 bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono text-sm" />
+                        <button type="submit" id="btn-exec-command"
+                            class="px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors flex items-center gap-2">
+                            <span class="material-symbols-outlined">play_arrow</span>
+                            Выполнить
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-black/80 border border-white/10 rounded-lg overflow-hidden">
+                <div
+                    class="px-3 py-2 bg-white/5 text-xs text-white/50 border-b border-white/5 flex items-center justify-between">
+                    <span>Вывод команды</span>
+                    <div class="flex gap-2">
+                        <button id="btn-stop-exec-command"
+                            class="text-red-400 hover:text-red-300 text-sm flex items-center gap-1 hidden">
+                            <span class="material-symbols-outlined text-base">stop_circle</span>
+                            Остановить
+                        </button>
+                        <button id="btn-copy-exec-output"
+                            class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base">content_copy</span>
+                            Скопировать
+                        </button>
+                        <button id="btn-clear-exec-output"
+                            class="text-white/50 hover:text-white text-sm flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                            Очистить
+                        </button>
+                    </div>
+                </div>
+                <div id="exec-output"
+                    class="p-4 font-mono text-xs text-green-400 h-96 overflow-y-auto whitespace-pre-wrap">
+                    Ожидание команды...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -2339,6 +2397,11 @@
                                     Перезагрузка
                                 </button>
                             </div>
+                            <button onclick="window.openExecuteCommandModal('host', '${host.host_name}')" 
+                                class="w-full px-2 py-1.5 rounded-md bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-medium flex items-center justify-center gap-1 transition-colors mt-2">
+                                <span class="material-symbols-outlined" style="font-size: 14px">terminal</span>
+                                Выполнить на сервере
+                            </button>
                         </div>
                     `).join('')}
                 </div>
@@ -2404,6 +2467,11 @@
                                     <span class="material-symbols-outlined" style="font-size: 14px">rocket_launch</span>
                                     Развернуть ноду
                                 </button>
+                                <button onclick="window.openExecuteCommandModal('ssh', '${target.target_name}')" 
+                                    class="w-full px-2 py-1.5 rounded-md bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-bold flex items-center justify-center gap-1 transition-colors">
+                                    <span class="material-symbols-outlined" style="font-size: 14px">terminal</span>
+                                    Выполнить на сервере
+                                </button>
                                 <div class="grid grid-cols-2 gap-2">
                                     <button onclick="refreshTargetUptime('${target.target_name}', ${idx})" 
                                         class="px-2 py-1.5 rounded-md bg-white/10 hover:bg-white/15 text-white text-xs font-medium flex items-center justify-center gap-1 transition-colors">
@@ -2449,27 +2517,45 @@
 
                 if (data.ok) {
                     if (uptimeEl) {
+                        const uptimeSeconds = data.uptime_seconds || 0;
+                        const isUptimeLong = uptimeSeconds >= 864000; // 10 days
+                        const uptimeIconClass = isUptimeLong ? 'text-green-400' : 'text-white/60';
+
+                        // CPU Color: <40 Green, <70 Yellow, >70 Red
+                        let cpuClass = 'text-green-400';
+                        if (data.cpu_percent > 70) cpuClass = 'text-red-400';
+                        else if (data.cpu_percent > 40) cpuClass = 'text-yellow-400';
+
+                        // RAM Color: <40 Green, <70 Yellow, >70 Red
+                        let ramClass = 'text-green-400';
+                        if (data.ram_percent > 70) ramClass = 'text-red-400';
+                        else if (data.ram_percent > 40) ramClass = 'text-yellow-400';
+
+                        // SWAP Color: <65 Green, <85 Yellow, >85 Red
+                        let swapClass = 'text-green-400';
+                        if (data.swap_percent > 85) swapClass = 'text-red-400';
+                        else if (data.swap_percent > 65) swapClass = 'text-yellow-400';
+
                         uptimeEl.innerHTML = `
                             <div class="space-y-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-white/40" style="font-size: 12px">schedule</span>
-                                    <span class="text-white/80">Uptime: ${data.uptime_formatted}</span>
-                                </div>
-                            </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-white/40" style="font-size: 12px">memory</span>
-                                    <span class="text-white/80">CPU: ${data.cpu_percent}% (${data.cpu_cores} ядер${data.cpu_cores > 1 && data.cpu_cores < 5 ? 'а' : ''})</span>
+                                    <span class="material-symbols-outlined ${uptimeIconClass}" style="font-size: 12px">schedule</span>
+                                    <span class="${uptimeIconClass}">Uptime: <span class="text-white/60">${data.uptime_formatted}</span></span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-white/40" style="font-size: 12px">developer_board</span>
-                                    <span class="text-white/80">RAM: ${data.ram_percent}% (${data.ram_used} / ${data.ram_total} МБ)</span>
+                                    <span class="material-symbols-outlined ${cpuClass}" style="font-size: 12px">memory</span>
+                                    <span class="${cpuClass}">CPU: ${data.cpu_percent}% <span class="text-white/60">(${data.cpu_cores} ядер${data.cpu_cores > 1 && data.cpu_cores < 5 ? 'а' : ''})</span></span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-white/40" style="font-size: 12px">swap_horiz</span>
-                                    <span class="text-white/80">
+                                    <span class="material-symbols-outlined ${ramClass}" style="font-size: 12px">developer_board</span>
+                                    <span class="${ramClass}">RAM: ${data.ram_percent}% <span class="text-white/60">(${data.ram_used} / ${data.ram_total} МБ)</span></span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined ${swapClass}" style="font-size: 12px">swap_horiz</span>
+                                    <span class="${swapClass}">
                                         ${data.swap_total > 0
-                                ? `SWAP: ${data.swap_percent}% (${data.swap_used} / ${data.swap_total} МБ) от ${data.swappiness}%`
-                                : `SWAP: НЕТ`
+                                ? `SWAP: ${data.swap_percent}% <span class="text-white/60">(${data.swap_used} / ${data.swap_total} МБ) от ${data.swappiness}%</span>`
+                                : `SWAP: <span class="text-white/60">НЕТ</span>`
                             }
                                     </span>
                                 </div>
@@ -3575,6 +3661,179 @@
                 btn.innerHTML = '<span class="material-symbols-outlined">delete_forever</span> Удалить SWAP';
             }
         };
+
+        let currentExecServer = null;
+        let currentExecServerType = null;
+        let currentExecEventSource = null;
+        let currentExecAbortController = null;
+        let currentExecReader = null;
+
+        window.openExecuteCommandModal = function (serverType, serverName) {
+            currentExecServer = serverName;
+            currentExecServerType = serverType;
+            document.getElementById('exec-server-name').textContent = serverName;
+            document.getElementById('exec-command-input').value = '';
+            document.getElementById('exec-output').textContent = 'Ожидание команды...';
+            document.getElementById('btn-stop-exec-command').classList.add('hidden');
+
+            const modal = document.getElementById('executeCommandModal');
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('exec-command-input').focus(), 100);
+        };
+
+        function closeExecuteCommandModal() {
+            const modal = document.getElementById('executeCommandModal');
+            modal.style.display = 'none';
+
+            if (currentExecAbortController) {
+                currentExecAbortController.abort();
+                currentExecAbortController = null;
+            }
+
+            if (currentExecReader) {
+                try {
+                    currentExecReader.cancel();
+                } catch (e) { }
+                currentExecReader = null;
+            }
+
+            if (currentExecEventSource) {
+                currentExecEventSource.close();
+                currentExecEventSource = null;
+            }
+
+            currentExecServer = null;
+            currentExecServerType = null;
+        }
+
+        document.getElementById('btn-close-exec-modal').addEventListener('click', closeExecuteCommandModal);
+
+        document.getElementById('btn-stop-exec-command').addEventListener('click', function () {
+            if (currentExecAbortController) {
+                currentExecAbortController.abort();
+                currentExecAbortController = null;
+            }
+
+            if (currentExecReader) {
+                try {
+                    currentExecReader.cancel();
+                } catch (e) { }
+                currentExecReader = null;
+            }
+
+            const outputEl = document.getElementById('exec-output');
+            outputEl.textContent += '\n[INFO] Команда остановлена пользователем\n';
+
+            this.classList.add('hidden');
+            const btn = document.getElementById('btn-exec-command');
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span> Выполнить';
+
+            window.showToast('info', 'Выполнение команды остановлено');
+        });
+
+        document.getElementById('btn-copy-exec-output').addEventListener('click', async function () {
+            const outputEl = document.getElementById('exec-output');
+            const text = outputEl.textContent;
+
+            try {
+                await navigator.clipboard.writeText(text);
+                window.showToast('success', 'Логи скопированы в буфер обмена');
+            } catch (err) {
+                window.showToast('danger', 'Ошибка копирования: ' + err.message);
+            }
+        });
+
+        document.getElementById('btn-clear-exec-output').addEventListener('click', function () {
+            document.getElementById('exec-output').textContent = 'Ожидание команды...';
+        });
+
+        document.getElementById('exec-command-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            if (!currentExecServer || !currentExecServerType) {
+                window.showToast('danger', 'Ошибка: сервер не выбран');
+                return;
+            }
+
+            const command = document.getElementById('exec-command-input').value.trim();
+            if (!command) {
+                window.showToast('warning', 'Введите команду');
+                return;
+            }
+
+            const outputEl = document.getElementById('exec-output');
+            const btn = document.getElementById('btn-exec-command');
+            const originalHtml = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '\u003csvg class=\"animate-spin h-4 w-4 inline mr-2\" viewBox=\"0 0 24 24\"\u003e\u003ccircle class=\"opacity-25\" cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-width=\"4\" fill=\"none\"\u003e\u003c/circle\u003e\u003cpath class=\"opacity-75\" fill=\"currentColor\" d=\"M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z\"\u003e\u003c/path\u003e\u003c/svg\u003e Выполняется...';
+
+            if (currentExecEventSource) {
+                currentExecEventSource.close();
+                currentExecEventSource = null;
+            }
+
+            outputEl.textContent = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('command', command);
+                formData.append('csrf_token', window.getCsrfToken());
+
+                const url = `/other/servers/execute/${encodeURIComponent(currentExecServerType)}/${encodeURIComponent(currentExecServer)}`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const text = decoder.decode(value, { stream: true });
+                    const lines = text.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.substring(6);
+                            if (data === '[DONE]') {
+                                btn.disabled = false;
+                                btn.innerHTML = originalHtml;
+                                continue;
+                            }
+
+                            outputEl.textContent += data + '\n';
+
+                            const maxLines = 300;
+                            const currentLines = outputEl.textContent.split('\n');
+                            if (currentLines.length > maxLines) {
+                                const linesToKeep = currentLines.slice(-maxLines);
+                                outputEl.textContent = linesToKeep.join('\n');
+                            }
+
+                            outputEl.scrollTop = outputEl.scrollHeight;
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error executing command:', error);
+                outputEl.textContent += `\n[ERROR] ${error.message}\n`;
+                window.showToast('danger', 'Ошибка выполнения команды: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
 
     });
 

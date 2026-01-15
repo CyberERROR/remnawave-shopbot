@@ -414,6 +414,7 @@ def initialize_db():
                 "extend_plan_image": None,
                 "keys_list_image": None,
                 "payment_method_image": None,
+                "key_gemini": None,
             }
             run_migration()
             for key, value in default_settings.items():
@@ -2217,17 +2218,17 @@ def initialize_default_button_configs():
         logging.error(f"Failed to initialize default button configs: {e}")
         return False
 
-def create_plan(host_name: str, plan_name: str, months: int, price: float):
+def create_plan(host_name: str, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0):
     try:
         host_name = normalize_host_name(host_name)
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT INTO plans (host_name, plan_name, months, price) VALUES (?, ?, ?, ?)",
-                (host_name, plan_name, months, price)
+                "INSERT INTO plans (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb) VALUES (?, ?, ?, ?, ?, ?)",
+                (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb)
             )
             conn.commit()
-            logging.info(f"Created new plan '{plan_name}' for host '{host_name}'.")
+            logging.info(f"Created new plan '{plan_name}' for host '{host_name}' with HWID={hwid_limit}, Traffic={traffic_limit_gb}GB.")
     except sqlite3.Error as e:
         logging.error(f"Failed to create plan for host '{host_name}': {e}")
 
@@ -2266,19 +2267,19 @@ def delete_plan(plan_id: int):
     except sqlite3.Error as e:
         logging.error(f"Failed to delete plan with id {plan_id}: {e}")
 
-def update_plan(plan_id: int, plan_name: str, months: int, price: float) -> bool:
+def update_plan(plan_id: int, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0) -> bool:
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE plans SET plan_name = ?, months = ?, price = ? WHERE plan_id = ?",
-                (plan_name, months, price, plan_id)
+                "UPDATE plans SET plan_name = ?, months = ?, price = ?, hwid_limit = ?, traffic_limit_gb = ? WHERE plan_id = ?",
+                (plan_name, months, price, hwid_limit, traffic_limit_gb, plan_id)
             )
             conn.commit()
             if cursor.rowcount == 0:
                 logging.warning(f"No plan updated for id {plan_id} (not found).")
                 return False
-            logging.info(f"Updated plan {plan_id}: name='{plan_name}', months={months}, price={price}.")
+            logging.info(f"Updated plan {plan_id}: name='{plan_name}', months={months}, price={price}, hwid={hwid_limit}, traffic={traffic_limit_gb}.")
             return True
     except sqlite3.Error as e:
         logging.error(f"Failed to update plan {plan_id}: {e}")
@@ -2294,7 +2295,7 @@ def register_user_if_not_exists(telegram_id: int, username: str, referrer_id):
 
                 cursor.execute(
                     "INSERT INTO users (telegram_id, username, registration_date, referred_by) VALUES (?, ?, ?, ?)",
-                    (telegram_id, username, datetime.now(), referrer_id)
+                    (telegram_id, username, datetime.now().replace(microsecond=0), referrer_id)
                 )
             else:
 
@@ -2605,7 +2606,7 @@ def log_transaction(username: str, transaction_id: str | None, payment_id: str |
                 """INSERT INTO transactions
                    (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, created_date)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, datetime.now())
+                (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, datetime.now().replace(microsecond=0))
             )
             conn.commit()
     except sqlite3.Error as e:
@@ -3356,6 +3357,10 @@ def get_tickets_paginated(page: int = 1, per_page: int = 20, status: str | None 
             cursor = conn.cursor()
             
             # Query with JOIN to users table and subquery for last_sender
+            # We add a sorting_priority field:
+            # 1 = Open + User last msg (Needs answer)
+            # 2 = Open + Admin last msg (Waiting answer)
+            # 3 = Closed
             base_query = """
                 SELECT t.*, 
                        u.username,
@@ -3366,20 +3371,37 @@ def get_tickets_paginated(page: int = 1, per_page: int = 20, status: str | None 
                 LEFT JOIN users u ON t.user_id = u.telegram_id
             """
             
+            where_clause = ""
+            params = []
+            
             if status:
                 cursor.execute("SELECT COUNT(*) FROM support_tickets WHERE status = ?", (status,))
                 total = cursor.fetchone()[0] or 0
-                cursor.execute(
-                    base_query + " WHERE t.status = ? ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
-                    (status, per_page, offset)
-                )
+                where_clause = " WHERE t.status = ?"
+                params.append(status)
             else:
                 cursor.execute("SELECT COUNT(*) FROM support_tickets")
                 total = cursor.fetchone()[0] or 0
-                cursor.execute(
-                    base_query + " ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
-                    (per_page, offset)
-                )
+            
+            # Custom sorting logic
+            order_clause = """
+                ORDER BY 
+                CASE 
+                    WHEN t.status = 'open' AND (
+                        SELECT sender FROM support_messages 
+                        WHERE ticket_id = t.ticket_id 
+                        ORDER BY created_at DESC LIMIT 1
+                    ) != 'admin' THEN 1
+                    WHEN t.status = 'open' THEN 2
+                    ELSE 3
+                END ASC,
+                t.updated_at DESC
+            """
+            
+            full_query = base_query + where_clause + order_clause + " LIMIT ? OFFSET ?"
+            params.extend([per_page, offset])
+            
+            cursor.execute(full_query, params)
             return [dict(r) for r in cursor.fetchall()], total
     except sqlite3.Error as e:
         logging.error("Failed to get paginated support tickets: %s", e)
