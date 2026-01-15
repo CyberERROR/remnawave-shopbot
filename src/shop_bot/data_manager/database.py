@@ -490,6 +490,8 @@ def _ensure_plans_columns(cursor: sqlite3.Cursor) -> None:
         "is_active": "INTEGER DEFAULT 1",
         "sort_order": "INTEGER DEFAULT 0",
         "metadata": "TEXT",
+        "hwid_limit": "INTEGER DEFAULT 0",
+        "traffic_limit_gb": "INTEGER DEFAULT 0",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "plans", column, definition)
