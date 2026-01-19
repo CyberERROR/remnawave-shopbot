@@ -41,13 +41,11 @@
                         id="mode_indicator"></div>
 
                     <button type="button" data-mode="personal"
-                        class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-[#102219] w-full sm:w-36 text-center"
-                        onclick="updateModeIndicator(this)">
+                        class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-[#102219] w-full sm:w-36 text-center">
                         Персональный
                     </button>
                     <button type="button" data-mode="gift"
-                        class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-white/60 w-full sm:w-36 text-center hover:text-white"
-                        onclick="updateModeIndicator(this)">
+                        class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-white/60 w-full sm:w-36 text-center hover:text-white">
                         Подарочный
                     </button>
                 </div>
@@ -84,7 +82,10 @@
                             style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;">
                             <option value="" disabled selected>Выберите хост...</option>
                             {% for h in hosts %}
-                            <option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}">{{ h.host_name }}
+                            <option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}"
+                                data-traffic-strategy="{{ h.default_traffic_strategy or 'NO_RESET' }}"
+                                data-traffic-limit-gb="{% if h.default_traffic_limit_bytes is not none %}{{ (h.default_traffic_limit_bytes / 1024 / 1024 / 1024)|round(2) }}{% else %}0{% endif %}">
+                                {{ h.host_name }}
                             </option>
                             {% endfor %}
                         </select>
@@ -106,7 +107,7 @@
                             </button>
                             <div class="soft-select-menu rounded-xl border-white/10 bg-[#15261d] backdrop-blur-xl shadow-2xl"
                                 id="plan_select_menu"></div>
-                            <select id="plan_select"
+                            <select id="plan_select" name="plan_id"
                                 style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;">
                                 <option value="">— Не выбран —</option>
                             </select>
@@ -124,7 +125,7 @@
                     <label
                         class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Дней</label>
                     <div class="relative">
-                        <input id="custom_days" type="number" min="1" placeholder="30"
+                        <input id="custom_days" name="custom_days" type="number" min="1" placeholder="30"
                             class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-center font-mono text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner" />
                     </div>
                 </div>
@@ -173,7 +174,8 @@
                         class="material-symbols-outlined text-base transition-transform group-open/details:rotate-90">chevron_right</span>
                     Технические детали (Inbound, Email)
                 </summary>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pl-6 border-l border-white/5 ml-1.5">
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3 pl-6 border-l border-white/5 ml-1.5">
                     <div>
                         <label class="block text-[10px] text-white/30 mb-1">Inbound ID</label>
                         <input id="inbound_id" type="text" placeholder="—" readonly
@@ -182,6 +184,21 @@
                     <div class="mode-section mode-personal">
                         <label class="block text-[10px] text-white/30 mb-1">Email</label>
                         <input id="key_email" name="key_email" type="email" placeholder="—" readonly
+                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-white/30 mb-1">GB (хост)</label>
+                        <input id="host_traffic_gb" type="text" placeholder="—" readonly
+                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-white/30 mb-1">Стратегия сброса</label>
+                        <input id="host_traffic_strategy" type="text" placeholder="—" readonly
+                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-white/30 mb-1">HWID (хост)</label>
+                        <input id="host_hwid_limit" type="text" placeholder="—" readonly
                             class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
                     </div>
                 </div>
@@ -408,6 +425,34 @@
             inboundEl.value = (opt && opt.getAttribute('data-inbound')) ? opt.getAttribute('data-inbound') : '—';
         }
 
+        // ========= Update Host Settings (Traffic GB and Strategy) =========
+        function updateHostSettings() {
+            if (!hostSel) return;
+
+            let opt = hostSel.options[hostSel.selectedIndex];
+            if ((!opt || !opt.getAttribute) && hostSel.value) {
+                opt = Array.from(hostSel.options || []).find(o => String(o.value) === String(hostSel.value));
+            }
+
+            if (opt) {
+                const trafficStrategy = opt.getAttribute('data-traffic-strategy') || 'NO_RESET';
+
+                const strategyInput = document.getElementById('host_traffic_strategy');
+
+                if (strategyInput) {
+                    const strategyLabels = {
+                        'NO_RESET': 'Никогда',
+                        'DAY': 'Ежедневно',
+                        'WEEK': 'Еженедельно',
+                        'MONTH': 'Ежемесячно'
+                    };
+                    strategyInput.value = strategyLabels[trafficStrategy] || trafficStrategy;
+                }
+
+                // GB и HWID обновляются при выборе тарифа, а не при выборе хоста
+            }
+        }
+
         // ========= Set Expiry Days =========
         function updateExpiryLabel(dateStr) {
             const lbl = document.getElementById('expiry_days_label');
@@ -461,7 +506,11 @@
                 const items = (d && d.ok && d.items) ? d.items : [];
                 const saved = (JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}).plan_select;
                 planSel.innerHTML = '<option value="">— Не выбран —</option>' + items.map(p =>
-                    `<option value="${p.plan_id}" data-months="${p.months}" data-price="${p.price || 0}">${p.plan_name} (${p.months} мес.) — ${Number(p.price || 0).toFixed(0)} RUB</option>`
+                    `<option value="${p.plan_id}" 
+                        data-months="${p.months}" 
+                        data-price="${p.price || 0}"
+                        data-hwid="${p.hwid_limit || 0}"
+                        data-traffic-gb="${p.traffic_limit_gb || 0}">${p.plan_name} (${p.months} мес.) — ${Number(p.price || 0).toFixed(0)} RUB</option>`
                 ).join('');
                 // Restore selected plan
                 if (saved) {
@@ -471,6 +520,19 @@
                     if (priceEl) priceEl.textContent = saved ? `${price.toFixed(0)} RUB` : '— RUB';
                     const months = opt ? Number(opt.getAttribute('data-months') || 0) : 0;
                     if (months > 0) setExpiryDays(months * 30);
+
+                    // Restore HWID and GB from selected plan
+                    const hwid = opt ? opt.getAttribute('data-hwid') || '0' : '0';
+                    const trafficGb = opt ? opt.getAttribute('data-traffic-gb') || '0' : '0';
+                    const hwidInput = document.getElementById('host_hwid_limit');
+                    const gbInput = document.getElementById('host_traffic_gb');
+
+                    if (hwidInput) {
+                        hwidInput.value = (hwid === '0') ? '—' : hwid;
+                    }
+                    if (gbInput) {
+                        gbInput.value = (trafficGb === '0') ? '—' : Number(trafficGb).toFixed(2);
+                    }
                 } else {
                     if (priceEl) priceEl.textContent = '— RUB';
                 }
@@ -485,20 +547,42 @@
         if (hostSel && hostSel.value) {
             updateInbound();
             loadPlansAndRestore();
+            updateHostSettings();
         }
 
         if (hostSel) hostSel.addEventListener('change', () => {
             updateInbound();
             loadPlansAndRestore();
+            updateHostSettings();
         });
 
-        // Plan change -> set expiry and update price
+        // Plan change -> set expiry and update price, hwid, traffic GB
         if (planSel) planSel.addEventListener('change', () => {
             const opt = planSel.options[planSel.selectedIndex];
             const months = opt ? Number(opt.getAttribute('data-months') || 0) : 0;
             const price = opt ? Number(opt.getAttribute('data-price') || 0) : 0;
+            const hwid = opt ? opt.getAttribute('data-hwid') || '0' : '0';
+            const trafficGb = opt ? opt.getAttribute('data-traffic-gb') || '0' : '0';
+
             if (months > 0) setExpiryDays(months * 30);
             if (priceEl) priceEl.textContent = planSel.value ? `${price.toFixed(0)} RUB` : '— RUB';
+
+            // Update HWID and GB fields from plan
+            const hwidInput = document.getElementById('host_hwid_limit');
+            const gbInput = document.getElementById('host_traffic_gb');
+
+            if (hwidInput) {
+                hwidInput.value = (hwid === '0' || !planSel.value) ? '—' : hwid;
+            }
+
+            if (gbInput) {
+                if (!planSel.value || trafficGb === '0') {
+                    gbInput.value = '—';
+                } else {
+                    gbInput.value = Number(trafficGb).toFixed(2);
+                }
+            }
+
             saveState();
         });
 

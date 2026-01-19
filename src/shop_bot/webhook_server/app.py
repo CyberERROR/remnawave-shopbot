@@ -2,6 +2,10 @@ import os
 import logging
 import asyncio
 import json
+import secrets
+import string
+import time
+import asyncio
 import hashlib
 import html as html_escape
 import base64
@@ -52,13 +56,14 @@ from shop_bot.data_manager.remnawave_repository import (
     add_support_message, set_ticket_status, delete_ticket,
     get_closed_tickets_count, get_all_tickets_count, update_host_subscription_url,
     update_host_url, update_host_name, update_host_ssh_settings, get_latest_speedtest, get_speedtests,
+    update_host_description, update_host_traffic_settings,
     get_all_keys, get_keys_for_user, delete_key_by_id, update_key_comment,
     get_balance, adjust_user_balance, get_referrals_for_user,
 
     get_users_paginated, get_keys_counts_for_users,
 
     get_all_ssh_targets, get_ssh_target, create_ssh_target, update_ssh_target_fields, delete_ssh_target, rename_ssh_target,
-    get_user
+    get_user, toggle_host_visibility
 )
 from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
@@ -525,8 +530,11 @@ def create_webhook_app(bot_controller_instance):
         hosts = []
         ssh_targets = []
         try:
-            hosts = get_all_hosts()
-            ssh_targets = get_all_ssh_targets()
+            all_hosts = get_all_hosts()
+            hosts = [h for h in all_hosts if h.get('ssh_host') and (h.get('ssh_password') or h.get('ssh_key_path'))]
+            
+            all_ssh_targets = get_all_ssh_targets()
+            ssh_targets = [t for t in all_ssh_targets if t.get('ssh_host') and (t.get('ssh_password') or t.get('ssh_key_path'))]
         except Exception:
             hosts = []
             ssh_targets = []
@@ -1114,6 +1122,8 @@ def create_webhook_app(bot_controller_instance):
                     "plan_name": p.get('plan_name'),
                     "months": p.get('months'),
                     "price": p.get('price'),
+                    "hwid_limit": p.get('hwid_limit'),
+                    "traffic_limit_gb": p.get('traffic_limit_gb'),
                 } for p in plans
             ]
             return jsonify({"ok": True, "items": data})
@@ -1209,6 +1219,9 @@ def create_webhook_app(bot_controller_instance):
                 return jsonify({"ok": False, "error": "invalid_expiry"}), 400
 
         days_total = 0
+        hwid_limit = None
+        traffic_limit_gb = None
+
         if plan_id:
             plan = get_plan_by_id(plan_id)
             if plan:
@@ -1217,6 +1230,16 @@ def create_webhook_app(bot_controller_instance):
                 except Exception:
                     months = 0
                 days_total += months * 30
+                try:
+                    hwid_val = plan.get('hwid_limit')
+                    if hwid_val is not None:
+                        hwid_limit = int(hwid_val)
+                    traffic_val = plan.get('traffic_limit_gb')
+                    if traffic_val is not None:
+                        traffic_limit_gb = float(traffic_val)
+                except Exception:
+                    pass
+        
         if custom_days_raw:
             try:
                 days_total += max(0, int(custom_days_raw))
@@ -1244,6 +1267,8 @@ def create_webhook_app(bot_controller_instance):
                     host_name,
                     key_email,
                     expiry_timestamp_ms=expiry_ms or None,
+                    hwid_limit=hwid_limit,
+                    traffic_limit_gb=traffic_limit_gb,
                 ))
             except Exception as e:
                 result = None
@@ -1322,6 +1347,8 @@ def create_webhook_app(bot_controller_instance):
                     expiry_timestamp_ms=expiry_ms or None,
                     description=comment or 'Gift key (created via admin panel)',
                     tag='GIFT',
+                    hwid_limit=hwid_limit,
+                    traffic_limit_gb=traffic_limit_gb,
                 ))
             except Exception as e:
                 logger.error(f"Создание подарочного ключа: ошибка remnawave: {e}")
@@ -1963,12 +1990,33 @@ def create_webhook_app(bot_controller_instance):
                 if key in request.form:
                     update_setting(key, request.form.get(key))
 
+            # Обработка настроек комментариев платежей
+            # Если мы на вкладке payments или поля присутствуют (чекбоксы шлют значение только если checked, поэтому проверяем наличие хотя бы одного или контекст)
+            # Так как форма общая, просто собираем состояние
+            pay_info = {
+                'id': 1 if request.form.get('pay_info_id') else 0,
+                'username': 1 if request.form.get('pay_info_username') else 0,
+                'first_name': 1 if request.form.get('pay_info_first_name') else 0,
+                'host_name': 1 if request.form.get('pay_info_host_name') else 0,
+            }
+            # Сохраняем только если это сабмит формы настроек (а не partial update, хотя тут вроде все save)
+            update_setting('pay_info_comment', json.dumps(pay_info))
+
             flash('Настройки сохранены.', 'success')
             next_hash = (request.form.get('next_hash') or '').strip() or '#panel'
             next_tab = (next_hash[1:] if next_hash.startswith('#') else next_hash) or 'panel'
             return redirect(url_for('settings_page', tab=next_tab))
 
         current_settings = get_all_settings()
+        
+        # Загрузка настроек комментариев
+        try:
+            pay_info = json.loads(current_settings.get('pay_info_comment', '{}'))
+        except (ValueError, TypeError):
+            pay_info = {}
+        
+
+
         hosts = get_all_hosts()
         for host in hosts:
             host['plans'] = get_plans_for_host(host['host_name'])
@@ -2002,7 +2050,36 @@ def create_webhook_app(bot_controller_instance):
             backups = []
 
         common_data = get_common_template_data()
-        return render_template('settings.html', settings=current_settings, hosts=hosts, ssh_targets=ssh_targets, backups=backups, **common_data)
+        return render_template('settings.html', settings=current_settings, hosts=hosts, ssh_targets=ssh_targets, backups=backups, pay_info=pay_info, **common_data)
+
+
+    @flask_app.route('/api/settings/update-pay-info', methods=['POST'])
+    @login_required
+    def update_pay_info_api():
+        data = request.get_json()
+        if not data:
+             return jsonify({'status': 'error', 'message': 'No data provided'}), 400
+            
+        field = data.get('field')
+        value = data.get('value')
+        
+        valid_fields = ['id', 'username', 'first_name', 'host_name']
+        if field not in valid_fields:
+            return jsonify({'status': 'error', 'message': f'Invalid field: {field}'}), 400
+            
+        try:
+            current_json = get_setting('pay_info_comment')
+            pay_info = json.loads(current_json) if current_json else {}
+        except (ValueError, TypeError):
+            pay_info = {}
+            
+
+             
+        pay_info[field] = 1 if value else 0
+        
+        update_setting('pay_info_comment', json.dumps(pay_info))
+        return jsonify({'status': 'success', 'pay_info': pay_info})
+
 
 
     @flask_app.route('/admin/ssh-targets/create', methods=['POST'])
@@ -2177,6 +2254,39 @@ def create_webhook_app(bot_controller_instance):
         else:
             flash('Не удалось обновить ссылку подписки для хоста (возможно, хост не найден).', 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
+
+    @flask_app.route('/update-host-description', methods=['POST'])
+    @login_required
+    def update_host_description_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        description = (request.form.get('host_description') or '').strip()
+        if not host_name:
+            flash('Не указан хост для обновления описания.', 'danger')
+            return redirect(url_for('settings_page', tab='hosts'))
+        ok = update_host_description(host_name, description or None)
+        if ok:
+            flash('Описание для хоста обновлено.', 'success')
+        else:
+            flash('Не удалось обновить описание для хоста (возможно, хост не найден).', 'danger')
+        return redirect(url_for('settings_page', tab='hosts'))
+
+    @flask_app.route('/update-host-traffic-settings', methods=['POST'])
+    @login_required
+    def update_host_traffic_settings_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        strategy = (request.form.get('traffic_limit_strategy') or 'NO_RESET')
+        
+        if not host_name:
+            flash('Не указан хост для обновления настроек трафика.', 'danger')
+            return redirect(url_for('settings_page', tab='hosts'))
+            
+        ok = update_host_traffic_settings(host_name, strategy)
+        if ok:
+            flash('Настройки трафика для хоста обновлены.', 'success')
+        else:
+            flash('Не удалось обновить настройки трафика (возможно, хост не найден).', 'danger')
+        return redirect(url_for('settings_page', tab='hosts'))
+
 
     @flask_app.route('/update-host-url', methods=['POST'])
     @login_required
@@ -2470,6 +2580,23 @@ def create_webhook_app(bot_controller_instance):
     def delete_host_route(host_name):
         delete_host(host_name)
         flash(f"Хост '{host_name}' и все его тарифы были удалены.", 'success')
+        return redirect(url_for('settings_page', tab='hosts'))
+
+    @flask_app.route('/toggle-host-visibility/<host_name>', methods=['POST'])
+    @login_required
+    def toggle_host_visibility_route(host_name):
+        visible = request.form.get('visible', '1')
+        try:
+            visible_int = int(visible)
+        except (ValueError, TypeError):
+            visible_int = 1
+        
+        ok = toggle_host_visibility(host_name, visible_int)
+        if ok:
+            status_text = "показан" if visible_int == 1 else "скрыт"
+            flash(f"Хост '{host_name}' теперь {status_text} в меню бота.", 'success')
+        else:
+            flash(f"Не удалось изменить видимость хоста '{host_name}'.", 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
 
     @flask_app.route('/add-plan', methods=['POST'])

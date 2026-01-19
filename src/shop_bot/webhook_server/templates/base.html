@@ -3,6 +3,11 @@
 
 <head>
     <meta charset="utf-8" />
+    <!-- ЗУМИРОВАНИЕ САЙТА: Параметр initial-scale управляет начальным зумом страницы -->
+    <!-- initial-scale=1.0 - стандартный масштаб (100%) -->
+    <!-- initial-scale=0.8 - уменьшенный масштаб (80%) - сайт будет меньше -->
+    <!-- initial-scale=1.2 - увеличенный масштаб (120%) - сайт будет больше -->
+    <!-- Измените значение initial-scale для изменения зума всего сайта -->
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>{% block title %}Панель управления Ботом{% endblock %}</title>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}" />
@@ -44,6 +49,35 @@
     </script>
 
     <style>
+        /* ========================================== */
+        /* ИЗМЕНЕНИЕ ЗУМА ВСЕГО САЙТА */
+        /* ========================================== */
+        /* Используйте CSS-переменную --site-scale для изменения масштаба */
+        /* Этот метод корректно работает с диаграммами и модальными окнами */
+
+        :root {
+            --site-scale: 0.85;
+        }
+
+        html {
+            font-size: calc(15px * var(--site-scale));
+        }
+
+        canvas {
+            font-size: 15px;
+        }
+
+        /* ИНСТРУКЦИЯ ПО ИЗМЕНЕНИЮ МАСШТАБА: */
+        /* 1. Измените значение --site-scale в блоке :root выше */
+        /* 2. Доступные значения: */
+        /*    0.85 - уменьшить сайт до 85% */
+        /*    0.9  - уменьшить сайт до 90% */
+        /*    1.0  - стандартный масштаб 100% (по умолчанию) */
+        /*    1.1  - увеличить сайт до 110% */
+        /*    1.15 - увеличить сайт до 115% */
+        /* 3. Сохраните файл и обновите страницу */
+        /* ========================================== */
+
         .max-w-7xl {
             max-width: 90rem !important;
         }
@@ -650,6 +684,10 @@
             }
 
             render();
+
+            // Если уже инициализировано - не вешаем повторные обработчики
+            if (wrap.dataset.initialized === 'true') return;
+
             sel.addEventListener('change', render);
 
             toggle.addEventListener('click', (e) => {
@@ -660,6 +698,8 @@
             document.addEventListener('click', (e) => {
                 if (!wrap.contains(e.target)) wrap.classList.remove('open');
             });
+
+            wrap.dataset.initialized = 'true';
         };
 
         window.refreshContainerById = async function (id) {

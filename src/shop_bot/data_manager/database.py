@@ -175,6 +175,24 @@ def initialize_db():
                     value TEXT
                 )
             ''')
+            # Инициализация дефолтных настроек
+            cursor.execute('''
+                INSERT OR IGNORE INTO bot_settings (key, value) 
+                VALUES (?, ?)
+            ''', ('pay_info_comment', json.dumps({"id": 1, "username": 1, "first_name": 1, "host_name": 1})))
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS other (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                )
+            ''')
+            # Инициализация записи для рассылки
+            cursor.execute('''
+                INSERT OR IGNORE INTO other (key, value) 
+                VALUES (?, ?)
+            ''', ('newsletter', json.dumps({})))
+
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS button_configs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -213,7 +231,8 @@ def initialize_db():
                     ssh_key_path TEXT,
                     is_active INTEGER DEFAULT 1,
                     sort_order INTEGER DEFAULT 0,
-                    metadata TEXT
+                    metadata TEXT,
+                    see INTEGER DEFAULT 1
                 )
             ''')
             cursor.execute('''
@@ -397,9 +416,7 @@ def initialize_db():
                 "platega_api_key": None,
 
                 "main_menu_image": None,
-                "profile_image": None,
-                "keys_image": None, 
-                "buy_key_image": None, 
+                "profile_image": None,  
                 "topup_image": None, 
                 "referral_image": None,
                 "support_image": None,
@@ -463,6 +480,7 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
         "description": "TEXT",
         "default_traffic_limit_bytes": "INTEGER",
         "default_traffic_strategy": "TEXT DEFAULT 'NO_RESET'",
+        "default_traffic_reset_at": "TEXT",
         "is_active": "INTEGER DEFAULT 1",
         "sort_order": "INTEGER DEFAULT 0",
         "metadata": "TEXT",
@@ -475,9 +493,7 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
 
         "remnawave_base_url": "TEXT",
         "remnawave_api_token": "TEXT",
-        "remnawave_limit_hwid": "INTEGER DEFAULT 0",
-        "remnawave_hwid_enabled": "INTEGER DEFAULT 0",
-        "remnawave_limit_traffic": "INTEGER DEFAULT 0",
+        "see": "INTEGER DEFAULT 1",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "xui_hosts", column, definition)
@@ -835,6 +851,56 @@ def update_host_subscription_url(host_name: str, subscription_url: str | None) -
         logging.error(f"Не удалось обновить subscription_url для хоста '{host_name}': {e}")
         return False
 
+def update_host_description(host_name: str, description: str | None) -> bool:
+    """Обновить кастомное описание для хоста."""
+    try:
+        host_name = normalize_host_name(host_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
+            exists = cursor.fetchone() is not None
+            if not exists:
+                logging.warning(f"update_host_description: хост с именем '{host_name}' не найден (после TRIM)")
+                return False
+
+            cursor.execute(
+                "UPDATE xui_hosts SET description = ? WHERE TRIM(host_name) = TRIM(?)",
+                (description, host_name)
+            )
+            conn.commit()
+            return True
+    except sqlite3.Error as e:
+        logging.error(f"Не удалось обновить description для хоста '{host_name}': {e}")
+        return False
+
+def update_host_traffic_settings(
+    host_name: str,
+    traffic_strategy: str | None = 'NO_RESET'
+) -> bool:
+    """Обновить настройки стратегии сброса трафика для хоста."""
+    try:
+        host_name = normalize_host_name(host_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
+            if cursor.fetchone() is None:
+                logging.warning(f"update_host_traffic_settings: хост '{host_name}' не найден")
+                return False
+
+            cursor.execute(
+                """
+                UPDATE xui_hosts
+                SET default_traffic_strategy = ?
+                WHERE TRIM(host_name) = TRIM(?)
+                """,
+                (traffic_strategy or 'NO_RESET', host_name)
+            )
+            conn.commit()
+            return True
+    except sqlite3.Error as e:
+        logging.error(f"Не удалось обновить настройки трафика для хоста '{host_name}': {e}")
+        return False
+
 def set_referral_start_bonus_received(user_id: int) -> bool:
     """Пометить, что пользователь получил стартовый бонус за реферальную регистрацию."""
     try:
@@ -1020,6 +1086,37 @@ def update_host_ssh_settings(
         logging.error(f"Не удалось обновить SSH-настройки для хоста '{host_name}': {e}")
         return False
 
+def toggle_host_visibility(host_name: str, visible: int) -> bool:
+    """Переключить видимость хоста в боте.
+    
+    Args:
+        host_name: Название хоста
+        visible: 1 - показывать в боте, 0 - скрыть из меню бота
+    
+    Returns:
+        True если обновление успешно, False в противном случае
+    """
+    try:
+        host_name_n = normalize_host_name(host_name)
+        visible_int = 1 if visible else 0
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name_n,))
+            if cursor.fetchone() is None:
+                logging.warning(f"toggle_host_visibility: хост не найден '{host_name_n}'")
+                return False
+            
+            cursor.execute(
+                "UPDATE xui_hosts SET see = ? WHERE TRIM(host_name) = TRIM(?)",
+                (visible_int, host_name_n)
+            )
+            conn.commit()
+            logging.info(f"Видимость хоста '{host_name_n}' обновлена: see={visible_int}")
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logging.error(f"Не удалось обновить видимость для хоста '{host_name}': {e}")
+        return False
+
 def delete_key_by_id(key_id: int) -> bool:
     try:
         with sqlite3.connect(DB_FILE) as conn:
@@ -1043,12 +1140,15 @@ def update_key_comment(key_id: int, comment: str) -> bool:
         logging.error(f"Не удалось обновить комментарий ключа для {key_id}: {e}")
         return False
 
-def get_all_hosts() -> list[dict]:
+def get_all_hosts(visible_only: bool = False) -> list[dict]:
     try:
         with sqlite3.connect(DB_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM xui_hosts")
+            if visible_only:
+                cursor.execute("SELECT * FROM xui_hosts WHERE see = 1")
+            else:
+                cursor.execute("SELECT * FROM xui_hosts")
             hosts = cursor.fetchall()
 
             result = []
@@ -1547,7 +1647,7 @@ def get_all_keys() -> list[dict]:
         with sqlite3.connect(DB_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM vpn_keys")
+            cursor.execute("SELECT * FROM vpn_keys ORDER BY key_id DESC")
             return [_normalize_key_row(row) for row in cursor.fetchall()]
     except sqlite3.Error as e:
         logging.error(f"Failed to get all keys: {e}")
@@ -3440,6 +3540,33 @@ def get_all_tickets_count() -> int:
     except sqlite3.Error as e:
         logging.error("Failed to get all tickets count: %s", e)
         return 0
+
+
+def get_other_value(key: str) -> str | None:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM other WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row[0] if row else None
+    except sqlite3.Error as e:
+        logging.error(f"Failed to get other value for {key}: {e}")
+        return None
+
+
+def set_other_value(key: str, value: str) -> bool:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO other (key, value) VALUES (?, ?)",
+                (key, value)
+            )
+            conn.commit()
+            return True
+    except sqlite3.Error as e:
+        logging.error(f"Failed to set other value for {key}: {e}")
+        return False
 
 
 

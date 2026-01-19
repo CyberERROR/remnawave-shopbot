@@ -78,7 +78,26 @@
     </div>
     <!-- Local Server Info -->
     <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 class="text-white font-bold mb-4">Текущий сервер</h3>
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-white font-bold" id="server-title">Текущий сервер</h3>
+            {% if hosts %}
+            <div class="soft-select" data-target="server-selector">
+                <button type="button" class="soft-select-toggle">Локальная панель</button>
+                <div class="soft-select-menu">
+                    <div class="soft-select-item is-active" data-value="local">Локальная панель</div>
+                    {% for h in hosts %}
+                    <div class="soft-select-item" data-value="remote:{{ h.host_name }}">{{ h.host_name }}</div>
+                    {% endfor %}
+                </div>
+                <select id="server-selector" style="position: absolute; opacity: 0; pointer-events: none;">
+                    <option value="local" selected>Локальная панель</option>
+                    {% for h in hosts %}
+                    <option value="remote:{{ h.host_name }}">{{ h.host_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
         <div id="local-metrics" class="space-y-3 text-sm text-white/70">Загрузка…</div>
         <div class="h-32 mt-4"><canvas id="local-mini-chart"></canvas></div>
     </div>
@@ -398,7 +417,19 @@
         }
 
         async function refreshCharts() {
-            const url = `{{ url_for('monitor_series_json', scope='local', name='panel') }}?hours=${currentPeriod}`;
+            const selector = document.getElementById('server-selector');
+            const selectedValue = selector ? selector.value : 'local';
+
+            let url;
+            if (selectedValue === 'local') {
+                url = `{{ url_for('monitor_series_json', scope='local', name='panel') }}?hours=${currentPeriod}`;
+            } else if (selectedValue.startsWith('remote:')) {
+                const hostName = selectedValue.replace('remote:', '');
+                url = `{{ url_for('monitor_series_json', scope='host', name='__HOST__') }}?hours=${currentPeriod}`.replace('__HOST__', encodeURIComponent(hostName));
+            } else {
+                url = `{{ url_for('monitor_series_json', scope='local', name='panel') }}?hours=${currentPeriod}`;
+            }
+
             const res = await fetchJSON(url);
             if (!res || !res.ok || !mainChart) return;
             const items = res.items || [];
@@ -428,22 +459,19 @@
 
         async function refreshLocalPanel() {
             const el = document.getElementById('local-metrics');
-            const headerEl = document.querySelector('h3.text-white.font-bold.mb-4');
-            try {
-                const hostsList = JSON.parse('{{ hosts|tojson|safe }}');
-                if (hostsList && hostsList.length > 0) {
-                    const currentHost = hostsList[0];
-                    const data = await fetchJSON(`{{ url_for('monitor_host_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(currentHost.host_name)));
-                    if (headerEl) headerEl.innerHTML = `Текущий сервер: ${currentHost.host_name}`;
-                    renderRemote(el, data);
-                    updateStatsCards(data);
-                    return;
-                }
-            } catch (e) { }
-            const data = await fetchJSON("{{ url_for('monitor_local_json') }}");
-            if (headerEl) headerEl.textContent = 'Локальная панель';
-            renderLocal(el, data);
-            updateStatsCards(data);
+            const selector = document.getElementById('server-selector');
+            const selectedValue = selector ? selector.value : 'local';
+
+            if (selectedValue === 'local') {
+                const data = await fetchJSON("{{ url_for('monitor_local_json') }}");
+                renderLocal(el, data);
+                updateStatsCards(data);
+            } else if (selectedValue.startsWith('remote:')) {
+                const hostName = selectedValue.replace('remote:', '');
+                const data = await fetchJSON(`{{ url_for('monitor_host_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(hostName)));
+                renderRemote(el, data);
+                updateStatsCards(data);
+            }
         }
 
         // Обновление хоста по имени
@@ -509,6 +537,18 @@
             refreshAll();
 
             document.getElementById('refresh-all')?.addEventListener('click', refreshAll);
+
+            if (document.getElementById('server-selector')) {
+                initSoftSelect('server-selector', 'Локальная панель');
+            }
+
+            const serverSelector = document.getElementById('server-selector');
+            if (serverSelector) {
+                serverSelector.addEventListener('change', async () => {
+                    await refreshLocalPanel();
+                    await refreshCharts();
+                });
+            }
 
             // Кнопка очистки метрик
             document.getElementById('clear-metrics')?.addEventListener('click', () => {

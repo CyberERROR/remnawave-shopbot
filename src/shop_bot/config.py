@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 CHOOSE_PLAN_MESSAGE = "Выберите подходящий тариф:"
 CHOOSE_PAYMENT_METHOD_MESSAGE = "Выберите удобный способ оплаты:"
 VPN_INACTIVE_TEXT = "❌ <b>Статус VPN:</b> Неактивен (срок истек)"
@@ -17,16 +19,65 @@ def get_vpn_active_text(days_left, hours_left):
         f"⏳ <b>Осталось:</b> {days_left} д. {hours_left} ч."
     )
 
-def get_key_info_text(key_number, expiry_date, created_date, connection_string):
-    expiry_formatted = expiry_date.strftime('%d.%m.%Y в %H:%M')
-    created_formatted = created_date.strftime('%d.%m.%Y в %H:%M')
+def _get_status_text(remaining):
+    total_seconds = int(remaining.total_seconds())
+    if total_seconds < 0:
+        return "Не активен (Истек)"
     
+    minutes = total_seconds // 60
+    hours = minutes // 60
+    days = hours // 24
+    
+    if days >= 365:
+        years = round(days / 365, 1)
+        return f"Активен ({years} год)"
+    if days >= 30:
+        months = int(round(days / 30))
+        return f"Активен ({months} мес)"
+    if days >= 1:
+        return f"Активен ({days} дн)"
+    if hours >= 1:
+        return f"Активен ({hours} ч.)"
+    return f"Активен ({max(1, minutes)} мин)"
+
+def get_key_info_text(key_number, expiry_date, created_date, connection_string, hwid_limit=None, hwid_usage=None, traffic_limit=None, traffic_used=None):
+    now = datetime.now()
+    remaining = expiry_date - now
+    days_left = remaining.days
+    
+    status_icon = "🟢"
+    status_text = _get_status_text(remaining)
+    
+    if days_left <= 10:
+        status_icon = "🟡"
+    
+    if days_left < 0:
+        status_icon = "🔴"
+
+    traffic_block = ""
+    if traffic_limit:
+        t_lim_str = str(traffic_limit).strip()
+        t_lim_display = "∞" if t_lim_str == "0" or t_lim_str.startswith("0 ") else t_lim_str
+        traffic_block = f"{traffic_used} / {t_lim_display}"
+
+    hwid_block = ""
+    if hwid_limit is not None:
+        limit_str = str(hwid_limit)
+        limit_display = "∞" if limit_str == "0" or (limit_str.isdigit() and int(limit_str) > 98) else limit_str
+        hwid_block = f"{hwid_usage} / {limit_display}"
+
     return (
-        f"<b>🔑 Информация о ключе #{key_number}</b>\n\n"
-        f"<b>➕ Приобретён:</b> {created_formatted}\n"
-        f"<b>⏳ Действителен до:</b> {expiry_formatted}\n\n"
-        f"<code>{connection_string}</code>"
+        f"🔑 <b>Информация о ключе #{key_number}</b>\n\n"
+        f"📅 <b>Сроки действия:</b>\n"
+        f"{status_icon} <b>Статус:</b> {status_text}\n"
+        f"➕ <b>Куплен:</b> {created_date.strftime('%d.%m.%Y')}\n"
+        f"⏳ <b>Истекает:</b> {expiry_date.strftime('%d.%m.%Y %H:%M')}\n\n"
+        f"📉 <b>Использование:</b>\n"
+        f"🛰 <b>Лимит трафика:</b> {traffic_block}\n" 
+        f"📱 <b>Лимит устройств:</b> {hwid_block}\n"
+        f"🗽 <b>Ваш ключ:</b>\n<code>{connection_string}</code>"
     )
+
 
 def get_purchase_success_text(action: str, key_number: int, expiry_date, connection_string: str):
     action_text = "обновлен" if action == "extend" else "готов"

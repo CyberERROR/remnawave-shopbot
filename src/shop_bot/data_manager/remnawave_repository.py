@@ -288,10 +288,13 @@ _LEGACY_FORWARDERS = (
     "set_terms_agreed",
     "set_ticket_status",
     "set_trial_used",
+    "toggle_host_visibility",
     "unban_user",
     "update_host_name",
     "update_host_ssh_settings",
     "update_host_subscription_url",
+    "update_host_description",
+    "update_host_traffic_settings",
     "update_host_url",
     "update_key_comment",
     "update_key_fields",
@@ -314,6 +317,8 @@ _LEGACY_FORWARDERS = (
     "insert_resource_metric",
     "get_latest_resource_metric",
     "get_metrics_series",
+    "get_other_value",
+    "set_other_value",
 )
 
 for _name in _LEGACY_FORWARDERS:

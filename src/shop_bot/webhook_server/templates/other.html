@@ -314,6 +314,67 @@
                             </div>
                         </label>
                     </div>
+
+                    <!-- Кнопка "Срок истекает" отдельно внизу на всю ширину -->
+                    <div class="mt-3">
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" name="mode" value="expiring_keys" class="peer sr-only" />
+                            <div
+                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
+                                    <span class="material-symbols-outlined text-xl">schedule</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Срок истекает</div>
+                                    <div class="text-[10px] text-white/40">Скоро истекут ключи</div>
+                                </div>
+                                <div
+                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
+                                    <div
+                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Выбор дней для истекающих ключей -->
+                    <div id="expiring-days-selector" class="mt-4 hidden">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-3 ml-1">Выберите
+                            количество дней</label>
+                        <div class="grid grid-cols-4 gap-3">
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" name="expiring_days" value="1" class="peer sr-only" />
+                                <div
+                                    class="h-full flex items-center justify-center p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
+                                    <div class="text-sm font-bold text-white leading-tight">1 день</div>
+                                </div>
+                            </label>
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" name="expiring_days" value="3" checked class="peer sr-only" />
+                                <div
+                                    class="h-full flex items-center justify-center p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
+                                    <div class="text-sm font-bold text-white leading-tight">3 дня</div>
+                                </div>
+                            </label>
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" name="expiring_days" value="5" class="peer sr-only" />
+                                <div
+                                    class="h-full flex items-center justify-center p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
+                                    <div class="text-sm font-bold text-white leading-tight">5 дней</div>
+                                </div>
+                            </label>
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" name="expiring_days" value="10" class="peer sr-only" />
+                                <div
+                                    class="h-full flex items-center justify-center p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
+                                    <div class="text-sm font-bold text-white leading-tight">10 дней</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" id="btn-send"
@@ -428,14 +489,16 @@
                             <input type="number" name="discount_value" step="0.01" min="0" required
                                 class="w-full bg-black/20 border border-white/10 rounded-l-xl border-r-0 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-inner"
                                 placeholder="10" />
-                            <div class="relative min-w-[90px]">
-                                <select name="discount_type"
-                                    class="w-full h-full bg-black/30 border border-white/10 rounded-r-xl pl-3 pr-8 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/50 cursor-pointer appearance-none text-center font-bold hover:bg-black/40 transition-colors">
+                            <div class="soft-select relative min-w-[90px]" data-target="discount_type_select">
+                                <button type="button"
+                                    class="soft-select-toggle h-full w-full bg-black/30 border border-white/10 rounded-r-xl border-l-[0px] px-3 py-3 text-sm text-white font-bold hover:bg-black/40 transition-colors flex items-center justify-between">
+                                    %
+                                </button>
+                                <div class="soft-select-menu"></div>
+                                <select name="discount_type" id="discount_type_select" class="hidden">
                                     <option value="percent">%</option>
                                     <option value="fixed">RUB</option>
                                 </select>
-                                <span
-                                    class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-white/40 text-lg pointer-events-none">expand_more</span>
                             </div>
                         </div>
                     </div>
@@ -655,21 +718,54 @@
                         <span class="material-symbols-outlined text-blue-400">package_2</span>
                         Установка Docker
                     </h6>
-                    <p class="text-white/60 text-sm mb-2">
-                        Будет выполнена команда: <code
-                            class="bg-black/30 px-2 py-1 rounded text-primary">sudo curl -fsSL https://get.docker.com | sh</code>
+                    <p class="text-white/60 text-sm mb-4">
+                        Выберите вашу операционную систему для установки Docker:
                     </p>
-                    <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
+
+                    <!-- Кнопки установки Docker в ряд -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                        <div class="bg-black/30 border border-white/10 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-white font-medium text-sm">Ubuntu</span>
+                            </div>
+                            <button id="btn-install-docker-ubuntu" data-os="ubuntu" disabled
+                                class="install-docker-btn w-full px-4 py-2.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500/20">
+                                <svg class="animate-spin h-4 w-4 btn-icon" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4" fill="none"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <span class="btn-text">Идет проверка...</span>
+                            </button>
+                        </div>
+
+                        <div class="bg-black/30 border border-white/10 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-white font-medium text-sm">Debian</span>
+                            </div>
+                            <button id="btn-install-docker-debian" data-os="debian" disabled
+                                class="install-docker-btn w-full px-4 py-2.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border border-purple-500/30 font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-500/20">
+                                <svg class="animate-spin h-4 w-4 btn-icon" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4" fill="none"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <span class="btn-text">Идет проверка...</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
                         <p class="text-yellow-300 text-sm flex items-center gap-2">
                             <span class="material-symbols-outlined text-base">schedule</span>
                             <span>Установка Docker обычно занимает <strong>2-5 минут</strong>. Пожалуйста,
                                 подождите.</span>
                         </p>
                     </div>
-                    <button id="btn-install-docker"
-                        class="px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors">
-                        Установить Docker
-                    </button>
                 </div>
             </div>
 
@@ -1109,7 +1205,7 @@
             </div>
         </div>
 
-        <div class="bg-black/80 rounded-lg p-4 font-mono text-sm text-white/80 h-[500px] overflow-y-auto"
+        <div class="bg-black/80 rounded-lg p-4 font-mono text-sm text-white/80 h-[57vh] overflow-y-auto"
             id="logs-container">
             <div class="text-white/30 text-center mt-20">Ожидание подключения к потоку логов...</div>
         </div>
@@ -1454,6 +1550,33 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+    /* Custom Scrollbar for Logs */
+    #logs-container::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    #logs-container::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+    }
+
+    #logs-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+
+    #logs-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    #logs-container::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+</style>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
 
@@ -1464,6 +1587,9 @@
         const btnClearLogs = document.getElementById('btn-clear-logs');
 
         let logEventSource = null;
+        let logsOffset = 0;
+        let isLoadingHistory = false;
+        let isAutoScrolling = true;
 
         window.showConfirm = function ({
             title = 'Подтверждение',
@@ -1563,19 +1689,89 @@
             }
         }
 
+        function createLogLine(text) {
+            const line = document.createElement('div');
+            if (text.includes('[ERROR]') || text.includes('ERROR')) {
+                line.className = 'whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-red-500/20 bg-red-500/10 transition-colors px-1 text-red-300';
+            } else if (text.includes('[WARNING]') || text.includes('WARNING')) {
+                line.className = 'whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-white/5 transition-colors px-1 text-yellow-300';
+            } else {
+                line.className = 'whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-white/5 transition-colors px-1 text-white/80';
+            }
+            line.textContent = text;
+            return line;
+        }
+
         function appendLog(text) {
             if (!logsContainer) return;
-            const line = document.createElement('div');
-            line.className = 'whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-white/5 transition-colors px-1';
-            line.textContent = text;
+            const line = createLogLine(text);
             logsContainer.appendChild(line);
 
-            logsContainer.scrollTop = logsContainer.scrollHeight;
+            if (isAutoScrolling) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
 
-            if (logsContainer.children.length > 1000) {
-                logsContainer.removeChild(logsContainer.firstChild);
+            if (logsContainer.children.length > 5000) {
+                if (isAutoScrolling) logsContainer.removeChild(logsContainer.firstChild);
             }
         }
+
+        function prependLog(text) {
+            if (!logsContainer) return;
+            const line = createLogLine(text);
+            logsContainer.insertBefore(line, logsContainer.firstChild);
+        }
+
+        async function loadHistory() {
+            if (isLoadingHistory) return;
+            isLoadingHistory = true;
+
+            const currentLines = logsContainer.children.length;
+
+            const loading = document.createElement('div');
+            loading.className = 'text-center text-xs text-white/30 py-1';
+            loading.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>';
+            logsContainer.insertBefore(loading, logsContainer.firstChild);
+
+            try {
+                const resp = await fetch(`/other/logs/history?lines=50&offset=${currentLines}`);
+                const data = await resp.json();
+
+                logsContainer.removeChild(loading);
+
+                if (data.ok && data.lines && data.lines.length > 0) {
+                    const oldHeight = logsContainer.scrollHeight;
+                    const oldScroll = logsContainer.scrollTop;
+
+                    const fragment = document.createDocumentFragment();
+                    data.lines.forEach(lineText => {
+                        fragment.appendChild(createLogLine(lineText));
+                    });
+
+                    logsContainer.insertBefore(fragment, logsContainer.firstChild);
+
+                    const newHeight = logsContainer.scrollHeight;
+                    logsContainer.scrollTop = oldScroll + (newHeight - oldHeight);
+                }
+            } catch (e) {
+                console.error("History error:", e);
+                if (logsContainer.contains(loading)) logsContainer.removeChild(loading);
+            } finally {
+                isLoadingHistory = false;
+            }
+        }
+
+        logsContainer.addEventListener('scroll', () => {
+            if (logsContainer.scrollTop + logsContainer.clientHeight < logsContainer.scrollHeight - 50) {
+                isAutoScrolling = false;
+            } else {
+                isAutoScrolling = true;
+            }
+
+            if (logsContainer.scrollTop < 50) {
+                loadHistory();
+            }
+        });
 
         function startLogStream() {
             if (logEventSource) logEventSource.close();
@@ -2662,12 +2858,16 @@
 
             setupDeployHandlers();
 
+            // Показываем кнопки в состоянии проверки
+            setDockerButtonsCheckingState(true);
+
             try {
                 appendDeployOutput('[INFO] Проверка текущего состояния развертывания...');
 
                 const resp = await fetch(`/other/servers/deploy/check-status/${encodeURIComponent(targetName)}`);
                 if (!resp.ok) {
                     appendDeployOutput('[WARNING] Не удалось проверить состояние. Начинаем с шага 1.');
+                    setDockerButtonsCheckingState(false, false); // Docker не установлен
                     return;
                 }
 
@@ -2677,8 +2877,10 @@
 
                     if (status.docker_installed) {
                         appendDeployOutput('[✓] Docker установлен');
+                        setDockerButtonsCheckingState(false, true); // Docker установлен
                     } else {
                         appendDeployOutput('[✗] Docker не установлен');
+                        setDockerButtonsCheckingState(false, false); // Docker не установлен
                     }
 
                     if (status.directory_exists) {
@@ -2714,20 +2916,83 @@
                     updateDeployStep(suggestedStep);
                 } else {
                     appendDeployOutput('[WARNING] Не удалось проверить состояние. Начинаем с шага 1.');
+                    setDockerButtonsCheckingState(false, false); // Docker не установлен
                 }
             } catch (e) {
                 console.error('Status check error:', e);
                 appendDeployOutput('[WARNING] Ошибка проверки состояния. Начинаем с шага 1.');
+                setDockerButtonsCheckingState(false, false); // Docker не установлен
             }
         };
 
+        // Функция для установки состояния кнопок Docker
+        function setDockerButtonsCheckingState(isChecking, dockerInstalled = false) {
+            const installButtons = document.querySelectorAll('.install-docker-btn');
+
+            installButtons.forEach(btn => {
+                const iconEl = btn.querySelector('.btn-icon');
+                const textSpan = btn.querySelector('.btn-text');
+
+                if (isChecking) {
+                    // Состояние проверки
+                    btn.disabled = true;
+                    if (textSpan) textSpan.textContent = 'Идет проверка...';
+                } else {
+                    // Проверка завершена
+                    if (dockerInstalled) {
+                        // Docker установлен - показываем что установлен
+                        btn.disabled = true;
+                        if (iconEl && iconEl.tagName === 'svg') {
+                            iconEl.outerHTML = '<span class="material-symbols-outlined text-sm btn-icon">check_circle</span>';
+                        }
+                        if (textSpan) textSpan.textContent = 'Установлен';
+                    } else {
+                        // Docker не установлен - включаем кнопку установки
+                        btn.disabled = false;
+                        if (iconEl && iconEl.tagName === 'svg') {
+                            iconEl.outerHTML = '<span class="material-symbols-outlined text-sm btn-icon">download</span>';
+                        }
+                        if (textSpan) textSpan.textContent = 'Установить';
+                    }
+                }
+            });
+        }
+
         function setupDeployHandlers() {
 
-            document.getElementById('btn-install-docker').onclick = async function () {
+            // Обработчик для установки Docker на Ubuntu
+            document.getElementById('btn-install-docker-ubuntu').onclick = async function () {
                 await executeDeployStep('install-docker', this, async () => {
+                    const formData = new FormData();
+                    formData.append('csrf_token', window.getCsrfToken());
+                    formData.append('os_type', 'ubuntu');
+
                     const resp = await fetch(`/other/servers/deploy/install-docker/${encodeURIComponent(currentDeployTarget)}`, {
                         method: 'POST',
-                        headers: { 'X-CSRFToken': window.getCsrfToken() }
+                        body: formData
+                    });
+
+                    if (!resp.ok) {
+                        if (resp.status === 504) {
+                            throw new Error('TIMEOUT_504: Установка Docker занимает 2-5 минут. Операция может продолжаться на сервере.');
+                        }
+                        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+                    }
+
+                    return await resp.json();
+                }, 2);
+            };
+
+            // Обработчик для установки Docker на Debian
+            document.getElementById('btn-install-docker-debian').onclick = async function () {
+                await executeDeployStep('install-docker', this, async () => {
+                    const formData = new FormData();
+                    formData.append('csrf_token', window.getCsrfToken());
+                    formData.append('os_type', 'debian');
+
+                    const resp = await fetch(`/other/servers/deploy/install-docker/${encodeURIComponent(currentDeployTarget)}`, {
+                        method: 'POST',
+                        body: formData
                     });
 
                     if (!resp.ok) {
@@ -3038,6 +3303,24 @@
             } finally {
                 button.disabled = false;
                 button.innerHTML = originalHtml;
+            }
+        }
+
+        // Функция для показа/скрытия индикатора проверки Docker
+        function showDockerCheckStatus(show) {
+            const checkStatusEl = document.getElementById('docker-check-status');
+            const installButtons = document.querySelectorAll('.install-docker-btn');
+
+            if (show) {
+                checkStatusEl.classList.remove('hidden');
+                installButtons.forEach(btn => {
+                    btn.disabled = true;
+                });
+            } else {
+                checkStatusEl.classList.add('hidden');
+                installButtons.forEach(btn => {
+                    btn.disabled = false;
+                });
             }
         }
 
@@ -3834,6 +4117,23 @@
                 btn.innerHTML = originalHtml;
             }
         });
+
+        // Обработчик для показа селектора дней при выборе режима "Срок истекает"
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                const expiringDaysSelector = document.getElementById('expiring-days-selector');
+                if (this.value === 'expiring_keys') {
+                    expiringDaysSelector.classList.remove('hidden');
+                } else {
+                    expiringDaysSelector.classList.add('hidden');
+                }
+            });
+        });
+
+        // Initialize soft select for discount type
+        if (window.initSoftSelect) {
+            window.initSoftSelect('discount_type_select', '%');
+        }
 
     });
 

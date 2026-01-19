@@ -27,23 +27,35 @@
 <div class="bg-white/5 border border-white/10 rounded-lg p-2 mb-6 overflow-x-auto">
     <nav class="flex gap-1 min-w-max" id="settings-nav">
         <button type="button" data-tab="panel"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-primary text-background-dark transition-colors">Панель</button>
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-primary text-background-dark transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">dashboard</span>
+            Панель
+        </button>
         <button type="button" data-tab="bot"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Бот</button>
-        <button type="button" data-tab="support-bot"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Support-бот</button>
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">smart_toy</span>
+            Боты
+        </button>
         <button type="button" data-tab="payments"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Платежи</button>
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">payments</span>
+            Платежи
+        </button>
         <button type="button" data-tab="hosts"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Хосты</button>
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">dns</span>
+            Хосты
+        </button>
         <button type="button" data-tab="referrals"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Рефералы</button>
-        <button type="button" data-tab="trial"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Триал</button>
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">group</span>
+            Рефералы
+        </button>
         <button type="button" data-tab="content"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Контент</button>
-        <button type="button" data-tab="monitoring"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Мониторинг</button>
+            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">article</span>
+            Контент
+        </button>
         <a href="{{ url_for('button_constructor_page') }}"
             class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors flex items-center gap-2 no-underline">
             <span class="material-symbols-outlined text-sm">construction</span>
@@ -58,239 +70,459 @@
 
 
     <section id="tab-panel" class="tab-content">
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h3 class="text-xl font-bold text-white mb-6">Настройки Панели</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Логин для входа в панель</label>
-                    <input type="text" name="panel_login" value="{{ settings.panel_login or '' }}" required
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Новый пароль (оставьте пустым)</label>
-                    <input type="password" name="panel_password"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Автобэкап базы (каждые N дней)</label>
-                    <input type="number" name="backup_interval_days" value="{{ settings.backup_interval_days or '1' }}"
-                        min="0"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    <p class="text-white/50 text-xs mt-1">0 — отключить автобэкап</p>
-                </div>
-            </div>
-            <div class="mt-6 pt-6 border-t border-white/10">
-                <h4 class="text-white font-bold mb-4">Резервное копирование</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+
+            <!-- Настройки Панели -->
+            <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                <h3 class="text-lg font-bold text-white mb-3">Настройки Панели</h3>
+                <div class="grid grid-cols-1 gap-3">
                     <div>
-                        <p class="text-white/70 text-sm mb-2">Скачать текущую БД</p>
-                        <button type="submit" formaction="{{ url_for('backup_db_route') }}"
-                            class="px-4 py-2 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary/30 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-base">download</span> Скачать бэкап БД
-                        </button>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Логин для входа</label>
+                        <input type="text" name="panel_login" value="{{ settings.panel_login or '' }}" required
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                     </div>
                     <div>
-                        <p class="text-white/70 text-sm mb-2">Восстановить из готового архива</p>
-                        <div class="flex gap-2 mb-2">
-                            <select name="existing_backup" id="existing_backup"
-                                class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white">
-                                <option value="">— Выберите архив —</option>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Новый пароль</label>
+                        <input type="password" name="panel_password" placeholder="Оставьте пустым, если не меняете"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/30" />
+                    </div>
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Автобэкап (дни)</label>
+                        <input type="number" name="backup_interval_days"
+                            value="{{ settings.backup_interval_days or '1' }}" min="0"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        <p class="text-white/50 text-[10px] mt-1 pl-1">0 — выключить автобэкап</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Резервное копирование -->
+            <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                <h3 class="text-lg font-bold text-white mb-3">Резервное копирование</h3>
+                <div class="grid grid-cols-1 gap-4">
+
+                    <!-- Скачать -->
+                    <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                        <label class="block text-white/70 text-xs font-medium mb-2">Создать бэкап</label>
+                        <button type="submit" formaction="{{ url_for('backup_db_route') }}"
+                            class="w-full px-3 py-2 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 flex items-center justify-center gap-2 transition">
+                            <span class="material-symbols-outlined text-sm">download</span> Скачать текущую БД
+                        </button>
+                    </div>
+
+                    <!-- Восстановить -->
+                    <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                        <label class="block text-white/70 text-xs font-medium mb-2">Восстановить из архива</label>
+
+                        <!-- Custom Select -->
+                        <div class="soft-select relative mb-2" data-target="existing_backup">
+                            <button type="button"
+                                class="soft-select-toggle w-full text-left bg-primary/10 border border-primary/20 rounded-lg pl-3 pr-8 py-2 text-primary text-sm font-medium hover:bg-primary/20 transition-colors">
+                                — Выберите архив —
+                            </button>
+                            <div class="soft-select-menu"></div>
+                            <select name="existing_backup" id="existing_backup" class="hidden">
+                                <option value="" class="bg-gray-900 text-white">— Выберите архив —</option>
                                 {% for b in backups %}
-                                <option value="{{ b.name }}" data-mtime="{{ b.mtime }}">{{ b.name }}</option>
+                                <option value="{{ b.name }}" data-mtime="{{ b.mtime }}" class="bg-gray-900 text-white">
+                                    {{ b.name }}</option>
                                 {% endfor %}
                             </select>
-                            <span id="backup-date"
-                                class="px-3 py-2 rounded-lg bg-white/5 text-white/50 text-sm">—</span>
+                            <span id="backup-date" class="hidden"></span>
                         </div>
-                        <p class="text-white/50 text-xs mb-3">Или загрузите свой файл (.zip или .db)</p>
-                        <div class="flex gap-2">
+
+                        <!-- Or Upload -->
+                        <div class="flex gap-2 mb-2">
                             <button type="button" id="btn-pick-file"
-                                class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-base">upload_file</span> Выбрать файл
+                                class="px-3 py-2 rounded-lg bg-white/10 text-white/70 text-xs hover:bg-white/20 flex items-center gap-1 shrink-0 transition">
+                                <span class="material-symbols-outlined text-sm">upload_file</span> Загрузить файл
                             </button>
                             <span id="picked-file-name"
-                                class="flex-1 px-3 py-2 rounded-lg bg-white/5 text-white/50 text-sm truncate">Файл не
-                                выбран</span>
+                                class="flex-1 flex items-center px-2 rounded-lg bg-white/5 text-white/30 text-[10px] truncate">
+                                Файл не выбран
+                            </span>
                         </div>
                         <input type="file" id="db_file" name="db_file" accept=".zip,.db" class="hidden" />
+
+                        <!-- Restore Button -->
+                        {% set restore_disabled = not (all_settings_ok and support_settings_ok) %}
                         <button type="submit" formaction="{{ url_for('restore_db_route') }}"
-                            formenctype="multipart/form-data"
-                            class="mt-3 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 flex items-center gap-2"
-                            data-confirm="Текущая БД будет заменена. Продолжить?">
-                            <span class="material-symbols-outlined text-base">settings_backup_restore</span>
+                            formenctype="multipart/form-data" {% if restore_disabled %}disabled{% endif %}
+                            class="w-full mt-1 px-3 py-2 rounded-lg {{ 'bg-white/5 text-white/30 cursor-not-allowed' if restore_disabled else 'bg-red-500/20 text-red-400 hover:bg-red-500/30' }} text-sm font-medium flex items-center justify-center gap-2 transition"
+                            {% if not restore_disabled %}data-confirm="Текущая БД будет заменена. Продолжить?" {% endif
+                            %}>
+                            <span class="material-symbols-outlined text-sm">settings_backup_restore</span>
                             Восстановить БД
                         </button>
-                        <p class="text-white/50 text-xs mt-2">Перед восстановлением текущая база автоматически
-                            сохраняется.</p>
+                        {% if restore_disabled %}
+                        <p class="text-red-400/70 text-[10px] mt-2 text-center">
+                            Внимание: Восстановление недоступно, пока не заполнены обязательные настройки ботов.
+                        </p>
+                        {% else %}
+                        <p class="text-white/30 text-[10px] mt-2 text-center">
+                            Перед восстановлением текущая база сохранится.
+                        </p>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Пробный период (Блок 3) -->
+            <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                <h3 class="text-lg font-bold text-white mb-3">Пробный период</h3>
+                <label class="flex items-center gap-2 mb-4 cursor-pointer">
+                    <input type="hidden" name="trial_enabled" value="false" />
+                    <input type="checkbox" name="trial_enabled" value="true" {% if settings.trial_enabled=='true'
+                        %}checked{% endif %}
+                        class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
+                    <span class="text-white text-sm font-medium">Включить пробный период</span>
+                </label>
+                <div>
+                    <label class="block text-white/70 text-xs font-medium mb-1">Длительность (дней)</label>
+                    <input type="number" name="trial_duration_days" value="{{ settings.trial_duration_days or '3' }}"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                </div>
+            </div>
+
+            <!-- Мониторинг ресурсов (Блок 4) -->
+            <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                <h3 class="text-lg font-bold text-white mb-3">Мониторинг ресурсов</h3>
+                <label class="flex items-center gap-2 mb-4 cursor-pointer">
+                    <input type="hidden" name="monitoring_enabled" value="false" />
+                    <input type="checkbox" name="monitoring_enabled" value="true" {% if (settings.monitoring_enabled
+                        or 'true' )=='true' %}checked{% endif %}
+                        class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
+                    <span class="text-white text-sm font-medium">Включить мониторинг</span>
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="flex items-center gap-1 mb-1">
+                            <label class="block text-white/70 text-xs font-medium">Интервал (сек)</label>
+                            <span
+                                class="material-symbols-outlined text-[14px] text-white/30 cursor-help hover:text-white/70 transition-colors"
+                                title="Как часто бот проверяет нагрузку на сервер">info</span>
+                        </div>
+                        <input type="number" name="monitoring_interval_sec"
+                            value="{{ settings.monitoring_interval_sec or '300' }}" min="30"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1 mb-1">
+                            <label class="block text-white/70 text-xs font-medium">Кулдаун (сек)</label>
+                            <span
+                                class="material-symbols-outlined text-[14px] text-white/30 cursor-help hover:text-white/70 transition-colors"
+                                title="Пауза между уведомлениями, чтобы не спамить">info</span>
+                        </div>
+                        <input type="number" name="monitoring_alert_cooldown_sec"
+                            value="{{ settings.monitoring_alert_cooldown_sec or '3600' }}" min="60"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                    <div class="col-span-2 grid grid-cols-3 gap-2">
+                        <div>
+                            <div class="flex items-center gap-1 mb-1">
+                                <label class="block text-white/70 text-[10px]">CPU %</label>
+                                <span
+                                    class="material-symbols-outlined text-[12px] text-white/30 cursor-help hover:text-white/70 transition-colors"
+                                    title="Порог тревоги для CPU">info</span>
+                            </div>
+                            <input type="number" name="monitoring_cpu_threshold"
+                                value="{{ settings.monitoring_cpu_threshold or '90' }}" min="10" max="100"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1 mb-1">
+                                <label class="block text-white/70 text-[10px]">RAM %</label>
+                                <span
+                                    class="material-symbols-outlined text-[12px] text-white/30 cursor-help hover:text-white/70 transition-colors"
+                                    title="Порог тревоги для RAM">info</span>
+                            </div>
+                            <input type="number" name="monitoring_mem_threshold"
+                                value="{{ settings.monitoring_mem_threshold or '90' }}" min="10" max="100"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1 mb-1">
+                                <label class="block text-white/70 text-[10px]">Disk %</label>
+                                <span
+                                    class="material-symbols-outlined text-[12px] text-white/30 cursor-help hover:text-white/70 transition-colors"
+                                    title="Порог тревоги для диска">info</span>
+                            </div>
+                            <input type="number" name="monitoring_disk_threshold"
+                                value="{{ settings.monitoring_disk_threshold or '90' }}" min="10" max="100"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs" />
+                        </div>
                     </div>
                 </div>
             </div>
+
         </div>
     </section>
 
 
     <section id="tab-bot" class="tab-content hidden">
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h3 class="text-xl font-bold text-white mb-6">Настройка Бота</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="md:col-span-2">
-                    <label class="block text-white/70 text-sm font-medium mb-2">Токен бота</label>
-                    <input type="password" name="telegram_bot_token" value="{{ settings.telegram_bot_token or '' }}"
-                        required
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Username бота (без @)</label>
-                    <input type="text" name="telegram_bot_username" value="{{ settings.telegram_bot_username or '' }}"
-                        required
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Telegram ID Администратора</label>
-                    <input type="text" name="admin_telegram_id" value="{{ settings.admin_telegram_id or '' }}" required
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+
+            <!-- Основной бот -->
+            <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                <h3 class="text-lg font-bold text-white mb-3">Основной бот</h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Токен бота</label>
+                        <input type="password" name="telegram_bot_token" value="{{ settings.telegram_bot_token or '' }}"
+                            required
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Username бота (без @)</label>
+                        <input type="text" name="telegram_bot_username"
+                            value="{{ settings.telegram_bot_username or '' }}" required
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Telegram ID Администратора</label>
+                        <input type="text" name="admin_telegram_id" value="{{ settings.admin_telegram_id or '' }}"
+                            required
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
 
-
-    <section id="tab-support-bot" class="tab-content hidden">
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h3 class="text-xl font-bold text-white mb-6">Настройки Support-бота</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="md:col-span-2">
-                    <label class="block text-white/70 text-sm font-medium mb-2">Токен support-бота</label>
-                    <input type="password" name="support_bot_token" value="{{ settings.support_bot_token or '' }}"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Username support-бота (без @)</label>
-                    <input type="text" name="support_bot_username" value="{{ settings.support_bot_username or '' }}"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">ID саппорт-чата (forum chat id)</label>
-                    <input type="text" name="support_forum_chat_id" value="{{ settings.support_forum_chat_id or '' }}"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    <p class="text-white/50 text-xs mt-1">Укажите ID forum-чата, если нужен вывод тикетов в обсуждения
-                    </p>
+            <!-- Support-бот -->
+            <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                <h3 class="text-lg font-bold text-white mb-3">Support-бот</h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Токен support-бота</label>
+                        <input type="password" name="support_bot_token" value="{{ settings.support_bot_token or '' }}"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Username (без @)</label>
+                        <input type="text" name="support_bot_username" value="{{ settings.support_bot_username or '' }}"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">ID саппорт-чата (forum)</label>
+                        <input type="text" name="support_forum_chat_id"
+                            value="{{ settings.support_forum_chat_id or '' }}"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        <p class="text-white/50 text-[10px] mt-1 pl-1">Для вывода тикетов в обсуждения</p>
+                    </div>
                 </div>
             </div>
+
         </div>
     </section>
 
 
     <section id="tab-payments" class="tab-content hidden">
-        <div class="space-y-6">
+        <div class="space-y-4">
 
+            <!-- Настройка полей комментариев платежей -->
             <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h3 class="text-xl font-bold text-white mb-4">YooKassa</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Почта для чеков</label>
-                        <input type="email" name="receipt_email" value="{{ settings.receipt_email or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">YooKassa Shop ID</label>
-                        <input type="text" name="yookassa_shop_id" value="{{ settings.yookassa_shop_id or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">YooKassa Secret Key</label>
-                        <input type="password" name="yookassa_secret_key"
-                            value="{{ settings.yookassa_secret_key or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                </div>
-                <div class="form-check mt-4">
-                    <input type="hidden" name="sbp_enabled" value="false" />
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="sbp_enabled" value="true" id="sbp_enabled" {% if
-                            settings.sbp_enabled=='true' %}checked{% endif %}
-                            class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
-                        <span class="text-white/70 text-sm">Включить оплату через СБП</span>
+                <h3 class="text-xl font-bold text-white mb-2">Данные в комментариях к платежам</h3>
+                <p class="text-white/50 text-sm mb-6">Выберите данные, которые будут добавляться в комментарий к платежу
+                    и отправляться в платежную систему. Если у пользователя не указаны Username или Имя, они будут
+                    пропущены.</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <label
+                        class="flex items-center justify-between gap-3 cursor-pointer p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <span class="text-white font-medium">ID пользователя</span>
+                        <div class="relative inline-flex items-center">
+                            <input type="checkbox" name="pay_info_id" value="1" data-field="id" {% if pay_info.id==1
+                                %}checked{% endif %} class="sr-only peer pay-info-toggle">
+                            <div
+                                class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                            </div>
+                        </div>
+                    </label>
+
+                    <label
+                        class="flex items-center justify-between gap-3 cursor-pointer p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <span class="text-white font-medium">Username</span>
+                        <div class="relative inline-flex items-center">
+                            <input type="checkbox" name="pay_info_username" value="1" data-field="username" {% if
+                                pay_info.username==1 %}checked{% endif %} class="sr-only peer pay-info-toggle">
+                            <div
+                                class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                            </div>
+                        </div>
+                    </label>
+
+                    <label
+                        class="flex items-center justify-between gap-3 cursor-pointer p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <span class="text-white font-medium">Имя</span>
+                        <div class="relative inline-flex items-center">
+                            <input type="checkbox" name="pay_info_first_name" value="1" data-field="first_name" {% if
+                                pay_info.first_name==1 %}checked{% endif %} class="sr-only peer pay-info-toggle">
+                            <div
+                                class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                            </div>
+                        </div>
+                    </label>
+
+                    <label
+                        class="flex items-center justify-between gap-3 cursor-pointer p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <span class="text-white font-medium">Хост</span>
+                        <div class="relative inline-flex items-center">
+                            <input type="checkbox" name="pay_info_host_name" value="1" data-field="host_name" {% if
+                                pay_info.host_name==1 %}checked{% endif %} class="sr-only peer pay-info-toggle">
+                            <div
+                                class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                            </div>
+                        </div>
                     </label>
                 </div>
             </div>
 
 
-            <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h3 class="text-xl font-bold text-white mb-4">CryptoBot</h3>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">CryptoBot Token</label>
-                    <input type="password" name="cryptobot_token" value="{{ settings.cryptobot_token or '' }}"
-                        class="w-full md:w-1/2 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-            </div>
+            <!-- Grid Container for Payment Gateways -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
 
-
-            <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h3 class="text-xl font-bold text-white mb-4">Heleket</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Heleket Merchant ID</label>
-                        <input type="text" name="heleket_merchant_id" value="{{ settings.heleket_merchant_id or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <!-- YooKassa -->
+                <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                    <h3 class="text-lg font-bold text-white mb-3">YooKassa</h3>
+                    <div class="grid grid-cols-1 gap-3 mb-3">
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">Почта для чеков</label>
+                            <input type="email" name="receipt_email" value="{{ settings.receipt_email or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">Shop ID</label>
+                            <input type="text" name="yookassa_shop_id" value="{{ settings.yookassa_shop_id or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">Secret Key</label>
+                            <input type="password" name="yookassa_secret_key"
+                                value="{{ settings.yookassa_secret_key or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Heleket API Key</label>
-                        <input type="password" name="heleket_api_key" value="{{ settings.heleket_api_key or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Ваш домен (для вебхуков, например
-                        my-shop.com)</label>
-                    <input type="text" name="domain" value="{{ settings.domain or '' }}" placeholder="my-shop.com"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-            </div>
-
-
-            <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h3 class="text-xl font-bold text-white mb-4">TonConnect</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Ton Wallet Address</label>
-                        <input type="text" name="ton_wallet_address" value="{{ settings.ton_wallet_address or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">TonAPI Key</label>
-                        <input type="password" name="tonapi_key" value="{{ settings.tonapi_key or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    <div class="form-check">
+                        <input type="hidden" name="sbp_enabled" value="false" />
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="sbp_enabled" value="true" id="sbp_enabled" {% if
+                                settings.sbp_enabled=='true' %}checked{% endif %}
+                                class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
+                            <span class="text-white/70 text-sm">Включить оплату через СБП</span>
+                        </label>
                     </div>
                 </div>
-            </div>
 
-
-            <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h3 class="text-xl font-bold text-white mb-4">Telegram Stars</h3>
-                <div class="mb-4">
-                    <input type="hidden" name="stars_enabled" value="false" />
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="stars_enabled" value="true" id="stars_enabled" {% if
-                            settings.stars_enabled=='true' %}checked{% endif %}
-                            class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
-                        <span class="text-white/70 text-sm">Включить оплату Telegram Stars</span>
-                    </label>
+                <!-- CryptoBot -->
+                <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                    <h3 class="text-lg font-bold text-white mb-3">CryptoBot</h3>
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">CryptoBot Token</label>
+                        <input type="password" name="cryptobot_token" value="{{ settings.cryptobot_token or '' }}"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Коэффициент конвертации (⭐ за 1
-                        RUB)</label>
-                    <input type="number" step="0.01" name="stars_per_rub" value="{{ settings.stars_per_rub or '1' }}"
-                        class="w-full md:w-64 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    <p class="text-white/50 text-xs mt-1">Например, 1.0 означает 1 звезду за 1 RUB; 2.5 — 2.5 звезды за
-                        1 RUB</p>
+
+                <!-- Heleket -->
+                <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                    <h3 class="text-lg font-bold text-white mb-3">Heleket</h3>
+                    <div class="grid grid-cols-1 gap-3 mb-3">
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">Merchant ID</label>
+                            <input type="text" name="heleket_merchant_id"
+                                value="{{ settings.heleket_merchant_id or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">API Key</label>
+                            <input type="password" name="heleket_api_key" value="{{ settings.heleket_api_key or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">Ваш домен</label>
+                            <input type="text" name="domain" value="{{ settings.domain or '' }}"
+                                placeholder="my-shop.com"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                    </div>
                 </div>
-            </div>
 
+                <!-- TonConnect -->
+                <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                    <h3 class="text-lg font-bold text-white mb-3">TonConnect</h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">Ton Wallet Address</label>
+                            <input type="text" name="ton_wallet_address" value="{{ settings.ton_wallet_address or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">TonAPI Key</label>
+                            <input type="password" name="tonapi_key" value="{{ settings.tonapi_key or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                    </div>
+                </div>
 
-            <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h3 class="text-xl font-bold text-white mb-4">YooMoney (кошелёк)</h3>
-                <div class="mb-4">
+                <!-- Telegram Stars -->
+                <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                    <h3 class="text-lg font-bold text-white mb-3">Telegram Stars</h3>
+                    <div class="mb-3">
+                        <input type="hidden" name="stars_enabled" value="false" />
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="stars_enabled" value="true" id="stars_enabled" {% if
+                                settings.stars_enabled=='true' %}checked{% endif %}
+                                class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
+                            <span class="text-white/70 text-sm">Включить оплату Telegram Stars</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Коэффициент (⭐ за 1 RUB)</label>
+                        <input type="number" step="0.01" name="stars_per_rub"
+                            value="{{ settings.stars_per_rub or '1' }}"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        <p class="text-white/50 text-[10px] mt-1 pl-1">Пример: 2.5 = 2.5 звезды за 1 RUB</p>
+                    </div>
+                </div>
+
+                <!-- Platega -->
+                <div class="bg-white/5 border border-white/10 rounded-lg p-5 h-full">
+                    <h3 class="text-lg font-bold text-white mb-3">Platega</h3>
+                    <div class="mb-3">
+                        <input type="hidden" name="platega_enabled" value="false" />
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="platega_enabled" value="true" id="platega_enabled" {% if
+                                settings.platega_enabled=='true' %}checked{% endif %}
+                                class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
+                            <span class="text-white/70 text-sm">Включить Platega</span>
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 mb-2">
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">Merchant ID</label>
+                            <input type="text" name="platega_merchant_id"
+                                value="{{ settings.platega_merchant_id or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <label class="block text-white/70 text-xs font-medium mb-1">API Key</label>
+                            <input type="password" name="platega_api_key" value="{{ settings.platega_api_key or '' }}"
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        </div>
+                    </div>
+                    <p class="text-white/50 text-[10px]">Callback: <code
+                            class="text-primary/80">{{ request.url_root.rstrip('/') }}/platega-webhook</code></p>
+                </div>
+
+            </div> <!-- End Grid -->
+
+            <!-- YooMoney (Отдельно на всю ширину или в грид? YooMoney большой. Поставлю его отдельно ПОД гридом или ВНУТРИ грида с col-span-2?) -->
+            <!-- Пользователь хотел "у всех блоков единый дизайн". YooMoney сильно больше других. -->
+            <!-- Лучше его тоже сделать компактнее, но оставить на всю ширину, или col-span-2. -->
+
+            <div class="bg-white/5 border border-white/10 rounded-lg p-5 mt-4">
+                <h3 class="text-lg font-bold text-white mb-3">YooMoney (кошелёк)</h3>
+                <div class="mb-3">
                     <input type="hidden" name="yoomoney_enabled" value="false" />
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="yoomoney_enabled" value="true" id="yoomoney_enabled" {% if
@@ -299,103 +531,54 @@
                         <span class="text-white/70 text-sm">Включить YooMoney</span>
                     </label>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Номер кошелька</label>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Номер кошелька</label>
                         <input type="text" name="yoomoney_wallet" value="{{ settings.yoomoney_wallet or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                     </div>
                     <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Секрет HTTP-уведомлений</label>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Секрет HTTP-уведомлений</label>
                         <input type="password" name="yoomoney_secret" value="{{ settings.yoomoney_secret or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                        <p class="text-white/50 text-xs mt-1">URL уведомлений: <code
-                                class="text-primary/80">{{ request.url_root.rstrip('/') }}/yoomoney-webhook</code></p>
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        <p class="text-white/50 text-[10px] mt-1 break-all">URL: {{ request.url_root.rstrip('/')
+                            }}/yoomoney-webhook</p>
                     </div>
                     <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">API Token (OAuth
-                            access_token)</label>
+                        <label class="block text-white/70 text-xs font-medium mb-1">API Token (OAuth)</label>
                         <input type="password" name="yoomoney_api_token" value="{{ settings.yoomoney_api_token or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                        <p class="text-white/50 text-xs mt-1">Используется для проверки account-info / operation-history
-                        </p>
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                     </div>
                     <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Client ID (для OAuth)</label>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Client ID</label>
                         <input type="text" name="yoomoney_client_id" value="{{ settings.yoomoney_client_id or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                     </div>
                     <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Client Secret (если
-                            требуется)</label>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Client Secret</label>
                         <input type="password" name="yoomoney_client_secret"
                             value="{{ settings.yoomoney_client_secret or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                     </div>
                     <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Redirect URI (для OAuth)</label>
+                        <label class="block text-white/70 text-xs font-medium mb-1">Redirect URI</label>
                         <input type="url" name="yoomoney_redirect_uri"
                             value="{{ settings.yoomoney_redirect_uri or '' }}"
                             placeholder="https://example.com/yoomoney/callback"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                        <p class="text-white/50 text-xs mt-1">Если не заполнено — используется: {{
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        <p class="text-white/50 text-[10px] mt-1 break-all">По умолчанию: {{
                             request.url_root.rstrip('/') }}/yoomoney/callback</p>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ url_for('yoomoney_connect_route') }}"
-                        class="px-4 py-2 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30">
-                        Подключить YooMoney (OAuth)
+                        class="px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30 transition">
+                        Подключить (OAuth)
                     </a>
                     <button type="submit" formmethod="post" formaction="{{ url_for('yoomoney_check_route') }}"
-                        class="px-4 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20">
-                        Проверить токен YooMoney
+                        class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">
+                        Проверить токен
                     </button>
-                </div>
-            </div>
-
-
-            <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h3 class="text-xl font-bold text-white mb-4">Platega</h3>
-                <div class="mb-4">
-                    <input type="hidden" name="platega_enabled" value="false" />
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="platega_enabled" value="true" id="platega_enabled" {% if
-                            settings.platega_enabled=='true' %}checked{% endif %}
-                            class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
-                        <span class="text-white/70 text-sm">Включить Platega</span>
-                    </label>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Merchant ID</label>
-                        <input type="text" name="platega_merchant_id" value="{{ settings.platega_merchant_id or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">API Key (Secret)</label>
-                        <input type="password" name="platega_api_key" value="{{ settings.platega_api_key or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                </div>
-                <p class="text-white/50 text-xs mt-3">Callback URL: <code
-                        class="text-primary/80">{{ request.url_root.rstrip('/') }}/platega-webhook</code></p>
-            </div>
-
-
-            <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h3 class="text-xl font-bold text-white mb-4">TonConnect</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Ton Wallet Address</label>
-                        <input type="text" name="ton_wallet_address" value="{{ settings.ton_wallet_address or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">TonAPI Key</label>
-                        <input type="password" name="tonapi_key" value="{{ settings.tonapi_key or '' }}"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
                 </div>
             </div>
 
@@ -461,56 +644,126 @@
                     <span id="host-icon-{{ host.host_name }}"
                         class="material-symbols-outlined text-white/50 transition-transform">expand_more</span>
                 </div>
-                <form action="{{ url_for('delete_host_route', host_name=host.host_name) }}" method="post" class="inline"
-                    data-confirm="Удалить хост {{ host.host_name }} и все его тарифы?"
-                    onclick="event.stopPropagation();">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button type="submit"
-                        class="px-3 py-1 rounded bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30">Удалить</button>
-                </form>
+                <div class="flex gap-2" onclick="event.stopPropagation();">
+                    <form action="{{ url_for('toggle_host_visibility_route', host_name=host.host_name) }}" method="post"
+                        class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        {% if host.see is none or host.see == 1 %}
+                        <input type="hidden" name="visible" value="0" />
+                        <button type="submit"
+                            class="px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-sm hover:bg-yellow-500/30">Скрыть</button>
+                        {% else %}
+                        <input type="hidden" name="visible" value="1" />
+                        <button type="submit"
+                            class="px-3 py-1 rounded bg-green-500/20 text-green-400 text-sm hover:bg-green-500/30">Показать</button>
+                        {% endif %}
+                    </form>
+                    <form action="{{ url_for('delete_host_route', host_name=host.host_name) }}" method="post"
+                        class="inline" data-confirm="Удалить хост {{ host.host_name }} и все его тарифы?">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit"
+                            class="px-3 py-1 rounded bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30">Удалить</button>
+                    </form>
+                </div>
             </div>
 
             <div id="host-content-{{ host.host_name }}" class="hidden">
 
 
-                <form action="{{ url_for('update_host_url_route') }}" method="post" class="mb-4">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                    <div class="flex gap-2">
-                        <input type="text" name="host_url" value="{{ host.host_url or '' }}"
-                            placeholder="URL панели Remnawave"
-                            class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
-                        <button type="submit"
-                            class="px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20">Сохранить
-                            URL</button>
-                    </div>
-                </form>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <!-- URL Panel -->
+                    <form action="{{ url_for('update_host_url_route') }}" method="post"
+                        class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                        <label class="block text-white text-xs font-medium mb-2">URL панели Remnawave</label>
+                        <div class="flex gap-2 mt-auto">
+                            <input type="text" name="host_url" value="{{ host.host_url or '' }}"
+                                placeholder="https://panel.example.com"
+                                class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
+                            <button type="submit"
+                                class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Сохранить</button>
+                        </div>
+                    </form>
 
+                    <!-- Rename Host -->
+                    <form action="{{ url_for('rename_host_route') }}" method="post"
+                        class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <input type="hidden" name="old_host_name" value="{{ host.host_name }}" />
+                        <label class="block text-white text-xs font-medium mb-2">Название хоста</label>
+                        <div class="flex gap-2 mt-auto">
+                            <input type="text" name="new_host_name" value="{{ host.host_name }}"
+                                class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
+                            <button type="submit"
+                                class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Переименовать</button>
+                        </div>
+                    </form>
 
-                <form action="{{ url_for('rename_host_route') }}" method="post" class="mb-4">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <input type="hidden" name="old_host_name" value="{{ host.host_name }}" />
-                    <div class="flex gap-2">
-                        <input type="text" name="new_host_name" value="{{ host.host_name }}" placeholder="Имя хоста"
-                            class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
-                        <button type="submit"
-                            class="px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20">Переименовать</button>
-                    </div>
-                </form>
+                    <!-- Subscription URL -->
+                    <form action="{{ url_for('update_host_subscription_route') }}" method="post"
+                        class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                        <label class="block text-white text-xs font-medium mb-2">Ссылка подписки</label>
+                        <div class="flex gap-2 mt-auto">
+                            <input type="text" name="host_subscription_url" value="{{ host.subscription_url or '' }}"
+                                placeholder="URL для подписки"
+                                class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
+                            <button type="submit"
+                                class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Сохранить</button>
+                        </div>
+                    </form>
 
+                    <!-- Traffic Strategy -->
+                    <form action="{{ url_for('update_host_traffic_settings_route') }}" method="post"
+                        class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                        <input type="hidden" name="traffic_limit_strategy"
+                            id="traffic_limit_strategy_input_{{ host.host_name }}"
+                            value="{{ host.default_traffic_strategy }}" />
 
-                <form action="{{ url_for('update_host_subscription_route') }}" method="post" class="mb-4">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                    <div class="flex gap-2">
-                        <input type="text" name="host_subscription_url" value="{{ host.subscription_url or '' }}"
-                            placeholder="Ссылка подписки для этого хоста"
-                            class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
-                        <button type="submit"
-                            class="px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20">Сохранить
-                            ссылку</button>
-                    </div>
-                </form>
+                        <div class="flex items-center gap-2 mb-2">
+                            <label class="text-white text-xs font-medium">Стратегия сброса трафика</label>
+                            <span class="material-symbols-outlined text-white/50 text-[16px] cursor-help"
+                                title="Когда сбрасывать трафик в панели Remnawave">info</span>
+                        </div>
+
+                        <div class="flex gap-2 mt-auto">
+                            <div class="relative flex-1 group" tabindex="0">
+                                {% set current_strategy = host.default_traffic_strategy or 'NO_RESET' %}
+                                {% set strategy_labels = {'NO_RESET': 'Никогда', 'DAY': 'Ежедневно', 'WEEK':
+                                'Еженедельно', 'MONTH': 'Ежемесячно'} %}
+                                <div
+                                    class="w-full bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm flex items-center justify-between cursor-pointer hover:bg-white/10">
+                                    <span id="strategy_label_{{ host.host_name }}">{{ strategy_labels[current_strategy]
+                                        }}</span>
+                                    <span class="material-symbols-outlined text-white/50 text-[18px]">expand_more</span>
+                                </div>
+                                <div
+                                    class="absolute z-10 bottom-full left-0 right-0 mb-1 bg-[#1a2f24] border border-white/10 rounded-lg shadow-xl overflow-hidden hidden group-focus-within:block">
+                                    <div class="p-1">
+                                        <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'NO_RESET', 'Никогда')"
+                                            class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
+                                            Никогда</div>
+                                        <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'DAY', 'Ежедневно')"
+                                            class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
+                                            Ежедневно</div>
+                                        <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'WEEK', 'Еженедельно')"
+                                            class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
+                                            Еженедельно</div>
+                                        <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'MONTH', 'Ежемесячно')"
+                                            class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
+                                            Ежемесячно</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit"
+                                class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">ОК</button>
+                        </div>
+                    </form>
+                </div>
 
 
                 <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
@@ -566,79 +819,105 @@
 
 
 
+
+
+
+                <!-- Description -->
+                <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <div>
+                            <h5 class="text-white font-medium text-sm">Свое описание (HTML)</h5>
+                            <p class="text-white/50 text-[10px]">Для меню выбора тарифа</p>
+                        </div>
+                        <input type="checkbox" id="toggle-description-{{ host.host_name }}"
+                            onchange="toggleDescriptionForm('{{ host.host_name }}')"
+                            class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" {% if
+                            host.description %}checked{% endif %} />
+                    </label>
+                    <div id="description-form-{{ host.host_name }}"
+                        class="{% if not host.description %}hidden{% endif %} mt-3 pt-3 border-t border-white/10">
+                        <form action="{{ url_for('update_host_description_route') }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <textarea name="host_description" rows="3" placeholder="Введите описание..."
+                                class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/50">{{ host.description or '' }}</textarea>
+                            <div class="flex justify-end mt-2">
+                                <button type="submit"
+                                    class="px-3 py-1.5 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20">Сохранить</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Plans -->
                 <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4">
-                    <h5 class="text-white font-medium mb-3">Тарифы</h5>
+                    <h5 class="text-white font-bold mb-4">Тарифы</h5>
                     {% if host.plans %}
-                    <div id="plans-grid-{{ host.host_name }}" class="grid gap-3 mb-4"
-                        style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div id="plans-grid-{{ host.host_name }}"
+                        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                         {% for plan in host.plans %}
                         <div
-                            class="relative bg-white/5 border border-white/10 rounded-lg p-3 hover:border-primary/30 transition-colors group">
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1">
-                                        <h6 class="text-white font-bold text-sm">{{ plan.plan_name }}</h6>
-                                        <p class="text-white/50 text-xs">{{ plan.months }} мес.</p>
+                            class="bg-white/[0.02] border border-white/10 rounded-lg p-3 hover:border-primary/50 transition-colors group relative">
+                            <!-- View State -->
+                            <div id="view-plan-{{ plan.plan_id }}" class="flex flex-col h-full">
+                                <div class="flex-1 mb-3">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <h6 class="text-white font-bold text-sm leading-tight pr-2">{{ plan.plan_name }}
+                                        </h6>
+                                        <span class="text-primary font-bold text-sm whitespace-nowrap">{{
+                                            plan.price|round(0) }}₽</span>
                                     </div>
-                                    <span class="text-primary font-bold text-sm">{{ plan.price|round(0) }}₽</span>
+                                    <div class="flex flex-wrap gap-2 text-white/60 text-[11px]">
+                                        <span>{{ plan.months }} мес.</span>
+                                        <span>{{ plan.traffic_limit_gb or '∞' }} GB</span>
+                                        <span>{{ plan.hwid_limit or '∞' }} HWID</span>
+                                    </div>
                                 </div>
 
-                                <div class="flex gap-1">
+                                <div class="grid grid-cols-2 gap-2 mt-auto">
                                     <button type="button"
-                                        class="plan-edit-btn flex-1 px-2 py-1 rounded bg-white/10 text-white/70 text-xs hover:bg-white/20 hover:text-white transition-colors flex items-center justify-center gap-1"
-                                        data-plan-id="{{ plan.plan_id }}">
-                                        <span class="material-symbols-outlined text-sm">edit</span>
+                                        class="px-2 py-1.5 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 flex items-center justify-center gap-1 transition"
+                                        onclick="document.getElementById('view-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('edit-plan-{{ plan.plan_id }}').classList.remove('hidden')">
                                         Изменить
                                     </button>
                                     <form action="{{ url_for('delete_plan_route', plan_id=plan.plan_id) }}"
-                                        method="post" class="flex-1"
-                                        data-confirm="Удалить тариф '{{ plan.plan_name }}'?">
+                                        method="post" data-confirm="Удалить тариф?">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                         <button type="submit"
-                                            class="w-full px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30 transition-colors flex items-center justify-center gap-1">
-                                            <span class="material-symbols-outlined text-sm">delete</span>
+                                            class="w-full px-2 py-1.5 rounded bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 flex items-center justify-center gap-1 transition">
                                             Удалить
                                         </button>
                                     </form>
                                 </div>
                             </div>
 
-                            <!-- Edit Form -->
-                            <div id="edit-plan-{{ plan.plan_id }}" class="hidden mt-3 pt-3 border-t border-white/10">
+                            <!-- Edit State -->
+                            <div id="edit-plan-{{ plan.plan_id }}" class="hidden flex flex-col h-full">
                                 <form action="{{ url_for('update_plan_route', plan_id=plan.plan_id) }}" method="post"
-                                    class="space-y-2">
+                                    class="flex flex-col h-full gap-2">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                    <input type="text" name="plan_name" value="{{ plan.plan_name }}"
-                                        placeholder="Название" required
-                                        class="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
+                                    <input type="text" name="plan_name" value="{{ plan.plan_name }}" placeholder="Name"
+                                        required class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
                                     <div class="grid grid-cols-2 gap-2">
-                                        <input type="number" name="months" value="{{ plan.months }}" placeholder="Мес."
-                                            required
-                                            class="bg-black/20 border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
-                                        <input type="number" step="0.01" name="price" value="{{ plan.price }}"
-                                            placeholder="Цена" required
-                                            class="bg-black/20 border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
+                                        <input type="number" name="months" value="{{ plan.months }}" required
+                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
+                                        <input type="number" name="price" value="{{ plan.price }}" required
+                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
                                     </div>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-[10px] text-white/50">HWID Limit</label>
-                                            <input type="number" name="hwid_limit" value="{{ plan.hwid_limit or 0 }}"
-                                                min="0" placeholder="0"
-                                                class="bg-black/20 border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
-                                        </div>
-                                        <div class="flex flex-col gap-1">
-                                            <label class="text-[10px] text-white/50">Traffic (GB)</label>
-                                            <input type="number" name="traffic_limit_gb"
-                                                value="{{ plan.traffic_limit_gb or 0 }}" min="0" placeholder="0"
-                                                class="bg-black/20 border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
-                                        </div>
+                                        <input type="number" name="traffic_limit_gb" value="{{ plan.traffic_limit_gb }}"
+                                            placeholder="GB"
+                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
+                                        <input type="number" name="hwid_limit" value="{{ plan.hwid_limit }}"
+                                            placeholder="HWID"
+                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
                                     </div>
-                                    <div class="flex gap-2">
+                                    <div class="grid grid-cols-2 gap-2 mt-auto">
                                         <button type="submit"
-                                            class="flex-1 px-2 py-1.5 rounded bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30">Сохранить</button>
+                                            class="bg-primary/20 text-primary rounded px-2 py-1 text-xs hover:bg-primary/30">Сохранить</button>
                                         <button type="button"
-                                            class="plan-cancel-btn px-2 py-1.5 rounded bg-white/10 text-white/70 text-xs hover:bg-white/20"
-                                            data-plan-id="{{ plan.plan_id }}">Отмена</button>
+                                            class="bg-white/10 text-white rounded px-2 py-1 text-xs hover:bg-white/20"
+                                            onclick="document.getElementById('edit-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('view-plan-{{ plan.plan_id }}').classList.remove('hidden')">Отмена</button>
                                     </div>
                                 </form>
                             </div>
@@ -646,25 +925,36 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="text-white/50 text-sm mb-4">Тарифы не добавлены</p>
+                    <div class="text-white/30 text-xs text-center py-4">Нет тарифов</div>
                     {% endif %}
-                    <form action="{{ url_for('add_plan_route') }}" method="post" class="flex gap-2 flex-wrap">
+
+                    <form action="{{ url_for('add_plan_route') }}" method="post"
+                        class="bg-white/[0.02] border border-white/10 rounded-lg p-3 grid grid-cols-6 gap-2 items-center">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                        <input type="text" name="plan_name" placeholder="Название" required
-                            class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-32" />
-                        <input type="number" name="months" placeholder="Мес." required
-                            class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-20" />
-                        <input type="number" step="0.01" name="price" placeholder="Цена" required
-                            class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-24" />
-                        <input type="number" name="hwid_limit" placeholder="HWID"
-                            class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-20"
-                            title="Лимит устройств (0=безлим)" />
-                        <input type="number" name="traffic_limit_gb" placeholder="GB"
-                            class="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm w-20"
-                            title="Лимит трафика GB (0=безлим)" />
+
+                        <div class="col-span-2">
+                            <input type="text" name="plan_name" placeholder="Название" required
+                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <input type="number" name="months" placeholder="Мес." required
+                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <input type="number" step="0.01" name="price" placeholder="Цена" required
+                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
+                        </div>
+                        <div>
+                            <input type="number" name="traffic_limit_gb" placeholder="GB"
+                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
+                        </div>
+                        <div>
+                            <input type="number" name="hwid_limit" placeholder="HWID"
+                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
+                        </div>
                         <button type="submit"
-                            class="px-3 py-1.5 rounded bg-primary text-background-dark text-sm font-medium">+ Добавить
+                            class="col-span-6 bg-primary/20 text-primary border border-primary/20 rounded px-3 py-1.5 text-xs font-medium hover:bg-primary/30 transition">Добавить
                             тариф</button>
                     </form>
                 </div>
@@ -967,23 +1257,7 @@
     </section>
 
 
-    <section id="tab-trial" class="tab-content hidden">
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h3 class="text-xl font-bold text-white mb-6">Пробный период</h3>
-            <label class="flex items-center gap-2 mb-6 cursor-pointer">
-                <input type="hidden" name="trial_enabled" value="false" />
-                <input type="checkbox" name="trial_enabled" value="true" {% if settings.trial_enabled=='true'
-                    %}checked{% endif %}
-                    class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
-                <span class="text-white font-medium">Включить пробный период</span>
-            </label>
-            <div class="w-full md:w-64">
-                <label class="block text-white/70 text-sm font-medium mb-2">Длительность (дней)</label>
-                <input type="number" name="trial_duration_days" value="{{ settings.trial_duration_days or '3' }}"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-            </div>
-        </div>
-    </section>
+
 
 
     <section id="tab-content" class="tab-content hidden">
@@ -1662,52 +1936,7 @@
     </section>
 
 
-    <section id="tab-monitoring" class="tab-content hidden">
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h3 class="text-xl font-bold text-white mb-6">Мониторинг ресурсов</h3>
-            <label class="flex items-center gap-2 mb-6 cursor-pointer">
-                <input type="hidden" name="monitoring_enabled" value="false" />
-                <input type="checkbox" name="monitoring_enabled" value="true" {% if (settings.monitoring_enabled
-                    or 'true' )=='true' %}checked{% endif %}
-                    class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
-                <span class="text-white font-medium">Включить мониторинг и алерты</span>
-            </label>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Интервал сбора (сек)</label>
-                    <input type="number" name="monitoring_interval_sec"
-                        value="{{ settings.monitoring_interval_sec or '300' }}" min="30"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    <p class="text-white/50 text-xs mt-1">Как часто собирать метрики</p>
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Кулдаун алертов (сек)</label>
-                    <input type="number" name="monitoring_alert_cooldown_sec"
-                        value="{{ settings.monitoring_alert_cooldown_sec or '3600' }}" min="60"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    <p class="text-white/50 text-xs mt-1">Пауза между повторами алертов</p>
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Порог CPU (%)</label>
-                    <input type="number" name="monitoring_cpu_threshold"
-                        value="{{ settings.monitoring_cpu_threshold or '90' }}" min="10" max="100"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Порог RAM (%)</label>
-                    <input type="number" name="monitoring_mem_threshold"
-                        value="{{ settings.monitoring_mem_threshold or '90' }}" min="10" max="100"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm font-medium mb-2">Порог диска (%)</label>
-                    <input type="number" name="monitoring_disk_threshold"
-                        value="{{ settings.monitoring_disk_threshold or '90' }}" min="10" max="100"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-            </div>
-        </div>
-    </section>
+
 
 
     <div class="mt-6">
@@ -2006,6 +2235,8 @@
             if (actionUrl.includes('update_host_url')) return 'URL сохранён';
             if (actionUrl.includes('rename_host')) return 'Хост переименован';
             if (actionUrl.includes('update_host_subscription')) return 'Ссылка сохранена';
+            if (actionUrl.includes('update_host_description')) return 'Описание сохранено';
+            if (actionUrl.includes('update_host_traffic_settings')) return 'Настройки трафика сохранены';
             if (actionUrl.includes('update_host_ssh')) return 'SSH настройки сохранены';
             if (actionUrl.includes('add_plan')) return 'Тариф добавлен';
             if (actionUrl.includes('delete_plan')) return 'Тариф удалён';
@@ -2281,6 +2512,10 @@
 
     // Restore states on page load
     document.addEventListener('DOMContentLoaded', function () {
+        if (window.initSoftSelect) {
+            window.initSoftSelect('existing_backup', '— Выберите архив —');
+        }
+
         // Restore Add Host Form state
         const addHostForm = document.getElementById('add-host-form');
         const addHostIcon = document.getElementById('add-host-icon');
@@ -2303,6 +2538,103 @@
             }
         });
     });
+
+    // Select traffic strategy
+    function selectTrafficStrategy(hostName, value, label) {
+        document.getElementById('traffic_limit_strategy_input_' + hostName).value = value;
+        document.getElementById('strategy_label_' + hostName).textContent = label;
+
+        // Blur to close dropdown
+        document.activeElement.blur();
+    }
+
+    // Toggle description form for host
+    function toggleDescriptionForm(hostName) {
+        const checkbox = document.getElementById('toggle-description-' + hostName);
+        const form = document.getElementById('description-form-' + hostName);
+        if (checkbox && form) {
+            if (checkbox.checked) {
+                form.classList.remove('hidden');
+            } else {
+                form.classList.add('hidden');
+            }
+        }
+    }
+
+    // AJAX update for payment info comments
+    document.querySelectorAll('.pay-info-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async function () {
+            const field = this.dataset.field;
+            const enabled = this.checked;
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+            try {
+                const response = await fetch('/api/settings/update-pay-info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        field: field,
+                        value: enabled
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    console.log('Updated pay info:', field, enabled);
+                    showToast('Настройки обновлены', 'success');
+                } else {
+                    console.error('Update failed:', data);
+                    showToast('Ошибка: ' + (data.message || 'unknown error'), 'error');
+                    // Revert checkbox state if failed
+                    this.checked = !enabled;
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+                showToast('Ошибка сети', 'error');
+                // Revert checkbox state if failed
+                this.checked = !enabled;
+            }
+        });
+    });
+
+    // Simple Toast Notification System
+    function showToast(message, type = 'success') {
+        // Create container if not exists
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'fixed bottom-6 right-6 z-50 flex flex-col gap-2';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+        toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-2 opacity-0 flex items-center gap-2`;
+
+        // Simple Icons
+        const icon = type === 'success'
+            ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+            : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+
+        toast.innerHTML = `${icon} <span class="font-medium">${message}</span>`;
+
+        container.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-2', 'opacity-0');
+        });
+
+        // Remove after 3s
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 </script>
 
 <style>

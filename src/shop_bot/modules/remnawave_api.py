@@ -266,6 +266,49 @@ async def get_user_by_uuid(user_uuid: str, *, host_name: str | None = None) -> d
     return payload.get("response") if isinstance(payload, dict) else None
 
 
+async def get_connected_devices_count(user_uuid: str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    if not user_uuid:
+        return None
+    encoded_uuid = quote(user_uuid.strip())
+    path = f"/api/hwid/devices/{encoded_uuid}"
+    
+    if host_name:
+        response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
+    else:
+        response = await _request("GET", path, expected_status=(200, 404))
+        
+    if response.status_code == 404:
+        return None
+        
+    payload = response.json()
+    if isinstance(payload, dict):
+        # API returns: {"response": {"total": 2, "devices": [...]}}
+        return payload.get("response")
+    return None
+
+
+async def get_subscription_info(user_uuid: str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    if not user_uuid:
+        return None
+    encoded_uuid = quote(user_uuid.strip())
+    path = f"/api/subscriptions/by-uuid/{encoded_uuid}"
+    
+    if host_name:
+        response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
+    else:
+        response = await _request("GET", path, expected_status=(200, 404))
+        
+    if response.status_code == 404:
+        return None
+        
+    payload = response.json()
+    if isinstance(payload, dict):
+        response_data = payload.get("response")
+        if isinstance(response_data, dict):
+             return response_data.get("user")
+    return None
+
+
 async def ensure_user(
     *,
     host_name: str,
@@ -279,7 +322,7 @@ async def ensure_user(
     username: str | None = None,
     telegram_id: int | str | None = None,
     force_expiry: bool = False,
-    hwid_limit: int | None = None, # Added parameter
+    hwid_limit: int | None = None,
 ) -> dict[str, Any]:
     if not email:
         raise RemnawaveAPIError("email is required for ensure_user")
@@ -344,6 +387,8 @@ async def ensure_user(
             payload["trafficLimitStrategy"] = traffic_limit_strategy
         if description:
             payload["description"] = description
+
+
         if tag:
             payload["tag"] = tag
         method = "PATCH"
@@ -379,6 +424,8 @@ async def ensure_user(
             payload["trafficLimitStrategy"] = traffic_limit_strategy
         if description:
             payload["description"] = description
+
+
         if tag:
             payload["tag"] = tag
         method = "POST"
@@ -542,9 +589,6 @@ async def create_or_update_key_on_host(
         # 2. else no limit override
         if traffic_limit_gb is not None and traffic_limit_gb > 0:
              effective_traffic_bytes = traffic_limit_gb * 1024 * 1024 * 1024
-        elif traffic_limit_gb == 0 and traffic_limit_gb is not None:
-             # Explicitly set 0 means unlimited
-             effective_traffic_bytes = 0 
         else:
              effective_traffic_bytes = None
 
@@ -560,7 +604,7 @@ async def create_or_update_key_on_host(
             username=email.split('@')[0] if email else None,
             telegram_id=telegram_id,
             force_expiry=force_expiry,  
-            hwid_limit=hwid_limit,
+            hwid_limit=None if hwid_limit == 0 else hwid_limit,
         )
 
         subscription_url = extract_subscription_url(user_payload) or ''

@@ -46,16 +46,17 @@ def save_broadcast_results(sent, failed, skipped):
             'skipped': skipped,
             'timestamp': moscow_time.isoformat()
         }
-        with open(RESULTS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(results, f, ensure_ascii=False, indent=2)
+        # Сохраняем в таблицу other с ключом newsletter
+        rw_repo.set_other_value('newsletter', json.dumps(results, ensure_ascii=False))
     except Exception as e:
         logger.error(f"Failed to save broadcast results: {e}")
 
 def load_broadcast_results():
     try:
-        if os.path.exists(RESULTS_FILE):
-            with open(RESULTS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
+        # Загружаем из таблицы other с ключом newsletter
+        data = rw_repo.get_other_value('newsletter')
+        if data:
+            return json.loads(data)
     except Exception as e:
         logger.error(f"Failed to load broadcast results: {e}")
     return {'sent': 0, 'failed': 0, 'skipped': 0, 'timestamp': None}
@@ -287,7 +288,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 return jsonify({'ok': False, 'error': 'Event loop not available'}), 500
             
             async def send_preview():
-                preview_text = f"📨 <b>Предпросмотр рассылки</b>\n\n{text}"
+                preview_text = f"{text}\n\n📨 <b>Предпросмотр рассылки</b>"
                 
                 if media_path and media_type:
                     media_file = FSInputFile(media_path)
@@ -431,6 +432,36 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                             except:
                                 pass
                     if not has_active_key and has_expired_key:
+                        filtered_users.append(user)
+                all_users = filtered_users
+            elif mode == 'expiring_keys':
+                from datetime import datetime, timedelta
+                expiring_days = request.form.get('expiring_days', '3')
+                try:
+                    days_threshold = int(expiring_days)
+                except ValueError:
+                    days_threshold = 3
+                
+                filtered_users = []
+                for user in all_users:
+                    user_id = user.get('telegram_id')
+                    keys = rw_repo.get_keys_for_user(user_id) or []
+                    has_expiring_key = False
+                    for key in keys:
+                        expire_at = key.get('expire_at')
+                        if expire_at:
+                            try:
+                                expire_dt = datetime.fromisoformat(expire_at.replace('Z', '+00:00'))
+                                now = datetime.now(expire_dt.tzinfo or None)
+                                days_until_expiry = (expire_dt - now).days
+                                # Проверяем, что ключ истекает через указанное количество дней или меньше (и еще активен)
+                                if 0 <= days_until_expiry <= days_threshold:
+                                    has_expiring_key = True
+                                    break
+                            except Exception as e:
+                                logger.warning(f"Error parsing expiry date for user {user_id}: {e}")
+                                pass
+                    if has_expiring_key:
                         filtered_users.append(user)
                 all_users = filtered_users
             elif mode == 'without_trial' or mode == 'not_used_trial':
@@ -996,6 +1027,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def deploy_install_docker(name):
         """Установка Docker на SSH-цели"""
         try:
+            # Получаем тип ОС из запроса
+            os_type = request.form.get('os_type', 'ubuntu')  # По умолчанию Ubuntu
+            
             ssh_targets = rw_repo.get_all_ssh_targets()
             server = next((t for t in ssh_targets if t.get('target_name') == name), None)
             if not server:
@@ -1009,10 +1043,17 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
-            logger.info(f"Installing Docker on {name} ({host}:{port})")
+            # Выбираем команду в зависимости от типа ОС
+            if os_type == 'debian':
+                docker_install_cmd = 'curl -fsSL https://get.docker.com | sh'
+                logger.info(f"Installing Docker on {name} ({host}:{port}) - Debian mode")
+            else:  # ubuntu или любой другой
+                docker_install_cmd = 'sudo curl -fsSL https://get.docker.com | sh'
+                logger.info(f"Installing Docker on {name} ({host}:{port}) - Ubuntu mode")
+            
             result = execute_ssh_command(
                 host, port, username, password,
-                'sudo curl -fsSL https://get.docker.com | sh',
+                docker_install_cmd,
                 timeout=300  
             )
             
@@ -1280,6 +1321,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             import socket
             import http.client
             
+            # Default tail for initial stream
+            tail_lines = "50"
+            
             if os.name == 'nt':
                 yield f"data: [INFO] --- Windows Logs Simulation Mode ---\n\n"
                 while True:
@@ -1289,9 +1333,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
 
             cli_cmd = None
             if shutil.which('docker-compose'):
-                cli_cmd = ['docker-compose', 'logs', '-f', '--tail=100']
+                cli_cmd = ['docker-compose', 'logs', '-f', f'--tail={tail_lines}']
             elif shutil.which('docker'):
-                cli_cmd = ['docker', 'compose', 'logs', '-f', '--tail=100']
+                cli_cmd = ['docker', 'compose', 'logs', '-f', f'--tail={tail_lines}']
             
             if cli_cmd and os.path.exists('/root/remnawave-shopbot'):
                 yield f"data: [INFO] Docker CLI found. Trying to stream via command...\n\n"
@@ -1322,7 +1366,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     sock.connect(socket_path)
                     
-                    request = f"GET /containers/{hostname}/logs?stdout=1&stderr=1&follow=1&tail=100 HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                    request = f"GET /containers/{hostname}/logs?stdout=1&stderr=1&follow=1&tail={tail_lines} HTTP/1.1\r\nHost: localhost\r\n\r\n"
                     sock.sendall(request.encode('ascii'))
                     
                     fp = sock.makefile('rb')
@@ -1371,7 +1415,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                         
                         with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
                             
-                            for line in deque(f, 100):
+                            for line in deque(f, int(tail_lines)):
                                 yield f"data: {line.strip()}\n\n"
                             
                             f.seek(0, os.SEEK_END)
@@ -1388,10 +1432,71 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     break
             
             if not found_log:
-                yield f"data: [CRITICAL] No log methods work. CLI missing, Socket missing, Log files missing.\n\n"
+                yield f"data: [WARN] No methods available for logs.\n\n"
 
-        return current_app.response_class(generate(), mimetype='text/event-stream')
+        response = current_app.response_class(generate(), mimetype='text/event-stream')
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['X-Accel-Buffering'] = 'no'
+        response.headers['Connection'] = 'keep-alive'
+        return response
 
+    @flask_app.route('/other/logs/history')
+    @login_required
+    def logs_history():
+        """Возвращает историю логов (чанками)."""
+        try:
+            lines_count = int(request.args.get('lines', 50))
+            offset = int(request.args.get('offset', 0))
+        except ValueError:
+            return jsonify({'ok': False, 'error': 'Invalid parameters'})
+
+        import subprocess
+        import shutil
+        
+        if shutil.which('docker-compose') or shutil.which('docker'):
+            total_fetch = offset + lines_count
+            
+            cli_cmd = None
+            if shutil.which('docker-compose'):
+                cli_cmd = ['docker-compose', 'logs', f'--tail={total_fetch}']
+            else:
+                cli_cmd = ['docker', 'compose', 'logs', f'--tail={total_fetch}']
+                
+            if cli_cmd and os.path.exists('/root/remnawave-shopbot'):
+                try:
+                    result = subprocess.run(
+                        cli_cmd,
+                        cwd='/root/remnawave-shopbot',
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        all_lines = result.stdout.splitlines()
+                        
+                        target_lines = all_lines[:len(all_lines) - offset]
+                        chunk = target_lines[-lines_count:] if lines_count < len(target_lines) else target_lines
+                        
+                        return jsonify({'ok': True, 'lines': chunk})
+                except Exception as e:
+                    logger.error(f"History fetch error: {e}")
+
+        log_files = ['logs/bot.log', 'bot.log']
+        for log_file in log_files:
+            if os.path.exists(log_file):
+                try: 
+                    with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
+                        all_lines = f.readlines()
+                        
+                    target_lines = all_lines[:len(all_lines) - offset]
+                    chunk = target_lines[-lines_count:] if lines_count < len(target_lines) else target_lines
+                    
+                    return jsonify({'ok': True, 'lines': [l.rstrip() for l in chunk]})
+                except Exception as e:
+                     return jsonify({'ok': False, 'error': str(e)})
+
+        return jsonify({'ok': False, 'error': 'Logs not available'})
+    
     @flask_app.route('/other/logs/clear', methods=['POST'])
     @login_required
     def logs_clear():

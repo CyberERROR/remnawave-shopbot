@@ -32,21 +32,17 @@
             </div>
             <div class="mb-4">
                 <label class="block text-white/70 text-sm mb-2">Тип меню:</label>
-                <div class="soft-select relative" id="menu-type-wrapper">
-                    <select id="menu-type-select" class="hidden">
-                        <option value="main_menu">Главное меню</option>
-                        <option value="admin_menu">Админ меню</option>
-                        <option value="profile_menu">Меню профиля</option>
-                        <option value="support_menu">Меню поддержки</option>
-                    </select>
-                    <div id="menu-type-toggle"
-                        class="w-full md:w-64 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white cursor-pointer flex items-center justify-between hover:bg-white/10 transition-colors">
-                        <span id="menu-type-text">Главное меню</span>
-                        <span class="material-symbols-outlined text-white/50 transition-transform"
-                            id="menu-type-arrow">expand_more</span>
-                    </div>
-                    <div id="menu-type-menu"
-                        class="hidden absolute z-50 w-full md:w-64 mt-1 bg-background-dark border border-white/10 rounded-lg shadow-xl overflow-hidden">
+                <div class="mb-4">
+                    <label class="block text-white/70 text-sm mb-2">Тип меню:</label>
+                    <div class="soft-select" data-target="menu-type-select">
+                        <button type="button" class="soft-select-toggle">Главное меню</button>
+                        <div class="soft-select-menu"></div>
+                        <select id="menu-type-select" class="hidden">
+                            <option value="main_menu">Главное меню</option>
+                            <option value="admin_menu">Админ меню</option>
+                            <option value="profile_menu">Меню профиля</option>
+                            <option value="support_menu">Меню поддержки</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -84,11 +80,14 @@
                 </div>
                 <div>
                     <label class="block text-white/70 text-sm mb-2">Тип действия:</label>
-                    <select id="action-type"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white">
-                        <option value="callback">Callback (внутреннее действие)</option>
-                        <option value="url">URL (внешняя ссылка)</option>
-                    </select>
+                    <div class="soft-select" data-target="action-type">
+                        <button type="button" class="soft-select-toggle">Callback (внутреннее действие)</button>
+                        <div class="soft-select-menu"></div>
+                        <select id="action-type" class="hidden">
+                            <option value="callback">Callback (внутреннее действие)</option>
+                            <option value="url">URL (внешняя ссылка)</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="callback-data-group">
                     <label class="block text-white/70 text-sm mb-2">Callback Data:</label>
@@ -114,12 +113,15 @@
                 </div>
                 <div>
                     <label class="block text-white/70 text-sm mb-2">Ширина:</label>
-                    <select id="button-width"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white">
-                        <option value="1">1 колонка (обычная)</option>
-                        <option value="2">2 колонки (широкая)</option>
-                        <option value="3">3 колонки (очень широкая)</option>
-                    </select>
+                    <div class="soft-select" data-target="button-width">
+                        <button type="button" class="soft-select-toggle">1 колонка (обычная)</button>
+                        <div class="soft-select-menu"></div>
+                        <select id="button-width" class="hidden">
+                            <option value="1">1 колонка (обычная)</option>
+                            <option value="2">2 колонки (широкая)</option>
+                            <option value="3">3 колонки (очень широкая)</option>
+                        </select>
+                    </div>
                     <p class="text-white/40 text-xs mt-1">Ширина кнопки относительно других</p>
                 </div>
                 <div>
@@ -189,11 +191,14 @@
             </div>
             <div>
                 <label class="block text-white/70 text-sm mb-2">Тип действия:</label>
-                <select id="new-action-type"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white">
-                    <option value="callback">Callback</option>
-                    <option value="url">URL</option>
-                </select>
+                <div class="soft-select" data-target="new-action-type">
+                    <button type="button" class="soft-select-toggle">Callback</button>
+                    <div class="soft-select-menu"></div>
+                    <select id="new-action-type" class="hidden">
+                        <option value="callback">Callback</option>
+                        <option value="url">URL</option>
+                    </select>
+                </div>
             </div>
             <div id="new-callback-data-group">
                 <label class="block text-white/70 text-sm mb-2">Callback Data:</label>
@@ -207,12 +212,15 @@
             </div>
             <div>
                 <label class="block text-white/70 text-sm mb-2">Ширина кнопки:</label>
-                <select id="new-button-width"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white">
-                    <option value="1">1 колонка (обычная)</option>
-                    <option value="2">2 колонки (широкая)</option>
-                    <option value="3">3 колонки (очень широкая)</option>
-                </select>
+                <div class="soft-select" data-target="new-button-width">
+                    <button type="button" class="soft-select-toggle">1 колонка (обычная)</button>
+                    <div class="soft-select-menu"></div>
+                    <select id="new-button-width" class="hidden">
+                        <option value="1">1 колонка (обычная)</option>
+                        <option value="2">2 колонки (широкая)</option>
+                        <option value="3">3 колонки (очень широкая)</option>
+                    </select>
+                </div>
             </div>
         </div>
         <div class="p-4 border-t border-white/10 flex justify-end gap-2">
@@ -515,7 +523,7 @@
         }
 
         init() {
-            this.initSoftSelect();
+            this.initSoftSelects();
             this.bindEvents();
             this.loadButtons();
             this.disableLogoutButton();
@@ -532,42 +540,14 @@
             }
         }
 
-        initSoftSelect() {
-            const wrapper = document.getElementById('menu-type-wrapper');
-            const select = document.getElementById('menu-type-select');
-            const toggle = document.getElementById('menu-type-toggle');
-            const text = document.getElementById('menu-type-text');
-            const arrow = document.getElementById('menu-type-arrow');
-            const menu = document.getElementById('menu-type-menu');
-            if (!wrapper || !select || !toggle || !menu) return;
-
-            const buildMenu = () => {
-                menu.innerHTML = '';
-                Array.from(select.options).forEach(opt => {
-                    const item = document.createElement('div');
-                    item.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
-                    item.textContent = opt.textContent;
-                    item.dataset.value = opt.value;
-                    item.addEventListener('click', () => {
-                        select.value = opt.value;
-                        text.textContent = opt.textContent;
-                        menu.querySelectorAll('.soft-select-item').forEach(i => i.classList.remove('is-active'));
-                        item.classList.add('is-active');
-                        closeMenu();
-                        select.dispatchEvent(new Event('change'));
-                    });
-                    menu.appendChild(item);
-                });
-            };
-
-            const openMenu = () => { menu.classList.remove('hidden'); arrow.style.transform = 'rotate(180deg)'; };
-            const closeMenu = () => { menu.classList.add('hidden'); arrow.style.transform = ''; };
-
-            toggle.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.contains('hidden') ? openMenu() : closeMenu(); });
-            document.addEventListener('click', (e) => { if (!wrapper.contains(e.target)) closeMenu(); });
-            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
-
-            buildMenu();
+        initSoftSelects() {
+            if (window.initSoftSelect) {
+                window.initSoftSelect('menu-type-select', 'Главное меню');
+                window.initSoftSelect('action-type', 'Callback (внутреннее действие)');
+                window.initSoftSelect('button-width', '1 колонка (обычная)');
+                window.initSoftSelect('new-action-type', 'Callback');
+                window.initSoftSelect('new-button-width', '1 колонка (обычная)');
+            }
         }
 
         bindEvents() {

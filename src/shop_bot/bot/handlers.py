@@ -61,6 +61,7 @@ from shop_bot.data_manager.remnawave_repository import (
     update_user_stats,
     log_transaction,
     is_admin,
+    get_host,
 )
 
 from shop_bot.config import (
@@ -87,24 +88,50 @@ def safe_str(val):
         return ""
     return str(val)
 
-def get_transaction_comment(user: types.User, action_type: str, value: any) -> str:
+def get_transaction_comment(user: types.User, action_type: str, value: any, host_name: str = None) -> str:
     """
     Generates a standardized transaction comment.
     
     :param user: The Telegram user object.
     :param action_type: 'new' (subscription), 'extend' (extension), or 'topup' (balance).
     :param value: The number of months (int) for subs/extensions, or amount (float/Decimal) for top-ups.
+    :param host_name: Optional host name for subscription/extension actions.
     """
+    # Получаем настройки отображения полей
+    pay_info_json = get_setting('pay_info_comment')
+    try:
+        pay_info = json.loads(pay_info_json) if pay_info_json else {}
+    except (ValueError, TypeError):
+        pay_info = {}
+        
     user_id = user.id
-    username = f"@{user.username}" if user.username else "—"
-    first_name = user.first_name or "—"
+    username = f"@{user.username}" if user.username else None
+    first_name = user.first_name or None
+    
+    # Формируем список полей на основе настроек
+    user_info_parts = []
+    
+    if pay_info.get('id', 1):
+        user_info_parts.append(f"ID: {user_id}")
+        
+    if pay_info.get('username', 1) and username:
+        user_info_parts.append(f"User: {username}")
+        
+    if pay_info.get('first_name', 1) and first_name:
+        user_info_parts.append(f"Имя: {first_name}")
+        
+    if pay_info.get('host_name', 1) and host_name:
+        user_info_parts.append(f"Хост: {host_name}")
+    
+    user_info = ", ".join(user_info_parts)
+    info_suffix = f" ({user_info})" if user_info else ""
     
     if action_type == 'new':
-        return f"Подписка на {value} мес. (ID: {user_id}, User: {username}, Имя: {first_name})"
+        return f"Подписка на {value} мес.{info_suffix}"
     elif action_type == 'extend':
-        return f"Продление на {value} мес. (ID: {user_id}, User: {username}, Имя: {first_name})"
+        return f"Продление на {value} мес.{info_suffix}"
     elif action_type == 'topup':
-        return f"Пополнение баланса на {value} RUB (ID: {user_id}, User: {username}, Имя: {first_name})"
+        return f"Пополнение баланса на {value} RUB{info_suffix}"
     return f"Транзакция (ID: {user_id})"
 
 async def _create_heleket_payment_request(
@@ -939,7 +966,8 @@ def get_user_router() -> Router:
         description_str = get_transaction_comment(
             callback.from_user, 
             'new' if data.get('action') == 'new' else 'extend', 
-            int(plan['months'])
+            int(plan['months']),
+            data.get('host_name')
         )
 
         title = f"{'Подписка' if data.get('action') == 'new' else 'Продление'} на {int(plan['months'])} мес."
@@ -1150,7 +1178,8 @@ def get_user_router() -> Router:
         description_str = get_transaction_comment(
             callback.from_user,
             'new' if data.get('action') == 'new' else 'extend',
-            int(plan['months'])
+            int(plan['months']),
+            data.get('host_name')
         )
 
         pay_url = _build_yoomoney_link(wallet, price_rub, payment_id, description_str)
@@ -1366,7 +1395,8 @@ def get_user_router() -> Router:
             description_str = get_transaction_comment(
                 callback.from_user,
                 'new' if data.get('action') == 'new' else 'extend',
-                int(plan['months'])
+                int(plan['months']),
+                data.get('host_name')
             )
 
             transaction_id, payment_url = await platega.create_payment(
@@ -2040,7 +2070,11 @@ def get_user_router() -> Router:
     async def show_key_handler(callback: types.CallbackQuery):
         await callback.answer()
         key_id_to_show = int(callback.data.split("_")[2])
-        msg = await smart_edit_message(callback.message, "Загружаю информацию о ключе...")
+        msg = await smart_edit_message(
+            callback.message, 
+            "🛰 Загружаю информацию о ключе...", 
+            photo_path=get_setting("keys_list_image")
+        )
         
         message_to_edit = msg if msg else callback.message
 
@@ -2051,14 +2085,29 @@ def get_user_router() -> Router:
             await smart_edit_message(message_to_edit, "❌ Ошибка: ключ не найден.")
             return
             
+        async def get_details():
+            try:
+                return await remnawave_api.get_key_details_from_host(key_data)
+            except Exception:
+                return None
+
+        async def get_sub_info():
+            if key_data.get('remnawave_user_uuid'):
+                try:
+                    return await remnawave_api.get_subscription_info(key_data['remnawave_user_uuid'], host_name=key_data.get('host_name'))
+                except Exception:
+                    return None
+            return None
+
+        details_task = asyncio.create_task(get_details())
+        sub_info_task = asyncio.create_task(get_sub_info())
+
+        details, sub_info = await asyncio.gather(details_task, sub_info_task)
+
         connection_string = None
-        try:
-            details = await remnawave_api.get_key_details_from_host(key_data)
-            if details:
-                connection_string = details.get('connection_string')
-        except Exception:
-            pass
-            
+        if details:
+            connection_string = details.get('connection_string')
+        
         if not connection_string:
             connection_string = key_data.get('subscription_url')
             
@@ -2070,10 +2119,31 @@ def get_user_router() -> Router:
             expiry_date = datetime.fromisoformat(key_data['expiry_date'])
             created_date = datetime.fromisoformat(key_data['created_date'])
             
+            hwid_limit = None
+            hwid_usage = None
+            
+            if details and details.get('user'):
+                user_payload = details['user']
+                hwid_limit = user_payload.get('hwidDeviceLimit')
+                
+                if hwid_limit is not None:
+                    user_uuid = user_payload.get('uuid')
+                    host_name = key_data.get('host_name')
+                    if user_uuid:
+                        try:
+                            hwid_stats = await remnawave_api.get_connected_devices_count(user_uuid, host_name=host_name)
+                            if hwid_stats:
+                                hwid_usage = hwid_stats.get('total', 0)
+                        except Exception as e:
+                            logger.error(f"Error getting HWID usage for key {key_id_to_show}: {e}")
+            
+            traffic_limit = sub_info.get('trafficLimit') if sub_info else None
+            traffic_used = sub_info.get('trafficUsed') if sub_info else None
+
             all_user_keys = get_user_keys(user_id)
             key_number = next((i + 1 for i, key in enumerate(all_user_keys) if key['key_id'] == key_id_to_show), 0)
             
-            final_text = get_key_info_text(key_number, expiry_date, created_date, connection_string)
+            final_text = get_key_info_text(key_number, expiry_date, created_date, connection_string, hwid_limit=hwid_limit, hwid_usage=hwid_usage, traffic_limit=traffic_limit, traffic_used=traffic_used)
             
             key_info_image = get_setting("key_info_image")
             await smart_edit_message(
@@ -2196,14 +2266,50 @@ def get_user_router() -> Router:
 
             try:
                 updated_key = rw_repo.get_key_by_id(key_id)
-                details = await remnawave_api.get_key_details_from_host(updated_key)
+
+                async def get_details():
+                    try:
+                        return await remnawave_api.get_key_details_from_host(updated_key)
+                    except Exception:
+                        return None
+
+                async def get_sub_info():
+                    if result.get('client_uuid'):
+                        try:
+                            return await remnawave_api.get_subscription_info(result['client_uuid'], host_name=new_host_name)
+                        except Exception:
+                            return None
+                    return None
+
+                details, sub_info = await asyncio.gather(get_details(), get_sub_info())
+
                 if details and details.get('connection_string'):
                     connection_string = details['connection_string']
                     expiry_date = datetime.fromisoformat(updated_key['expiry_date'])
                     created_date = datetime.fromisoformat(updated_key['created_date'])
                     all_user_keys = get_user_keys(callback.from_user.id)
                     key_number = next((i + 1 for i, k in enumerate(all_user_keys) if k['key_id'] == key_id), 0)
-                    final_text = get_key_info_text(key_number, expiry_date, created_date, connection_string)
+                    
+                    hwid_limit = None
+                    hwid_usage = None
+                    if details and details.get('user'):
+                        user_payload = details['user']
+                        hwid_limit = user_payload.get('hwidDeviceLimit')
+                        
+                        if hwid_limit is not None:
+                            user_uuid = user_payload.get('uuid')
+                            if user_uuid:
+                                try:
+                                    hwid_stats = await remnawave_api.get_connected_devices_count(user_uuid, host_name=new_host_name)
+                                    if hwid_stats:
+                                        hwid_usage = hwid_stats.get('total', 0)
+                                except Exception as e:
+                                    logger.error(f"Error getting HWID usage for switched key {key_id}: {e}")
+
+                    traffic_limit = sub_info.get('trafficLimit') if sub_info else None
+                    traffic_used = sub_info.get('trafficUsed') if sub_info else None
+                    
+                    final_text = get_key_info_text(key_number, expiry_date, created_date, connection_string, hwid_limit=hwid_limit, hwid_usage=hwid_usage, traffic_limit=traffic_limit, traffic_used=traffic_used)
                     await smart_edit_message(
                         callback.message,
                         final_text,
@@ -2442,7 +2548,7 @@ def get_user_router() -> Router:
     async def buy_new_key_handler(callback: types.CallbackQuery):
         await callback.answer()
         try:
-            hosts = rw_repo.get_all_hosts() or []
+            hosts = rw_repo.get_all_hosts(visible_only=True) or []
             if not hosts:
                 await smart_edit_message(callback.message, "❌ Серверы не найдены. Обратитесь к администратору.", keyboards.create_back_to_menu_keyboard())
                 return
@@ -2468,9 +2574,14 @@ def get_user_router() -> Router:
             await smart_edit_message(callback.message, f"❌ Для сервера \"{host_name}\" не настроены тарифы.")
             return
         buy_plan_image = get_setting("buy_plan_image")
+        
+        # Получаем кастомное описание хоста или используем текст по умолчанию
+        host_data = get_host(host_name)
+        plan_text = host_data.get('description') if host_data and host_data.get('description') else "Выберите тариф для нового ключа:"
+        
         await smart_edit_message(
             callback.message,
-            "Выберите тариф для нового ключа:", 
+            plan_text, 
             keyboards.create_plans_keyboard(plans, action="new", host_name=host_name),
             buy_plan_image
         )
@@ -2568,10 +2679,17 @@ def get_user_router() -> Router:
             if not plans:
                 await smart_edit_message(callback.message, f"❌ Для сервера \"{host_name}\" не настроены тарифы.")
                 return
+            
+            # Получаем кастомное описание хоста или используем текст по умолчанию
+            host_data = get_host(host_name)
+            plan_text = host_data.get('description') if host_data and host_data.get('description') else "Выберите тариф для нового ключа:"
+            
+            buy_plan_image = get_setting("buy_plan_image")
             await smart_edit_message(
                 callback.message,
-                "Выберите тариф для нового ключа:",
-                keyboards.create_plans_keyboard(plans, action="new", host_name=host_name)
+                plan_text,
+                keyboards.create_plans_keyboard(plans, action="new", host_name=host_name),
+                buy_plan_image
             )
             return
 
@@ -2602,6 +2720,8 @@ def get_user_router() -> Router:
                     f"❌ Извините, для сервера \"{host_name}\" в данный момент не настроены тарифы для продления."
                 )
                 return
+            
+            extend_plan_image = get_setting("extend_plan_image")
             await smart_edit_message(
                 callback.message,
                 f"Выберите тариф для продления ключа на сервере \"{host_name}\":",
@@ -2610,7 +2730,8 @@ def get_user_router() -> Router:
                     action="extend",
                     host_name=host_name,
                     key_id=key_id
-                )
+                ),
+                extend_plan_image
             )
             return
 
@@ -2860,7 +2981,7 @@ def get_user_router() -> Router:
                 receipt = {
                     "customer": {"email": customer_email},
                     "items": [{
-                        "description": get_transaction_comment(callback.from_user, 'new' if action == 'new' else 'extend', months),
+                        "description": get_transaction_comment(callback.from_user, 'new' if action == 'new' else 'extend', months, host_name),
                         "quantity": "1.00",
                         "amount": {"value": price_str_for_api, "currency": "RUB"},
                         "vat_code": "1",
@@ -2872,7 +2993,8 @@ def get_user_router() -> Router:
             description_str = get_transaction_comment(
                 callback.from_user,
                 'new' if action == 'new' else 'extend',
-                months
+                months,
+                host_name
             )
 
             payment_payload = {
