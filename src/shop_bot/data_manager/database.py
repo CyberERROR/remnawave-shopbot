@@ -101,9 +101,18 @@ def normalize_host_name(name: str | None) -> str:
     return s
 
 
+def get_db_connection():
+    """Создать подключение к БД с настройками против блокировки."""
+    conn = sqlite3.connect(DB_FILE, timeout=30.0)
+    conn.execute("PRAGMA busy_timeout=30000")
+    return conn
+
+
 def initialize_db():
     try:
-        with sqlite3.connect(DB_FILE) as conn:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=30000")
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
@@ -435,7 +444,6 @@ def initialize_db():
                 "payment_method_image": None,
                 "key_gemini": None,
             }
-            run_migration()
             for key, value in default_settings.items():
                 cursor.execute(
                     "INSERT OR IGNORE INTO bot_settings (key, value) VALUES (?, ?)",
@@ -458,11 +466,17 @@ def initialize_db():
                 pass
             
             logging.info("База данных инициализирована")
+        
+        run_migration()
+        
     except sqlite3.Error as e:
         logging.error("Не удалось инициализировать базу данных: %s", e)
 
 
 def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    if not cursor.fetchone():
+        return
     mapping = {
         "referred_by": "INTEGER",
         "balance": "REAL DEFAULT 0",
@@ -475,6 +489,9 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
 
 
 def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='xui_hosts'")
+    if not cursor.fetchone():
+        return
     extras = {
         "squad_uuid": "TEXT",
         "description": "TEXT",
@@ -500,6 +517,9 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
 
 
 def _ensure_plans_columns(cursor: sqlite3.Cursor) -> None:
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='plans'")
+    if not cursor.fetchone():
+        return
     extras = {
         "squad_uuid": "TEXT",
         "duration_days": "INTEGER",
@@ -516,6 +536,9 @@ def _ensure_plans_columns(cursor: sqlite3.Cursor) -> None:
 
 
 def _ensure_support_tickets_columns(cursor: sqlite3.Cursor) -> None:
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='support_tickets'")
+    if not cursor.fetchone():
+        return
     extras = {
         "forum_chat_id": "TEXT",
         "message_thread_id": "INTEGER",
@@ -666,7 +689,7 @@ def run_migration():
     logging.info("Запуск миграций базы данных: %s", DB_FILE)
 
     try:
-        with sqlite3.connect(DB_FILE) as conn:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
             cursor = conn.cursor()
             cursor.execute("PRAGMA foreign_keys = OFF")
             _ensure_users_columns(cursor)
