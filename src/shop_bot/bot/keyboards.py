@@ -764,7 +764,7 @@ def create_admin_months_pick_keyboard(action: str = "gift") -> InlineKeyboardMar
     return builder.as_markup()
 
 
-def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_available: bool = False, is_admin: bool = False, balance: float = 0.0) -> InlineKeyboardMarkup:
+def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_available: bool = False, is_admin: bool = False, balance: float = 0.0, key_id: int = None, connection_string: str = None) -> InlineKeyboardMarkup:
     """Create a keyboard based on database configuration"""
     try:
         button_configs = get_button_configs(menu_type)
@@ -781,6 +781,8 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 return create_profile_keyboard()
             elif menu_type == "support_menu":
                 return create_support_menu_keyboard()
+            elif menu_type == "key_info_menu" and key_id is not None:
+                return create_key_info_keyboard(key_id, connection_string)
             else:
                 return create_back_to_menu_keyboard()
 
@@ -827,7 +829,43 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 if menu_type == "main_menu" and "{len(balance)}" in text:
                      text = text.replace("{len(balance)}", f"{int(balance)}")
 
-                if url:
+                # Placeholders for Key Info
+                if key_id is not None:
+                    if callback_data and "{key_id}" in callback_data:
+                        callback_data = callback_data.replace("{key_id}", str(key_id))
+                    if url and "{key_id}" in url:
+                        url = url.replace("{key_id}", str(key_id))
+
+                if connection_string:
+                   if url and "{connection_string}" in url:
+                       url = url.replace("{connection_string}", connection_string)
+                       # Special handling for WebApp if URL IS exactly the connection string or contains it in a specific way
+                       # For now, let's assume if it contains key info it might be a WebApp or standard link. 
+                       # But for 'connect' button usually it is WebApp.
+                       # If config URL was exactly "{connection_string}", we make it a WebApp button if looks like one?
+                       # Or better: check if we should use WebApp.
+                       # In standard create_key_info_keyboard: builder.button(text="📲 Подключиться", web_app=WebAppInfo(url=connection_string))
+                       # Here we need a way to specify it is a WebApp.
+                       # Heuristic: if button_id is 'connect' and url is the connection string.
+                       pass
+                
+                # Logic to determine if it is a WebApp button
+                # If the URL was replaced with connection_string and button_id is connect, or if the URL protocol suggests so?
+                # Actually, aiogram Button needs explicit web_app argument.
+                # Let's say if url contains 'vless://' or 'ss://' after replacement it could be a link (tg:// or https://)
+                # But WebApp is different.
+                # To support WebApp via generic config is tricky without extra field. 
+                # HACK: If the original URL was "{connection_string}" AND the text is "Подключиться" (or button_id='connect'), use WebAppInfo.
+                
+                is_web_app = False
+                if cfg.get('url') == "{connection_string}" and connection_string:
+                     is_web_app = True
+
+                if is_web_app:
+                     row_buttons_objs.append(InlineKeyboardButton(text=text, web_app=WebAppInfo(url=url)))
+                     included_row.append(cfg)
+
+                elif url:
                     row_buttons_objs.append(InlineKeyboardButton(text=text, url=url))
                     included_row.append(cfg)
                 elif callback_data:
@@ -838,19 +876,18 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
             if not included_row:
                 continue
 
-            has_wide = any(int(b.get('button_width', 1) or 1) > 1 for b in included_row)
-            if has_wide and row_buttons_objs:
-
-                builder.row(row_buttons_objs[0])
-                layout.append(1)
-            else:
-
-                if len(row_buttons_objs) >= 2:
-                    builder.row(row_buttons_objs[0], row_buttons_objs[1])
-                    layout.append(2)
-                else:
-                    builder.row(*row_buttons_objs)
-                    layout.append(len(row_buttons_objs))
+            # If there's a wide button, it typically means we want a specific layout.
+            # But the current manual row construction (builder.row) assumes we just dump buttons there.
+            # If we want to respect "width", we should just add all objects to the row.
+            # The builder.row(*objs) adds them as a single row.
+            # If 'button_width' is meant to control grid span, InlineKeyboardBuilder handles that via .adjust(), 
+            # but here we are building row by row manually.
+            # So if we have multiple buttons in this row (based on row_pos), we should just add them all.
+            # The previous logic "if has_wide: add only [0]" was definitely wrong for non-exclusive wide buttons.
+            
+            if row_buttons_objs:
+                builder.row(*row_buttons_objs)
+                layout.append(len(row_buttons_objs))
 
 
 
@@ -862,6 +899,8 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
 
         if menu_type == "main_menu":
             return create_main_menu_keyboard(user_keys or [], trial_available, is_admin, balance)
+        elif menu_type == "key_info_menu" and key_id is not None:
+             return create_key_info_keyboard(key_id, connection_string)
         else:
             return create_back_to_menu_keyboard()
 
@@ -880,3 +919,7 @@ def create_dynamic_profile_keyboard() -> InlineKeyboardMarkup:
 def create_dynamic_support_menu_keyboard() -> InlineKeyboardMarkup:
     """Create support menu keyboard using dynamic configuration"""
     return create_dynamic_keyboard("support_menu")
+
+def create_dynamic_key_info_keyboard(key_id: int, connection_string: str | None = None) -> InlineKeyboardMarkup:
+    """Create key info keyboard using dynamic configuration"""
+    return create_dynamic_keyboard("key_info_menu", key_id=key_id, connection_string=connection_string)

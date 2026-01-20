@@ -1106,10 +1106,21 @@ def toggle_host_visibility(host_name: str, visible: int) -> bool:
                 logging.warning(f"toggle_host_visibility: хост не найден '{host_name_n}'")
                 return False
             
-            cursor.execute(
-                "UPDATE xui_hosts SET see = ? WHERE TRIM(host_name) = TRIM(?)",
-                (visible_int, host_name_n)
-            )
+            try:
+                cursor.execute(
+                    "UPDATE xui_hosts SET see = ? WHERE TRIM(host_name) = TRIM(?)",
+                    (visible_int, host_name_n)
+                )
+            except sqlite3.OperationalError as op_err:
+                if "no such column: see" in str(op_err):
+                    cursor.execute("ALTER TABLE xui_hosts ADD COLUMN see INTEGER DEFAULT 1")
+                    conn.commit()
+                    cursor.execute(
+                        "UPDATE xui_hosts SET see = ? WHERE TRIM(host_name) = TRIM(?)",
+                        (visible_int, host_name_n)
+                    )
+                else:
+                    raise
             conn.commit()
             logging.info(f"Видимость хоста '{host_name_n}' обновлена: see={visible_int}")
             return cursor.rowcount > 0
@@ -1145,10 +1156,21 @@ def get_all_hosts(visible_only: bool = False) -> list[dict]:
         with sqlite3.connect(DB_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            if visible_only:
-                cursor.execute("SELECT * FROM xui_hosts WHERE see = 1")
-            else:
-                cursor.execute("SELECT * FROM xui_hosts")
+            try:
+                if visible_only:
+                    cursor.execute("SELECT * FROM xui_hosts WHERE see = 1")
+                else:
+                    cursor.execute("SELECT * FROM xui_hosts")
+            except sqlite3.OperationalError as op_err:
+                if "no such column: see" in str(op_err):
+                    cursor.execute("ALTER TABLE xui_hosts ADD COLUMN see INTEGER DEFAULT 1")
+                    conn.commit()
+                    if visible_only:
+                        cursor.execute("SELECT * FROM xui_hosts WHERE see = 1")
+                    else:
+                        cursor.execute("SELECT * FROM xui_hosts")
+                else:
+                    raise
             hosts = cursor.fetchall()
 
             result = []
@@ -2235,84 +2257,108 @@ def initialize_default_button_configs():
             cursor = conn.cursor()
             
 
-            cursor.execute("SELECT COUNT(*) FROM button_configs")
-            count = cursor.fetchone()[0]
-            if count > 0:
-                logging.info("Button configs already exist, skipping initialization")
-                return True
+
+            # Check individual menu types to prevent overwriting user changes (e.g. deletions)
+            # Only insert defaults if the menu has NO buttons configured.
+
+            # Helper to check if menu has buttons
+            def menu_has_buttons(m_type):
+                cursor.execute("SELECT 1 FROM button_configs WHERE menu_type = ? LIMIT 1", (m_type,))
+                return cursor.fetchone() is not None
+
+            if not menu_has_buttons("main_menu"):
+                main_menu_buttons = [
+                    ("trial", "🎁 Попробовать бесплатно", "get_trial", 0, 0, 0, 2),
+                    ("profile", "👤 Мой профиль", "show_profile", 1, 0, 1, 1),
+                    ("my_keys", "🔑 Мои ключи ({len(user_keys)})", "manage_keys", 1, 1, 2, 1),
+                    ("buy_key", "🛒 Купить ключ", "buy_new_key", 2, 0, 3, 1),
+                    ("topup", "💳 Пополнить баланс", "top_up_start", 2, 1, 4, 1),
+                    ("referral", "🤝 Реферальная программа", "show_referral_program", 3, 0, 5, 2),
+                    ("support", "🆘 Поддержка", "show_help", 4, 0, 6, 1),
+                    ("about", "ℹ️ О проекте", "show_about", 4, 1, 7, 1),
+                    ("speed", "⚡ Скорость", "user_speedtest_last", 5, 0, 8, 1),
+                    ("howto", "❓ Как использовать", "howto_vless", 5, 1, 9, 1),
+                    ("admin", "⚙️ Админка", "admin_menu", 6, 0, 10, 2),
+                ]
+                
+                for button_id, text, callback_data, row_pos, col_pos, sort_order, button_width in main_menu_buttons:
+                    cursor.execute("""
+                        INSERT INTO button_configs 
+                        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    """, ("main_menu", button_id, text, callback_data, row_pos, col_pos, sort_order, button_width))
             
 
-            main_menu_buttons = [
-                ("trial", "🎁 Попробовать бесплатно", "get_trial", 0, 0, 0, 2),
-                ("profile", "👤 Мой профиль", "show_profile", 1, 0, 1, 1),
-                ("my_keys", "🔑 Мои ключи ({len(user_keys)})", "manage_keys", 1, 1, 2, 1),
-                ("buy_key", "🛒 Купить ключ", "buy_new_key", 2, 0, 3, 1),
-                ("topup", "💳 Пополнить баланс", "top_up_start", 2, 1, 4, 1),
-                ("referral", "🤝 Реферальная программа", "show_referral_program", 3, 0, 5, 2),
-                ("support", "🆘 Поддержка", "show_help", 4, 0, 6, 1),
-                ("about", "ℹ️ О проекте", "show_about", 4, 1, 7, 1),
-                ("speed", "⚡ Скорость", "user_speedtest_last", 5, 0, 8, 1),
-                ("howto", "❓ Как использовать", "howto_vless", 5, 1, 9, 1),
-                ("admin", "⚙️ Админка", "admin_menu", 6, 0, 10, 2),
-            ]
-            
-            for button_id, text, callback_data, row_pos, col_pos, sort_order, button_width in main_menu_buttons:
-                cursor.execute("""
-                    INSERT INTO button_configs 
-                    (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-                """, ("main_menu", button_id, text, callback_data, row_pos, col_pos, sort_order, button_width))
-            
-
-            admin_menu_buttons = [
-                ("users", "👥 Пользователи", "admin_users", 0, 0, 0),
-                ("host_keys", "🌍 Ключи на хосте", "admin_host_keys", 0, 1, 1),
-                ("gift_key", "🎁 Выдать ключ", "admin_gift_key", 1, 0, 2),
-                ("promo", "🎟 Промокоды", "admin_promo_menu", 1, 1, 3),
-                ("speedtest", "⚡ Тест скорости", "admin_speedtest", 2, 0, 4),
-                ("monitor", "📊 Мониторинг", "admin_monitor", 2, 1, 5),
-                ("backup", "🗄 Бэкап БД", "admin_backup_db", 3, 0, 6),
-                ("restore", "♻️ Восстановить БД", "admin_restore_db", 3, 1, 7),
-                ("admins", "👮 Администраторы", "admin_admins_menu", 4, 0, 8),
-                ("broadcast", "📢 Рассылка", "start_broadcast", 4, 1, 9),
-                ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 5, 0, 10),
-            ]
-            
-            for button_id, text, callback_data, row_pos, col_pos, sort_order in admin_menu_buttons:
-                cursor.execute("""
-                    INSERT INTO button_configs 
-                    (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                """, ("admin_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+            if not menu_has_buttons("admin_menu"):
+                admin_menu_buttons = [
+                    ("users", "👥 Пользователи", "admin_users", 0, 0, 0),
+                    ("host_keys", "🌍 Ключи на хосте", "admin_host_keys", 0, 1, 1),
+                    ("gift_key", "🎁 Выдать ключ", "admin_gift_key", 1, 0, 2),
+                    ("promo", "🎟 Промокоды", "admin_promo_menu", 1, 1, 3),
+                    ("speedtest", "⚡ Тест скорости", "admin_speedtest", 2, 0, 4),
+                    ("monitor", "📊 Мониторинг", "admin_monitor", 2, 1, 5),
+                    ("backup", "🗄 Бэкап БД", "admin_backup_db", 3, 0, 6),
+                    ("restore", "♻️ Восстановить БД", "admin_restore_db", 3, 1, 7),
+                    ("admins", "👮 Администраторы", "admin_admins_menu", 4, 0, 8),
+                    ("broadcast", "📢 Рассылка", "start_broadcast", 4, 1, 9),
+                    ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 5, 0, 10),
+                ]
+                
+                for button_id, text, callback_data, row_pos, col_pos, sort_order in admin_menu_buttons:
+                    cursor.execute("""
+                        INSERT INTO button_configs 
+                        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                    """, ("admin_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
             
 
-            profile_menu_buttons = [
-                ("topup", "💳 Пополнить баланс", "top_up_start", 0, 0, 0),
-                ("referral", "🤝 Реферальная программа", "show_referral_program", 1, 0, 1),
-                ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 2, 0, 2),
-            ]
-            
-            for button_id, text, callback_data, row_pos, col_pos, sort_order in profile_menu_buttons:
-                cursor.execute("""
-                    INSERT INTO button_configs 
-                    (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                """, ("profile_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+            if not menu_has_buttons("profile_menu"):
+                profile_menu_buttons = [
+                    ("topup", "💳 Пополнить баланс", "top_up_start", 0, 0, 0),
+                    ("referral", "🤝 Реферальная программа", "show_referral_program", 1, 0, 1),
+                    ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 2, 0, 2),
+                ]
+                
+                for button_id, text, callback_data, row_pos, col_pos, sort_order in profile_menu_buttons:
+                    cursor.execute("""
+                        INSERT INTO button_configs 
+                        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                    """, ("profile_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
             
 
-            support_menu_buttons = [
-                ("new_ticket", "✍️ Новое обращение", "support_new_ticket", 0, 0, 0),
-                ("my_tickets", "📨 Мои обращения", "support_my_tickets", 1, 0, 1),
-                ("external", "🆘 Внешняя поддержка", "support_external", 2, 0, 2),
-                ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 3, 0, 3),
-            ]
-            
-            for button_id, text, callback_data, row_pos, col_pos, sort_order in support_menu_buttons:
-                cursor.execute("""
-                    INSERT INTO button_configs 
-                    (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                """, ("support_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+            if not menu_has_buttons("support_menu"):
+                support_menu_buttons = [
+                    ("new_ticket", "✍️ Новое обращение", "support_new_ticket", 0, 0, 0),
+                    ("my_tickets", "📨 Мои обращения", "support_my_tickets", 1, 0, 1),
+                    ("external", "🆘 Внешняя поддержка", "support_external", 2, 0, 2),
+                    ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 3, 0, 3),
+                ]
+                
+                for button_id, text, callback_data, row_pos, col_pos, sort_order in support_menu_buttons:
+                    cursor.execute("""
+                        INSERT INTO button_configs 
+                        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                    """, ("support_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+
+            if not menu_has_buttons("key_info_menu"):
+                key_info_menu_buttons = [
+                    ("connect", "📲 Подключиться", None, "{connection_string}", 0, 0, 0, 1),
+                    ("extend", "➕ Продлить этот ключ", "extend_key_{key_id}", None, 1, 0, 1, 1),
+                    ("qr", "📱 Показать QR-код", "show_qr_{key_id}", None, 2, 0, 2, 2),
+                    ("howto", "📖 Инструкция", "howto_vless_{key_id}", None, 2, 1, 3, 1),
+                    ("back", "⬅️ Назад к списку ключей", "manage_keys", None, 3, 0, 4, 1),
+                ]
+
+                for button_id, text, callback_data, url, row_pos, col_pos, sort_order, width in key_info_menu_buttons:
+                    cursor.execute("""
+                        INSERT INTO button_configs 
+                        (menu_type, button_id, text, callback_data, url, row_position, column_position, sort_order, button_width, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    """, ("key_info_menu", button_id, text, callback_data, url, row_pos, col_pos, sort_order, width))
+
+
             
             conn.commit()
             logging.info("Default button configurations initialized")

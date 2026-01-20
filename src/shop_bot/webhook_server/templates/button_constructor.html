@@ -32,18 +32,16 @@
             </div>
             <div class="mb-4">
                 <label class="block text-white/70 text-sm mb-2">Тип меню:</label>
-                <div class="mb-4">
-                    <label class="block text-white/70 text-sm mb-2">Тип меню:</label>
-                    <div class="soft-select" data-target="menu-type-select">
-                        <button type="button" class="soft-select-toggle">Главное меню</button>
-                        <div class="soft-select-menu"></div>
-                        <select id="menu-type-select" class="hidden">
-                            <option value="main_menu">Главное меню</option>
-                            <option value="admin_menu">Админ меню</option>
-                            <option value="profile_menu">Меню профиля</option>
-                            <option value="support_menu">Меню поддержки</option>
-                        </select>
-                    </div>
+                <div class="soft-select" data-target="menu-type-select">
+                    <button type="button" class="soft-select-toggle">Главное меню</button>
+                    <div class="soft-select-menu"></div>
+                    <select id="menu-type-select" class="hidden">
+                        <option value="main_menu">Главное меню</option>
+                        <option value="admin_menu">Админ меню</option>
+                        <option value="profile_menu">Меню профиля</option>
+                        <option value="support_menu">Меню поддержки</option>
+                        <option value="key_info_menu">Информация о ключе</option>
+                    </select>
                 </div>
             </div>
             <div id="button-grid"
@@ -96,7 +94,7 @@
                 </div>
                 <div id="url-group" class="hidden">
                     <label class="block text-white/70 text-sm mb-2">URL:</label>
-                    <input type="url" id="button-url" placeholder="https://example.com"
+                    <input type="text" id="button-url" placeholder="https://example.com или {connection_string}"
                         class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -207,7 +205,7 @@
             </div>
             <div id="new-url-group" class="hidden">
                 <label class="block text-white/70 text-sm mb-2">URL:</label>
-                <input type="url" id="new-button-url" placeholder="https://example.com"
+                <input type="text" id="new-button-url" placeholder="https://example.com или {connection_string}"
                     class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
             </div>
             <div>

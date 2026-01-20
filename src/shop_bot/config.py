@@ -40,7 +40,7 @@ def _get_status_text(remaining):
         return f"Активен ({hours} ч.)"
     return f"Активен ({max(1, minutes)} мин)"
 
-def get_key_info_text(key_number, expiry_date, created_date, connection_string, hwid_limit=None, hwid_usage=None, traffic_limit=None, traffic_used=None):
+def get_key_info_text(key_number, expiry_date, created_date, connection_string, email=None, hwid_limit=None, hwid_usage=None, traffic_limit=None, traffic_used=None):
     now = datetime.now()
     remaining = expiry_date - now
     days_left = remaining.days
@@ -66,12 +66,16 @@ def get_key_info_text(key_number, expiry_date, created_date, connection_string, 
         limit_display = "∞" if limit_str == "0" or (limit_str.isdigit() and int(limit_str) > 98) else limit_str
         hwid_block = f"{hwid_usage} / {limit_display}"
 
+    if email and str(email).endswith("@bot.local"):
+        email = str(email).replace("@bot.local", "@bot")
+
     return (
         f"🔑 <b>Информация о ключе #{key_number}</b>\n\n"
         f"📅 <b>Сроки действия:</b>\n"
         f"{status_icon} <b>Статус:</b> {status_text}\n"
         f"➕ <b>Куплен:</b> {created_date.strftime('%d.%m.%Y')}\n"
-        f"⏳ <b>Истекает:</b> {expiry_date.strftime('%d.%m.%Y %H:%M')}\n\n"
+        f"⏳ <b>Истекает:</b> {expiry_date.strftime('%d.%m.%Y %H:%M')}\n"
+        f"💌 <b>ID ключа:</b> <code>{email}</code>\n\n"
         f"📉 <b>Использование:</b>\n"
         f"🛰 <b>Лимит трафика:</b> {traffic_block}\n" 
         f"📱 <b>Лимит устройств:</b> {hwid_block}\n"

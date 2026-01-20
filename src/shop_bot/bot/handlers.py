@@ -2054,12 +2054,11 @@ def get_user_router() -> Router:
             try:
                 await message.delete()
             except Exception:
-                # Игнорируем ошибку если сообщение уже удалено
                 pass
             
             new_expiry_date = datetime.fromtimestamp(result['expiry_timestamp_ms'] / 1000)
             final_text = get_purchase_success_text("new", get_next_key_number(user_id) -1, new_expiry_date, result['connection_string'])
-            await message.answer(text=final_text, reply_markup=keyboards.create_key_info_keyboard(new_key_id, result['connection_string']))
+            await message.answer(text=final_text, reply_markup=keyboards.create_dynamic_key_info_keyboard(new_key_id, result['connection_string']))
 
         except Exception as e:
             logger.error(f"Error creating trial key for user {user_id} on host {host_name}: {e}", exc_info=True)
@@ -2070,13 +2069,7 @@ def get_user_router() -> Router:
     async def show_key_handler(callback: types.CallbackQuery):
         await callback.answer()
         key_id_to_show = int(callback.data.split("_")[2])
-        msg = await smart_edit_message(
-            callback.message, 
-            "🛰 Загружаю информацию о ключе...", 
-            photo_path=get_setting("keys_list_image")
-        )
-        
-        message_to_edit = msg if msg else callback.message
+        message_to_edit = callback.message
 
         user_id = callback.from_user.id
         key_data = rw_repo.get_key_by_id(key_id_to_show)
@@ -2084,7 +2077,45 @@ def get_user_router() -> Router:
         if not key_data or key_data['user_id'] != user_id:
             await smart_edit_message(message_to_edit, "❌ Ошибка: ключ не найден.")
             return
+
+        try:
+            expiry_date = datetime.fromisoformat(key_data['expiry_date'])
+            created_date = datetime.fromisoformat(key_data['created_date'])
+            email = key_data.get('key_email')
             
+            connection_string = key_data.get('subscription_url') or "Загрузка..."
+            
+            all_user_keys = get_user_keys(user_id)
+            key_number = next((i + 1 for i, key in enumerate(all_user_keys) if key['key_id'] == key_id_to_show), 0)
+            
+            initial_text = get_key_info_text(
+                key_number, 
+                expiry_date, 
+                created_date, 
+                connection_string, 
+                email=email, 
+                hwid_limit="...", 
+                hwid_usage="...", 
+                traffic_limit="...", 
+                traffic_used="..."
+            )
+            
+            key_info_image = get_setting("key_info_image")
+            
+            msg = await smart_edit_message(
+                message_to_edit,
+                initial_text,
+                keyboards.create_dynamic_key_info_keyboard(key_id_to_show, connection_string if connection_string != "Загрузка..." else ""),
+                key_info_image
+            )
+            if msg:
+                message_to_edit = msg
+
+        except Exception as e:
+            logger.error(f"Error showing cached key info {key_id_to_show}: {e}")
+            pass
+
+
         async def get_details():
             try:
                 return await remnawave_api.get_key_details_from_host(key_data)
@@ -2104,21 +2135,18 @@ def get_user_router() -> Router:
 
         details, sub_info = await asyncio.gather(details_task, sub_info_task)
 
-        connection_string = None
+
         if details:
-            connection_string = details.get('connection_string')
+            connection_string = details.get('connection_string') or connection_string
         
-        if not connection_string:
+        if not connection_string or connection_string == "Загрузка...":
             connection_string = key_data.get('subscription_url')
             
         if not connection_string:
-            await smart_edit_message(message_to_edit, "❌ Ошибка на сервере. Не удалось получить данные ключа.")
-            return
+             await smart_edit_message(message_to_edit, "❌ Ошибка на сервере. Не удалось получить данные ключа.")
+             return
 
         try:
-            expiry_date = datetime.fromisoformat(key_data['expiry_date'])
-            created_date = datetime.fromisoformat(key_data['created_date'])
-            
             hwid_limit = None
             hwid_usage = None
             
@@ -2140,21 +2168,27 @@ def get_user_router() -> Router:
             traffic_limit = sub_info.get('trafficLimit') if sub_info else None
             traffic_used = sub_info.get('trafficUsed') if sub_info else None
 
-            all_user_keys = get_user_keys(user_id)
-            key_number = next((i + 1 for i, key in enumerate(all_user_keys) if key['key_id'] == key_id_to_show), 0)
+            final_text = get_key_info_text(
+                key_number, 
+                expiry_date, 
+                created_date, 
+                connection_string, 
+                email=email, 
+                hwid_limit=hwid_limit, 
+                hwid_usage=hwid_usage, 
+                traffic_limit=traffic_limit, 
+                traffic_used=traffic_used
+            )
             
-            final_text = get_key_info_text(key_number, expiry_date, created_date, connection_string, hwid_limit=hwid_limit, hwid_usage=hwid_usage, traffic_limit=traffic_limit, traffic_used=traffic_used)
-            
-            key_info_image = get_setting("key_info_image")
+
             await smart_edit_message(
                 message_to_edit,
                 final_text,
-                keyboards.create_key_info_keyboard(key_id_to_show, connection_string),
+                keyboards.create_dynamic_key_info_keyboard(key_id_to_show, connection_string),
                 key_info_image
             )
         except Exception as e:
-            logger.error(f"Error showing key {key_id_to_show}: {e}")
-            await smart_edit_message(message_to_edit, "❌ Произошла ошибка при получении данных ключа.")
+            logger.error(f"Error updating key info {key_id_to_show}: {e}")
 
     @user_router.callback_query(F.data.startswith("switch_server_"))
     @registration_required
@@ -2313,7 +2347,7 @@ def get_user_router() -> Router:
                     await smart_edit_message(
                         callback.message,
                         final_text,
-                        keyboards.create_key_info_keyboard(key_id)
+                        keyboards.create_dynamic_key_info_keyboard(key_id)
                     )
                 else:
 
@@ -3881,7 +3915,7 @@ async def process_successful_payment(bot: Bot, metadata: dict):
         await bot.send_message(
             chat_id=user_id,
             text=final_text,
-            reply_markup=keyboards.create_key_info_keyboard(key_id)
+            reply_markup=keyboards.create_dynamic_key_info_keyboard(key_id, connection_string)
         )
 
         try:
