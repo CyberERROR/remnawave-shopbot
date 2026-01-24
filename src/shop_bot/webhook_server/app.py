@@ -114,6 +114,7 @@ ALL_SETTINGS_KEYS = [
     "platega_enabled", "platega_merchant_id", "platega_api_key",
 
     "main_menu_image",
+    "skip_email", "enable_wal_mode",
 ]
 
 def create_webhook_app(bot_controller_instance):
@@ -1977,7 +1978,7 @@ def create_webhook_app(bot_controller_instance):
                 update_setting('panel_password', request.form.get('panel_password'))
 
 
-            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled']
+            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'skip_email', 'enable_wal_mode']
             for checkbox_key in checkbox_keys:
                 values = request.form.getlist(checkbox_key)
                 value = values[-1] if values else 'false'

@@ -673,14 +673,26 @@
                         sel.value = opt.value;
                         menu.querySelectorAll('.soft-select-item').forEach(el => el.classList.remove('is-active'));
                         div.classList.add('is-active');
-                        toggle.textContent = opt.textContent || placeholder || '';
+
+                        const textSpan = toggle.querySelector('.soft-select-text');
+                        if (textSpan) {
+                            textSpan.textContent = opt.textContent || placeholder || '';
+                        } else {
+                            toggle.textContent = opt.textContent || placeholder || '';
+                        }
+
                         wrap.classList.remove('open');
                         sel.dispatchEvent(new Event('change', { bubbles: true }));
                     });
                     menu.appendChild(div);
                 });
                 const selOpt = Array.from(sel.options || []).find(o => o.selected) || sel.options[0];
-                toggle.textContent = (selOpt && selOpt.textContent) || placeholder || '';
+                const textSpan = toggle.querySelector('.soft-select-text');
+                if (textSpan) {
+                    textSpan.textContent = (selOpt && selOpt.textContent) || placeholder || '';
+                } else {
+                    toggle.textContent = (selOpt && selOpt.textContent) || placeholder || '';
+                }
             }
 
             render();

@@ -383,6 +383,7 @@ def create_payment_method_keyboard(
     main_balance: float | None = None,
     price: float | None = None,
     promo_applied: bool = False,
+    back_callback: str = "back_to_email_prompt"
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -434,7 +435,7 @@ def create_payment_method_keyboard(
     if not promo_applied:
         builder.button(text="🎟 Ввести промокод", callback_data="enter_promo_code")
 
-    builder.button(text="⬅️ Назад", callback_data="back_to_email_prompt")
+    builder.button(text="⬅️ Назад", callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 

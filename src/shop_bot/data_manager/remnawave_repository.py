@@ -313,6 +313,9 @@ _LEGACY_FORWARDERS = (
     "update_ssh_target_fields",
     "delete_ssh_target",
     "rename_ssh_target",
+    "update_ssh_target_scheduler",
+    "update_ssh_target_sort_order",
+    "update_host_sort_order",
 
     "insert_resource_metric",
     "get_latest_resource_metric",

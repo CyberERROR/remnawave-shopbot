@@ -9,6 +9,8 @@ import hashlib
 import json
 import base64
 import asyncio
+import time
+from collections import deque
 
 from urllib.parse import urlencode
 from hmac import compare_digest
@@ -82,6 +84,10 @@ ADMIN_ID = None
 CRYPTO_BOT_TOKEN = get_setting("cryptobot_token")
 
 logger = logging.getLogger(__name__)
+
+user_command_times = {}
+user_blocked_until = {}
+user_spam_level = {}
 
 def safe_str(val):
     if val is None:
@@ -522,6 +528,65 @@ async def process_successful_onboarding(callback: types.CallbackQuery, state: FS
     except Exception:
         pass
 
+def anti_spam(f):
+    @wraps(f)
+    async def decorated_function(event: types.Update, *args, **kwargs):
+        user_id = event.from_user.id
+        current_time = time.time()
+        
+        blocked_until = user_blocked_until.get(user_id)
+        if blocked_until:
+            if current_time < blocked_until:
+                return
+            else:
+                del user_blocked_until[user_id]
+        
+        if user_id not in user_command_times:
+            user_command_times[user_id] = deque(maxlen=5)
+        
+        times = user_command_times[user_id]
+        
+        recent_count = sum(1 for t in times if current_time - t < 1.0)
+        
+        if recent_count >= 3:
+            if user_id in user_spam_level:
+                last_spam_time, current_block_time = user_spam_level[user_id]
+                if current_time - last_spam_time < 60:
+                    block_duration = min(current_block_time * 2, 320)
+                else:
+                    block_duration = 10
+            else:
+                block_duration = 10
+            
+            user_spam_level[user_id] = (current_time, block_duration)
+            user_blocked_until[user_id] = current_time + block_duration
+            user_command_times[user_id].clear()
+            
+            message_text = (
+                "⛔️ <b>Обнаружен спам!</b>\n\n"
+                "❌ <i>Пожалуйста, не отправляйте команды слишком часто.</i>\n\n"
+                f"⏳ <b>Блокировка:</b> {int(block_duration)} секунд\n"
+                f"💡 <i>Я смогу вам ответить через {int(block_duration)} секунд.</i>"
+            )
+            try:
+                if isinstance(event, types.CallbackQuery):
+                    await event.answer(message_text, show_alert=True)
+                else:
+                    await event.answer(message_text)
+            except Exception:
+                pass
+            return
+        
+        times.append(current_time)
+        
+        if user_id in user_spam_level:
+            last_spam_time, _ = user_spam_level[user_id]
+            if current_time - last_spam_time > 60:
+                del user_spam_level[user_id]
+        
+        return await f(event, *args, **kwargs)
+    return decorated_function
+
 def registration_required(f):
     @wraps(f)
     async def decorated_function(event: types.Update, *args, **kwargs):
@@ -541,6 +606,7 @@ def get_user_router() -> Router:
     user_router = Router()
 
     @user_router.message(CommandStart())
+    @anti_spam
     async def start_handler(message: types.Message, state: FSMContext, bot: Bot, command: CommandObject):
         user_id = message.from_user.id
         username = message.from_user.username or message.from_user.full_name
@@ -652,6 +718,7 @@ def get_user_router() -> Router:
         await state.set_state(Onboarding.waiting_for_subscription_and_agreement)
 
     @user_router.callback_query(Onboarding.waiting_for_subscription_and_agreement, F.data == "check_subscription_and_agree")
+    @anti_spam
     async def check_subscription_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
         user_id = callback.from_user.id
         channel_url = get_setting("channel_url")
@@ -680,27 +747,32 @@ def get_user_router() -> Router:
             await callback.answer("Не удалось проверить подписку. Убедитесь, что бот является администратором канала. Попробуйте позже.", show_alert=True)
 
     @user_router.message(Onboarding.waiting_for_subscription_and_agreement)
+    @anti_spam
     async def onboarding_fallback_handler(message: types.Message):
         await message.answer("Пожалуйста, выполните требуемые действия и нажмите на кнопку в сообщении выше.")
 
     @user_router.message(F.text == "🏠 Главное меню")
+    @anti_spam
     @registration_required
     async def main_menu_handler(message: types.Message):
         await show_main_menu(message)
 
     @user_router.callback_query(F.data == "back_to_main_menu")
+    @anti_spam
     @registration_required
     async def back_to_main_menu_handler(callback: types.CallbackQuery):
         await callback.answer()
         await show_main_menu(callback.message, edit_message=True)
 
     @user_router.callback_query(F.data == "show_main_menu")
+    @anti_spam
     @registration_required
     async def show_main_menu_cb(callback: types.CallbackQuery):
         await callback.answer()
         await show_main_menu(callback.message, edit_message=True)
 
     @user_router.callback_query(F.data == "show_profile")
+    @anti_spam
     @registration_required
     async def profile_handler_callback(callback: types.CallbackQuery):
         await callback.answer()
@@ -745,6 +817,7 @@ def get_user_router() -> Router:
         await smart_edit_message(callback.message, final_text, keyboards.create_dynamic_profile_keyboard(), profile_image)
 
     @user_router.callback_query(F.data == "top_up_start")
+    @anti_spam
     @registration_required
     async def topup_start_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
@@ -760,6 +833,7 @@ def get_user_router() -> Router:
         await state.set_state(TopUpProcess.waiting_for_amount)
 
     @user_router.message(TopUpProcess.waiting_for_amount)
+    @anti_spam
     async def topup_amount_input(message: types.Message, state: FSMContext, bot: Bot):
         
         try:
@@ -922,6 +996,7 @@ def get_user_router() -> Router:
 
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_stars")
+    @anti_spam
     async def create_stars_invoice_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Готовлю счёт в Telegram Stars...")
         data = await state.get_data()
@@ -987,6 +1062,7 @@ def get_user_router() -> Router:
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_stars")
+    @anti_spam
     async def topup_stars_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Готовлю счёт в Telegram Stars...")
         data = await state.get_data()
@@ -1117,6 +1193,7 @@ def get_user_router() -> Router:
         return url
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_yoomoney")
+    @anti_spam
     async def pay_yoomoney_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Готовлю ссылку YooMoney...")
         data = await state.get_data()
@@ -1193,6 +1270,7 @@ def get_user_router() -> Router:
         await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_yoomoney")
+    @anti_spam
     async def topup_yoomoney_handler(callback: types.CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
         logger.info(f"💜 Пользователь {user_id} инициировал платеж через ЮMoney")
@@ -1249,6 +1327,7 @@ def get_user_router() -> Router:
         await state.clear()
 
     @user_router.callback_query(F.data.startswith("check_pending:"))
+    @anti_spam
     async def check_pending_payment_handler(callback: types.CallbackQuery, bot: Bot):
         try:
             pid = callback.data.split(":", 1)[1]
@@ -1336,6 +1415,7 @@ def get_user_router() -> Router:
         await callback.answer("⏳ Оплата ещё не поступила. Попробуйте через минуту.", show_alert=True)
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_platega")
+    @anti_spam
     async def pay_platega_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю ссылку на оплату через СБП...")
         data = await state.get_data()
@@ -1426,6 +1506,7 @@ def get_user_router() -> Router:
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_platega")
+    @anti_spam
     async def topup_platega_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю ссылку на оплату через СБП...")
         data = await state.get_data()
@@ -1482,6 +1563,7 @@ def get_user_router() -> Router:
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_heleket")
+    @anti_spam
     async def topup_pay_heleket_like(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю счёт...")
         data = await state.get_data()
@@ -1566,6 +1648,7 @@ def get_user_router() -> Router:
             await state.clear()
 
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_tonconnect")
+    @anti_spam
     async def topup_pay_tonconnect(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Готовлю TON Connect...")
         data = await state.get_data()
@@ -1630,6 +1713,7 @@ def get_user_router() -> Router:
             await state.clear()
 
     @user_router.callback_query(F.data == "show_referral_program")
+    @anti_spam
     @registration_required
     async def referral_program_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -1734,6 +1818,7 @@ def get_user_router() -> Router:
             await callback.message.answer(text, reply_markup=kb.as_markup())
 
     @user_router.callback_query(F.data == "show_help")
+    @anti_spam
     @registration_required
     async def help_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -1760,6 +1845,7 @@ def get_user_router() -> Router:
                 await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.callback_query(F.data == "support_menu")
+    @anti_spam
     @registration_required
     async def support_menu_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -1786,6 +1872,7 @@ def get_user_router() -> Router:
                 await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.callback_query(F.data == "support_external")
+    @anti_spam
     @registration_required
     async def support_external_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -1808,6 +1895,7 @@ def get_user_router() -> Router:
         )
 
     @user_router.callback_query(F.data == "support_new_ticket")
+    @anti_spam
     @registration_required
     async def support_new_ticket_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
@@ -1822,6 +1910,7 @@ def get_user_router() -> Router:
             await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.message(SupportDialog.waiting_for_subject)
+    @anti_spam
     @registration_required
     async def support_subject_received(message: types.Message, state: FSMContext):
         await state.clear()
@@ -1951,6 +2040,7 @@ def get_user_router() -> Router:
             logger.warning(f"Failed to relay forum thread message: {e}")
 
     @user_router.callback_query(F.data.startswith("support_close_"))
+    @anti_spam
     @registration_required
     async def support_close_ticket_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -1965,6 +2055,7 @@ def get_user_router() -> Router:
         await smart_edit_message(callback.message, "Контакты поддержки не настроены.", keyboards.create_back_to_menu_keyboard())
 
     @user_router.callback_query(F.data == "manage_keys")
+    @anti_spam
     @registration_required
     async def manage_keys_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -1979,6 +2070,7 @@ def get_user_router() -> Router:
         )
 
     @user_router.callback_query(F.data == "get_trial")
+    @anti_spam
     @registration_required
     async def trial_period_handler(callback: types.CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
@@ -1987,7 +2079,7 @@ def get_user_router() -> Router:
             await callback.answer("Вы уже использовали бесплатный пробный период.", show_alert=True)
             return
 
-        hosts = get_all_hosts()
+        hosts = get_all_hosts(visible_only=True)
         if not hosts:
             await smart_edit_message(callback.message, "❌ В данный момент нет доступных серверов для создания пробного ключа.")
             return
@@ -1999,11 +2091,13 @@ def get_user_router() -> Router:
             await callback.answer()
             await smart_edit_message(
                 callback.message,
-                "Выберите сервер, на котором хотите получить пробный ключ:",
-                keyboards.create_host_selection_keyboard(hosts, action="trial")
+                "🎁 Выберите сервер, на котором хотите получить пробный ключ:",
+                keyboards.create_host_selection_keyboard(hosts, action="trial"),
+                get_setting("buy_server_image")
             )
 
     @user_router.callback_query(F.data.startswith("select_host_trial_"))
+    @anti_spam
     @registration_required
     async def trial_host_selection_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2065,6 +2159,7 @@ def get_user_router() -> Router:
             await smart_edit_message(message, "❌ Произошла ошибка при создании пробного ключа.")
 
     @user_router.callback_query(F.data.startswith("show_key_"))
+    @anti_spam
     @registration_required
     async def show_key_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2191,6 +2286,7 @@ def get_user_router() -> Router:
             logger.error(f"Error updating key info {key_id_to_show}: {e}")
 
     @user_router.callback_query(F.data.startswith("switch_server_"))
+    @anti_spam
     @registration_required
     async def switch_server_start(callback: types.CallbackQuery):
         await callback.answer()
@@ -2205,7 +2301,7 @@ def get_user_router() -> Router:
             await callback.answer("Ключ не найден.", show_alert=True)
             return
 
-        hosts = get_all_hosts()
+        hosts = get_all_hosts(visible_only=True)
         if not hosts:
             await callback.answer("Нет доступных серверов.", show_alert=True)
             return
@@ -2223,6 +2319,7 @@ def get_user_router() -> Router:
         )
 
     @user_router.callback_query(F.data.startswith("select_host_switch_"))
+    @anti_spam
     @registration_required
     async def select_host_for_switch(callback: types.CallbackQuery):
         await callback.answer()
@@ -2372,6 +2469,7 @@ def get_user_router() -> Router:
             )
 
     @user_router.callback_query(F.data.startswith("show_qr_"))
+    @anti_spam
     @registration_required
     async def show_qr_handler(callback: types.CallbackQuery):
         await callback.answer("Генерирую QR-код...")
@@ -2394,6 +2492,7 @@ def get_user_router() -> Router:
             logger.error(f"Error showing QR for key {key_id}: {e}")
 
     @user_router.callback_query(F.data.startswith("howto_vless_"))
+    @anti_spam
     @registration_required
     async def show_instruction_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2409,6 +2508,7 @@ def get_user_router() -> Router:
         )
     
     @user_router.callback_query(F.data.startswith("howto_vless"))
+    @anti_spam
     @registration_required
     async def show_instruction_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2497,6 +2597,7 @@ def get_user_router() -> Router:
         )
 
     @user_router.callback_query(F.data == "howto_windows")
+    @anti_spam
     @registration_required
     async def howto_windows_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2551,6 +2652,7 @@ def get_user_router() -> Router:
             )
 
     @user_router.callback_query(F.data == "howto_linux")
+    @anti_spam
     @registration_required
     async def howto_linux_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2578,6 +2680,7 @@ def get_user_router() -> Router:
         )
 
     @user_router.callback_query(F.data == "buy_new_key")
+    @anti_spam
     @registration_required
     async def buy_new_key_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2599,6 +2702,7 @@ def get_user_router() -> Router:
 
 
     @user_router.callback_query(F.data.startswith("select_host_new_"))
+    @anti_spam
     @registration_required
     async def select_host_for_purchase_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2621,6 +2725,7 @@ def get_user_router() -> Router:
         )
 
     @user_router.callback_query(F.data.startswith("extend_key_"))
+    @anti_spam
     @registration_required
     async def extend_key_handler(callback: types.CallbackQuery):
         await callback.answer()
@@ -2665,6 +2770,7 @@ def get_user_router() -> Router:
         )
 
     @user_router.callback_query(F.data.startswith("buy_"))
+    @anti_spam
     @registration_required
     async def plan_selection_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
@@ -2683,15 +2789,21 @@ def get_user_router() -> Router:
             action=action, key_id=key_id, plan_id=plan_id, host_name=host_name
         )
         
-        enter_email_image = get_setting("enter_email_image")
-        await smart_edit_message(
-            callback.message,
-            "📧 Пожалуйста, введите ваш email для отправки чека об оплате.\n\n"
-            "Если вы не хотите указывать почту, нажмите кнопку ниже.",
-            keyboards.create_skip_email_keyboard(),
-            enter_email_image
-        )
-        await state.set_state(PaymentProcess.waiting_for_email)
+        skip_email = get_setting("skip_email") == "1"
+        
+        if skip_email:
+            await state.update_data(customer_email=None)
+            await show_payment_options(callback.message, state)
+        else:
+            enter_email_image = get_setting("enter_email_image")
+            await smart_edit_message(
+                callback.message,
+                "📧 Пожалуйста, введите ваш email для отправки чека об оплате.\n\n"
+                "Если вы не хотите указывать почту, нажмите кнопку ниже.",
+                keyboards.create_skip_email_keyboard(),
+                enter_email_image
+            )
+            await state.set_state(PaymentProcess.waiting_for_email)
 
     @user_router.callback_query(PaymentProcess.waiting_for_email, F.data == "back_to_plans")
     async def back_to_plans_handler(callback: types.CallbackQuery, state: FSMContext):
@@ -2773,6 +2885,7 @@ def get_user_router() -> Router:
         await back_to_main_menu_handler(callback)
 
     @user_router.message(PaymentProcess.waiting_for_email)
+    @anti_spam
     async def process_email_handler(message: types.Message, state: FSMContext):
         if is_valid_email(message.text):
             await state.update_data(customer_email=message.text)
@@ -2785,6 +2898,7 @@ def get_user_router() -> Router:
             await message.answer("❌ Неверный формат email. Попробуйте еще раз.")
 
     @user_router.callback_query(PaymentProcess.waiting_for_email, F.data == "skip_email")
+    @anti_spam
     async def skip_email_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
         await state.update_data(customer_email=None)
@@ -2848,6 +2962,17 @@ def get_user_router() -> Router:
         show_balance_btn = main_balance >= float(final_price)
 
         payment_method_image = get_setting("payment_method_image")
+        
+        # Определяем callback для кнопки назад
+        is_skip_email = (get_setting("skip_email") or "0") == "1"
+        back_cb = "back_to_email_prompt"
+        if is_skip_email:
+            host_name = data.get('host_name')
+            if host_name:
+                back_cb = f"select_host_new_{host_name}"
+            else:
+                back_cb = "manage_keys" # Fallback
+
         await smart_edit_message(
             message,
             message_text,
@@ -2859,6 +2984,7 @@ def get_user_router() -> Router:
                 main_balance=main_balance,
                 price=float(final_price),
                 promo_applied=bool(data.get('promo_code')),
+                back_callback=back_cb
             ),
             payment_method_image
         )
@@ -2877,6 +3003,7 @@ def get_user_router() -> Router:
         await state.set_state(PaymentProcess.waiting_for_email)
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "enter_promo_code")
+    @anti_spam
     async def prompt_promo_code(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
         await smart_edit_message(
@@ -2887,11 +3014,13 @@ def get_user_router() -> Router:
         await state.set_state(PaymentProcess.waiting_for_promo_code)
 
     @user_router.callback_query(PaymentProcess.waiting_for_promo_code, F.data == "cancel_promo")
+    @anti_spam
     async def cancel_promo_entry(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Отменено")
         await show_payment_options(callback.message, state)
 
     @user_router.message(PaymentProcess.waiting_for_promo_code)
+    @anti_spam
     async def handle_promo_code_input(message: types.Message, state: FSMContext):
         code_raw = (message.text or '').strip()
         if not code_raw:
@@ -2928,6 +3057,7 @@ def get_user_router() -> Router:
         await show_payment_options(message, state)
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_yookassa")
+    @anti_spam
     async def create_yookassa_payment_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю ссылку на оплату...")
         
@@ -3065,6 +3195,7 @@ def get_user_router() -> Router:
             await state.clear()
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_cryptobot")
+    @anti_spam
     async def create_cryptobot_invoice_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("Создаю счет в Crypto Pay...")
         
@@ -3151,6 +3282,7 @@ def get_user_router() -> Router:
             await smart_edit_message(callback.message, "❌ Не удалось создать счёт в CryptoBot. Попробуйте другой способ оплаты.")
 
     @user_router.callback_query(F.data.startswith("check_crypto_invoice:"))
+    @anti_spam
     async def check_crypto_invoice_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
         await callback.answer("Проверяю статус оплаты...")
         try:
@@ -3238,6 +3370,7 @@ def get_user_router() -> Router:
             await callback.message.answer("⚠️ Оплата получена, но обработка не завершена. Обратитесь в поддержку.")
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_tonconnect")
+    @anti_spam
     async def create_ton_invoice_handler(callback: types.CallbackQuery, state: FSMContext):
         logger.info(f"User {callback.from_user.id}: Entered create_ton_invoice_handler.")
         data = await state.get_data()
@@ -3308,6 +3441,7 @@ def get_user_router() -> Router:
             await state.clear()
 
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_balance")
+    @anti_spam
     async def pay_with_main_balance_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
         await callback.answer()
         data = await state.get_data()

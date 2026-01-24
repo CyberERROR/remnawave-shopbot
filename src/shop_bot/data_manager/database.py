@@ -102,17 +102,35 @@ def normalize_host_name(name: str | None) -> str:
 
 
 def get_db_connection():
-    """Создать подключение к БД с настройками против блокировки."""
+    """Создать подключение к БД."""
     conn = sqlite3.connect(DB_FILE, timeout=30.0)
-    conn.execute("PRAGMA busy_timeout=30000")
+    
+    # Проверяем настройку WAL режима
+    # Пытаемся получить настройку из bot_settings
+    # Используем сырой запрос чтобы избежать циклических зависимостей, 
+    # так как get_setting может использовать get_db_connection
+    wal_enabled = False
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM bot_settings WHERE key='enable_wal_mode'")
+        row = cursor.fetchone()
+        if row and row[0] == '1':
+            wal_enabled = True
+    except Exception:
+        pass
+        
+    if wal_enabled:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=30000")
+    else:
+        conn.execute("PRAGMA journal_mode=DELETE")
+        
     return conn
 
 
 def initialize_db():
     try:
         with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA busy_timeout=30000")
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
@@ -189,6 +207,16 @@ def initialize_db():
                 INSERT OR IGNORE INTO bot_settings (key, value) 
                 VALUES (?, ?)
             ''', ('pay_info_comment', json.dumps({"id": 1, "username": 1, "first_name": 1, "host_name": 1})))
+            
+            cursor.execute('''
+                INSERT OR IGNORE INTO bot_settings (key, value) 
+                VALUES (?, ?)
+            ''', ('skip_email', '0'))
+            
+            cursor.execute('''
+                INSERT OR IGNORE INTO bot_settings (key, value) 
+                VALUES (?, ?)
+            ''', ('enable_wal_mode', '0'))
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS other (
@@ -720,6 +748,23 @@ def run_migration():
                 ''')
             except Exception:
                 pass
+            
+            try:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO bot_settings (key, value) 
+                    VALUES (?, ?)
+                ''', ('skip_email', '0'))
+            except Exception:
+                pass
+            
+            try:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO bot_settings (key, value) 
+                    VALUES (?, ?)
+                ''', ('enable_wal_mode', '0'))
+            except Exception:
+                pass
+            
             cursor.execute("PRAGMA foreign_keys = ON")
             conn.commit()
     except sqlite3.Error as e:
@@ -1181,17 +1226,17 @@ def get_all_hosts(visible_only: bool = False) -> list[dict]:
             cursor = conn.cursor()
             try:
                 if visible_only:
-                    cursor.execute("SELECT * FROM xui_hosts WHERE see = 1")
+                    cursor.execute("SELECT * FROM xui_hosts WHERE see = 1 ORDER BY sort_order ASC, host_name ASC")
                 else:
-                    cursor.execute("SELECT * FROM xui_hosts")
+                    cursor.execute("SELECT * FROM xui_hosts ORDER BY sort_order ASC, host_name ASC")
             except sqlite3.OperationalError as op_err:
                 if "no such column: see" in str(op_err):
                     cursor.execute("ALTER TABLE xui_hosts ADD COLUMN see INTEGER DEFAULT 1")
                     conn.commit()
                     if visible_only:
-                        cursor.execute("SELECT * FROM xui_hosts WHERE see = 1")
+                        cursor.execute("SELECT * FROM xui_hosts WHERE see = 1 ORDER BY sort_order ASC, host_name ASC")
                     else:
-                        cursor.execute("SELECT * FROM xui_hosts")
+                        cursor.execute("SELECT * FROM xui_hosts ORDER BY sort_order ASC, host_name ASC")
                 else:
                     raise
             hosts = cursor.fetchall()
@@ -1323,7 +1368,8 @@ def _ensure_ssh_targets_table(cursor: sqlite3.Cursor) -> None:
             description TEXT,
             is_active INTEGER DEFAULT 1,
             sort_order INTEGER DEFAULT 0,
-            metadata TEXT
+            metadata TEXT,
+            time_auto TEXT DEFAULT '{}'
         )
     """)
 
@@ -1337,6 +1383,7 @@ def _ensure_ssh_targets_table(cursor: sqlite3.Cursor) -> None:
         "is_active": "INTEGER DEFAULT 1",
         "sort_order": "INTEGER DEFAULT 0",
         "metadata": "TEXT",
+        "time_auto": "TEXT DEFAULT '{}'",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "speedtest_ssh_targets", column, definition)
@@ -1551,6 +1598,38 @@ def update_ssh_target_fields(
         return False
 
 
+def update_ssh_target_sort_order(target_name: str, sort_order: int) -> bool:
+    try:
+        name = normalize_host_name(target_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE speedtest_ssh_targets SET sort_order = ? WHERE TRIM(target_name) = TRIM(?)",
+                (int(sort_order), name)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logging.error(f"Не удалось обновить sort_order для SSH-цели '{target_name}': {e}")
+        return False
+
+
+def update_host_sort_order(host_name: str, sort_order: int) -> bool:
+    try:
+        name = normalize_host_name(host_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE xui_hosts SET sort_order = ? WHERE TRIM(host_name) = TRIM(?)",
+                (int(sort_order), name)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logging.error(f"Не удалось обновить sort_order для хоста '{host_name}': {e}")
+        return False
+
+
 def delete_ssh_target(target_name: str) -> bool:
     try:
         name = normalize_host_name(target_name)
@@ -1606,6 +1685,26 @@ def rename_ssh_target(old_target_name: str, new_target_name: str) -> bool:
             return True
     except sqlite3.Error as e:
         logging.error(f"Не удалось переименовать SSH-цель '{old_target_name}' → '{new_target_name}': {e}")
+        return False
+
+def update_ssh_target_scheduler(target_name: str, time_auto_json: str) -> bool:
+    try:
+        name = normalize_host_name(target_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (name,))
+            if cursor.fetchone() is None:
+                logging.warning(f"update_ssh_target_scheduler: цель не найдена '{name}'")
+                return False
+            
+            cursor.execute(
+                "UPDATE speedtest_ssh_targets SET time_auto = ? WHERE TRIM(target_name) = TRIM(?)",
+                (time_auto_json, name)
+            )
+            conn.commit()
+            return True
+    except sqlite3.Error as e:
+        logging.error(f"Не удалось обновить планировщик для '{target_name}': {e}")
         return False
 
 def get_admin_stats() -> dict:
@@ -3639,3 +3738,51 @@ def set_other_value(key: str, value: str) -> bool:
 
 
 
+
+def update_ssh_target_scheduler(target_name: str, time_auto: str) -> bool:
+    try:
+        name = normalize_host_name(target_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE speedtest_ssh_targets SET time_auto = ? WHERE TRIM(target_name) = TRIM(?)", (time_auto, name))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logging.error(f"Не удалось обновить планировщик для '{target_name}': {e}")
+        return False
+
+
+def update_host_sort_order(host_name: str, sort_order: int) -> bool:
+    try:
+        name = normalize_host_name(host_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE xui_hosts SET sort_order = ? WHERE TRIM(host_name) = TRIM(?)", (sort_order, name))
+            conn.commit()
+            if cursor.rowcount > 0:
+                logging.info(f"Updated host '{name}' sort_order to {sort_order}")
+                return True
+            else:
+                logging.warning(f"No host found named '{name}' to update sort_order")
+                return False
+    except sqlite3.Error as e:
+        logging.error(f"Failed to update host sort order: {e}")
+        return False
+
+
+def update_ssh_target_sort_order(target_name: str, sort_order: int) -> bool:
+    try:
+        name = normalize_host_name(target_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE speedtest_ssh_targets SET sort_order = ? WHERE TRIM(target_name) = TRIM(?)", (sort_order, name))
+            conn.commit()
+            if cursor.rowcount > 0:
+                logging.info(f"Updated SSH target '{name}' sort_order to {sort_order}")
+                return True
+            else:
+                logging.warning(f"No SSH target found named '{name}' to update sort_order")
+                return False
+    except sqlite3.Error as e:
+        logging.error(f"Failed to update SSH target sort order: {e}")
+        return False

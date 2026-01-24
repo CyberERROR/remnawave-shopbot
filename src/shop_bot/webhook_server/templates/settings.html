@@ -93,6 +93,27 @@
                             class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                         <p class="text-white/50 text-[10px] mt-1 pl-1">0 — выключить автобэкап</p>
                     </div>
+
+                    <div class="pt-3 border-t border-white/10 mt-1">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-white/70 text-xs font-medium mb-0.5">WAL режим БД</p>
+                                <p class="text-white/30 text-[10px] leading-tight max-w-[400px]">
+                                    WAL: выкл — для сервера с быстрыми дисками (SSD/NVMe)<br>
+                                    WAL: вкл — для сервера с медленными дисками (HDD/медленные VPS) чтобы избежать
+                                    ошибок "Database is locked".
+                                </p>
+                            </div>
+                            <input type="hidden" name="enable_wal_mode" value="0" />
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="enable_wal_mode" value="1" id="enable_wal_mode" {% if
+                                    settings.enable_wal_mode=='1' %}checked{% endif %} class="sr-only peer" />
+                                <div
+                                    class="w-9 h-5 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
+                                </div>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -582,6 +603,27 @@
                 </div>
             </div>
 
+            <div class="bg-white/5 border border-white/10 rounded-lg p-5 mt-4">
+                <h3 class="text-lg font-bold text-white mb-3">Общие настройки платежей</h3>
+                <div class="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary">mail_off</span>
+                        <div>
+                            <p class="text-white font-medium">Пропускать в боте ввод email</p>
+                            <p class="text-white/50 text-sm">Пользователи сразу переходят к выбору оплаты</p>
+                        </div>
+                    </div>
+                    <input type="hidden" name="skip_email" value="0" />
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="skip_email" value="1" id="skip_email" {% if
+                            settings.skip_email=='1' %}checked{% endif %} class="sr-only peer" />
+                        <div
+                            class="w-11 h-6 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                        </div>
+                    </label>
+                </div>
+            </div>
+
 
         </div>
     </section>
@@ -634,339 +676,351 @@
         </div>
 
 
-        {% if hosts %}
-        {% for host in hosts %}
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4 cursor-pointer"
-                onclick="toggleHostContent('{{ host.host_name }}')">
-                <div class="flex items-center gap-2">
-                    <h4 class="text-lg font-bold text-white">{{ host.host_name }}</h4>
-                    <span id="host-icon-{{ host.host_name }}"
-                        class="material-symbols-outlined text-white/50 transition-transform">expand_more</span>
-                </div>
-                <div class="flex gap-2" onclick="event.stopPropagation();">
-                    <form action="{{ url_for('toggle_host_visibility_route', host_name=host.host_name) }}" method="post"
-                        class="inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        {% if host.see is none or host.see == 1 %}
-                        <input type="hidden" name="visible" value="0" />
-                        <button type="submit"
-                            class="px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-sm hover:bg-yellow-500/30">Скрыть</button>
-                        {% else %}
-                        <input type="hidden" name="visible" value="1" />
-                        <button type="submit"
-                            class="px-3 py-1 rounded bg-green-500/20 text-green-400 text-sm hover:bg-green-500/30">Показать</button>
-                        {% endif %}
-                    </form>
-                    <form action="{{ url_for('delete_host_route', host_name=host.host_name) }}" method="post"
-                        class="inline" data-confirm="Удалить хост {{ host.host_name }} и все его тарифы?">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <button type="submit"
-                            class="px-3 py-1 rounded bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30">Удалить</button>
-                    </form>
-                </div>
-            </div>
-
-            <div id="host-content-{{ host.host_name }}" class="hidden">
-
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <!-- URL Panel -->
-                    <form action="{{ url_for('update_host_url_route') }}" method="post"
-                        class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                        <label class="block text-white text-xs font-medium mb-2">URL панели Remnawave</label>
-                        <div class="flex gap-2 mt-auto">
-                            <input type="text" name="host_url" value="{{ host.host_url or '' }}"
-                                placeholder="https://panel.example.com"
-                                class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
-                            <button type="submit"
-                                class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Сохранить</button>
-                        </div>
-                    </form>
-
-                    <!-- Rename Host -->
-                    <form action="{{ url_for('rename_host_route') }}" method="post"
-                        class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <input type="hidden" name="old_host_name" value="{{ host.host_name }}" />
-                        <label class="block text-white text-xs font-medium mb-2">Название хоста</label>
-                        <div class="flex gap-2 mt-auto">
-                            <input type="text" name="new_host_name" value="{{ host.host_name }}"
-                                class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
-                            <button type="submit"
-                                class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Переименовать</button>
-                        </div>
-                    </form>
-
-                    <!-- Subscription URL -->
-                    <form action="{{ url_for('update_host_subscription_route') }}" method="post"
-                        class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                        <label class="block text-white text-xs font-medium mb-2">Ссылка подписки</label>
-                        <div class="flex gap-2 mt-auto">
-                            <input type="text" name="host_subscription_url" value="{{ host.subscription_url or '' }}"
-                                placeholder="URL для подписки"
-                                class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
-                            <button type="submit"
-                                class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Сохранить</button>
-                        </div>
-                    </form>
-
-                    <!-- Traffic Strategy -->
-                    <form action="{{ url_for('update_host_traffic_settings_route') }}" method="post"
-                        class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                        <input type="hidden" name="traffic_limit_strategy"
-                            id="traffic_limit_strategy_input_{{ host.host_name }}"
-                            value="{{ host.default_traffic_strategy }}" />
-
-                        <div class="flex items-center gap-2 mb-2">
-                            <label class="text-white text-xs font-medium">Стратегия сброса трафика</label>
-                            <span class="material-symbols-outlined text-white/50 text-[16px] cursor-help"
-                                title="Когда сбрасывать трафик в панели Remnawave">info</span>
-                        </div>
-
-                        <div class="flex gap-2 mt-auto">
-                            <div class="relative flex-1 group" tabindex="0">
-                                {% set current_strategy = host.default_traffic_strategy or 'NO_RESET' %}
-                                {% set strategy_labels = {'NO_RESET': 'Никогда', 'DAY': 'Ежедневно', 'WEEK':
-                                'Еженедельно', 'MONTH': 'Ежемесячно'} %}
-                                <div
-                                    class="w-full bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm flex items-center justify-between cursor-pointer hover:bg-white/10">
-                                    <span id="strategy_label_{{ host.host_name }}">{{ strategy_labels[current_strategy]
-                                        }}</span>
-                                    <span class="material-symbols-outlined text-white/50 text-[18px]">expand_more</span>
-                                </div>
-                                <div
-                                    class="absolute z-10 bottom-full left-0 right-0 mb-1 bg-[#1a2f24] border border-white/10 rounded-lg shadow-xl overflow-hidden hidden group-focus-within:block">
-                                    <div class="p-1">
-                                        <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'NO_RESET', 'Никогда')"
-                                            class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
-                                            Никогда</div>
-                                        <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'DAY', 'Ежедневно')"
-                                            class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
-                                            Ежедневно</div>
-                                        <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'WEEK', 'Еженедельно')"
-                                            class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
-                                            Еженедельно</div>
-                                        <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'MONTH', 'Ежемесячно')"
-                                            class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
-                                            Ежемесячно</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="submit"
-                                class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">ОК</button>
-                        </div>
-                    </form>
-                </div>
-
-
-                <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
-                    <h5 class="text-white font-medium mb-3">SSH для Speedtest</h5>
-                    <form action="{{ url_for('update_host_ssh_route') }}" method="post">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                            <div>
-                                <label class="block text-white/50 text-xs mb-1">SSH Host</label>
-                                <input type="text" name="ssh_host" value="{{ host.ssh_host or '' }}"
-                                    placeholder="example.com"
-                                    class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
-                            </div>
-                            <div>
-                                <label class="block text-white/50 text-xs mb-1">Port</label>
-                                <input type="number" name="ssh_port" value="{{ host.ssh_port or '' }}" placeholder="22"
-                                    class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
-                            </div>
-                            <div>
-                                <label class="block text-white/50 text-xs mb-1">User</label>
-                                <input type="text" name="ssh_user" value="{{ host.ssh_user or '' }}" placeholder="root"
-                                    class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
-                            </div>
-                            <div>
-                                <label class="block text-white/50 text-xs mb-1">Пароль</label>
-                                <input type="password" name="ssh_password" value="{{ host.ssh_password or '' }}"
-                                    class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
-                            </div>
-                        </div>
-                        <div class="flex gap-3 items-end">
-                            <div class="flex-1">
-                                <label class="block text-white/50 text-xs mb-1">Путь к приватному ключу</label>
-                                <input type="text" name="ssh_key_path" value="{{ host.ssh_key_path or '' }}"
-                                    placeholder="/app/keys/id_rsa"
-                                    class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
-                            </div>
-                            <button type="submit"
-                                class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm hover:bg-primary/30">Сохранить
-                                SSH</button>
-                        </div>
-                    </form>
-                    <form action="{{ url_for('auto_install_speedtest_route', host_name=host.host_name) }}" method="post"
-                        class="mt-2">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <button type="submit"
-                            class="speedtest-loading-btn px-3 py-1.5 rounded bg-white/10 text-white text-sm hover:bg-white/20"
-                            data-label="Автоустановка Speedtest">Автоустановка Speedtest</button>
-                    </form>
-                </div>
-
-
-
-
-
-
-
-
-                <!-- Description -->
-                <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
-                    <label class="flex items-center justify-between cursor-pointer">
-                        <div>
-                            <h5 class="text-white font-medium text-sm">Свое описание (HTML)</h5>
-                            <p class="text-white/50 text-[10px]">Для меню выбора тарифа</p>
-                        </div>
-                        <input type="checkbox" id="toggle-description-{{ host.host_name }}"
-                            onchange="toggleDescriptionForm('{{ host.host_name }}')"
-                            class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" {% if
-                            host.description %}checked{% endif %} />
-                    </label>
-                    <div id="description-form-{{ host.host_name }}"
-                        class="{% if not host.description %}hidden{% endif %} mt-3 pt-3 border-t border-white/10">
-                        <form action="{{ url_for('update_host_description_route') }}" method="post">
+        <div id="hosts-grid-container" class="space-y-4">
+            {% if hosts %}
+            {% for host in hosts %}
+            <div class="bg-white/5 border border-white/10 rounded-lg p-6 host-card transition-transform duration-200"
+                draggable="true" data-host-name="{{ host.host_name }}">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2 cursor-pointer w-full"
+                        onclick="toggleHostContent('{{ host.host_name }}')">
+                        <span
+                            class="material-symbols-outlined text-white/30 cursor-grab active:cursor-grabbing hover:text-white/70 drag-handle"
+                            onclick="event.stopPropagation()">drag_indicator</span>
+                        <h4 class="text-lg font-bold text-white">{{ host.host_name }}</h4>
+                        <span id="host-icon-{{ host.host_name }}"
+                            class="material-symbols-outlined text-white/50 transition-transform">expand_more</span>
+                    </div>
+                    <div class="flex gap-2" onclick="event.stopPropagation();">
+                        <form action="{{ url_for('toggle_host_visibility_route', host_name=host.host_name) }}"
+                            method="post" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                            <textarea name="host_description" rows="3" placeholder="Введите описание..."
-                                class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/50">{{ host.description or '' }}</textarea>
-                            <div class="flex justify-end mt-2">
-                                <button type="submit"
-                                    class="px-3 py-1.5 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20">Сохранить</button>
-                            </div>
+                            {% if host.see is none or host.see == 1 %}
+                            <input type="hidden" name="visible" value="0" />
+                            <button type="submit"
+                                class="px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-sm hover:bg-yellow-500/30">Скрыть</button>
+                            {% else %}
+                            <input type="hidden" name="visible" value="1" />
+                            <button type="submit"
+                                class="px-3 py-1 rounded bg-green-500/20 text-green-400 text-sm hover:bg-green-500/30">Показать</button>
+                            {% endif %}
+                        </form>
+                        <form action="{{ url_for('delete_host_route', host_name=host.host_name) }}" method="post"
+                            class="inline" data-confirm="Удалить хост {{ host.host_name }} и все его тарифы?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit"
+                                class="px-3 py-1 rounded bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30">Удалить</button>
                         </form>
                     </div>
                 </div>
 
-                <!-- Plans -->
-                <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4">
-                    <h5 class="text-white font-bold mb-4">Тарифы</h5>
-                    {% if host.plans %}
-                    <div id="plans-grid-{{ host.host_name }}"
-                        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                        {% for plan in host.plans %}
-                        <div
-                            class="bg-white/[0.02] border border-white/10 rounded-lg p-3 hover:border-primary/50 transition-colors group relative">
-                            <!-- View State -->
-                            <div id="view-plan-{{ plan.plan_id }}" class="flex flex-col h-full">
-                                <div class="flex-1 mb-3">
-                                    <div class="flex justify-between items-start mb-1">
-                                        <h6 class="text-white font-bold text-sm leading-tight pr-2">{{ plan.plan_name }}
-                                        </h6>
-                                        <span class="text-primary font-bold text-sm whitespace-nowrap">{{
-                                            plan.price|round(0) }}₽</span>
+                <div id="host-content-{{ host.host_name }}" class="hidden">
+
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <!-- URL Panel -->
+                        <form action="{{ url_for('update_host_url_route') }}" method="post"
+                            class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <label class="block text-white text-xs font-medium mb-2">URL панели Remnawave</label>
+                            <div class="flex gap-2 mt-auto">
+                                <input type="text" name="host_url" value="{{ host.host_url or '' }}"
+                                    placeholder="https://panel.example.com"
+                                    class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
+                                <button type="submit"
+                                    class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Сохранить</button>
+                            </div>
+                        </form>
+
+                        <!-- Rename Host -->
+                        <form action="{{ url_for('rename_host_route') }}" method="post"
+                            class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="old_host_name" value="{{ host.host_name }}" />
+                            <label class="block text-white text-xs font-medium mb-2">Название хоста</label>
+                            <div class="flex gap-2 mt-auto">
+                                <input type="text" name="new_host_name" value="{{ host.host_name }}"
+                                    class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
+                                <button type="submit"
+                                    class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Переименовать</button>
+                            </div>
+                        </form>
+
+                        <!-- Subscription URL -->
+                        <form action="{{ url_for('update_host_subscription_route') }}" method="post"
+                            class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <label class="block text-white text-xs font-medium mb-2">Ссылка подписки</label>
+                            <div class="flex gap-2 mt-auto">
+                                <input type="text" name="host_subscription_url"
+                                    value="{{ host.subscription_url or '' }}" placeholder="URL для подписки"
+                                    class="flex-1 bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/50" />
+                                <button type="submit"
+                                    class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">Сохранить</button>
+                            </div>
+                        </form>
+
+                        <!-- Traffic Strategy -->
+                        <form action="{{ url_for('update_host_traffic_settings_route') }}" method="post"
+                            class="bg-white/[0.02] border border-white/10 rounded-lg p-4 h-full flex flex-col justify-between">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <input type="hidden" name="traffic_limit_strategy"
+                                id="traffic_limit_strategy_input_{{ host.host_name }}"
+                                value="{{ host.default_traffic_strategy }}" />
+
+                            <div class="flex items-center gap-2 mb-2">
+                                <label class="text-white text-xs font-medium">Стратегия сброса трафика</label>
+                                <span class="material-symbols-outlined text-white/50 text-[16px] cursor-help"
+                                    title="Когда сбрасывать трафик в панели Remnawave">info</span>
+                            </div>
+
+                            <div class="flex gap-2 mt-auto">
+                                <div class="relative flex-1 group" tabindex="0">
+                                    {% set current_strategy = host.default_traffic_strategy or 'NO_RESET' %}
+                                    {% set strategy_labels = {'NO_RESET': 'Никогда', 'DAY': 'Ежедневно', 'WEEK':
+                                    'Еженедельно', 'MONTH': 'Ежемесячно'} %}
+                                    <div
+                                        class="w-full bg-white/[0.02] border border-white/10 rounded px-3 py-2 text-white text-sm flex items-center justify-between cursor-pointer hover:bg-white/10">
+                                        <span id="strategy_label_{{ host.host_name }}">{{
+                                            strategy_labels[current_strategy]
+                                            }}</span>
+                                        <span
+                                            class="material-symbols-outlined text-white/50 text-[18px]">expand_more</span>
                                     </div>
-                                    <div class="flex flex-wrap gap-2 text-white/60 text-[11px]">
-                                        <span>{{ plan.months }} мес.</span>
-                                        <span>{{ plan.traffic_limit_gb or '∞' }} GB</span>
-                                        <span>{{ plan.hwid_limit or '∞' }} HWID</span>
+                                    <div
+                                        class="absolute z-10 bottom-full left-0 right-0 mb-1 bg-[#1a2f24] border border-white/10 rounded-lg shadow-xl overflow-hidden hidden group-focus-within:block">
+                                        <div class="p-1">
+                                            <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'NO_RESET', 'Никогда')"
+                                                class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
+                                                Никогда</div>
+                                            <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'DAY', 'Ежедневно')"
+                                                class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
+                                                Ежедневно</div>
+                                            <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'WEEK', 'Еженедельно')"
+                                                class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
+                                                Еженедельно</div>
+                                            <div onclick="selectTrafficStrategy('{{ host.host_name }}', 'MONTH', 'Ежемесячно')"
+                                                class="px-3 py-2 rounded text-white text-sm hover:bg-primary/10 cursor-pointer">
+                                                Ежемесячно</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit"
+                                    class="px-3 py-2 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition">ОК</button>
+                            </div>
+                        </form>
+                    </div>
+
+
+                    <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
+                        <h5 class="text-white font-medium mb-3">SSH для Speedtest</h5>
+                        <form action="{{ url_for('update_host_ssh_route') }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                                <div>
+                                    <label class="block text-white/50 text-xs mb-1">SSH Host</label>
+                                    <input type="text" name="ssh_host" value="{{ host.ssh_host or '' }}"
+                                        placeholder="example.com"
+                                        class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-white/50 text-xs mb-1">Port</label>
+                                    <input type="number" name="ssh_port" value="{{ host.ssh_port or '' }}"
+                                        placeholder="22"
+                                        class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-white/50 text-xs mb-1">User</label>
+                                    <input type="text" name="ssh_user" value="{{ host.ssh_user or '' }}"
+                                        placeholder="root"
+                                        class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-white/50 text-xs mb-1">Пароль</label>
+                                    <input type="password" name="ssh_password" value="{{ host.ssh_password or '' }}"
+                                        class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
+                                </div>
+                            </div>
+                            <div class="flex gap-3 items-end">
+                                <div class="flex-1">
+                                    <label class="block text-white/50 text-xs mb-1">Путь к приватному ключу</label>
+                                    <input type="text" name="ssh_key_path" value="{{ host.ssh_key_path or '' }}"
+                                        placeholder="/app/keys/id_rsa"
+                                        class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-sm" />
+                                </div>
+                                <button type="submit"
+                                    class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm hover:bg-primary/30">Сохранить
+                                    SSH</button>
+                            </div>
+                        </form>
+                        <form action="{{ url_for('auto_install_speedtest_route', host_name=host.host_name) }}"
+                            method="post" class="mt-2">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit"
+                                class="speedtest-loading-btn px-3 py-1.5 rounded bg-white/10 text-white text-sm hover:bg-white/20"
+                                data-label="Автоустановка Speedtest">Автоустановка Speedtest</button>
+                        </form>
+                    </div>
+
+
+
+
+
+
+
+
+                    <!-- Description -->
+                    <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4 mb-4">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div>
+                                <h5 class="text-white font-medium text-sm">Свое описание (HTML)</h5>
+                                <p class="text-white/50 text-[10px]">Для меню выбора тарифа</p>
+                            </div>
+                            <input type="checkbox" id="toggle-description-{{ host.host_name }}"
+                                onchange="toggleDescriptionForm('{{ host.host_name }}')"
+                                class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50"
+                                {% if host.description %}checked{% endif %} />
+                        </label>
+                        <div id="description-form-{{ host.host_name }}"
+                            class="{% if not host.description %}hidden{% endif %} mt-3 pt-3 border-t border-white/10">
+                            <form action="{{ url_for('update_host_description_route') }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                                <textarea name="host_description" rows="3" placeholder="Введите описание..."
+                                    class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/50">{{ host.description or '' }}</textarea>
+                                <div class="flex justify-end mt-2">
+                                    <button type="submit"
+                                        class="px-3 py-1.5 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20">Сохранить</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Plans -->
+                    <div class="bg-white/[0.02] border border-white/10 rounded-lg p-4">
+                        <h5 class="text-white font-bold mb-4">Тарифы</h5>
+                        {% if host.plans %}
+                        <div id="plans-grid-{{ host.host_name }}"
+                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                            {% for plan in host.plans %}
+                            <div
+                                class="bg-white/[0.02] border border-white/10 rounded-lg p-3 hover:border-primary/50 transition-colors group relative">
+                                <!-- View State -->
+                                <div id="view-plan-{{ plan.plan_id }}" class="flex flex-col h-full">
+                                    <div class="flex-1 mb-3">
+                                        <div class="flex justify-between items-start mb-1">
+                                            <h6 class="text-white font-bold text-sm leading-tight pr-2">{{
+                                                plan.plan_name }}
+                                            </h6>
+                                            <span class="text-primary font-bold text-sm whitespace-nowrap">{{
+                                                plan.price|round(0) }}₽</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2 text-white/60 text-[11px]">
+                                            <span>{{ plan.months }} мес.</span>
+                                            <span>{{ plan.traffic_limit_gb or '∞' }} GB</span>
+                                            <span>{{ plan.hwid_limit or '∞' }} HWID</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-2 mt-auto">
+                                        <button type="button"
+                                            class="px-2 py-1.5 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 flex items-center justify-center gap-1 transition"
+                                            onclick="document.getElementById('view-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('edit-plan-{{ plan.plan_id }}').classList.remove('hidden')">
+                                            Изменить
+                                        </button>
+                                        <form action="{{ url_for('delete_plan_route', plan_id=plan.plan_id) }}"
+                                            method="post" data-confirm="Удалить тариф?">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                            <button type="submit"
+                                                class="w-full px-2 py-1.5 rounded bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 flex items-center justify-center gap-1 transition">
+                                                Удалить
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-2 gap-2 mt-auto">
-                                    <button type="button"
-                                        class="px-2 py-1.5 rounded bg-white/10 text-white text-xs font-medium hover:bg-white/20 flex items-center justify-center gap-1 transition"
-                                        onclick="document.getElementById('view-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('edit-plan-{{ plan.plan_id }}').classList.remove('hidden')">
-                                        Изменить
-                                    </button>
-                                    <form action="{{ url_for('delete_plan_route', plan_id=plan.plan_id) }}"
-                                        method="post" data-confirm="Удалить тариф?">
+                                <!-- Edit State -->
+                                <div id="edit-plan-{{ plan.plan_id }}" class="hidden flex flex-col h-full">
+                                    <form action="{{ url_for('update_plan_route', plan_id=plan.plan_id) }}"
+                                        method="post" class="flex flex-col h-full gap-2">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                        <button type="submit"
-                                            class="w-full px-2 py-1.5 rounded bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 flex items-center justify-center gap-1 transition">
-                                            Удалить
-                                        </button>
+                                        <input type="text" name="plan_name" value="{{ plan.plan_name }}"
+                                            placeholder="Name" required
+                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <input type="number" name="months" value="{{ plan.months }}" required
+                                                class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
+                                            <input type="number" name="price" value="{{ plan.price }}" required
+                                                class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <input type="number" name="traffic_limit_gb"
+                                                value="{{ plan.traffic_limit_gb }}" placeholder="GB"
+                                                class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
+                                            <input type="number" name="hwid_limit" value="{{ plan.hwid_limit }}"
+                                                placeholder="HWID"
+                                                class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2 mt-auto">
+                                            <button type="submit"
+                                                class="bg-primary/20 text-primary rounded px-2 py-1 text-xs hover:bg-primary/30">Сохранить</button>
+                                            <button type="button"
+                                                class="bg-white/10 text-white rounded px-2 py-1 text-xs hover:bg-white/20"
+                                                onclick="document.getElementById('edit-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('view-plan-{{ plan.plan_id }}').classList.remove('hidden')">Отмена</button>
+                                        </div>
                                     </form>
                                 </div>
                             </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-white/30 text-xs text-center py-4">Нет тарифов</div>
+                        {% endif %}
 
-                            <!-- Edit State -->
-                            <div id="edit-plan-{{ plan.plan_id }}" class="hidden flex flex-col h-full">
-                                <form action="{{ url_for('update_plan_route', plan_id=plan.plan_id) }}" method="post"
-                                    class="flex flex-col h-full gap-2">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                    <input type="text" name="plan_name" value="{{ plan.plan_name }}" placeholder="Name"
-                                        required class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <input type="number" name="months" value="{{ plan.months }}" required
-                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
-                                        <input type="number" name="price" value="{{ plan.price }}" required
-                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <input type="number" name="traffic_limit_gb" value="{{ plan.traffic_limit_gb }}"
-                                            placeholder="GB"
-                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
-                                        <input type="number" name="hwid_limit" value="{{ plan.hwid_limit }}"
-                                            placeholder="HWID"
-                                            class="bg-white/10 border-0 rounded px-2 py-1 text-white text-xs" />
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2 mt-auto">
-                                        <button type="submit"
-                                            class="bg-primary/20 text-primary rounded px-2 py-1 text-xs hover:bg-primary/30">Сохранить</button>
-                                        <button type="button"
-                                            class="bg-white/10 text-white rounded px-2 py-1 text-xs hover:bg-white/20"
-                                            onclick="document.getElementById('edit-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('view-plan-{{ plan.plan_id }}').classList.remove('hidden')">Отмена</button>
-                                    </div>
-                                </form>
+                        <form action="{{ url_for('add_plan_route') }}" method="post"
+                            class="bg-white/[0.02] border border-white/10 rounded-lg p-3 grid grid-cols-6 gap-2 items-center">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+
+                            <div class="col-span-2">
+                                <input type="text" name="plan_name" placeholder="Название" required
+                                    class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
                             </div>
-                        </div>
-                        {% endfor %}
+                            <div>
+                                <input type="number" name="months" placeholder="Мес." required
+                                    class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
+                            </div>
+                            <div>
+                                <input type="number" step="0.01" name="price" placeholder="Цена" required
+                                    class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
+                            </div>
+                            <div>
+                                <input type="number" name="traffic_limit_gb" placeholder="GB"
+                                    class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
+                            </div>
+                            <div>
+                                <input type="number" name="hwid_limit" placeholder="HWID"
+                                    class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
+                            </div>
+                            <button type="submit"
+                                class="col-span-6 bg-primary/20 text-primary border border-primary/20 rounded px-3 py-1.5 text-xs font-medium hover:bg-primary/30 transition">Добавить
+                                тариф</button>
+                        </form>
                     </div>
-                    {% else %}
-                    <div class="text-white/30 text-xs text-center py-4">Нет тарифов</div>
-                    {% endif %}
-
-                    <form action="{{ url_for('add_plan_route') }}" method="post"
-                        class="bg-white/[0.02] border border-white/10 rounded-lg p-3 grid grid-cols-6 gap-2 items-center">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-
-                        <div class="col-span-2">
-                            <input type="text" name="plan_name" placeholder="Название" required
-                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
-                        </div>
-                        <div>
-                            <input type="number" name="months" placeholder="Мес." required
-                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
-                        </div>
-                        <div>
-                            <input type="number" step="0.01" name="price" placeholder="Цена" required
-                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs focus:ring-1 focus:ring-primary/50" />
-                        </div>
-                        <div>
-                            <input type="number" name="traffic_limit_gb" placeholder="GB"
-                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
-                        </div>
-                        <div>
-                            <input type="number" name="hwid_limit" placeholder="HWID"
-                                class="w-full bg-white/[0.02] border border-white/10 rounded px-2 py-1.5 text-white text-xs" />
-                        </div>
-                        <button type="submit"
-                            class="col-span-6 bg-primary/20 text-primary border border-primary/20 rounded px-3 py-1.5 text-xs font-medium hover:bg-primary/30 transition">Добавить
-                            тариф</button>
-                    </form>
                 </div>
             </div>
+            {% endfor %}
+            {% else %}
+            <div class="bg-white/5 border border-white/10 rounded-lg p-8 text-center">
+                <span class="material-symbols-outlined text-4xl text-white/30 mb-2">dns</span>
+                <p class="text-white/50">Хосты ещё не добавлены.</p>
+            </div>
+            {% endif %}
         </div>
-        {% endfor %}
-        {% else %}
-        <div class="bg-white/5 border border-white/10 rounded-lg p-8 text-center">
-            <span class="material-symbols-outlined text-4xl text-white/30 mb-2">dns</span>
-            <p class="text-white/50">Хосты ещё не добавлены.</p>
-        </div>
-        {% endif %}
 
 
         <div class="border-t border-white/10 pt-6">
@@ -1025,20 +1079,19 @@
 
 
             {% if ssh_targets %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div id="ssh-targets-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {% for t in ssh_targets %}
-                <div
-                    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
-                    <!-- Decorative glow -->
-                    <div
-                        class="absolute -top-12 -right-12 w-24 h-24 bg-primary/10 blur-[60px] rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    </div>
+                <div class="ssh-target-card relative overflow-hidden bg-white/5 border border-white/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-transform duration-200 group"
+                    draggable="true" data-target-name="{{ t.target_name }}">
 
                     <div class="relative z-10">
                         <!-- Header -->
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
+                                    <span
+                                        class="material-symbols-outlined text-white/30 cursor-grab active:cursor-grabbing hover:text-white/70 drag-handle"
+                                        onclick="event.stopPropagation()">drag_indicator</span>
                                     <span class="material-symbols-outlined text-primary text-lg">dns</span>
                                     <h4 class="text-white font-bold text-sm truncate">{{ t.target_name }}</h4>
                                 </div>
@@ -2343,6 +2396,99 @@
                 }
             });
         });
+
+        // =======================================================
+        // Drag and Drop Logic for Hosts and SSH Targets
+        // =======================================================
+
+        function initDragAndDrop(containerId, itemClass, saveEndpoint, idAttribute) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            let draggedItem = null;
+
+            container.addEventListener('mousedown', (e) => {
+                const card = e.target.closest('.' + itemClass);
+                if (!card) return;
+
+                if (e.target.closest('.drag-handle')) {
+                    card.setAttribute('draggable', 'true');
+                } else {
+                    card.setAttribute('draggable', 'false');
+                }
+            });
+
+            container.addEventListener('dragstart', (e) => {
+                const card = e.target.closest('.' + itemClass);
+                if (!card || card.getAttribute('draggable') === 'false') {
+                    e.preventDefault();
+                    return;
+                }
+
+                draggedItem = card;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', card.getAttribute(idAttribute));
+
+                setTimeout(() => {
+                    card.classList.add('opacity-50', 'scale-95');
+                }, 0);
+            });
+
+            container.addEventListener('dragend', (e) => {
+                if (draggedItem) {
+                    draggedItem.classList.remove('opacity-50', 'scale-95');
+                    draggedItem = null;
+                    saveSortOrder(container, itemClass, saveEndpoint, idAttribute);
+                }
+            });
+
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (!draggedItem) return;
+
+                const targetCard = e.target.closest('.' + itemClass);
+                if (targetCard && targetCard !== draggedItem) {
+                    const siblings = Array.from(container.children).filter(c => c.classList.contains(itemClass));
+
+                    const draggedIndex = siblings.indexOf(draggedItem);
+                    const targetIndex = siblings.indexOf(targetCard);
+
+                    if (draggedIndex > -1 && targetIndex > -1) {
+                        if (draggedIndex < targetIndex) {
+                            container.insertBefore(draggedItem, targetCard.nextSibling);
+                        } else {
+                            container.insertBefore(draggedItem, targetCard);
+                        }
+                    }
+                }
+            });
+        }
+
+        async function saveSortOrder(container, itemClass, endpoint, idAttribute) {
+            const items = container.querySelectorAll('.' + itemClass);
+            const order = Array.from(items).map(item => item.getAttribute(idAttribute));
+
+            try {
+                const csrfToken = window.getCsrfToken ? window.getCsrfToken() : document.querySelector('input[name="csrf_token"]').value;
+                await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ order: order })
+                });
+            } catch (e) {
+                console.error('Failed to save sort order:', e);
+                showToast('Ошибка сохранения порядка', true);
+            }
+        }
+
+        // Initialize for Hosts
+        initDragAndDrop('hosts-grid-container', 'host-card', '/other/servers/hosts/reorder', 'data-host-name');
+
+        // Initialize for SSH Targets
+        initDragAndDrop('ssh-targets-grid-container', 'ssh-target-card', '/other/servers/ssh/reorder', 'data-target-name');
 
         // SSH Target Edit handlers
         document.querySelectorAll('.ssh-edit-btn').forEach(btn => {

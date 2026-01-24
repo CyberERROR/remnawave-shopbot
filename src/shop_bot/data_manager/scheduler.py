@@ -239,8 +239,25 @@ async def sync_keys_with_panels():
             for normalized_email, (remote_email, remote_user) in remote_by_email.items():
                 import re
 
-                match = re.search(r"user(\d+)", remote_email)
-                user_id = int(match.group(1)) if match else None
+                # Пытаемся найти user_id разными способами
+                user_id = remote_user.get('telegramId')
+                
+                if not user_id:
+                    # Пробуем найти в note (часто там хранят)
+                    note = str(remote_user.get('note') or "")
+                    if note.isdigit():
+                        user_id = int(note)
+                
+                if not user_id:
+                    match = re.search(r"user(\d+)", remote_email)
+                    user_id = int(match.group(1)) if match else None
+                
+                # Если все равно нет ID, можно попробовать найти пользователя по username из email (до @)
+                if not user_id:
+                     username_part = remote_email.split('@')[0]
+                     # Здесь нужен метод репозитория для поиска по username, но его может не быть.
+                     # Пока оставим как есть, но без user_id мы не можем привязать.
+                     pass
                 if not user_id:
                     logger.warning(
                         "Scheduler: Осиротевший пользователь '%s' в Remnawave не содержит user_id — пропускаю.",

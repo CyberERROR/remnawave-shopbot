@@ -9,6 +9,7 @@ from flask import render_template, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 from aiogram.types import FSInputFile
 from shop_bot.data_manager import remnawave_repository as rw_repo
+from . import server_plan
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 broadcast_progress = {}
 broadcast_lock = threading.Lock()
+scheduler = None
+
+# Хранение активных SSH сессий для интерактивного терминала
+ssh_sessions = {}
+ssh_sessions_lock = threading.Lock()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -60,6 +66,46 @@ def load_broadcast_results():
     except Exception as e:
         logger.error(f"Failed to load broadcast results: {e}")
     return {'sent': 0, 'failed': 0, 'skipped': 0, 'timestamp': None}
+
+def execute_ssh_command(host, port, username, password, command, timeout=10):
+    """Выполнение SSH команды на удаленном сервере"""
+    try:
+        import paramiko
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        client.connect(
+            hostname=host,
+            port=port,
+            username=username,
+            password=password,
+            timeout=timeout,
+            look_for_keys=False,
+            allow_agent=False
+        )
+        
+        stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
+        output = stdout.read().decode('utf-8').strip()
+        error = stderr.read().decode('utf-8').strip()
+        exit_status = stdout.channel.recv_exit_status()
+        
+        client.close()
+        
+        return {
+            'ok': exit_status == 0,
+            'output': output,
+            'error': error,
+            'exit_status': exit_status
+        }
+    except Exception as e:
+        logger.error(f"SSH command failed for {host}:{port} - {e}")
+        return {
+            'ok': False,
+            'output': '',
+            'error': str(e),
+            'exit_status': -1
+        }
 
 async def send_broadcast_async(bot, users, text, media_path=None, media_type=None, buttons=None, mode='all', task_id=None):
     sent = 0
@@ -185,6 +231,13 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
     return {'sent': sent, 'failed': failed, 'skipped': skipped}
 
 def register_other_routes(flask_app, login_required, get_common_template_data):
+    global scheduler
+    if scheduler is None:
+        scheduler = server_plan.ServerScheduler(
+            ssh_executor=execute_ssh_command,
+            log_func=lambda msg: logger.info(msg)
+        )
+        scheduler.start()
     @flask_app.route('/other')
     @login_required
     def other_page():
@@ -687,45 +740,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             logger.error(f"Error updating promo code: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
     
-    def execute_ssh_command(host, port, username, password, command, timeout=10):
-        """Выполнение SSH команды на удаленном сервере"""
-        try:
-            import paramiko
-            
-            client = paramiko.SSHClient()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            
-            client.connect(
-                hostname=host,
-                port=port,
-                username=username,
-                password=password,
-                timeout=timeout,
-                look_for_keys=False,
-                allow_agent=False
-            )
-            
-            stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
-            output = stdout.read().decode('utf-8').strip()
-            error = stderr.read().decode('utf-8').strip()
-            exit_status = stdout.channel.recv_exit_status()
-            
-            client.close()
-            
-            return {
-                'ok': exit_status == 0,
-                'output': output,
-                'error': error,
-                'exit_status': exit_status
-            }
-        except Exception as e:
-            logger.error(f"SSH command failed for {host}:{port} - {e}")
-            return {
-                'ok': False,
-                'output': '',
-                'error': str(e),
-                'exit_status': -1
-            }
+
     
     @flask_app.route('/other/servers/list')
     @login_required
@@ -751,6 +766,48 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             })
         except Exception as e:
             logger.error(f"Error getting servers list: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/servers/ssh/reorder', methods=['POST'])
+    @login_required
+    def ssh_servers_reorder():
+        """Сохранение порядка сортировки SSH серверов"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'ok': False, 'error': 'Invalid JSON'}), 400
+                
+            order = data.get('order', [])
+            if not isinstance(order, list):
+                 return jsonify({'ok': False, 'error': 'Invalid order format'}), 400
+            
+            for index, target_name in enumerate(order):
+                 rw_repo.update_ssh_target_sort_order(target_name, index)
+                 
+            return jsonify({'ok': True, 'message': 'Порядок сохранён'})
+        except Exception as e:
+            logger.error(f"Error reordering SSH servers: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/hosts/reorder', methods=['POST'])
+    @login_required
+    def hosts_reorder():
+        """Сохранение порядка сортировки хостов"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'ok': False, 'error': 'Invalid JSON'}), 400
+                
+            order = data.get('order', [])
+            if not isinstance(order, list):
+                 return jsonify({'ok': False, 'error': 'Invalid order format'}), 400
+            
+            for index, host_name in enumerate(order):
+                 rw_repo.update_host_sort_order(host_name, index)
+                 
+            return jsonify({'ok': True, 'message': 'Порядок сохранён'})
+        except Exception as e:
+            logger.error(f"Error reordering hosts: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
     
     @flask_app.route('/other/servers/uptime/<server_type>/<name>')
@@ -1623,7 +1680,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     status['active'] = is_active
                     status['service_exists'] = service_exists
                     status['binary_exists'] = binary_exists
-                    status['installed'] = service_exists or binary_exists
+                    status['installed'] = binary_exists
                     
                     import re
                     
@@ -2241,10 +2298,12 @@ MemoryHigh={memory_high}
             import paramiko
             from flask import Response, stream_with_context
             import time
+            import re
             
-            command = request.form.get('command', '').strip()
-            if not command:
-                return jsonify({'ok': False, 'error': 'Command is required'}), 400
+            # Получаем команду как есть, без strip(), чтобы сохранить пробелы и переносы
+            command = request.form.get('command', '')
+            # Убрали проверку if not command, так как пустая строка = Enter
+            
             
             if server_type == 'host':
                 hosts = rw_repo.list_squads(active_only=False)
@@ -2272,105 +2331,117 @@ MemoryHigh={memory_high}
             if not host or not password:
                 return jsonify({'ok': False, 'error': 'SSH credentials not configured'}), 400
             
+            session_key = f"{server_type}:{name}"
+            ansi_escape = re.compile(r'\x1B\[[0-9;]*[a-zA-Z]|\x1B\(B|\x1B\[m|\x1B\]0;[^\x07]*\x07')
+            
             def generate():
+                global ssh_sessions
                 client = None
                 channel = None
+                is_new_session = False
+                
                 try:
-                    import re
+                    with ssh_sessions_lock:
+                        session = ssh_sessions.get(session_key)
+                        if session:
+                            client = session.get('client')
+                            channel = session.get('channel')
+                            if client and channel:
+                                try:
+                                    transport = client.get_transport()
+                                    if transport and transport.is_active() and not channel.closed:
+                                        pass
+                                    else:
+                                        client = None
+                                        channel = None
+                                except:
+                                    client = None
+                                    channel = None
                     
-                    ansi_escape = re.compile(r'\x1B\[[0-9;]*[a-zA-Z]|\x1B\(B|\x1B\[m')
+                    if not client or not channel:
+                        is_new_session = True
+                        client = paramiko.SSHClient()
+                        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                        
+                        yield f"data: [INFO] Connecting to {host}:{port}...\n\n"
+                        
+                        client.connect(
+                            hostname=host,
+                            port=port,
+                            username=username,
+                            password=password,
+                            timeout=30,
+                            look_for_keys=False,
+                            allow_agent=False
+                        )
+                        
+                        yield f"data: [INFO] Connected. Starting interactive shell...\n\n"
+                        
+                        channel = client.invoke_shell(term='xterm', width=200, height=50)
+                        channel.settimeout(0.1)
+                        
+                        with ssh_sessions_lock:
+                            ssh_sessions[session_key] = {
+                                'client': client,
+                                'channel': channel,
+                                'created': time.time()
+                            }
+                        
+                        time.sleep(0.5)
+                        while channel.recv_ready():
+                            channel.recv(4096)
                     
-                    client = paramiko.SSHClient()
-                    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    channel.send(command + '\n')
                     
-                    yield f"data: [INFO] Connecting to {host}:{port}...\n\n"
-                    
-                    client.connect(
-                        hostname=host,
-                        port=port,
-                        username=username,
-                        password=password,
-                        timeout=30,
-                        look_for_keys=False,
-                        allow_agent=False
-                    )
-                    
-                    yield f"data: [INFO] Connected. Executing command...\n\n"
-                    yield f"data: [INFO] Нажмите кнопку 'Остановить' чтобы прервать выполнение команды\n\n"
-                    yield f"data: [INFO] Отображаются последние 300 строк вывода\n\n"
-                    
-                    channel = client.get_transport().open_session()
-                    channel.get_pty()
-                    channel.settimeout(0.1)
-                    channel.exec_command(command)
+                    timeout = 30
+                    start_time = time.time()
+                    idle_count = 0
+                    max_idle = 50
                     
                     while True:
                         try:
                             if channel.recv_ready():
                                 data = channel.recv(4096)
                                 if data:
+                                    idle_count = 0
                                     try:
                                         text = data.decode('utf-8', errors='replace')
                                         text = ansi_escape.sub('', text)
                                         
                                         for line in text.splitlines():
-                                            line = line.strip()
-                                            if line and line != '':
+                                            line = line.rstrip()
+                                            if line:
                                                 yield f"data: {line}\n\n"
                                     except Exception as ex:
                                         logger.error(f"Error decoding stdout: {ex}")
+                            else:
+                                idle_count += 1
                             
-                            if channel.recv_stderr_ready():
-                                data = channel.recv_stderr(4096)
-                                if data:
-                                    try:
-                                        text = data.decode('utf-8', errors='replace')
-                                        text = ansi_escape.sub('', text)
-                                        
-                                        for line in text.splitlines():
-                                            line = line.strip()
-                                            if line and line != '':
-                                                yield f"data: [STDERR] {line}\n\n"
-                                    except Exception as ex:
-                                        logger.error(f"Error decoding stderr: {ex}")
+                            if channel.closed:
+                                yield f"data: [INFO] Session closed\n\n"
+                                with ssh_sessions_lock:
+                                    if session_key in ssh_sessions:
+                                        del ssh_sessions[session_key]
+                                break
                             
-                            if channel.exit_status_ready():
-                                while channel.recv_ready():
-                                    data = channel.recv(4096)
-                                    if data:
-                                        try:
-                                            text = data.decode('utf-8', errors='replace')
-                                            text = ansi_escape.sub('', text)
-                                            
-                                            for line in text.splitlines():
-                                                line = line.strip()
-                                                if line and line != '':
-                                                    yield f"data: {line}\n\n"
-                                        except:
-                                            pass
-                                
-                                exit_status = channel.recv_exit_status()
-                                yield f"data: [INFO] Command finished with exit code: {exit_status}\n\n"
+                            if idle_count >= max_idle:
+                                break
+                            
+                            if time.time() - start_time > timeout:
                                 break
                             
                             time.sleep(0.1)
-                        except:
+                        except Exception as loop_ex:
+                            logger.error(f"Loop error: {loop_ex}")
                             break
                     
                 except Exception as e:
                     logger.error(f"Error executing command on {server_type}/{name}: {e}")
                     yield f"data: [ERROR] {str(e)}\n\n"
+                    with ssh_sessions_lock:
+                        if session_key in ssh_sessions:
+                            del ssh_sessions[session_key]
                 finally:
-                    if channel:
-                        try:
-                            channel.close()
-                        except:
-                            pass
-                    if client:
-                        try:
-                            client.close()
-                        except:
-                            pass
                     yield "data: [DONE]\n\n"
             
             return Response(
@@ -2385,4 +2456,62 @@ MemoryHigh={memory_high}
             
         except Exception as e:
             logger.error(f"Error in server_execute_command for {server_type}/{name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    
+    @flask_app.route('/other/servers/execute/close/<server_type>/<name>', methods=['POST'])
+    @login_required
+    def close_ssh_session(server_type, name):
+        try:
+            session_key = f"{server_type}:{name}"
+            with ssh_sessions_lock:
+                session = ssh_sessions.get(session_key)
+                if session:
+                    try:
+                        if session.get('channel'):
+                            session['channel'].close()
+                        if session.get('client'):
+                            session['client'].close()
+                    except:
+                        pass
+                    del ssh_sessions[session_key]
+                    return jsonify({'ok': True, 'message': 'Session closed'})
+                return jsonify({'ok': True, 'message': 'No active session'})
+        except Exception as e:
+            logger.error(f"Error closing SSH session for {server_type}/{name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/other/servers/scheduler/save/<target_name>', methods=['POST'])
+    @login_required
+    def save_scheduler_config(target_name):
+        try:
+            value = request.form.get('value')
+            unit = request.form.get('unit')
+            enabled = request.form.get('enabled') == 'true'
+            
+            if not value or not value.isdigit():
+                 return jsonify({'ok': False, 'error': 'Invalid value'}), 400
+            
+            value = int(value)
+            if unit not in ['minutes', 'hours', 'days']:
+                 return jsonify({'ok': False, 'error': 'Invalid unit'}), 400
+            
+            config = {
+                'value': value,
+                'unit': unit,
+                'enabled': enabled,
+                'last_run': None 
+            }
+            
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            target = next((t for t in ssh_targets if t.get('target_name') == target_name), None)
+            if not target:
+                return jsonify({'ok': False, 'error': 'Target not found'}), 404
+            
+            json_config = json.dumps(config)
+            rw_repo.update_ssh_target_scheduler(target_name, json_config)
+            
+            return jsonify({'ok': True})
+            
+        except Exception as e:
+            logger.error(f"Error saving scheduler config for {target_name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
