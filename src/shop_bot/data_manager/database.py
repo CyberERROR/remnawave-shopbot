@@ -178,7 +178,8 @@ def initialize_db():
                     traffic_limit_bytes INTEGER,
                     traffic_limit_strategy TEXT DEFAULT 'NO_RESET',
                     tag TEXT,
-                    description TEXT
+                    description TEXT,
+                    comment_key TEXT
                 )
             ''')
             cursor.execute('''
@@ -470,6 +471,7 @@ def initialize_db():
                 "extend_plan_image": None,
                 "keys_list_image": None,
                 "payment_method_image": None,
+                "key_comments_image": None,
                 "key_gemini": None,
             }
             for key, value in default_settings.items():
@@ -609,7 +611,8 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
             traffic_limit_bytes INTEGER,
             traffic_limit_strategy TEXT DEFAULT 'NO_RESET',
             tag TEXT,
-            description TEXT
+            description TEXT,
+            comment_key TEXT
         )
     ''')
     old_columns = _get_table_columns(cursor, "vpn_keys_legacy")
@@ -646,6 +649,7 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
         f"{traffic_strategy_expr} AS traffic_limit_strategy",
         f"{col('tag')} AS tag",
         f"{col('description')} AS description",
+        f"{col('comment_key')} AS comment_key",
     ])
 
     cursor.execute(
@@ -666,7 +670,8 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
             traffic_limit_bytes,
             traffic_limit_strategy,
             tag,
-            description
+            description,
+            comment_key
         )
         SELECT
             {select_clause}
@@ -701,7 +706,8 @@ def _ensure_vpn_keys_schema(cursor: sqlite3.Cursor) -> None:
                 traffic_limit_bytes INTEGER,
                 traffic_limit_strategy TEXT DEFAULT 'NO_RESET',
                 tag TEXT,
-                description TEXT
+                description TEXT,
+                comment_key TEXT
             )
         ''')
         _finalize_vpn_key_indexes(cursor)
@@ -725,6 +731,7 @@ def run_migration():
             _ensure_plans_columns(cursor)
             _ensure_support_tickets_columns(cursor)
             _ensure_vpn_keys_schema(cursor)
+            _ensure_table_column(cursor, "vpn_keys", "comment_key", "TEXT")
             _ensure_ssh_targets_table(cursor)
             _ensure_gift_tokens_table(cursor)
             _ensure_promo_tables(cursor)
@@ -2470,7 +2477,8 @@ def initialize_default_button_configs():
                     ("extend", "➕ Продлить этот ключ", "extend_key_{key_id}", None, 1, 0, 1, 1),
                     ("qr", "📱 Показать QR-код", "show_qr_{key_id}", None, 2, 0, 2, 2),
                     ("howto", "📖 Инструкция", "howto_vless_{key_id}", None, 2, 1, 3, 1),
-                    ("back", "⬅️ Назад к списку ключей", "manage_keys", None, 3, 0, 4, 1),
+                    ("comments", "📝 Комментарии", "key_comments_{key_id}", None, 3, 0, 4, 1),
+                    ("back", "⬅️ Назад к списку ключей", "manage_keys", None, 4, 0, 5, 1),
                 ]
 
                 for button_id, text, callback_data, url, row_pos, col_pos, sort_order, width in key_info_menu_buttons:
@@ -2479,6 +2487,17 @@ def initialize_default_button_configs():
                         (menu_type, button_id, text, callback_data, url, row_position, column_position, sort_order, button_width, is_active)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                     """, ("key_info_menu", button_id, text, callback_data, url, row_pos, col_pos, sort_order, width))
+            
+            # Ensure comments button exists even if menu wasn't empty
+            cursor.execute("SELECT 1 FROM button_configs WHERE menu_type='key_info_menu' AND button_id='comments'")
+            if not cursor.fetchone():
+                 cursor.execute("""
+                    INSERT INTO button_configs 
+                    (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                """, ("key_info_menu", "comments", "📝 Комментарии", "key_comments_{key_id}", None, 3, 0, 4, 1))
+                 # Shift 'back' button if it conflicts
+                 cursor.execute("UPDATE button_configs SET row_position = 4, sort_order = 5 WHERE menu_type='key_info_menu' AND button_id='back' AND row_position=3")
 
 
             
@@ -2946,6 +2965,7 @@ def add_new_key(
     traffic_limit_strategy: str | None = None,
     description: str | None = None,
     tag: str | None = None,
+    comment_key: str | None = None,
 ) -> int | None:
     host_name_norm = normalize_host_name(host_name) if host_name else None
     email_normalized = _normalize_email(key_email) or key_email.strip()
@@ -2969,11 +2989,11 @@ def add_new_key(
                     expire_at,
                     created_at,
                     updated_at,
-                    traffic_limit_bytes,
                     traffic_limit_strategy,
                     tag,
-                    description
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    description,
+                    comment_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     user_id,
@@ -2991,6 +3011,7 @@ def add_new_key(
                     strategy_value,
                     tag,
                     description,
+                    comment_key,
                 ),
             )
             conn.commit()
@@ -3043,6 +3064,7 @@ def update_key_fields(
     traffic_limit_strategy: str | None = None,
     tag: str | None = None,
     description: str | None = None,
+    comment_key: str | None = None,
 ) -> bool:
     updates: dict[str, Any] = {}
     if host_name is not None:
@@ -3070,6 +3092,8 @@ def update_key_fields(
         updates["tag"] = tag
     if description is not None:
         updates["description"] = description
+    if comment_key is not None:
+        updates["comment_key"] = comment_key
     return _apply_key_updates(key_id, updates)
 
 

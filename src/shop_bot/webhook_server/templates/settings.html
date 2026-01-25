@@ -1539,6 +1539,32 @@
                                     <input type="file" id="referral_image_file" accept=".jpg,.jpeg,.png,.gif"
                                         class="hidden" data-section="referral" />
                                 </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Комментарии к
+                                            ключу</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="КОММЕНТАРИИ К КЛЮЧУ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отображается в меню комментариев к ключу</p>
+                                    <input type="text" id="key_comments_image_url"
+                                        value="{{ settings.key_comments_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="key_comments">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="key_comments">Удалить</button>
+                                    </div>
+                                    <input type="file" id="key_comments_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="key_comments" />
+                                </div>
                             </div>
                         </div>
 

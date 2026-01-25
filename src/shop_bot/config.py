@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from aiogram import html
 
 CHOOSE_PLAN_MESSAGE = "Выберите подходящий тариф:"
 CHOOSE_PAYMENT_METHOD_MESSAGE = "Выберите удобный способ оплаты:"
@@ -30,17 +31,17 @@ def _get_status_text(remaining):
     
     if days >= 365:
         years = round(days / 365, 1)
-        return f"Активен ({years} год)"
+        return f"Активен ({years} год.)"
     if days >= 30:
         months = int(round(days / 30))
-        return f"Активен ({months} мес)"
+        return f"Активен ({months} мес.)"
     if days >= 1:
-        return f"Активен ({days} дн)"
+        return f"Активен ({days} д.)"
     if hours >= 1:
         return f"Активен ({hours} ч.)"
-    return f"Активен ({max(1, minutes)} мин)"
+    return f"Активен ({max(1, minutes)} мин.)"
 
-def get_key_info_text(key_number, expiry_date, created_date, connection_string, email=None, hwid_limit=None, hwid_usage=None, traffic_limit=None, traffic_used=None):
+def get_key_info_text(key_number, expiry_date, created_date, connection_string, email=None, hwid_limit=None, hwid_usage=None, traffic_limit=None, traffic_used=None, comment=None):
     now = datetime.now()
     remaining = expiry_date - now
     days_left = remaining.days
@@ -69,9 +70,14 @@ def get_key_info_text(key_number, expiry_date, created_date, connection_string, 
     if email and str(email).endswith("@bot.local"):
         email = str(email).replace("@bot.local", "@bot")
 
+    comment_block = ""
+    if comment:
+        comment_block = f"💬 <b>Комментарий: {html.quote(comment)} ♻️</b>\n"
+
     return (
-        f"🔑 <b>Информация о ключе #{key_number}</b>\n\n"
-        f"📅 <b>Сроки действия:</b>\n"
+        f"🔑 <b>Информация о ключе #{key_number}</b>\n"
+        f"{comment_block}"
+        f"\n📅 <b>Сроки действия:</b>\n"
         f"{status_icon} <b>Статус:</b> {status_text}\n"
         f"➕ <b>Куплен:</b> {created_date.strftime('%d.%m.%Y')}\n"
         f"⏳ <b>Истекает:</b> {expiry_date.strftime('%d.%m.%Y %H:%M')}\n"

@@ -64,7 +64,13 @@
     <!-- Properties Panel -->
     <div class="space-y-6">
         <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h3 class="text-white font-bold mb-4">Свойства кнопки</h3>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-white font-bold">Свойства кнопки</h3>
+                <button type="button" onclick="openModal('buttonHelpModal')"
+                    class="text-white/30 hover:text-primary transition-colors" title="Доступные кнопки">
+                    <span class="material-symbols-outlined text-base">info</span>
+                </button>
+            </div>
             <form id="button-properties-form" class="space-y-4">
                 <div>
                     <label class="block text-white/70 text-sm mb-2">ID кнопки:</label>
@@ -171,7 +177,13 @@
 <div id="addButtonModal" class="modal-overlay">
     <div class="modal-content">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <h5 class="text-white font-bold">Добавить новую кнопку</h5>
+            <div class="flex items-center gap-2">
+                <h5 class="text-white font-bold">Добавить новую кнопку</h5>
+                <button type="button" onclick="openModal('buttonHelpModal')"
+                    class="text-white/30 hover:text-primary transition-colors" title="Доступные кнопки">
+                    <span class="material-symbols-outlined text-base">info</span>
+                </button>
+            </div>
             <button onclick="closeModal('addButtonModal')" class="text-white/50 hover:text-white">
                 <span class="material-symbols-outlined">close</span>
             </button>
@@ -226,6 +238,71 @@
                 class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
             <button id="confirm-add-button"
                 class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Добавить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Available Buttons Help Modal -->
+<div id="buttonHelpModal" class="modal-overlay modal-xl">
+    <div class="modal-content">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold">Доступные кнопки и callback_data</h5>
+            <button onclick="closeModal('buttonHelpModal')" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <div class="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <p class="text-[11px] text-white/70 leading-relaxed">
+                    <span class="text-primary font-bold">💡 Подсказка:</span> ID кнопки можно указывать по вашему
+                    желанию. Кнопки <span class="text-white px-1">не привязаны</span> жестко к определенным меню - вы
+                    можете свободно переносить их (например, из Главного меню в Профиль и наоборот).
+                    <br><br>
+                    Поле <span class="text-yellow-400 font-bold">Callback / URL</span> является обязательным - именно по
+                    нему бот определяет, какое действие совершить или какое меню вызвать при нажатии.
+                    <br><br>
+                    Примеры кнопок: <br>
+                    <span class="text-white px-1">⬅️ К списку ключей</span> - callback_data = <span
+                        class="text-yellow-400 font-bold">"manage_keys"</span>;
+                    <br> и так же можно указать: <br>
+                    <span class="text-white px-1">🔑 Мои ключи</span> - callback_data = <span
+                        class="text-yellow-400 font-bold">"manage_keys"</span>;
+                </p>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="help-search" placeholder="Поиск по названию или ID..."
+                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-primary/50" />
+            </div>
+            <div class="overflow-x-auto max-h-[250vh] custom-scroll">
+                <table class="w-full text-xs">
+                    <thead class="bg-primary/10 sticky top-0 backdrop-blur-md">
+                        <tr>
+                            <th
+                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
+                                Меню</th>
+                            <th
+                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
+                                ID</th>
+                            <th
+                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
+                                Текст</th>
+                            <th
+                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
+                                Callback</th>
+                            <th
+                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
+                                URL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="help-table-body" class="divide-y divide-white/5">
+                        <!-- Rows will be added via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="p-4 border-t border-white/10 flex justify-end">
+            <button onclick="closeModal('buttonHelpModal')"
+                class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Понятно</button>
         </div>
     </div>
 </div>
@@ -505,12 +582,106 @@
         background: rgba(var(--primary-rgb), 0.2);
         color: var(--primary);
     }
+
+    .custom-scroll::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 10px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background: rgba(19, 236, 128, 0.2);
+        border-radius: 10px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(19, 236, 128, 0.4);
+    }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
+    const AVAILABLE_BUTTONS_HELP = [
+        { m: 'admin_menu', id: 'admins', t: '👮 Администраторы', c: 'admin_admins_menu', u: '' },
+        { m: 'admin_menu', id: 'backup', t: '🗄 Бэкап БД', c: 'admin_backup_db', u: '' },
+        { m: 'admin_menu', id: 'broadcast', t: '📢 Рассылка', c: 'start_broadcast', u: '' },
+        { m: 'admin_menu', id: 'gift_key', t: '🎁 Выдать ключ', c: 'admin_gift_key', u: '' },
+        { m: 'admin_menu', id: 'host_keys', t: '🌍 Ключи на хосте', c: 'admin_host_keys', u: '' },
+        { m: 'admin_menu', id: 'monitor', t: '📊 Мониторинг', c: 'admin_monitor', u: '' },
+        { m: 'admin_menu', id: 'promo', t: '🎟 Промокоды', c: 'admin_promo_menu', u: '' },
+        { m: 'admin_menu', id: 'restore', t: '♻️ Восстановить БД', c: 'admin_restore_db', u: '' },
+        { m: 'admin_menu', id: 'speedtest', t: '⚡ Тест скорости', c: 'admin_speedtest', u: '' },
+        { m: 'admin_menu', id: 'users', t: '👥 Пользователи', c: 'admin_users', u: '' },
+        { m: 'key_info_menu', id: 'comment_key', t: '📝 Комментарии к ключу', c: 'key_comments_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'connect', t: '📲 Подключиться', c: '', u: '{connection_string}' },
+        { m: 'key_info_menu', id: 'extend', t: '➕ Продлить этот ключ', c: 'extend_key_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'howto', t: '📖 Инструкция', c: 'howto_vless_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'qr', t: '📱 QR-код', c: 'show_qr_{key_id}', u: '' },
+        { m: 'main_menu', id: 'about', t: 'ℹ️ О проекте', c: 'show_about', u: '' },
+        { m: 'main_menu', id: 'admin', t: '⚙️ Админка', c: 'admin_menu', u: '' },
+        { m: 'main_menu', id: 'buy_key', t: '🛒 Купить', c: 'buy_new_key', u: '' },
+        { m: 'main_menu', id: 'howto', t: '❓ Как использовать', c: 'howto_vless', u: '' },
+        { m: 'main_menu', id: 'my_keys', t: '🔑 Мои ключи ({len(user_keys)})', c: 'manage_keys', u: '' },
+        { m: 'main_menu', id: 'profile', t: '👤 Профиль', c: 'show_profile', u: '' },
+        { m: 'main_menu', id: 'referral', t: '🤝 Реферальная программа', c: 'show_referral_program', u: '' },
+        { m: 'main_menu', id: 'speed', t: '⚡ Скорость', c: 'user_speedtest_last', u: '' },
+        { m: 'main_menu', id: 'support', t: '💌 Поддержка', c: 'show_help', u: '' },
+        { m: 'main_menu', id: 'topup', t: '💳 Баланс ({balance}₽)', c: 'top_up_start', u: '' },
+        { m: 'main_menu', id: 'trial', t: '🎁 Попробовать бесплатно', c: 'get_trial', u: '' },
+        { m: 'profile_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' },
+        { m: 'profile_menu', id: 'topup', t: '💳 Пополнить баланс', c: 'top_up_start', u: '' },
+        { m: 'support_menu', id: 'external', t: '🆘 Внешняя поддержка', c: 'support_external', u: '' },
+        { m: 'support_menu', id: 'my_tickets', t: '📨 Мои обращения', c: 'support_my_tickets', u: '' },
+        { m: 'support_menu', id: 'new_ticket', t: '✍️ Новое обращение', c: 'support_new_ticket', u: '' }
+    ];
+
+    const MENU_NAME_MAP = {
+        'main_menu': 'Главное меню',
+        'key_info_menu': 'Информация о ключе',
+        'admin_menu': 'Админ меню',
+        'profile_menu': 'Меню профиля',
+        'support_menu': 'Меню поддержки'
+    };
+
+    function initHelpModal() {
+        const tbody = document.getElementById('help-table-body');
+        const searchInput = document.getElementById('help-search');
+        if (!tbody || !searchInput) return;
+
+        function render(filter = '') {
+            const q = filter.toLowerCase();
+            tbody.innerHTML = AVAILABLE_BUTTONS_HELP
+                .filter(b => {
+                    const menuName = MENU_NAME_MAP[b.m] || b.m;
+                    return b.t.toLowerCase().includes(q) ||
+                        b.id.toLowerCase().includes(q) ||
+                        b.c.toLowerCase().includes(q) ||
+                        b.u.toLowerCase().includes(q) ||
+                        menuName.toLowerCase().includes(q);
+                })
+                .map(b => `
+                    <tr class="hover:bg-white/[0.03] transition-colors leading-tight">
+                        <td class="px-2 py-1 text-white/40 text-[10px] font-medium whitespace-nowrap">${MENU_NAME_MAP[b.m] || b.m}</td>
+                        <td class="px-2 py-1 font-mono text-primary/80 text-[10px] font-bold">${b.id}</td>
+                        <td class="px-2 py-1 text-white text-[11px] font-medium">${b.t}</td>
+                        <td class="px-2 py-1 font-mono text-yellow-400/70 text-[10px] break-all max-w-[120px]">${b.c || '-'}</td>
+                        <td class="px-2 py-1 font-mono text-blue-400/70 text-[10px] break-all max-w-[120px]">${b.u || '-'}</td>
+                    </tr>
+                `).join('');
+        }
+
+        searchInput.addEventListener('input', (e) => render(e.target.value));
+        render();
+    }
+
+    document.addEventListener('DOMContentLoaded', initHelpModal);
+
     class ButtonConstructor {
         constructor() {
             this.currentMenuType = 'main_menu';

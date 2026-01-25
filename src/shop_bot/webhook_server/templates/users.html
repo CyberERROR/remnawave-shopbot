@@ -632,7 +632,8 @@
                                 <span class="text-white/50 text-xs">до: ${sub.expire_date}</span>
                             </div>
                             <div class="flex items-center gap-2 text-xs text-white/50 font-medium">
-                                ${sub.comment ? `<span class="italic max-w-[150px] truncate" title="${sub.comment.replace(/"/g, '&quot;')}">${sub.comment}</span>` : ''}
+                                ${sub.admin_comment ? `<span class="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400" title="Комментарий админа: ${sub.admin_comment.replace(/"/g, '&quot;')}">${sub.admin_comment}</span>` : ''}
+                                ${sub.user_comment ? `<span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 italic max-w-[150px] truncate" title="Комментарий пользователя: ${sub.user_comment.replace(/"/g, '&quot;')}">${sub.user_comment}</span>` : ''}
                                 <div class="bg-white/5 px-2 py-0.5 rounded">${sub.host_name}</div>
                             </div>
                         </div>
@@ -674,7 +675,7 @@
                                   </button>
                                   
                                   <button class="btn-user-edit-comment w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-                                          data-key-id="${sub.key_id}" data-current-comment="${(sub.comment || '').replace(/"/g, '&quot;')}" title="Комментарий">
+                                          data-key-id="${sub.key_id}" data-current-comment="${(sub.admin_comment || '').replace(/"/g, '&quot;')}" title="Комментарий">
                                       <span class="material-symbols-outlined text-sm">comment</span>
                                   </button>
 
@@ -791,9 +792,9 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <span class="text-white/30 text-xs whitespace-nowrap text-right min-w-[80px]">
+                                    <span class="text-white/30 text-xs whitespace-nowrap text-right min-w-[120px]">
                                         ${datePart}<br>
-                                        <span class="text-white/20">${relTime}</span>
+                                        <span class="text-white/20">Потратил: <span class="${r.total_spent > 0 ? 'text-yellow-400 font-bold' : ''}">${(r.total_spent || 0).toFixed(0)}₽</span> - ${relTime}</span>
                                     </span>
                                     <a href="{{ url_for('users_page') }}?q=${r.telegram_id}"
                                        class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors"

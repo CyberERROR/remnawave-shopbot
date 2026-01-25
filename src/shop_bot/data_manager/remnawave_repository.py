@@ -88,6 +88,7 @@ def record_key(
     traffic_limit_strategy: str | None = None,
     tag: str | None = None,
     description: str | None = None,
+    comment_key: str | None = None,
 ) -> int | None:
     expire_ms = expire_at_ms if expire_at_ms is not None else _default_expire_at_ms()
     email_normalized = _normalize_email(email)
@@ -115,6 +116,7 @@ def record_key(
                 traffic_limit_strategy=traffic_limit_strategy,
                 tag=tag,
                 description=description,
+                comment_key=comment_key,
             )
             return key_id
 
@@ -131,6 +133,7 @@ def record_key(
             traffic_limit_strategy=traffic_limit_strategy,
             description=description,
             tag=tag,
+            comment_key=comment_key,
         )
     except Exception:
         logger.exception("Remnawave repository failed to record key for user %s", user_id)
@@ -190,6 +193,7 @@ def update_key(
     traffic_limit_strategy: str | None = None,
     tag: str | None = None,
     description: str | None = None,
+    comment_key: str | None = None,
 ) -> bool:
     return database.update_key_fields(
         key_id,
@@ -204,6 +208,7 @@ def update_key(
         traffic_limit_strategy=traffic_limit_strategy,
         tag=tag,
         description=description,
+        comment_key=comment_key,
     )
 
 

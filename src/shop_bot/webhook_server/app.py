@@ -925,7 +925,8 @@ def create_webhook_app(bot_controller_instance):
                         "is_expired": is_expired,
                         "email": key.get('email') or key.get('key_email') or 'N/A',
                         "remnawave_user_uuid": key.get('remnawave_user_uuid') or 'N/A',
-                        "comment": key.get('comment') or key.get('description') or ''
+                        "user_comment": key.get('comment_key') or '',
+                        "admin_comment": key.get('description') or key.get('comment') or ''
                     })
                     
             except Exception as e:
@@ -3322,6 +3323,7 @@ def create_webhook_app(bot_controller_instance):
         'extend_plan': 'extend_plan_image',
         'keys_list': 'keys_list_image',
         'payment_method': 'payment_method_image',
+        'key_comments': 'key_comments_image',
     }
 
     @flask_app.route('/upload-menu-image/<section>', methods=['POST'])

@@ -430,6 +430,9 @@ class TopUpProcess(StatesGroup):
     waiting_for_amount = State()
     waiting_for_topup_method = State()
 
+class KeyCommentState(StatesGroup):
+    waiting_for_comment = State()
+
 
 class SupportDialog(StatesGroup):
     waiting_for_subject = State()
@@ -2168,6 +2171,7 @@ def get_user_router() -> Router:
 
         user_id = callback.from_user.id
         key_data = rw_repo.get_key_by_id(key_id_to_show)
+        key_info_image = None
 
         if not key_data or key_data['user_id'] != user_id:
             await smart_edit_message(message_to_edit, "❌ Ошибка: ключ не найден.")
@@ -2192,7 +2196,8 @@ def get_user_router() -> Router:
                 hwid_limit="...", 
                 hwid_usage="...", 
                 traffic_limit="...", 
-                traffic_used="..."
+                traffic_used="...",
+                comment=key_data.get('comment_key')
             )
             
             key_info_image = get_setting("key_info_image")
@@ -2272,7 +2277,8 @@ def get_user_router() -> Router:
                 hwid_limit=hwid_limit, 
                 hwid_usage=hwid_usage, 
                 traffic_limit=traffic_limit, 
-                traffic_used=traffic_used
+                traffic_used=traffic_used,
+                comment=key_data.get('comment_key')
             )
             
 
@@ -3503,6 +3509,195 @@ def get_user_router() -> Router:
 
     
 
+    @user_router.callback_query(F.data.startswith("key_comments_"))
+    @anti_spam
+    @registration_required
+    async def key_comments_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer()
+        try:
+            key_id = int(callback.data.split("_")[2])
+        except (IndexError, ValueError):
+            await callback.answer("Ошибка: Неверный ID ключа", show_alert=True)
+            return
+
+        key_data = rw_repo.get_key_by_id(key_id)
+        if not key_data or key_data.get('user_id') != callback.from_user.id:
+            await smart_edit_message(callback.message, "❌ Ключ не найден или доступ запрещен.")
+            return
+
+        comment = key_data.get('comment_key')
+        text = f"<b>✏️ Комментарий к ключу #{key_id}</b>\n\n"
+        
+        if comment:
+            text += f"💬 Ваш текущий комментарий: <b>{html.quote(comment)}</b>\n\n"
+            
+        text += (
+            "Он виден только вам и помогает <b>легко различать ключи</b>, "
+            "чтобы не путаться в списке.\n\n"
+            "💡 <i>Примеры: Мой телефон, Для родителей, Планшет</i>\n\n"
+            "👇 <b>Введите новый комментарий:</b>"
+        )
+
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🗑 Удалить", callback_data=f"delete_comment_{key_id}")
+        builder.button(text="⬅️ Назад", callback_data=f"show_key_{key_id}")
+        builder.adjust(2) 
+
+        image_path = get_setting("key_comments_image")
+        photo_path = image_path if (image_path and os.path.exists(image_path)) else None
+
+        msg = await smart_edit_message(callback.message, text, builder.as_markup(), photo_path=photo_path)
+        
+        await state.update_data(editing_key_id=key_id)
+        if msg:
+            await state.update_data(prompt_message_id=msg.message_id)
+        await state.set_state(KeyCommentState.waiting_for_comment)
+
+
+
+    @user_router.callback_query(F.data.startswith("delete_comment_"))
+    @anti_spam
+    @registration_required
+    async def delete_key_comment_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
+        try:
+            key_id = int(callback.data.split("_")[2])
+        except (IndexError, ValueError):
+            return
+
+        key_data = rw_repo.get_key_by_id(key_id)
+        if not key_data or key_data.get('user_id') != callback.from_user.id:
+            await callback.answer("Ключ не найден", show_alert=True)
+            return
+
+        rw_repo.update_key(key_id, comment_key="")
+        await callback.answer("Комментарий удален")
+        
+        # Get prompt message id from state to delete it
+        data = await state.get_data()
+        prompt_message_id = data.get('prompt_message_id')
+        
+        await state.clear()
+        
+        await callback.message.delete()
+        if prompt_message_id:
+             try:
+                 await bot.delete_message(chat_id=callback.message.chat.id, message_id=prompt_message_id)
+             except Exception:
+                 pass
+
+        # Show key info immediately
+        user_id = callback.from_user.id
+        key_data = rw_repo.get_key_by_id(key_id) # Reload data
+        
+        try:
+             expiry_date = datetime.fromisoformat(key_data['expiry_date'])
+             created_date = datetime.fromisoformat(key_data['created_date'])
+             connection_string = key_data.get('subscription_url') or "Загрузка..."
+             
+             all_user_keys = get_user_keys(user_id)
+             key_number = next((i + 1 for i, key in enumerate(all_user_keys) if key['key_id'] == key_id), 0)
+             
+             info_text = get_key_info_text(
+                key_number, 
+                expiry_date, 
+                created_date, 
+                connection_string, 
+                email=key_data.get('key_email'),
+                hwid_limit="...", hwid_usage="...", traffic_limit="...", traffic_used="...",
+                comment=None
+             ) 
+             
+             key_info_image = get_setting("key_info_image")
+             photo_path_info = key_info_image if (key_info_image and os.path.exists(key_info_image)) else None
+             
+             reply_markup = keyboards.create_dynamic_key_info_keyboard(key_id, connection_string if connection_string != "Загрузка..." else "")
+             
+             from aiogram.types import FSInputFile
+             if photo_path_info:
+                 photo = FSInputFile(photo_path_info)
+                 await callback.message.answer_photo(photo=photo, caption=info_text, reply_markup=reply_markup)
+             else:
+                 await callback.message.answer(info_text, reply_markup=reply_markup)
+                 
+        except Exception as e:
+             logger.error(f"Error showing key info after comment delete: {e}")
+             await callback.message.answer("✅ Комментарий удален!")
+
+    @user_router.message(KeyCommentState.waiting_for_comment)
+    async def key_comment_input_handler(message: types.Message, state: FSMContext, bot: Bot):
+        data = await state.get_data()
+        key_id = data.get('editing_key_id')
+        if not key_id:
+            await state.clear()
+            await message.answer("Ошибка состояния. Попробуйте снова.")
+            return
+
+        comment = (message.text or "").strip()
+        if not comment:
+            await message.answer("Комментарий не может быть пустым.")
+            return
+
+        if len(comment) > 200:
+            await message.answer("Комментарий слишком длинный (макс. 200 символов).")
+            return
+
+        rw_repo.update_key(key_id, comment_key=comment)
+        
+        prompt_message_id = data.get('prompt_message_id')
+        
+        await state.clear()
+        
+        await message.delete() 
+        
+        if prompt_message_id:
+            try:
+                await bot.delete_message(chat_id=message.chat.id, message_id=prompt_message_id)
+            except Exception:
+                pass
+        
+        user_id = message.from_user.id
+        
+        user_id = message.from_user.id
+        key_data = rw_repo.get_key_by_id(key_id) # Reload data
+        
+        if not key_data or key_data['user_id'] != user_id:
+             await message.answer("❌ Ошибка: ключ не найден.")
+             return
+
+        try:
+             expiry_date = datetime.fromisoformat(key_data['expiry_date'])
+             created_date = datetime.fromisoformat(key_data['created_date'])
+             connection_string = key_data.get('subscription_url') or "Загрузка..."
+             
+             all_user_keys = get_user_keys(user_id)
+             key_number = next((i + 1 for i, key in enumerate(all_user_keys) if key['key_id'] == key_id), 0)
+             
+             info_text = get_key_info_text(
+                key_number, 
+                expiry_date, 
+                created_date, 
+                connection_string, 
+                email=key_data.get('key_email'),
+                hwid_limit="...", hwid_usage="...", traffic_limit="...", traffic_used="...",
+                comment=key_data.get('comment_key')
+             ) 
+             
+             key_info_image = get_setting("key_info_image")
+             photo_path_info = key_info_image if (key_info_image and os.path.exists(key_info_image)) else None
+             
+             reply_markup = keyboards.create_dynamic_key_info_keyboard(key_id, connection_string if connection_string != "Загрузка..." else "")
+             
+             from aiogram.types import FSInputFile
+             if photo_path_info:
+                 photo = FSInputFile(photo_path_info)
+                 await message.answer_photo(photo=photo, caption=info_text, reply_markup=reply_markup)
+             else:
+                 await message.answer(info_text, reply_markup=reply_markup)
+                 
+        except Exception as e:
+             logger.error(f"Error showing key info after comment update: {e}")
+             await message.answer("✅ Комментарий сохранен!")   
+
     return user_router
 
 async def notify_admin_of_purchase(bot: Bot, metadata: dict):
@@ -4066,5 +4261,7 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                 await bot.send_message(chat_id=user_id, text="❌ Ошибка при выдаче ключа.")
             except Exception:
                 pass
+
+
 
 
