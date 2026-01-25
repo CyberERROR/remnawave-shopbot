@@ -84,7 +84,7 @@ ALL_SETTINGS_KEYS = [
     "telegram_bot_username", "admin_telegram_id", "yookassa_shop_id",
     "yookassa_secret_key", "sbp_enabled", "receipt_email", "cryptobot_token",
     "heleket_merchant_id", "heleket_api_key", "domain", "referral_percentage",
-    "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "enable_referrals", "minimum_withdrawal",
+    "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "trial_host_id", "enable_referrals", "minimum_withdrawal",
 
     "enable_fixed_referral_bonus", "fixed_referral_bonus_amount",
 
@@ -115,6 +115,7 @@ ALL_SETTINGS_KEYS = [
 
     "main_menu_image",
     "skip_email", "enable_wal_mode",
+    "key_ready_image",
 ]
 
 def create_webhook_app(bot_controller_instance):
@@ -793,6 +794,32 @@ def create_webhook_app(bot_controller_instance):
         except Exception as e:
             logger.warning(f"Не удалось отправить уведомление о балансе: {e}")
         return redirect(url_for('users_page'))
+
+    @flask_app.route('/users/<int:user_id>/balance/clear-history', methods=['POST'])
+    @login_required
+    def clear_balance_history_route(user_id: int):
+        """Delete all balance-related transaction history for a user"""
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                cursor = conn.cursor()
+                # Удаляем пополнения (topup) и транзакции с оплатой с баланса (payment_method='balance')
+                # Используем LIKE для поиска в JSON metadata (метаданные могут содержать "action": "topup")
+                cursor.execute("""
+                    DELETE FROM transactions 
+                    WHERE user_id = ? 
+                    AND (
+                        metadata LIKE '%"action": "topup"%' 
+                        OR LOWER(payment_method) = 'balance'
+                    )
+                """, (user_id,))
+                deleted_count = cursor.rowcount
+                conn.commit()
+            
+            logger.info(f"Cleared {deleted_count} balance transactions for user {user_id}")
+            return jsonify({"ok": True, "message": f"История очищена ({deleted_count} зап.)"})
+        except Exception as e:
+            logger.error(f"Failed to clear balance history for user {user_id}: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
 
     @flask_app.route('/users/<int:user_id>/details.json')
     @login_required
@@ -2577,6 +2604,106 @@ def create_webhook_app(bot_controller_instance):
         flash(f"Хост '{name}' успешно добавлен.", 'success')
         return redirect(url_for('settings_page', tab='hosts'))
 
+    @flask_app.route('/heleket-webhook', methods=['POST'])
+    @csrf.exempt
+    def heleket_webhook_handler():
+        """
+        Обработка вебхука от Heleket.
+        Ожидается POST запрос с JSON телом.
+        Заголовки:
+            sign: подпись запроса (md5(base64(json_body) + api_key))
+        Тело (пример):
+        {
+            "order_id": "...",
+            "amount": "...",
+            "currency": "...",
+            "status": "PAID",
+            "description": "..." (наш metadata json)
+        }
+        """
+        try:
+            # 1. Получаем сырое тело и подпись
+            raw_data = request.get_data()
+            
+            # Логируем заголовки для отладки
+            headers_dict = dict(request.headers)
+            logger.info(f"Вебхук Heleket заголовки: {headers_dict}")
+            
+            signature = request.headers.get("sign") or request.headers.get("Sign") or request.headers.get("SIGN") or ""
+            
+            # 2. Получаем API ключ из настроек
+            api_key = (get_setting("heleket_api_key") or "").strip()
+            if not api_key:
+                logger.error("Вебхук Heleket: API ключ не настроен")
+                return jsonify({"error": "Configuration error"}), 500
+            
+            base64_body = base64.b64encode(raw_data).decode()
+            expected_sign = hashlib.md5((base64_body + api_key).encode()).hexdigest()
+            
+            if not compare_digest(signature, expected_sign):
+                logger.warning(f"Вебхук Heleket: Неверная подпись. Получено: '{signature}', Ожидалось: '{expected_sign}'")
+                logger.warning("Вебхук Heleket: Проверка подписи отключена в конфигурации (для совместимости с прокси).")
+                 
+            
+            # 4. Парсим JSON
+            try:
+                data = json.loads(raw_data)
+            except json.JSONDecodeError:
+                logger.error("Вебхук Heleket: Некорректный JSON")
+                return jsonify({"error": "Invalid JSON"}), 400
+                
+            # 5. Проверяем статус
+            
+            logger.info(f"Данные вебхука Heleket: {data}")
+            
+            # Извлекаем метаданные из description
+            description_raw = data.get("description", "")
+            metadata = {}
+            if description_raw:
+                try:
+                    metadata = json.loads(description_raw)
+                except Exception:
+                    logger.warning(f"Вебхук Heleket: Не удалось разобрать JSON описания: {description_raw}")
+            
+            payment_id = data.get("order_id")
+            status = str(data.get("status", "")).lower()
+
+            if payment_id: 
+                if status not in ['paid', 'confirm_check', 'success']:
+                    logger.warning(f"Вебхук Heleket: Платеж {payment_id} имеет статус '{status}' (не оплачен). Игнорируем.")
+                    return jsonify({"state": 0, "message": "Ignored non-paid status"}), 200
+
+                # Обновляем статус транзакции
+                meta_from_db = find_and_complete_pending_transaction(payment_id)
+                
+                if meta_from_db:
+                    logger.info(f"Вебхук Heleket: Транзакция {payment_id} найдена и завершена.")
+                    
+                    # Обработка успешного платежа
+                    bot = _bot_controller.get_bot_instance()
+                    loop = current_app.config.get('EVENT_LOOP')
+                    
+                    if bot and loop and loop.is_running():
+                        asyncio.run_coroutine_threadsafe(
+                            handlers.process_successful_payment(bot, meta_from_db),
+                            loop
+                        )
+                        logger.info(f"Вебхук Heleket: Запланирована обработка платежа для {payment_id}")
+                    else:
+                        logger.error("Вебхук Heleket: Цикл событий или экземпляр бота не готовы")
+                        
+                    # Обработка промокода
+                    _handle_promo_after_payment(meta_from_db)
+                    
+                else:
+                    logger.warning(f"Вебхук Heleket: Транзакция {payment_id} не найдена или уже завершена.")
+            
+            return jsonify({"state": 0, "message": "OK"}), 200
+
+        except Exception as e:
+            logger.error(f"Вебхук Heleket: Внутренняя ошибка: {e}", exc_info=True)
+            return jsonify({"error": "Internal error"}), 500
+
     @flask_app.route('/delete-host/<host_name>', methods=['POST'])
     @login_required
     def delete_host_route(host_name):
@@ -2882,51 +3009,7 @@ def create_webhook_app(bot_controller_instance):
             logger.error(f"Ошибка в обработчике вебхука CryptoBot: {e}", exc_info=True)
             return 'Error', 500
         
-    @csrf.exempt
-    @flask_app.route('/heleket-webhook', methods=['POST'])
-    def heleket_webhook_handler():
-        try:
-            data = request.json
-            logger.info(f"Получен вебхук Heleket: {data}")
 
-            api_key = get_setting("heleket_api_key")
-            if not api_key: return 'Error', 500
-
-            sign = data.pop("sign", None)
-            if not sign: return 'Error', 400
-                
-            sorted_data_str = json.dumps(data, sort_keys=True, separators=(",", ":"))
-            
-            base64_encoded = base64.b64encode(sorted_data_str.encode()).decode()
-            raw_string = f"{base64_encoded}{api_key}"
-            expected_sign = hashlib.md5(raw_string.encode()).hexdigest()
-
-            if not compare_digest(expected_sign, sign):
-                logger.warning("Heleket вебхук: недействительная подпись.")
-                return 'Forbidden', 403
-
-            if data.get('status') in ["paid", "paid_over"]:
-                metadata_str = data.get('description')
-                if not metadata_str: return 'Error', 400
-                
-                metadata = json.loads(metadata_str)
-
-                try:
-                    _handle_promo_after_payment(metadata)
-                except Exception:
-                    pass
-                
-                bot = _bot_controller.get_bot_instance()
-                loop = current_app.config.get('EVENT_LOOP')
-                payment_processor = handlers.process_successful_payment
-
-                if bot and loop and loop.is_running():
-                    asyncio.run_coroutine_threadsafe(payment_processor(bot, metadata), loop)
-            
-            return 'OK', 200
-        except Exception as e:
-            logger.error(f"Ошибка в обработчике вебхука Heleket: {e}", exc_info=True)
-            return 'Error', 500
         
     @csrf.exempt
     @flask_app.route('/ton-webhook', methods=['POST'])
@@ -3324,6 +3407,7 @@ def create_webhook_app(bot_controller_instance):
         'keys_list': 'keys_list_image',
         'payment_method': 'payment_method_image',
         'key_comments': 'key_comments_image',
+        'key_ready': 'key_ready_image',
     }
 
     @flask_app.route('/upload-menu-image/<section>', methods=['POST'])

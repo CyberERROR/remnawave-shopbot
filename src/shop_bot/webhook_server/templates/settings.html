@@ -204,6 +204,28 @@
                     <input type="number" name="trial_duration_days" value="{{ settings.trial_duration_days or '3' }}"
                         class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                 </div>
+                <div class="mt-3">
+                    <label class="block text-white/70 text-xs font-medium mb-1">Сервер для пробного периода</label>
+                    <div class="soft-select" data-target="trial_host_id">
+                        <button type="button" class="soft-select-toggle" id="trial_host_id_toggle">
+                            {% if settings.trial_host_id %}
+                            {{ settings.trial_host_id }}
+                            {% else %}
+                            Выборочно (пользователь выбирает)
+                            {% endif %}
+                        </button>
+                        <div class="soft-select-menu" id="trial_host_id_menu"></div>
+                        <select name="trial_host_id" id="trial_host_id" class="hidden">
+                            <option value="">Выборочно (пользователь выбирает)</option>
+                            {% for host in hosts %}
+                            <option value="{{ host.host_name }}" {% if settings.trial_host_id==host.host_name
+                                %}selected{% endif %}>
+                                {{ host.host_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <!-- Мониторинг ресурсов (Блок 4) -->
@@ -462,7 +484,7 @@
                         <div>
                             <label class="block text-white/70 text-xs font-medium mb-1">Ваш домен</label>
                             <input type="text" name="domain" value="{{ settings.domain or '' }}"
-                                placeholder="my-shop.com"
+                                placeholder="my-shop.com или my-shop.com:8443"
                                 class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
                         </div>
                     </div>
@@ -1224,15 +1246,25 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                 <div>
                     <label class="block text-white/70 text-sm font-medium mb-2">Тип начисления</label>
-                    <select name="referral_reward_type" id="referral_reward_type"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white">
-                        <option value="percent_purchase" {% if (settings.referral_reward_type or 'percent_purchase'
-                            )=='percent_purchase' %}selected{% endif %}>Процент с покупки реферала</option>
-                        <option value="fixed_purchase" {% if settings.referral_reward_type=='fixed_purchase'
-                            %}selected{% endif %}>Фиксированная сумма за покупку</option>
-                        <option value="fixed_start_referrer" {% if settings.referral_reward_type=='fixed_start_referrer'
-                            %}selected{% endif %}>Бонус пригласившему при старте</option>
-                    </select>
+                    <div class="soft-select" data-target="referral_reward_type">
+                        <button type="button" class="soft-select-toggle" id="referral_reward_type_toggle">
+                            {% set ref_type = settings.referral_reward_type or 'percent_purchase' %}
+                            {% if ref_type == 'percent_purchase' %}Процент с покупки реферала
+                            {% elif ref_type == 'fixed_purchase' %}Фиксированная сумма за покупку
+                            {% elif ref_type == 'fixed_start_referrer' %}Бонус пригласившему при старте
+                            {% endif %}
+                        </button>
+                        <div class="soft-select-menu" id="referral_reward_type_menu"></div>
+                        <select name="referral_reward_type" id="referral_reward_type" class="hidden">
+                            <option value="percent_purchase" {% if (settings.referral_reward_type or 'percent_purchase'
+                                )=='percent_purchase' %}selected{% endif %}>Процент с покупки реферала</option>
+                            <option value="fixed_purchase" {% if settings.referral_reward_type=='fixed_purchase'
+                                %}selected{% endif %}>Фиксированная сумма за покупку</option>
+                            <option value="fixed_start_referrer" {% if
+                                settings.referral_reward_type=='fixed_start_referrer' %}selected{% endif %}>Бонус
+                                пригласившему при старте</option>
+                        </select>
+                    </div>
                     <p class="text-white/50 text-xs mt-1">Показываются только параметры, актуальные для выбранного типа.
                     </p>
                 </div>
@@ -1717,6 +1749,33 @@
                                     </div>
                                     <input type="file" id="keys_list_image_file" accept=".jpg,.jpeg,.png,.gif"
                                         class="hidden" data-section="keys_list" />
+                                </div>
+
+                                <div class="bg-white/5 rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <label class="block text-white/70 text-sm font-medium">Ключ готов (Key
+                                            Ready)</label>
+                                        <button type="button"
+                                            class="text-white/30 hover:text-primary transition-colors btn-copy-text"
+                                            data-copy-text="КЛЮЧ ГОТОВ" title="Скопировать">
+                                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-white/30 text-xs mb-2">Отправляется с сообщением о готовности ключа.
+                                    </p>
+                                    <input type="text" id="key_ready_image_url"
+                                        value="{{ settings.key_ready_image or '' }}" readonly
+                                        class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white/70 text-sm mb-2" />
+                                    <div class="flex gap-2">
+                                        <button type="button"
+                                            class="btn-upload-menu-image px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30"
+                                            data-section="key_ready">Загрузить</button>
+                                        <button type="button"
+                                            class="btn-delete-menu-image px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                                            data-section="key_ready">Удалить</button>
+                                    </div>
+                                    <input type="file" id="key_ready_image_file" accept=".jpg,.jpeg,.png,.gif"
+                                        class="hidden" data-section="key_ready" />
                                 </div>
 
                                 <div class="bg-white/5 rounded-lg p-3">
@@ -2686,6 +2745,8 @@
     document.addEventListener('DOMContentLoaded', function () {
         if (window.initSoftSelect) {
             window.initSoftSelect('existing_backup', '— Выберите архив —');
+            window.initSoftSelect('trial_host_id', 'Выборочно (пользователь выбирает)');
+            window.initSoftSelect('referral_reward_type', 'Выберите тип начисления...');
         }
 
         // Restore Add Host Form state

@@ -354,8 +354,14 @@
 
                 <div>
                     <div class="bg-white/5 border border-white/10 rounded-lg">
-                        <div class="p-4 border-b border-white/10">
+                        <div class="p-4 border-b border-white/10 flex justify-between items-center">
                             <h4 class="text-white font-bold">История транзакций баланса</h4>
+                            <button id="udm-clear-balance-history"
+                                class="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center gap-1 text-xs"
+                                title="Очистить всю историю баланса">
+                                <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                                Очистить всё
+                            </button>
                         </div>
                         <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
                             <table class="w-full text-sm">
@@ -382,6 +388,34 @@
 {% block scripts %}
 <script>
     (function () {
+        async function clearBalanceHistory(uid) {
+            if (!confirm('Вы уверены, что хотите полностью очистить историю транзакций баланса для этого пользователя? Это действие необратимо.')) return;
+
+            try {
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                const resp = await fetch(`{{ url_for('clear_balance_history_route', user_id=0) }}`.replace('/0/', `/${uid}/`), {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                    credentials: 'same-origin'
+                });
+                const data = await resp.json();
+                if (data && data.ok) {
+                    showToast('success', data.message || 'История очищена');
+                    // Refresh history in modal
+                    document.getElementById('udm-balance-history').innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-white/50">История очищена</td></tr>';
+                } else {
+                    showToast('danger', (data && data.error) || 'Ошибка при очистке');
+                }
+            } catch (e) {
+                showToast('danger', 'Ошибка соединения: ' + e.message);
+            }
+        }
+
+        document.getElementById('udm-clear-balance-history')?.addEventListener('click', function () {
+            const uid = document.getElementById('udm-trial-toggle').getAttribute('data-user-id');
+            if (uid) clearBalanceHistory(uid);
+        });
+
         const input = document.getElementById('users-search');
         const table = document.getElementById('users-table');
         const tbody = document.getElementById('users-tbody');

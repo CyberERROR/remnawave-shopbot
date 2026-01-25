@@ -33,6 +33,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from shop_bot.bot import keyboards
 from shop_bot.modules.platega_api import PlategaAPI
+from shop_bot.modules.heleket_api import create_heleket_payment_request
 from shop_bot.data_manager.remnawave_repository import (
     add_to_balance,
     deduct_from_balance,
@@ -140,109 +141,7 @@ def get_transaction_comment(user: types.User, action_type: str, value: any, host
         return f"Пополнение баланса на {value} RUB{info_suffix}"
     return f"Транзакция (ID: {user_id})"
 
-async def _create_heleket_payment_request(
-    user_id: int,
-    price: float,
-    months: int,
-    host_name: str | None,
-    state_data: dict,
-) -> str | None:
-    """
-    Создание инвойса в Heleket и возврат payment URL.
 
-    Требования API:
-      - POST https://api.heleket.com/v1/payment
-      - Заголовки: merchant, sign (md5(base64(json_body)+API_KEY))
-      - Тело (минимум): { amount, currency, order_id }
-      - Дополнительно: url_callback (наш вебхук), description (положим JSON метаданных)
-    """
-
-    merchant_id = (get_setting("heleket_merchant_id") or "").strip()
-    api_key = (get_setting("heleket_api_key") or "").strip()
-    if not (merchant_id and api_key):
-        logger.error("Heleket: не заданы merchant_id/api_key в настройках.")
-        return None
-
-
-    payment_id = str(uuid.uuid4())
-
-
-    metadata = {
-        "user_id": int(user_id),
-        "months": int(months or 0),
-        "price": float(Decimal(str(price)).quantize(Decimal("0.01"))),
-        "action": state_data.get("action"),
-        "key_id": state_data.get("key_id"),
-        "host_name": host_name or state_data.get("host_name"),
-        "plan_id": state_data.get("plan_id"),
-        "customer_email": state_data.get("customer_email"),
-        "payment_method": "Heleket",
-        "payment_id": payment_id,
-        "promo_code": state_data.get("promo_code"),
-        "promo_discount": state_data.get("promo_discount"),
-    }
-
-
-    try:
-        create_payload_pending(payment_id, user_id, float(metadata["price"]), metadata)
-    except Exception as e:
-        logger.warning(f"Heleket: не удалось создать pending: {e}")
-
-
-    amount_str = f"{Decimal(str(price)).quantize(Decimal('0.01'))}"
-    body: dict = {
-        "amount": amount_str,
-        "currency": "RUB",
-        "order_id": payment_id,
-
-        "description": json.dumps(metadata, ensure_ascii=False, separators=(",", ":")),
-    }
-
-    try:
-        domain = (get_setting("domain") or "").strip()
-    except Exception:
-        domain = ""
-    if domain:
-
-
-        cb = f"{domain.rstrip('/')}/heleket-webhook"
-        body["url_callback"] = cb
-
-
-    body_json = json.dumps(body, ensure_ascii=False, separators=(",", ":"))
-    base64_payload = base64.b64encode(body_json.encode()).decode()
-    sign = hashlib.md5((base64_payload + api_key).encode()).hexdigest()
-
-    headers = {
-        "merchant": merchant_id,
-        "sign": sign,
-        "Content-Type": "application/json",
-    }
-
-    url = "https://api.heleket.com/v1/payment"
-
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=body, timeout=20) as resp:
-                if resp.status != 200:
-                    text = await resp.text()
-                    logger.error(f"Heleket: HTTP {resp.status}: {text}")
-                    return None
-                data = await resp.json(content_type=None)
-
-                if isinstance(data, dict) and data.get("state") == 0:
-                    try:
-                        result = data.get("result") or {}
-                        pay_url = result.get("url")
-                        if pay_url:
-                            return pay_url
-                    except Exception:
-                        pass
-                logger.error(f"Heleket: неожиданный ответ API: {data}")
-                return None
-    except Exception as e:
-        logger.error(f"Heleket: ошибка при создании инвойса: {e}", exc_info=True)
-        return None
 
 async def _create_cryptobot_invoice(
     user_id: int,
@@ -1417,6 +1316,65 @@ def get_user_router() -> Router:
         logger.info(f"⏳ Платеж не найден или еще не оплачен: {pid}")
         await callback.answer("⏳ Оплата ещё не поступила. Попробуйте через минуту.", show_alert=True)
 
+    @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_heleket")
+    @anti_spam
+    async def pay_heleket_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer("Создаю счёт...")
+        data = await state.get_data()
+        
+        plan_id = data.get('plan_id')
+        if not plan_id:
+            logger.error(f"[PAYMENT_BUG] Missing plan_id for user {callback.from_user.id}")
+            await smart_edit_message(callback.message, "❌ Произошла ошибка. Тариф не найден.")
+            await state.clear()
+            return
+
+        plan = get_plan_by_id(plan_id)
+        if not plan:
+            logger.error(f"[PAYMENT_BUG] Invalid plan_id={plan_id}")
+            await smart_edit_message(callback.message, "❌ Тариф не найден.")
+            await state.clear()
+            return
+
+        price_rub = Decimal(str(data.get('final_price', plan['price'])))
+        user_id = callback.from_user.id
+        
+        state_data = {
+            "action": data.get('action'),
+            "key_id": data.get('key_id'),
+            "host_name": data.get('host_name'),
+            "plan_id": data.get('plan_id'),
+            "customer_email": data.get('customer_email'),
+            "promo_code": data.get('promo_code'),
+            "promo_discount": data.get("promo_discount"),
+        }
+        
+        try:
+            pay_url = await create_heleket_payment_request(
+                user_id=user_id,
+                price=float(price_rub),
+                months=int(plan['months']),
+                host_name=data.get('host_name'),
+                state_data=state_data
+            )
+
+            if pay_url:
+                payment_image = get_setting("payment_image")
+                await smart_edit_message(
+                    callback.message,
+                    "Нажмите на кнопку ниже для оплаты:",
+                    keyboards.create_payment_keyboard(pay_url),
+                    payment_image
+                )
+                await state.clear()
+            else:
+                await smart_edit_message(callback.message, "❌ Не удалось создать счёт. Попробуйте другой способ оплаты.")
+                
+        except Exception as e:
+            logger.error(f"Heleket payment error: {e}", exc_info=True)
+            await smart_edit_message(callback.message, "❌ Ошибка при создании платежа.")
+            await state.clear()
+
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_platega")
     @anti_spam
     async def pay_platega_handler(callback: types.CallbackQuery, state: FSMContext):
@@ -1585,7 +1543,7 @@ def get_user_router() -> Router:
             "key_id": None,
         }
         try:
-            pay_url = await _create_heleket_payment_request(
+            pay_url = await create_heleket_payment_request(
                 user_id=user_id,
                 price=float(amount),
                 months=0,
@@ -2086,6 +2044,16 @@ def get_user_router() -> Router:
         if not hosts:
             await smart_edit_message(callback.message, "❌ В данный момент нет доступных серверов для создания пробного ключа.")
             return
+
+        # Check for forced host setting
+        forced_host = get_setting("trial_host_id")
+        if forced_host:
+             # Verify it exists in the active hosts list
+             found_host = next((h for h in hosts if h['host_name'] == forced_host), None)
+             if found_host:
+                 await callback.answer()
+                 await process_trial_key_creation(callback.message, forced_host)
+                 return
             
         if len(hosts) == 1:
             await callback.answer()
@@ -2154,8 +2122,17 @@ def get_user_router() -> Router:
                 pass
             
             new_expiry_date = datetime.fromtimestamp(result['expiry_timestamp_ms'] / 1000)
-            final_text = get_purchase_success_text("new", get_next_key_number(user_id) -1, new_expiry_date, result['connection_string'])
-            await message.answer(text=final_text, reply_markup=keyboards.create_dynamic_key_info_keyboard(new_key_id, result['connection_string']))
+            final_text = get_purchase_success_text("new", get_next_key_number(user_id) -1, new_expiry_date, result['connection_string'], email=candidate_email)
+            
+            key_ready_image = get_setting("key_ready_image")
+            photo_path = key_ready_image if (key_ready_image and os.path.exists(key_ready_image)) else None
+            
+            if photo_path:
+                from aiogram.types import FSInputFile
+                photo = FSInputFile(photo_path)
+                await message.answer_photo(photo=photo, caption=final_text, reply_markup=keyboards.create_dynamic_key_info_keyboard(new_key_id, result['connection_string']))
+            else:
+                await message.answer(text=final_text, reply_markup=keyboards.create_dynamic_key_info_keyboard(new_key_id, result['connection_string']))
 
         except Exception as e:
             logger.error(f"Error creating trial key for user {user_id} on host {host_name}: {e}", exc_info=True)
@@ -4238,14 +4215,23 @@ async def process_successful_payment(bot: Bot, metadata: dict):
             action="extend" if action == "extend" else "new",
             key_number=key_number,
             expiry_date=new_expiry_date or datetime.now(),
-            connection_string=connection_string or ""
+            connection_string=connection_string or "",
+            email=candidate_email
         )
         
-        await bot.send_message(
-            chat_id=user_id,
-            text=final_text,
-            reply_markup=keyboards.create_dynamic_key_info_keyboard(key_id, connection_string)
-        )
+        key_ready_image = get_setting("key_ready_image")
+        photo_path = key_ready_image if (key_ready_image and os.path.exists(key_ready_image)) else None
+
+        if photo_path:
+             from aiogram.types import FSInputFile
+             photo = FSInputFile(photo_path)
+             await bot.send_photo(chat_id=user_id, photo=photo, caption=final_text, reply_markup=keyboards.create_dynamic_key_info_keyboard(key_id, connection_string))
+        else:
+             await bot.send_message(
+                 chat_id=user_id,
+                 text=final_text,
+                 reply_markup=keyboards.create_dynamic_key_info_keyboard(key_id, connection_string)
+             )
 
         try:
             await notify_admin_of_purchase(bot, metadata)

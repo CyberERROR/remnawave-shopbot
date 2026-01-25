@@ -89,12 +89,20 @@ def get_key_info_text(key_number, expiry_date, created_date, connection_string, 
     )
 
 
-def get_purchase_success_text(action: str, key_number: int, expiry_date, connection_string: str):
-    action_text = "обновлен" if action == "extend" else "готов"
-    expiry_formatted = expiry_date.strftime('%d.%m.%Y в %H:%M')
+def get_purchase_success_text(action: str, key_number: int, expiry_date, connection_string: str, email: str = None):
+    action_text = "продлен" if action == "extend" else "готов"
+    expiry_date_str = expiry_date.strftime('%d.%m %H:%M')
+    
+    # Обработка email для скрытия служебного суффикса @bot.local
+    if email and str(email).endswith("@bot.local"):
+        email = str(email).replace("@bot.local", "@bot")
+    email_display = email if email else "Не указан"
 
     return (
         f"🎉 <b>Ваш ключ #{key_number} {action_text}!</b>\n\n"
-        f"⏳ <b>Он будет действовать до:</b> {expiry_formatted}\n\n"
+        f"📅 <b>Сроки действия:</b>\n"
+        f"⏳ <b>Действует до: {expiry_date_str}</b>\n"
+        f"💌 <b>ID ключа:</b> <code>{email_display}</code>\n\n"
+        f"🗽 <b>Ваш ключ:</b>\n"
         f"<code>{connection_string}</code>"
     )

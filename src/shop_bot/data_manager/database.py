@@ -472,6 +472,7 @@ def initialize_db():
                 "keys_list_image": None,
                 "payment_method_image": None,
                 "key_comments_image": None,
+                "key_ready_image": None,
                 "key_gemini": None,
             }
             for key, value in default_settings.items():
@@ -1999,7 +2000,7 @@ def _complete_pending(payment_id: str) -> bool:
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE pending_transactions SET status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE payment_id = ?",
+                "UPDATE pending_transactions SET status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE payment_id = ? AND status != 'paid'",
                 (payment_id,)
             )
             conn.commit()
@@ -2015,7 +2016,11 @@ def find_and_complete_ton_transaction(payment_id: str, amount_ton: float | None 
     meta = _get_pending_metadata(payment_id)
     if not meta:
         return None
-    _complete_pending(payment_id)
+    
+    if not _complete_pending(payment_id):
+        # Already paid or failed to update
+        return None
+        
     return meta
 
 def find_and_complete_pending_transaction(payment_id: str) -> dict | None:
@@ -2032,9 +2037,10 @@ def find_and_complete_pending_transaction(payment_id: str) -> dict | None:
     success = _complete_pending(payment_id)
     if success:
         logging.info(f"✅ Транзакция отмечена как оплаченная: {payment_id}")
+        return meta
     else:
-        logging.error(f"❌ Не удалось отметить транзакцию как оплаченную: {payment_id}")
-    return meta
+        logging.warning(f"⚠️ Транзакция {payment_id} уже была оплачена или заблокирована (дубликат вебхука)")
+        return None
 
 def get_latest_pending_for_user(user_id: int) -> dict | None:
     """Return metadata of the most recent pending transaction for the user (without completing it)."""
@@ -2493,7 +2499,7 @@ def initialize_default_button_configs():
             if not cursor.fetchone():
                  cursor.execute("""
                     INSERT INTO button_configs 
-                    (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
+                    (menu_type, button_id, text, callback_data, url, row_position, column_position, sort_order, button_width, is_active)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 """, ("key_info_menu", "comments", "📝 Комментарии", "key_comments_{key_id}", None, 3, 0, 4, 1))
                  # Shift 'back' button if it conflicts
@@ -2989,6 +2995,7 @@ def add_new_key(
                     expire_at,
                     created_at,
                     updated_at,
+                    traffic_limit_bytes,
                     traffic_limit_strategy,
                     tag,
                     description,
