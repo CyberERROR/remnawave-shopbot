@@ -290,6 +290,7 @@ server {
     listen ${port} ssl http2;
     listen [::]:${port} ssl http2;
     server_name ${domain};
+    client_max_body_size 500M;
 
     ssl_certificate /etc/letsencrypt/live/${domain}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${domain}/privkey.pem;
