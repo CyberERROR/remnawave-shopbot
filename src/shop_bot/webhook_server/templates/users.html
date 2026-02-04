@@ -2,145 +2,155 @@
 {% block title %}Управление Пользователями{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold text-white">Пользователи</h2>
-            <p class="text-white/50 text-sm">Список зарегистрированных пользователей и быстрые действия</p>
-        </div>
-        <div class="relative w-full md:w-80">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/50">search</span>
-            <input id="users-search" type="text" value="{{ q or '' }}"
-                class="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
-                placeholder="Поиск по ID или Username..." />
-        </div>
+<!-- ===== ЗАГОЛОВОК СТРАНИЦЫ ===== -->
+<div class="mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="space-y-1">
+        <h2 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            Пользователи
+            <span
+                class="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-widest border border-primary/20">Клиенты</span>
+        </h2>
+        <p class="text-white/40 text-xs font-medium uppercase tracking-[0.2em] ml-1">Управление базой пользователей</p>
+    </div>
+
+    <div class="relative w-full md:w-96 group">
+        <span
+            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within:text-primary transition-colors">person_search</span>
+        <input id="users-search" type="text" value="{{ q or '' }}"
+            class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-lg backdrop-blur-sm"
+            placeholder="Поиск по ID или Username..." />
+        <button id="search-clear"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors hidden">
+            <span class="material-symbols-outlined text-lg">close</span>
+        </button>
     </div>
 </div>
 
-<style>
-    /* Custom Scrollbar for Modal and Lists */
-    .custom-scroll::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 3px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-thumb {
-        background: rgba(19, 236, 128, 0.3);
-        border-radius: 3px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-thumb:hover {
-        background: rgba(19, 236, 128, 0.5);
-    }
-
-    /* Ensure modal content uses custom scroll */
-    .modal-content {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(19, 236, 128, 0.3) rgba(255, 255, 255, 0.05);
-    }
-
-    .modal-content::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .modal-content::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .modal-content::-webkit-scrollbar-thumb {
-        background: rgba(19, 236, 128, 0.3);
-        border-radius: 3px;
-    }
 </style>
 
-<div class="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+<div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md">
     <div class="overflow-x-auto">
-        <table id="users-table" class="w-full text-left">
-            <thead class="bg-white/5">
-                <tr>
-                    <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Telegram ID</th>
-                    <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Username</th>
-                    <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Статус</th>
-                    <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-center">
+        <table id="users-table" class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-white/5 bg-white/[0.02]">
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Telegram ID</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Username</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Статус</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40 text-center">
                         Активные ключи</th>
-                    <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Баланс</th>
-                    <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-right">Действия
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Баланс</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40 text-right">
+                        Действия
                     </th>
                 </tr>
             </thead>
-            <tbody id="users-tbody" class="divide-y divide-white/10"
+            <tbody id="users-tbody" class="divide-y divide-white/5"
                 data-fetch-url="{{ url_for('users_table_partial', page=current_page, per_page=per_page, q=q) }}"
-                data-fetch-interval="100000">
-                {% include 'partials/users_table.html' %}
+                data-fetch-interval="120000">
+                <tr>
+                    <td colspan="6" class="p-8 text-center">
+                        <div class="flex flex-col items-center justify-center text-white/30">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                            <span class="text-xs">Загрузка пользователей...</span>
+                        </div>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
 </div>
 
-{% if total_pages and total_pages > 1 %}
-<div class="flex justify-center mt-4 gap-2" id="users-pagination"
+<div class="flex justify-center mt-6 gap-2" id="users-pagination"
     data-src="{{ url_for('users_pagination_partial', page=current_page, q=q, per_page=per_page) }}">
     {% include 'partials/users_pagination.html' %}
 </div>
-{% endif %}
 
-<div id="balanceModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <h5 class="text-white font-bold">Баланс пользователя</h5>
-            <button onclick="closeModal('balanceModal')" class="text-white/50 hover:text-white">
+<div id="balanceModal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-content bg-[#101815] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
+            <h5 class="text-white font-bold text-lg">Баланс пользователя</h5>
+            <button onclick="closeModal('balanceModal')" class="text-white/50 hover:text-white transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
         <div class="p-6">
-            <div class="mb-3 text-white/70" id="bm-user"></div>
-            <div class="mb-4 text-white">Текущий баланс: <strong id="bm-balance">0.00</strong> RUB</div>
-            <form id="bm-form" class="flex gap-3" method="post">
+            <div class="mb-4 flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined">person</span>
+                </div>
+                <div>
+                    <div class="text-white/50 text-xs uppercase font-bold tracking-wider">Пользователь</div>
+                    <div class="text-white font-bold text-sm" id="bm-user"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div class="text-white/50 text-[10px] uppercase font-bold tracking-wider mb-1">Текущий баланс</div>
+                    <div class="text-2xl font-bold text-white"><span id="bm-balance">0.00</span> <span
+                            class="text-white/50 text-lg font-normal">₽</span></div>
+                </div>
+                <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div class="text-white/50 text-[10px] uppercase font-bold tracking-wider mb-1">Рефералы</div>
+                    <div class="text-2xl font-bold text-white"><span id="bm-refcount">0</span></div>
+                </div>
+            </div>
+
+            <form id="bm-form" class="flex gap-3 ajax-form" method="post" data-success-msg="Баланс успешно изменён"
+                data-refresh="users-tbody">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <input
-                    class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    type="text" inputmode="decimal" name="delta" placeholder="± сумма" required />
+                <div class="relative flex-1">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">payments</span>
+                    <input
+                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/40 font-mono"
+                        type="text" inputmode="decimal" name="delta" placeholder="± Сумма" required />
+                </div>
                 <button
-                    class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors"
+                    class="px-6 py-2 rounded-xl bg-primary text-background-dark font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
                     type="submit">
-                    Изменить
+                    <span class="material-symbols-outlined text-lg">save</span>
+                    <span>Изменить</span>
                 </button>
             </form>
-            <hr class="border-white/10 my-4" />
-            <div class="mb-2 text-white">Рефералы: <strong id="bm-refcount">0</strong></div>
-            <div class="text-sm text-white/50 max-h-36 overflow-auto">
-                <ul id="bm-reflist" class="space-y-1"></ul>
+
+            <div class="mt-6">
+                <div class="text-white/50 text-[10px] uppercase font-bold tracking-wider mb-2">Список рефералов</div>
+                <div class="bg-black/30 rounded-xl border border-white/5 p-2 max-h-36 overflow-y-auto custom-scroll">
+                    <ul id="bm-reflist" class="space-y-1 text-xs text-white/70"></ul>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div id="messageModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <h5 class="text-white font-bold">Отправить сообщение пользователю</h5>
-            <button onclick="closeModal('messageModal')" class="text-white/50 hover:text-white">
+<div id="messageModal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-content bg-[#101815] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
+            <h5 class="text-white font-bold text-lg">Отправить сообщение</h5>
+            <button onclick="closeModal('messageModal')" class="text-white/50 hover:text-white transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
         <div class="p-6">
-            <div class="mb-3 text-white/70" id="mm-user"></div>
-            <form id="mm-form" method="post">
+            <div class="mb-4 text-white/70 text-sm" id="mm-user"></div>
+            <form id="mm-form" method="post" class="ajax-form" data-success-msg="Сообщение отправлено">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <div class="mb-4">
-                    <label class="block text-white/70 text-sm mb-2">Сообщение</label>
-                    <p class="text-white/50 text-sm mb-2">📩 Сообщение от администратора:</p>
-                    <textarea
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        name="message" rows="5" placeholder="Введите текст сообщения..." required></textarea>
+                    <label class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-2">📩 Сообщение
+                        от администратора:</label>
+                    <div class="relative">
+                        <textarea
+                            class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all min-h-[120px] resize-y text-sm"
+                            name="message" placeholder="Введите сообщение для пользователя..." required></textarea>
+                        <div class="absolute bottom-3 right-3 text-white/20 text-xs pointer-events-none">От лица бота
+                        </div>
+                    </div>
                 </div>
                 <button
-                    class="w-full px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors"
+                    class="w-full py-3 rounded-xl bg-primary text-background-dark font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
                     type="submit">
+                    <span class="material-symbols-outlined text-lg">send</span>
                     Отправить
                 </button>
             </form>
@@ -201,7 +211,7 @@
 
 <!-- Revoke Key Confirmation Modal -->
 <div id="revokeConfirmModal" class="modal-overlay" style="z-index: 1100;">
-    <div class="modal-content">
+    <div class="modal-content overflow-hidden">
         <div class="p-4 border-b border-red-500/30 flex items-center justify-between bg-red-500/10">
             <h5 class="text-white font-bold flex items-center gap-2">
                 <span class="material-symbols-outlined text-red-400">warning</span>
@@ -212,20 +222,107 @@
             </button>
         </div>
         <div class="p-6">
-            <p class="text-white mb-4">Вы уверены, что хотите отозвать этот ключ?</p>
-            <p class="text-red-400 text-sm">⚠️ Пользователь потеряет доступ к подписке (Полностью)!</p>
+            <p class="text-white mb-2">Вы уверены, что хотите отозвать <span class="text-red-400 font-bold">этот</span>
+                ключ?</p>
+            <p class="text-white/40 text-xs uppercase font-bold tracking-widest">⚠️ Действие необратимо</p>
         </div>
-        <div class="p-4 border-t border-white/10 flex justify-end gap-2">
+        <div class="p-4 border-t border-white/10 flex justify-end gap-2 bg-black/20">
             <button onclick="closeModal('revokeConfirmModal')"
-                class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
+                class="px-4 py-2 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors text-sm font-bold uppercase tracking-wider">Отмена</button>
             <button id="revokeConfirmBtn"
-                class="px-4 py-2 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600">Отозвать</button>
+                class="px-5 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 text-sm uppercase tracking-wider">Отозвать</button>
         </div>
     </div>
 </div>
 
-<div id="userDetailsModal" class="modal-overlay modal-xl">
-    <div class="modal-content">
+<!-- Revoke ALL Keys Confirmation Modal -->
+<div id="revokeAllConfirmModal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-content overflow-hidden">
+        <div class="p-4 border-b border-red-500/30 flex items-center justify-between bg-red-500/10">
+            <h5 class="text-white font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-red-400">delete_forever</span>
+                Отозвать ВСЕ ключи
+            </h5>
+            <button onclick="closeModal('revokeAllConfirmModal')" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="text-white mb-2">Вы уверены, что хотите отозвать <span
+                    class="text-red-500 font-bold underline">ВСЕ</span> ключи этого пользователя?</p>
+            <p class="text-red-400/80 text-xs font-bold uppercase tracking-widest">⚠️ Все подписки будут аннулированы
+                немедленно!</p>
+        </div>
+        <div class="p-4 border-t border-white/10 flex justify-end gap-2 bg-black/20">
+            <button onclick="closeModal('revokeAllConfirmModal')"
+                class="px-4 py-2 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors text-sm font-bold uppercase tracking-wider">Отмена</button>
+            <button id="revokeAllConfirmBtn"
+                class="px-5 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 text-sm uppercase tracking-wider">Отозвать
+                всё</button>
+        </div>
+    </div>
+</div>
+
+<!-- Ban User Confirmation Modal -->
+<div id="banConfirmModal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-content overflow-hidden">
+        <div class="p-4 border-b border-orange-500/30 flex items-center justify-between bg-orange-500/10">
+            <h5 class="text-white font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-orange-400">block</span>
+                Изменение статуса доступа
+            </h5>
+            <button onclick="closeModal('banConfirmModal')" class="text-white/50 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="text-white mb-2" id="banModalText">Вы уверены, что хотите изменить статус блокировки пользователя?
+            </p>
+            <p class="text-white/40 text-[10px] uppercase font-bold tracking-widest">📩 Пользователь получит уведомление
+                в боте</p>
+        </div>
+        <div class="p-4 border-t border-white/10 flex justify-end gap-2 bg-black/20">
+            <button onclick="closeModal('banConfirmModal')"
+                class="px-4 py-2 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors text-sm font-bold uppercase tracking-wider">Отмена</button>
+            <button id="banConfirmBtn"
+                class="px-5 py-2 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 text-sm uppercase tracking-wider">Изменить
+                статус</button>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Confirmation Modal for Clear Actions -->
+<div id="confirmClearModal" class="modal-overlay" style="z-index: 1200;">
+    <div class="modal-content overflow-hidden border border-red-500/20 shadow-2xl shadow-red-500/10">
+        <div class="p-5 border-b border-red-500/20 flex items-center justify-between bg-red-500/5">
+            <h5 class="text-white font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
+                <span class="material-symbols-outlined text-red-500">warning</span>
+                <span id="ccm-title">Подтверждение</span>
+            </h5>
+            <button onclick="closeModal('confirmClearModal')" class="text-white/30 hover:text-white transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="text-white/80 text-sm leading-relaxed mb-1" id="ccm-message"></p>
+            <p class="text-red-500/60 text-[10px] uppercase font-black tracking-widest italic">Действие абсолютно
+                необратимо!</p>
+        </div>
+        <div class="p-4 border-t border-white/5 flex justify-end gap-3 bg-black/20">
+            <button onclick="closeModal('confirmClearModal')"
+                class="px-5 py-2 rounded-xl bg-white/5 text-white/60 hover:bg-white/10 transition-colors text-[10px] font-black uppercase tracking-widest border border-white/10">
+                Отмена
+            </button>
+            <button id="ccm-confirm-btn"
+                class="px-6 py-2 rounded-xl bg-red-500 text-white font-black hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 text-[10px] uppercase tracking-widest border border-red-400/30">
+                Очистить
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="userDetailsModal" class="modal-overlay modal-xl" style="z-index: 1050;">
+    <div class="modal-content bg-[#101815] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
             <h5 class="text-white font-bold">Информация о пользователе</h5>
             <button onclick="closeModal('userDetailsModal')" class="text-white/50 hover:text-white">
@@ -238,126 +335,393 @@
                 <p class="text-white/50 mt-2">Загрузка...</p>
             </div>
             <div id="udm-content" class="hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-white/5 border border-white/10 rounded-lg p-4">
-                        <h4 class="text-white font-bold mb-4">Основная информация</h4>
-                        <table class="w-full text-sm">
-                            <tbody class="divide-y divide-white/10">
-                                <tr>
-                                    <td class="py-2 text-white/70">Telegram ID:</td>
-                                    <td class="py-2 text-white" id="udm-telegram-id"></td>
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-white/70">Username:</td>
-                                    <td class="py-2 text-white" id="udm-username"></td>
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-white/70">Регистрация:</td>
-                                    <td class="py-2 text-white" id="udm-registration"></td>
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-white/70">Баланс:</td>
-                                    <td class="py-2 text-white" id="udm-balance"></td>
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-white/70">Потрачено всего:</td>
-                                    <td class="py-2 text-white" id="udm-total-spent"></td>
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-white/70">Приобретено месяцев:</td>
-                                    <td class="py-2 text-white" id="udm-total-months"></td>
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-white/70">Пробный:</td>
-                                    <td class="py-2">
-                                        <label class="inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" id="udm-trial-toggle" data-user-id=""
-                                                class="sr-only peer">
-                                            <div
-                                                class="relative w-11 h-6 bg-white/10 peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- LEFT COLUMN: User Profile & Finance -->
+                    <div class="flex flex-col gap-4 h-full">
+                        <!-- Profile Block -->
+                        <div
+                            class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-inner relative overflow-hidden group">
+                            <div
+                                class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <span class="material-symbols-outlined text-6xl text-white">person</span>
+                            </div>
+                            <div class="relative z-10 flex items-start gap-4">
+                                <div
+                                    class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary border border-primary/20 shadow-lg shadow-primary/5">
+                                    <span class="material-symbols-outlined text-3xl">badge</span>
+                                </div>
+                                <div class="flex-1 min-w-0 pt-1">
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="text-white font-bold text-xl leading-tight truncate select-all"
+                                            id="udm-username"></h4>
+                                        <span id="udm-pinned-badge"
+                                            class="hidden material-symbols-outlined text-primary text-lg">push_pin</span>
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-x-2.5 gap-y-2 mt-2.5">
+                                        <span
+                                            class="text-white/40 text-sm font-mono bg-black/30 px-2 py-0.5 rounded select-all"
+                                            id="udm-telegram-id"></span>
+                                        <div class="flex items-center gap-2">
+                                            <div class="px-1.5 py-0.5 rounded bg-white/5 text-white/40 text-[10px] uppercase font-bold tracking-wider"
+                                                title="Дата регистрации">
+                                                <span
+                                                    class="material-symbols-outlined text-[13px] opacity-30">calendar_today</span>
+                                                <span id="udm-registration" class="font-mono pt-px"></span>
                                             </div>
-                                            <span class="ml-2 text-white/70 text-sm" id="udm-trial-label"></span>
-                                        </label>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="bg-white/5 border border-white/10 rounded-lg p-4">
-                        <h4 class="text-white font-bold mb-4">Реферальная система</h4>
-                        <table class="w-full text-sm">
-                            <tbody class="divide-y divide-white/10">
-                                <tr>
-                                    <td class="py-2 text-white/70">Реф. код:</td>
-                                    <td class="py-2 text-white" id="udm-ref-code"></td>
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-white/70">Рефералов:</td>
-                                    <td class="py-2 text-white" id="udm-ref-count"></td>
-                                </tr>
-                                <td class="py-2 text-white/70">Приглашён:</td>
-                                <td class="py-2 text-white" id="udm-referred-by"></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2" class="pt-4 border-t border-white/10 mt-2">
-                                        <div
-                                            class="text-white/70 mb-2 text-xs uppercase font-bold flex justify-between items-center">
-                                            <span>Приглашенные (<span id="udm-refs-total">0</span>)</span>
                                         </div>
-                                        <div id="udm-referrals-container"
-                                            class="custom-scroll max-h-[140px] overflow-y-auto pr-1">
-                                            <ul id="udm-referrals-list" class="space-y-1 text-sm"></ul>
-                                        </div>
-                                        <button id="udm-refs-load-more"
-                                            class="w-full mt-2 py-1 flex items-center justify-center text-primary hover:bg-white/5 rounded transition-colors hidden"
-                                            title="Загрузить еще">
-                                            <span class="material-symbols-outlined">expand_more</span>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <div class="bg-white/5 border border-white/10 rounded-lg">
-                        <div class="p-4 border-b border-white/10">
-                            <h4 class="text-white font-bold">Подписки <span id="udm-subs-stats"
-                                    class="text-white/50 text-sm font-normal"></span></h4>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div id="udm-subs-list" class="max-h-[450px] overflow-y-auto divide-y divide-white/10"></div>
+
+                        <!-- Finance Grid -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Balance -->
+                            <div
+                                class="bg-white/5 border border-white/10 rounded-2xl p-4 shadow-inner flex flex-col justify-between h-full relative overflow-hidden group">
+                                <div
+                                    class="absolute -bottom-4 -right-4 w-20 h-20 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition-colors">
+                                </div>
+                                <div class="flex items-center gap-2 text-primary/80">
+                                    <span class="material-symbols-outlined text-lg">account_balance_wallet</span>
+                                    <span class="text-[10px] font-bold uppercase tracking-wider">Баланс</span>
+                                </div>
+                                <div>
+                                    <div class="text-2xl font-bold text-white tracking-tight" id="udm-balance"></div>
+                                    <div class="text-[10px] text-white/40 mt-1">Текущий счет</div>
+                                </div>
+                            </div>
+
+                            <!-- Spent & Months -->
+                            <div class="flex flex-col gap-4">
+                                <div
+                                    class="bg-white/5 border border-white/10 rounded-2xl p-3 flex-1 flex items-center gap-3">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/50">
+                                        <span class="material-symbols-outlined text-xl">payments</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-white" id="udm-total-spent"></div>
+                                        <div class="text-[9px] text-white/30 uppercase font-bold tracking-wider">
+                                            Потрачено</div>
+                                    </div>
+                                </div>
+                                <div
+                                    class="bg-white/5 border border-white/10 rounded-2xl p-3 flex-1 flex items-center gap-3">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/50">
+                                        <span class="material-symbols-outlined text-xl">calendar_month</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-white" id="udm-total-months"></div>
+                                        <div class="text-[9px] text-white/30 uppercase font-bold tracking-wider">Месяцев
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Details Block (Reg & Trial) -->
+                        <div
+                            class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-inner space-y-5 flex-1 flex flex-col justify-center">
+                            <div class="flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+                                        <span class="material-symbols-outlined text-lg">history_toggle_off</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-white uppercase tracking-wide">Пробный период
+                                        </div>
+                                        <div class="text-[10px] text-white/40" id="udm-trial-label"></div>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="udm-trial-toggle" class="sr-only peer">
+                                    <div
+                                        class="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500">
+                                    </div>
+                                </label>
+                            </div>
+
+
+
+                            <!-- INDIVIDUAL SETTINGS BLOCK -->
+                            <div class="border-t border-white/5 pt-3 mt-1">
+                                <div class="flex items-center justify-between">
+                                    <span
+                                        class="text-[10px] uppercase font-bold text-white/30 tracking-wider">Индивидуальные
+                                        настройки</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="udm-seller-active" class="sr-only peer">
+                                        <div
+                                            class="w-9 h-5 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div id="udm-seller-settings"
+                                    class="hidden mt-3 space-y-3 bg-white/5 p-3 rounded-xl border border-white/10">
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <label
+                                                class="flex items-center text-[9px] uppercase font-bold text-white/30 mb-1">
+                                                Скидка (%)
+                                                <span
+                                                    class="material-symbols-outlined text-[10px] ml-1 opacity-40">info</span>
+                                            </label>
+                                            <input type="number" step="0.1" id="udm-seller-sale"
+                                                class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50"
+                                                placeholder="0">
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="flex items-center text-[9px] uppercase font-bold text-white/30 mb-1">
+                                                Реф. (%)
+                                                <span
+                                                    class="material-symbols-outlined text-[10px] ml-1 opacity-40">info</span>
+                                            </label>
+                                            <input type="number" step="0.1" id="udm-seller-ref"
+                                                class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50"
+                                                placeholder="0">
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="flex items-center text-[9px] uppercase font-bold text-white/30 mb-1">
+                                                UUID
+                                                <span
+                                                    class="material-symbols-outlined text-[10px] ml-1 opacity-40">info</span>
+                                            </label>
+                                            <input type="text" id="udm-seller-uuid"
+                                                class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-primary/50"
+                                                placeholder="0">
+                                        </div>
+                                    </div>
+                                    <button id="udm-save-seller-btn"
+                                        class="w-full py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all mt-1">
+                                        Сохранить настройки
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: Referral System -->
+                    <div
+                        class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-inner flex flex-col h-full min-h-[300px] relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                            <span class="material-symbols-outlined text-9xl text-white">group_add</span>
+                        </div>
+
+                        <div class="flex items-center gap-4 mb-6 relative z-10">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center text-purple-400 border border-purple-500/20 shadow-lg shadow-purple-500/5">
+                                <span class="material-symbols-outlined text-2xl">diversity_3</span>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-bold text-lg leading-tight">Рефералы</h4>
+                                <p class="text-white/40 text-xs mt-0.5">Статистика приглашений</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 flex-1 flex flex-col relative z-10">
+                            <!-- Ref Info Cards Compact -->
+                            <div class="flex gap-2">
+                                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl px-3 py-2 hover:bg-white/5 transition-colors cursor-pointer group flex h-10 items-center justify-between"
+                                    onclick="copyToClipboard(document.getElementById('udm-ref-code').innerText, this)">
+                                    <div
+                                        class="text-[8px] font-bold text-white/40 uppercase tracking-widest group-hover:text-purple-400 transition-colors">
+                                        ваш Код</div>
+                                    <div class="text-[11px] font-bold text-white font-mono flex items-center gap-1.5">
+                                        <span id="udm-ref-code"></span>
+                                        <span
+                                            class="material-symbols-outlined text-[10px] opacity-0 group-hover:opacity-50">content_copy</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex-1 bg-black/20 border border-white/5 rounded-xl px-3 py-2 flex h-10 items-center justify-between overflow-hidden">
+                                    <div
+                                        class="text-[8px] font-bold text-white/40 uppercase tracking-widest flex-shrink-0 mr-2">
+                                        Пригласил</div>
+                                    <div class="text-[11px] font-bold text-white truncate text-purple-300 text-right"
+                                        id="udm-referred-by"></div>
+                                </div>
+                            </div>
+
+                            <!-- Ref List Section -->
+                            <div
+                                class="flex-1 bg-black/20 border border-white/5 rounded-2xl p-4 flex flex-col relative overflow-hidden">
+                                <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                                    <div class="flex items-center gap-3">
+                                        <span
+                                            class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Список
+                                            приглашенных</span>
+                                        <label
+                                            class="relative inline-flex items-center cursor-pointer scale-75 origin-left"
+                                            title="Показывать тех, кто потратил > 0₽, первыми">
+                                            <input type="checkbox" id="udm-ref-filter-spent" class="sr-only peer">
+                                            <div
+                                                class="w-9 h-5 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/60 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary/60 peer-checked:after:bg-white">
+                                            </div>
+                                            <span
+                                                class="ml-2 text-[9px] font-bold text-white/30 uppercase tracking-widest peer-checked:text-primary transition-colors">Активные</span>
+                                        </label>
+                                    </div>
+                                    <span
+                                        class="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-bold"
+                                        id="udm-ref-count-badge">
+                                        <span id="udm-ref-count">0</span> / <span id="udm-refs-total">0</span>
+                                    </span>
+                                </div>
+
+                                <div class="custom-scroll pr-1 -mr-1 overflow-y-auto h-[222px]">
+                                    <ul id="udm-referrals-list" class="space-y-2 pb-2"></ul>
+                                </div>
+
+                                <div>
+                                    <button id="udm-refs-load-more"
+                                        class="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-2 hidden">
+                                        <span class="material-symbols-outlined text-sm">expand_circle_down</span>
+                                        Загрузить больше
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Quick Actions Toolbar -->
+                <div class="mb-6 grid grid-cols-4 md:grid-cols-7 gap-3">
+                    <button id="udm-action-pin"
+                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        <span id="udm-action-pin-icon"
+                            class="material-symbols-outlined text-white/50 group-hover:text-primary transition-colors">push_pin</span>
+                        <span id="udm-action-pin-text"
+                            class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Закреп</span>
+                    </button>
+                    <button id="udm-action-issue"
+                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        <span
+                            class="material-symbols-outlined text-white/50 group-hover:text-primary transition-colors">vpn_key</span>
+                        <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Выдать</span>
+                    </button>
+                    <button id="udm-action-add-bal"
+                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        <span
+                            class="material-symbols-outlined text-white/50 group-hover:text-green-400 transition-colors">add_card</span>
+                        <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Пополнить</span>
+                    </button>
+                    <button id="udm-action-sub-bal"
+                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        <span
+                            class="material-symbols-outlined text-white/50 group-hover:text-red-400 transition-colors">credit_card_off</span>
+                        <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Списать</span>
+                    </button>
+                    <button id="udm-action-msg"
+                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        <span
+                            class="material-symbols-outlined text-white/50 group-hover:text-blue-400 transition-colors">mail</span>
+                        <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Написать</span>
+                    </button>
+                    <button id="udm-action-ban"
+                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        <span
+                            class="material-symbols-outlined text-white/50 group-hover:text-red-500 transition-colors">block</span>
+                        <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Бан</span>
+                    </button>
+                    <button id="udm-action-revoke-all"
+                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        <span
+                            class="material-symbols-outlined text-white/50 group-hover:text-red-500 transition-colors">delete_forever</span>
+                        <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Отозвать</span>
+                    </button>
+                </div>
+
+                <!-- Subscriptions Section -->
                 <div class="mb-6">
-                    <div class="bg-white/5 border border-white/10 rounded-lg">
-                        <div class="p-4 border-b border-white/10">
-                            <h4 class="text-white font-bold">История платежей</h4>
+                    <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
+                        <div class="p-5 border-b border-white/10 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                    <span class="material-symbols-outlined text-xl">vpn_key</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm uppercase tracking-wide">Подписки</h4>
+                                    <p class="text-white/40 text-[10px] font-medium" id="udm-subs-stats"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="udm-subs-list" class="max-h-[450px] overflow-y-auto divide-y divide-white/5 p-2"></div>
+                    </div>
+                </div>
+
+                <!-- Payment History Section -->
+                <div class="mb-6">
+                    <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
+                        <div class="p-5 border-b border-white/10 flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
+                                    <span class="material-symbols-outlined text-xl">receipt_long</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm uppercase tracking-wide">История платежей
+                                    </h4>
+                                    <p class="text-white/40 text-[10px] font-medium">Транзакции покупки подписок</p>
+                                </div>
+                            </div>
+                            <button id="udm-clear-payment-history"
+                                class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider border border-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
+                                title="Очистить всю историю платежей">
+                                <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                                Очистить всё
+                            </button>
                         </div>
                         <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
                             <table class="w-full text-sm">
-                                <thead class="bg-[#102219] sticky top-0 z-10">
+                                <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
                                     <tr>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Дата</td>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Тариф</td>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Хост</td>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Тип</td>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Сумма</td>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Дата</th>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Тариф</th>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Хост</th>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Тип</th>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Сумма</th>
                                     </tr>
                                 </thead>
-                                <tbody id="udm-payment-history" class="divide-y divide-white/10"></tbody>
+                                <tbody id="udm-payment-history" class="divide-y divide-white/5"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
+                <!-- Balance History Section -->
                 <div>
-                    <div class="bg-white/5 border border-white/10 rounded-lg">
-                        <div class="p-4 border-b border-white/10 flex justify-between items-center">
-                            <h4 class="text-white font-bold">История транзакций баланса</h4>
+                    <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
+                        <div class="p-5 border-b border-white/10 flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+                                    <span class="material-symbols-outlined text-xl">account_balance</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm uppercase tracking-wide">История баланса
+                                    </h4>
+                                    <p class="text-white/40 text-[10px] font-medium">Пополнения и списания</p>
+                                </div>
+                            </div>
                             <button id="udm-clear-balance-history"
-                                class="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center gap-1 text-xs"
+                                class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider border border-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
                                 title="Очистить всю историю баланса">
                                 <span class="material-symbols-outlined text-sm">delete_sweep</span>
                                 Очистить всё
@@ -365,16 +729,26 @@
                         </div>
                         <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
                             <table class="w-full text-sm">
-                                <thead class="bg-[#102219] sticky top-0 z-10">
+                                <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
                                     <tr>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Дата</td>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Тариф</td>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Хост</td>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Тип</td>
-                                        <td class="px-4 py-2 text-left text-white/70 font-bold">Сумма</td>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Дата</th>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Тариф</th>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Хост</th>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Тип</th>
+                                        <th
+                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
+                                            Сумма</th>
                                     </tr>
                                 </thead>
-                                <tbody id="udm-balance-history" class="divide-y divide-white/10"></tbody>
+                                <tbody id="udm-balance-history" class="divide-y divide-white/5"></tbody>
                             </table>
                         </div>
                     </div>
@@ -388,27 +762,57 @@
 {% block scripts %}
 <script>
     (function () {
-        async function clearBalanceHistory(uid) {
-            if (!confirm('Вы уверены, что хотите полностью очистить историю транзакций баланса для этого пользователя? Это действие необратимо.')) return;
 
-            try {
-                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-                const resp = await fetch(`{{ url_for('clear_balance_history_route', user_id=0) }}`.replace('/0/', `/${uid}/`), {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': csrfToken },
-                    credentials: 'same-origin'
-                });
-                const data = await resp.json();
-                if (data && data.ok) {
-                    showToast('success', data.message || 'История очищена');
-                    // Refresh history in modal
-                    document.getElementById('udm-balance-history').innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-white/50">История очищена</td></tr>';
-                } else {
-                    showToast('danger', (data && data.error) || 'Ошибка при очистке');
+        async function clearBalanceHistory(uid) {
+            showConfirmModal(
+                'Очистка истории баланса',
+                'Вы уверены, что хотите полностью очистить историю транзакций баланса для этого пользователя?',
+                async () => {
+                    try {
+                        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                        const resp = await fetch(`{{ url_for('clear_balance_history_route', user_id=0) }}`.replace('/0/', `/${uid}/`), {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': csrfToken },
+                            credentials: 'same-origin'
+                        });
+                        const data = await resp.json();
+                        if (data && data.ok) {
+                            showToast('success', data.message || 'История очищена');
+                            document.getElementById('udm-balance-history').innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-white/50">История очищена</td></tr>';
+                        } else {
+                            showToast('danger', (data && data.error) || 'Ошибка при очистке');
+                        }
+                    } catch (e) {
+                        showToast('danger', 'Ошибка соединения: ' + e.message);
+                    }
                 }
-            } catch (e) {
-                showToast('danger', 'Ошибка соединения: ' + e.message);
-            }
+            );
+        }
+
+        async function clearPaymentHistory(uid) {
+            showConfirmModal(
+                'Очистка истории платежей',
+                'Вы уверены, что хотите полностью очистить историю внешних платежей для этого пользователя?',
+                async () => {
+                    try {
+                        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                        const resp = await fetch(`{{ url_for('clear_payment_history_route', user_id=0) }}`.replace('/0/', `/${uid}/`), {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': csrfToken },
+                            credentials: 'same-origin'
+                        });
+                        const data = await resp.json();
+                        if (data && data.ok) {
+                            showToast('success', data.message || 'История очищена');
+                            document.getElementById('udm-payment-history').innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
+                        } else {
+                            showToast('danger', (data && data.error) || 'Ошибка при очистке');
+                        }
+                    } catch (e) {
+                        showToast('danger', 'Ошибка соединения: ' + e.message);
+                    }
+                }
+            );
         }
 
         document.getElementById('udm-clear-balance-history')?.addEventListener('click', function () {
@@ -416,10 +820,64 @@
             if (uid) clearBalanceHistory(uid);
         });
 
+        document.getElementById('udm-clear-payment-history')?.addEventListener('click', function () {
+            const uid = document.getElementById('udm-trial-toggle').getAttribute('data-user-id');
+            if (uid) clearPaymentHistory(uid);
+        });
+
         const input = document.getElementById('users-search');
+        const clearBtn = document.getElementById('search-clear');
         const table = document.getElementById('users-table');
         const tbody = document.getElementById('users-tbody');
         if (!input || !table || !tbody) return;
+
+        const toggleClearBtn = () => {
+            if (clearBtn) clearBtn.classList.toggle('hidden', !input.value);
+        };
+        input.addEventListener('input', toggleClearBtn);
+        clearBtn?.addEventListener('click', () => {
+            input.value = '';
+            toggleClearBtn();
+            input.focus();
+            input.dispatchEvent(new Event('input'));
+        });
+        toggleClearBtn();
+
+        // ===== LAZY LOAD LOGIC =====
+        const loadUsersTable = async () => {
+            const url = new URL(tbody.dataset.fetchUrl, location.origin);
+            try {
+                const resp = await fetch(url, { headers: { 'Accept': 'text/html' } });
+                if (resp.ok) {
+                    tbody.innerHTML = await resp.text();
+                    updatePagination(url); // Helper to reload pagination if needed
+                }
+            } catch (e) {
+                console.error("Failed to load users:", e);
+                tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-red-500">Ошибка загрузки</td></tr>';
+            }
+        };
+
+        const updatePagination = async (currentUrl) => {
+            const pagEl = document.getElementById('users-pagination');
+            if (pagEl) {
+                const pagUrl = new URL(pagEl.dataset.src, location.origin);
+                // Copy params from current table url (like q, page) to pagination url
+                currentUrl.searchParams.forEach((v, k) => pagUrl.searchParams.set(k, v));
+                try {
+                    const resp = await fetch(pagUrl, { headers: { 'Accept': 'text/html' } });
+                    if (resp.ok) pagEl.innerHTML = await resp.text();
+                } catch (_) { }
+            }
+        };
+
+        // Загружаем сразу
+        loadUsersTable();
+
+        // Автообновление (если нужно)
+        if (tbody.dataset.fetchInterval) {
+            setInterval(loadUsersTable, parseInt(tbody.dataset.fetchInterval));
+        }
 
         const LS_KEY = 'users_open_keys_ids';
         function loadOpenSet() {
@@ -495,12 +953,29 @@
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(async () => {
                 const url = new URL(tbody.getAttribute('data-fetch-url'), location.origin);
-                url.searchParams.set('q', input.value || '');
+                const qValue = input.value || '';
+                url.searchParams.set('q', qValue);
                 url.searchParams.set('page', '1');
                 try {
                     const resp = await fetch(url, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
                     if (resp.ok) {
                         tbody.innerHTML = await resp.text();
+                        // Важно: обновляем data-fetch-url для будущих AJAX рефрешей
+                        tbody.setAttribute('data-fetch-url', url.toString());
+
+                        // Также обновляем URL в пагинации если она есть
+                        const pagEl = document.getElementById('users-pagination');
+                        if (pagEl) {
+                            const pagUrl = new URL(pagEl.getAttribute('data-src'), location.origin);
+                            pagUrl.searchParams.set('q', qValue);
+                            pagUrl.searchParams.set('page', '1');
+                            pagEl.setAttribute('data-src', pagUrl.toString());
+
+                            // Загружаем актуальную пагинацию
+                            const pResp = await fetch(pagUrl, { headers: { 'Accept': 'text/html' } });
+                            if (pResp.ok) pagEl.innerHTML = await pResp.text();
+                        }
+
                         restoreOpenedKeys();
                         applyFilter();
                     }
@@ -522,14 +997,8 @@
             }
         });
 
-        table.addEventListener('click', async function (e) {
-            const btn = e.target.closest('.btn-user-balance-sign');
-            if (!btn) return;
-            const uid = btn.getAttribute('data-uid');
-            const uname = btn.getAttribute('data-username') || 'N/A';
-            const balance = btn.getAttribute('data-balance') || '0.00';
-            const sign = btn.getAttribute('data-sign') || '';
-
+        // Reusable function to open balance modal
+        async function openBalanceModalForUser(uid, uname, balance, sign = '') {
             let refs = [];
             try {
                 const resp = await fetch(`{{ url_for('user_referrals_json', user_id=0) }}`.replace('/0/', `/${uid}/`), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
@@ -549,80 +1018,277 @@
                 setTimeout(() => { deltaInput.focus(); deltaInput.setSelectionRange(1, 1); }, 100);
             }
             openModal('balanceModal');
+        }
+
+        table.addEventListener('click', async function (e) {
+            const btn = e.target.closest('.btn-user-balance-sign');
+            if (!btn) return;
+            const uid = btn.getAttribute('data-uid');
+            const uname = btn.getAttribute('data-username') || 'N/A';
+            const balance = btn.getAttribute('data-balance') || '0.00';
+            const sign = btn.getAttribute('data-sign') || '';
+
+            openBalanceModalForUser(uid, uname, balance, sign);
         });
 
-        document.getElementById('bm-form')?.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const form = this;
+        // Reusable function to open message modal
+        function openMessageModalForUser(uid, uname) {
+            document.getElementById('mm-user').textContent = `@${uname} (#${uid})`;
+            document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
+            document.querySelector('#mm-form textarea[name="message"]').value = '';
+            openModal('messageModal');
+        }
+
+        // Reusable function to ban user
+        async function banUser(uid, uname) {
+            document.getElementById('banModalText').innerHTML = `Вы уверены, что хотите изменить статус блокировки для <span class="text-primary font-bold">@${uname}</span>?`;
+
+            const confirmBtn = document.getElementById('banConfirmBtn');
+            confirmBtn.onclick = async () => {
+                const data = await apiRequest(
+                    `{{ url_for('toggle_block_user_route', user_id=0) }}`.replace('/0/', `/${uid}/`),
+                    'POST',
+                    {},
+                    'Статус блокировки изменен'
+                );
+                if (data) {
+                    closeModal('banConfirmModal');
+                    // Refresh details if modal is open
+                    const udmContent = document.getElementById('udm-content');
+                    if (!udmContent.classList.contains('hidden')) {
+                        fetchUserDetails(uid);
+                    }
+                }
+            };
+            openModal('banConfirmModal');
+        }
+
+        // Reusable function to revoke all keys
+        async function revokeAllKeys(uid, uname) {
+            const confirmBtn = document.getElementById('revokeAllConfirmBtn');
+            confirmBtn.onclick = async () => {
+                const data = await apiRequest(
+                    `{{ url_for('revoke_keys_route', user_id=0) }}`.replace('/0/', `/${uid}/`),
+                    'POST',
+                    {},
+                    'Все ключи пользователя отозваны'
+                );
+                if (data) {
+                    closeModal('revokeAllConfirmModal');
+                    const udmContent = document.getElementById('udm-content');
+                    if (!udmContent.classList.contains('hidden')) {
+                        fetchUserDetails(uid);
+                    }
+                }
+            };
+            openModal('revokeAllConfirmModal');
+        }
+
+        // ===== УНИВЕРСАЛЬНЫЙ ЗАПРОС =====
+        async function apiRequest(url, method, body, successMsg) {
             try {
-                const fd = new FormData(form);
-                const resp = await fetch(form.action, {
-                    method: 'POST', body: fd,
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                const fd = body instanceof FormData ? body : new FormData();
+                if (!(body instanceof FormData) && typeof body === 'object') Object.entries(body).forEach(([k, v]) => fd.append(k, v));
+
+                const csrfToken = getCsrfToken();
+                fd.append('csrf_token', csrfToken);
+
+                const resp = await fetch(url, {
+                    method,
+                    body: fd,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrfToken
+                    },
                     credentials: 'same-origin'
                 });
-                const data = await resp.json().catch(() => null);
-                if (resp.ok && data && data.ok) {
-                    showToast('success', data.message || 'Баланс изменён');
-                    closeModal('balanceModal');
-                    refreshContainerById('users-tbody');
-                } else {
-                    showToast('danger', (data && data.message) || 'Не удалось изменить баланс');
+                const data = await resp.json().catch(() => ({ ok: resp.ok }));
+                if (data.ok) {
+                    if (successMsg) showToast('success', successMsg);
+                    return data;
                 }
-            } catch (_) { showToast('danger', 'Ошибка сети'); }
+                showToast('danger', (data && data.message) || data.error || 'Ошибка операции');
+                return null;
+            } catch (e) {
+                showToast('danger', 'Ошибка сети: ' + e.message);
+                return null;
+            }
+        }
+
+        // ===== УНИВЕРСАЛЬНЫЙ ЗАПРОС ПЕРЕНЕСЕН В BASE.HTML =====
+
+        // Оставляем только специфичную логику если нужно, но AJAX формы теперь в base.html
+
+        document.addEventListener('submit', (e) => {
+            const form = e.target.closest('#commentForm, #expiryForm, #revokeKeyInternalForm'); // Для внутренних форм модалок если они есть
+            if (!form) return;
+            // Здесь можно оставить специфичную логику для модалок ключей
         });
+
+        // ===== AJAX НАВИГАЦИЯ =====
+        document.addEventListener('click', async (e) => {
+            const link = e.target.closest('.ajax-nav');
+            if (!link) return;
+
+            e.preventDefault();
+            const href = link.getAttribute('href');
+            if (!href) return;
+
+            history.pushState(null, '', href);
+            const urlObj = new URL(href, location.origin);
+            const params = new URLSearchParams(urlObj.search);
+            await updateTableAndPagination(params);
+        });
+
+        window.addEventListener('popstate', () => {
+            const params = new URLSearchParams(location.search);
+            updateTableAndPagination(params);
+        });
+
+        async function updateTableAndPagination(params) {
+            const tbody = document.getElementById('users-tbody');
+            const pagEl = document.getElementById('users-pagination');
+            if (!tbody) return;
+
+            const tableBaseUrl = tbody.getAttribute('data-fetch-url').split('?')[0];
+            const tableUrl = `${tableBaseUrl}?${params.toString()}`;
+
+            let pagUrl = '';
+            if (pagEl) {
+                const pagBaseUrl = pagEl.getAttribute('data-src').split('?')[0];
+                pagUrl = `${pagBaseUrl}?${params.toString()}`;
+            }
+
+            try {
+                const [tableResp, pagResp] = await Promise.all([
+                    fetch(tableUrl, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' }),
+                    pagUrl ? fetch(pagUrl, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' }) : Promise.resolve(null)
+                ]);
+
+                if (tableResp.ok) {
+                    const html = await tableResp.text();
+                    if (isLoginPage(html)) { window.location.reload(); return; }
+                    tbody.innerHTML = html;
+                    tbody.setAttribute('data-fetch-url', tableUrl); // Синхронизируем URL для рефреша
+                    restoreOpenedKeys(); // Restore opened key rows state
+                }
+
+                if (pagResp && pagResp.ok && pagEl) {
+                    const html = await pagResp.text();
+                    if (isLoginPage(html)) { window.location.reload(); return; }
+                    pagEl.innerHTML = html;
+                    // Update data-src for next usage
+                    pagEl.setAttribute('data-src', pagUrl);
+                }
+            } catch (err) {
+                console.error('Navigation error:', err);
+                showToast('danger', 'Ошибка загрузки данных');
+            }
+        }
 
         table.addEventListener('click', function (e) {
             const btn = e.target.closest('.btn-user-message');
             if (!btn) return;
             const uid = btn.getAttribute('data-uid');
             const uname = btn.getAttribute('data-username') || 'N/A';
-            document.getElementById('mm-user').textContent = `@${uname} (#${uid})`;
-            document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
-            document.querySelector('#mm-form textarea[name="message"]').value = '';
-            openModal('messageModal');
-        });
 
-        document.getElementById('mm-form')?.addEventListener('submit', async function (e) {
             e.preventDefault();
-            const form = this;
-            try {
-                const fd = new FormData(form);
-                const resp = await fetch(form.action, {
-                    method: 'POST', body: fd,
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    credentials: 'same-origin'
-                });
-                const data = await resp.json().catch(() => null);
-                if (resp.ok && data && data.ok) {
-                    showToast('success', data.message || 'Сообщение отправлено');
-                    closeModal('messageModal');
-                } else {
-                    showToast('danger', (data && data.message) || 'Не удалось отправить сообщение');
-                }
-            } catch (_) { showToast('danger', 'Ошибка сети'); }
+            openMessageModalForUser(uid, uname);
         });
 
-        table.addEventListener('click', async function (e) {
-            const btn = e.target.closest('.btn-user-details');
-            if (!btn) return;
-            const uid = btn.getAttribute('data-uid');
-
+        async function fetchUserDetails(uid) {
             document.getElementById('udm-loading').classList.remove('hidden');
             document.getElementById('udm-content').classList.add('hidden');
-            openModal('userDetailsModal');
 
             try {
                 const resp = await fetch(`{{ url_for('user_details_json', user_id=0) }}`.replace('/0/', `/${uid}/`), {
-                    headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
                 });
                 const data = await resp.json();
+                if (typeof data === 'string' && isLoginPage(data)) { window.location.reload(); return; }
 
                 if (data && data.ok) {
+                    // Seller Settings Logic
+                    const sellerInfo = data.seller_info || { active: false, settings: {} };
+                    const sellerActive = sellerInfo.active;
+                    const sellerSettings = sellerInfo.settings || { seller_sale: 0, seller_ref: 0, seller_uuid: "0" };
+
+                    // Elements
+                    const sellerToggle = document.getElementById('udm-seller-active');
+                    const sellerContainer = document.getElementById('udm-seller-settings');
+                    const sellerSaleInput = document.getElementById('udm-seller-sale');
+                    const sellerRefInput = document.getElementById('udm-seller-ref');
+                    const sellerUuidInput = document.getElementById('udm-seller-uuid');
+                    const sellerSaveBtn = document.getElementById('udm-save-seller-btn');
+
+                    // Init State
+                    if (sellerToggle) {
+                        sellerToggle.checked = sellerActive;
+                        if (sellerActive) {
+                            sellerContainer.classList.remove('hidden');
+                        } else {
+                            sellerContainer.classList.add('hidden');
+                        }
+
+                        sellerSaleInput.value = sellerSettings.seller_sale || 0;
+                        sellerRefInput.value = sellerSettings.seller_ref || 0;
+                        sellerUuidInput.value = sellerSettings.seller_uuid || "0";
+
+                        // Handlers
+                        const saveSellerSettings = async () => {
+                            const payload = new FormData();
+                            payload.append('seller_active', sellerToggle.checked ? 1 : 0);
+                            payload.append('seller_sale', sellerSaleInput.value);
+                            payload.append('seller_ref', sellerRefInput.value);
+                            payload.append('seller_uuid', sellerUuidInput.value);
+
+                            const csrfToken = getCsrfToken();
+                            payload.append('csrf_token', csrfToken);
+
+                            sellerSaveBtn.disabled = true;
+                            const oldText = sellerSaveBtn.textContent;
+                            sellerSaveBtn.textContent = 'Сохранение...';
+
+                            try {
+                                const resp = await fetch(`/admin/users/${uid}/seller_settings`, {
+                                    method: 'POST',
+                                    body: payload,
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'X-CSRFToken': csrfToken
+                                    }
+                                });
+                                const res = await resp.json();
+                                if (res.ok) {
+                                    showToast('success', 'Настройки продавца сохранены');
+                                } else {
+                                    showToast('danger', 'Ошибка: ' + res.error);
+                                }
+                            } catch (e) {
+                                showToast('danger', 'Ошибка сохранения: ' + e);
+                            } finally {
+                                sellerSaveBtn.disabled = false;
+                                sellerSaveBtn.textContent = oldText;
+                            }
+                        };
+
+                        sellerToggle.onchange = () => {
+                            if (sellerToggle.checked) {
+                                sellerContainer.classList.remove('hidden');
+                            } else {
+                                sellerContainer.classList.add('hidden');
+                            }
+                            saveSellerSettings();
+                        };
+
+                        sellerSaveBtn.onclick = saveSellerSettings;
+                    }
+
                     document.getElementById('udm-telegram-id').textContent = data.user.telegram_id || 'N/A';
                     document.getElementById('udm-username').textContent = '@' + (data.user.username || 'N/A');
                     document.getElementById('udm-registration').textContent = data.user.registration_date || 'N/A';
-                    document.getElementById('udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' RUB';
+                    document.getElementById('udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' ₽';
                     document.getElementById('udm-total-months').textContent = (data.user.total_months || 0) + ' мес.';
 
                     const trialToggle = document.getElementById('udm-trial-toggle');
@@ -635,7 +1301,26 @@
                     document.getElementById('udm-ref-count').textContent = data.user.referral_count || '0';
                     document.getElementById('udm-referred-by').textContent = data.user.referred_by?.username ?
                         `@${data.user.referred_by.username} (#${data.user.referred_by.telegram_id})` : 'Не приглашён';
-                    document.getElementById('udm-balance').textContent = (data.user.balance || 0).toFixed(2) + ' RUB';
+                    document.getElementById('udm-balance').textContent = (data.user.balance || 0).toFixed(2) + ' ₽';
+
+                    const pinBadge = document.getElementById('udm-pinned-badge');
+                    if (pinBadge) {
+                        pinBadge.classList.toggle('hidden', !data.user.is_pinned);
+                        pinBadge.style.color = '#22c55e'; // Ярко-зеленый (green-500)
+                    }
+
+                    const pinText = document.getElementById('udm-action-pin-text');
+                    const pinIcon = document.getElementById('udm-action-pin-icon');
+                    if (pinText) pinText.textContent = data.user.is_pinned ? 'Открепить' : 'Закрепить';
+                    if (pinIcon) {
+                        if (data.user.is_pinned) {
+                            pinIcon.style.color = '#22c55e';
+                            pinIcon.classList.add('rotate-45');
+                        } else {
+                            pinIcon.style.color = '';
+                            pinIcon.classList.remove('rotate-45');
+                        }
+                    }
 
                     const subsStats = document.getElementById('udm-subs-stats');
                     const subsList = document.getElementById('udm-subs-list');
@@ -656,30 +1341,32 @@
                             return '';
                         }
                         const durationText = formatDuration(sub.expire_date);
+                        // Extract local part of email
+                        const emailDisp = sub.email ? sub.email.split('@')[0] : 'N/A';
 
                         return `
-                    <div class="p-2 relative bg-white/3 mb-4 border border-white/5 last:mb-0 shadow-lg shadow-black/20">
-                        <div class="flex items-center gap-2 mb-2 flex-wrap justify-between">
+                    <div class="p-4 relative bg-black/20 mb-4 border border-white/5 rounded-2xl last:mb-0 shadow-lg hover:bg-black/30 transition-colors">
+                        <div class="flex items-center gap-2 mb-3 flex-wrap justify-between">
                             <div class="flex items-center gap-2">
                                 <span class="${sub.is_expired ? 'text-red-400' : 'text-primary'} font-bold text-sm">${sub.status_text}</span>
-                                ${durationText ? `<span class="text-white/50 text-sm">${durationText}</span>` : ''}
-                                <span class="text-white/50 text-xs">до: ${sub.expire_date}</span>
+                                ${durationText ? `<span class="text-white/50 text-sm font-medium bg-white/5 px-2 py-0.5 rounded-lg">${durationText}</span>` : ''}
+                                <span class="text-white/30 text-[10px] uppercase font-bold tracking-wider ml-1">Истекает: ${sub.expire_date}</span>
                             </div>
                             <div class="flex items-center gap-2 text-xs text-white/50 font-medium">
-                                ${sub.admin_comment ? `<span class="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400" title="Комментарий админа: ${sub.admin_comment.replace(/"/g, '&quot;')}">${sub.admin_comment}</span>` : ''}
-                                ${sub.user_comment ? `<span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 italic max-w-[150px] truncate" title="Комментарий пользователя: ${sub.user_comment.replace(/"/g, '&quot;')}">${sub.user_comment}</span>` : ''}
-                                <div class="bg-white/5 px-2 py-0.5 rounded">${sub.host_name}</div>
+                                ${sub.admin_comment ? `<span class="px-2 py-0.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20" title="Комментарий админа: ${sub.admin_comment.replace(/"/g, '&quot;')}">${sub.admin_comment}</span>` : ''}
+                                ${sub.user_comment ? `<span class="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 italic max-w-[150px] truncate" title="Комментарий пользователя: ${sub.user_comment.replace(/"/g, '&quot;')}">${sub.user_comment}</span>` : ''}
+                                <div class="bg-white/5 px-2 py-0.5 rounded-lg border border-white/10">${sub.host_name}</div>
                             </div>
                         </div>
-                        <div class="bg-white/5 rounded p-2 font-mono text-sm text-primary break-all mb-2 pr-2 relative flex items-center gap-2">
-                            <span class="flex-1">${sub.key}</span>
+                        <div class="bg-white/5 rounded-xl p-3 font-mono text-sm text-primary break-all mb-3 pr-2 relative flex items-center gap-3 border border-white/5 group-hover:border-white/10 transition-colors">
+                            <span class="flex-1 select-all">${sub.key}</span>
                             <button onclick="copyToClipboard('${sub.key}', this)" 
-                                    class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors"
+                                    class="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 hover:bg-primary/20 hover:text-primary text-white/50 flex items-center justify-center transition-all shadow-lg shadow-black/20"
                                     title="Скопировать ссылку">
                                 <span class="material-symbols-outlined text-sm">content_copy</span>
                             </button>
                             <button onclick="window.open('${sub.key}', '_blank')" 
-                                    class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors"
+                                    class="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 hover:bg-primary/20 hover:text-primary text-white/50 flex items-center justify-center transition-all shadow-lg shadow-black/20"
                                     title="Открыть ссылку">
                                 <span class="material-symbols-outlined text-sm">open_in_new</span>
                             </button>
@@ -689,38 +1376,43 @@
                         <div class="flex items-center gap-2 justify-between flex-wrap mt-2">
                              <!-- Left: Email & UUID -->
                              <div class="flex items-center gap-2 flex-wrap">
-                                <div class="bg-white/5 rounded px-2 py-1 text-xs text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1" 
-                                     onclick="copyToClipboard('${sub.email}', this)" title="Нажмите для копирования">
-                                    <span class="material-symbols-outlined text-[10px] opacity-50">content_copy</span>
-                                    <span class="text-white/50">Email:</span> ${sub.email}
+                                <div class="bg-white/5 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1.5 uppercase tracking-wide group" 
+                                     onclick="copyToClipboard('${sub.email}', this)" title="Скопировать полный email">
+                                    <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">mail</span>
+                                    <span class="text-white/40">Email:</span> <span class="text-white group-hover:text-primary transition-colors">${sub.email}</span>
                                 </div>
-                                <div class="bg-white/5 rounded px-2 py-1 text-xs text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1" 
-                                     onclick="copyToClipboard('${sub.remnawave_user_uuid}', this)" title="Нажмите для копирования">
-                                    <span class="material-symbols-outlined text-[10px] opacity-50">content_copy</span>
-                                    <span class="text-white/50">UUID:</span> ${sub.remnawave_user_uuid}
+                                <div class="bg-white/5 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1.5 uppercase tracking-wide group" 
+                                     onclick="copyToClipboard('${emailDisp}', this)" title="Скопировать имя пользователя">
+                                    <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">person</span>
+                                    <span class="text-white/40">User:</span> <span class="text-white group-hover:text-primary transition-colors">${emailDisp}</span>
+                                </div>
+                                <div class="bg-white/5 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1.5 uppercase tracking-wide group" 
+                                     onclick="copyToClipboard('${sub.remnawave_user_uuid}', this)" title="Скопировать UUID">
+                                    <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">fingerprint</span>
+                                    <span class="text-white/40">UUID:</span> <span class="font-mono text-white group-hover:text-primary transition-colors">${sub.remnawave_user_uuid.substring(0, 8)}...</span>
                                 </div>
                              </div>
 
                              <!-- Right: Buttons -->
                              <div class="flex items-center gap-2 flex-shrink-0">
-                                  <button class="btn-user-edit-expiry w-8 h-8 flex items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors"
+                                  <button class="btn-user-edit-expiry w-8 h-8 flex items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-all"
                                           data-key-id="${sub.key_id}" title="Изменить срок">
                                       <span class="material-symbols-outlined text-sm">schedule</span>
                                   </button>
                                   
-                                  <button class="btn-user-edit-comment w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                                  <button class="btn-user-edit-comment w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10 transition-all"
                                           data-key-id="${sub.key_id}" data-current-comment="${(sub.admin_comment || '').replace(/"/g, '&quot;')}" title="Комментарий">
                                       <span class="material-symbols-outlined text-sm">comment</span>
                                   </button>
 
-                                  <button class="btn-user-revoke-key w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                                  <button class="btn-user-revoke-key w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all"
                                           data-key-id="${sub.key_id}" title="Отозвать">
                                       <span class="material-symbols-outlined text-sm">delete</span>
                                   </button>
                              </div>
                         </div>
                     </div>
-                `}).join('') : '<div class="p-4 text-center text-white/50">Нет подписок</div>';
+                `}).join('') : '<div class="p-8 text-center text-white/30 text-sm font-medium border-2 border-dashed border-white/5 rounded-2xl">Нет активных подписок</div>';
 
                     function formatWithRelative(dateStr) {
                         if (!dateStr) return 'N/A';
@@ -755,25 +1447,25 @@
 
                     const paymentHistory = document.getElementById('udm-payment-history');
                     paymentHistory.innerHTML = data.payment_history?.length ? data.payment_history.map(p => `
-                    <tr>
-                        <td class="px-4 py-2 text-white whitespace-nowrap">${formatWithRelative(p.date)}</td>
-                        <td class="px-4 py-2 text-white">${p.plan || 'N/A'}</td>
-                        <td class="px-4 py-2 text-white">${p.host || 'N/A'}</td>
-                        <td class="px-4 py-2 text-white">${p.type || 'N/A'}</td>
-                        <td class="px-4 py-2 text-white">${(p.amount || 0).toFixed(2)} RUB</td>
+                    <tr class="hover:bg-white/5 transition-colors group">
+                        <td class="px-5 py-2.5 text-xs font-medium text-white/70 whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">${formatWithRelative(p.date)}</td>
+                        <td class="px-5 py-2.5 text-xs font-medium text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none">${p.plan || 'N/A'}</td>
+                        <td class="px-5 py-2.5 text-xs font-medium text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none">${p.host || 'N/A'}</td>
+                        <td class="px-5 py-2.5 text-xs font-bold text-white/60 uppercase tracking-wider whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none text-[10px]">${p.type || 'N/A'}</td>
+                        <td class="px-5 py-2.5 text-xs font-bold text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">${(p.amount || 0).toFixed(2)} ₽</td>
                     </tr>
-                `).join('') : '<tr><td colspan="5" class="px-4 py-4 text-center text-white/50">Нет данных</td></tr>';
+                `).join('') : '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
 
                     const balanceHistory = document.getElementById('udm-balance-history');
                     balanceHistory.innerHTML = data.balance_history?.length ? data.balance_history.map(t => `
-                    <tr>
-                        <td class="px-4 py-2 text-white whitespace-nowrap">${formatWithRelative(t.date)}</td>
-                        <td class="px-4 py-2 text-white">${t.plan || '—'}</td>
-                        <td class="px-4 py-2 text-white">${t.host || '—'}</td>
-                        <td class="px-4 py-2 text-white">${t.type || 'N/A'}</td>
-                        <td class="px-4 py-2 text-white">${(t.amount || 0).toFixed(2)} RUB</td>
+                    <tr class="hover:bg-white/5 transition-colors group">
+                        <td class="px-5 py-2.5 text-xs font-medium text-white/70 whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">${formatWithRelative(t.date)}</td>
+                        <td class="px-5 py-2.5 text-xs font-medium text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none">${t.plan || '—'}</td>
+                        <td class="px-5 py-2.5 text-xs font-medium text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none">${t.host || '—'}</td>
+                        <td class="px-5 py-2.5 text-xs font-bold text-white/60 uppercase tracking-wider whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none text-[10px]">${t.type || 'N/A'}</td>
+                        <td class="px-5 py-2.5 text-xs font-bold text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">${(t.amount || 0).toFixed(2)} ₽</td>
                     </tr>
-                `).join('') : '<tr><td colspan="5" class="px-4 py-4 text-center text-white/50">Нет данных</td></tr>';
+                `).join('') : '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
 
                     document.getElementById('udm-loading').classList.add('hidden');
                     document.getElementById('udm-content').classList.remove('hidden');
@@ -788,22 +1480,37 @@
                         headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
                     });
                     const refData = await refResp.json();
-                    const refs = (refData && refData.ok) ? (refData.items || []) : [];
+                    let refs = (refData && refData.ok) ? (refData.items || []) : [];
 
                     document.getElementById('udm-refs-total').textContent = refs.length;
 
                     const refsContainer = document.getElementById('udm-referrals-list');
                     const loadMoreBtn = document.getElementById('udm-refs-load-more');
-                    refsContainer.innerHTML = '';
+                    const filterSpent = document.getElementById('udm-ref-filter-spent');
 
                     let renderedCount = 0;
-                    const BATCH_SIZE_INITIAL = 3;
+                    const BATCH_SIZE_INITIAL = 4;
                     const BATCH_SIZE_MORE = 10;
 
-                    function renderRefs(count) {
-                        const next = refs.slice(renderedCount, renderedCount + count);
+                    const getSortedRefs = () => {
+                        if (!filterSpent?.checked) return [...refs];
+                        return [...refs].sort((a, b) => {
+                            const aSpent = (a.total_spent || 0) > 0;
+                            const bSpent = (b.total_spent || 0) > 0;
+                            if (aSpent !== bSpent) return bSpent ? 1 : -1;
+                            return new Date(b.registration_date) - new Date(a.registration_date);
+                        });
+                    };
+
+                    function renderRefs(count, reset = false) {
+                        if (reset) {
+                            refsContainer.innerHTML = '';
+                            renderedCount = 0;
+                        }
+                        const sorted = getSortedRefs();
+                        const next = sorted.slice(renderedCount, renderedCount + (count || 0));
                         next.forEach(r => {
-                            const datePart = r.registration_date.split(' ')[0];
+                            const datePart = (r.registration_date || '').split(' ')[0];
                             // Calculate relative time
                             let relTime = '';
                             try {
@@ -816,25 +1523,28 @@
                             } catch (_) { }
 
                             const li = document.createElement('li');
-                            li.className = 'bg-white/5 rounded px-2 py-1.5 flex justify-between items-center';
+                            li.className = 'bg-white/5 border border-white/5 rounded-xl px-3 py-2.5 flex justify-between items-center mb-2 hover:bg-white/10 transition-colors group';
 
                             li.innerHTML = `
-                                <div class="truncate flex items-center gap-2">
+                                <div class="truncate flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px] border border-primary/20">
+                                       RF
+                                    </div>
                                     <div class="flex flex-col truncate">
-                                        <span class="text-white font-mono text-xs">#${r.telegram_id}</span>
-                                        <span class="text-white/70 truncate">@${r.username || 'N/A'}</span>
+                                        <span class="text-white font-bold text-xs tracking-tight group-hover:text-primary transition-colors">@${r.username || 'Без юзернейма'}</span>
+                                        <span class="text-white/40 text-[10px] font-mono">#${r.telegram_id}</span>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-white/30 text-xs whitespace-nowrap text-right min-w-[120px]">
-                                        ${datePart}<br>
-                                        <span class="text-white/20">Потратил: <span class="${r.total_spent > 0 ? 'text-yellow-400 font-bold' : ''}">${(r.total_spent || 0).toFixed(0)}₽</span> - ${relTime}</span>
-                                    </span>
-                                    <a href="{{ url_for('users_page') }}?q=${r.telegram_id}"
-                                       class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors"
-                                       title="Профиль" target="_blank">
-                                        <span class="material-symbols-outlined text-sm">person</span>
-                                    </a>
+                                <div class="flex flex-col items-end gap-0.5">
+                                    <span class="text-white/30 text-[9px] uppercase tracking-wider font-bold">${datePart}</span>
+                                    <div class="flex items-center gap-2">
+                                         <span class="text-[10px] ${r.total_spent > 0 ? 'text-primary font-bold' : 'text-white/20'} bg-black/20 px-1.5 rounded">${(r.total_spent || 0).toFixed(0)}₽</span>
+                                         <a href="{{ url_for('users_page') }}?q=${r.telegram_id}"
+                                           class="w-5 h-5 rounded-md bg-white/5 hover:bg-white/20 text-white/30 hover:text-white flex items-center justify-center transition-all"
+                                           title="Перейти к пользователю" target="_blank">
+                                            <span class="material-symbols-outlined text-[10px]">arrow_outward</span>
+                                        </a>
+                                    </div>
                                 </div>
                             `;
                             refsContainer.appendChild(li);
@@ -847,9 +1557,23 @@
                         } else {
                             loadMoreBtn.classList.add('hidden');
                         }
+
+                        // Update counter
+                        const countBadge = document.getElementById('udm-ref-count');
+                        if (countBadge) countBadge.textContent = renderedCount;
                     }
 
-                    renderRefs(BATCH_SIZE_INITIAL);
+                    if (refs.length > 0) {
+                        renderRefs(BATCH_SIZE_INITIAL, true);
+                    } else {
+                        refsContainer.innerHTML = '<div class="py-10 text-center"><div class="text-white/20 text-[10px] font-bold uppercase tracking-widest">Список пуст</div></div>';
+                        loadMoreBtn.classList.add('hidden');
+                    }
+
+                    filterSpent?.addEventListener('change', () => {
+                        const currentCount = renderedCount;
+                        renderRefs(currentCount, true);
+                    });
 
                     // Remove old listener to avoid duplicates if any (simple way: clone node or just reassign onclick)
                     // Better: define handler outside or use a property.
@@ -865,6 +1589,93 @@
             } catch (_) {
                 showToast('danger', 'Ошибка сети');
                 closeModal('userDetailsModal');
+            }
+        }
+
+        table.addEventListener('click', async function (e) {
+            const btn = e.target.closest('.btn-user-details');
+            if (!btn) return;
+            const uid = btn.getAttribute('data-uid');
+            openModal('userDetailsModal');
+            await fetchUserDetails(uid);
+        });
+
+        // Quick Action Handlers (Delegated)
+        document.getElementById('userDetailsModal').addEventListener('click', function (e) {
+            const btn = e.target.closest('button[id^="udm-action-"]');
+            if (!btn) return;
+
+            const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+            const uname = document.getElementById('udm-username')?.textContent?.replace('@', '') || '';
+            const balance = document.getElementById('udm-balance')?.textContent || '0.00';
+
+            if (!uid) return;
+
+            const action = btn.id.replace('udm-action-', '');
+
+            // Re-use Logic from Table Buttons
+            if (action === 'add-bal' || action === 'sub-bal') {
+                const isAdd = action === 'add-bal';
+                document.getElementById('bm-user').textContent = `@${uname} (#${uid})`;
+                document.getElementById('bm-balance').textContent = balance;
+                document.getElementById('bm-form').action = `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
+                document.getElementById('bm-refcount').textContent = document.getElementById('udm-ref-count').textContent;
+                document.getElementById('bm-reflist').innerHTML = ''; // Simplified, or fetch again
+
+                const deltaInput = document.querySelector('#bm-form input[name="delta"]');
+                if (deltaInput) {
+                    deltaInput.value = isAdd ? '+' : '-';
+                    setTimeout(() => { deltaInput.focus(); deltaInput.setSelectionRange(1, 1); }, 100);
+                }
+                openModal('balanceModal');
+            } else if (action === 'issue') {
+                window.location.href = `{{ url_for('admin_keys_page') }}?user_id=${uid}`;
+            } else if (action === 'msg') {
+                document.getElementById('mm-user').textContent = `@${uname} (#${uid})`;
+                document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
+                document.querySelector('#mm-form textarea[name="message"]').value = '';
+                openModal('messageModal');
+            } else if (action === 'ban') {
+                banUser(uid, uname);
+            } else if (action === 'revoke-all') {
+                revokeAllKeys(uid, uname);
+            } else if (action === 'pin') {
+                apiRequest(`{{ url_for('toggle_pin_user_route', user_id=0) }}`.replace('/0', `/${uid}`), 'POST', {}, 'Статус закрепа изменен')
+                    .then(d => {
+                        if (d) {
+                            // Локальное обновление БЕЗ перерисовки всей модалки
+                            const pinBadge = document.getElementById('udm-pinned-badge');
+                            const pinText = document.getElementById('udm-action-pin-text');
+                            const pinIcon = document.getElementById('udm-action-pin-icon');
+
+                            const isPinnedNow = pinText.textContent === 'Закрепить';
+
+                            if (pinBadge) {
+                                pinBadge.classList.toggle('hidden', !isPinnedNow);
+                                pinBadge.style.color = '#22c55e';
+                            }
+                            if (pinText) pinText.textContent = isPinnedNow ? 'Открепить' : 'Закрепить';
+                            if (pinIcon) {
+                                if (isPinnedNow) {
+                                    pinIcon.style.color = '#22c55e';
+                                    pinIcon.classList.add('rotate-45');
+                                } else {
+                                    pinIcon.style.color = '';
+                                    pinIcon.classList.remove('rotate-45');
+                                }
+                            }
+
+                            // Обновляем таблицу в фоне
+                            const tbody = document.getElementById('users-tbody');
+                            if (tbody) {
+                                const urlStr = tbody.getAttribute('data-fetch-url');
+                                if (urlStr) {
+                                    const params = new URLSearchParams(new URL(urlStr, location.origin).search);
+                                    updateTableAndPagination(params);
+                                }
+                            }
+                        }
+                    });
             }
         });
 

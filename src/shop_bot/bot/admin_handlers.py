@@ -41,6 +41,7 @@ from shop_bot.data_manager.remnawave_repository import (
     list_promo_codes,
     update_promo_code_status,
 )
+from shop_bot.config import get_msk_time
 from shop_bot.data_manager.database import (
     update_key_email,
     set_referral_balance,
@@ -496,7 +497,7 @@ def get_admin_router() -> Router:
             await callback.answer("У вас нет прав.")
             return
         await callback.answer()
-        now = datetime.now()
+        now = get_msk_time().replace(tzinfo=None)
         if callback.data.endswith("custom"):
             await callback.message.edit_text(
                 "Укажите дату начала (ГГГГ-ММ-ДД или ГГГГ-ММ-ДД ЧЧ:ММ):",
@@ -565,7 +566,7 @@ def get_admin_router() -> Router:
             valid_until = None
         else:
             data = await state.get_data()
-            base = data.get('valid_from') or datetime.now()
+            base = data.get('valid_from') or get_msk_time().replace(tzinfo=None)
             if callback.data.endswith("plus1d"):
                 valid_until = base + timedelta(days=1)
             elif callback.data.endswith("plus7d"):
@@ -1219,7 +1220,7 @@ def get_admin_router() -> Router:
             await message.answer("❌ Поддерживаются только файлы .zip или .db")
             return
         try:
-            ts = datetime.now().strftime('%Y%m%d-%H%M%S')
+            ts = get_msk_time().strftime('%Y%m%d-%H%M%S')
             dest = backup_manager.BACKUPS_DIR / f"uploaded-{ts}-{filename}"
             dest.parent.mkdir(parents=True, exist_ok=True)
             await message.bot.download(doc, destination=dest)

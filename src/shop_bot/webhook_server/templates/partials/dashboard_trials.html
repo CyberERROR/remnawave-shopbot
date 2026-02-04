@@ -1,27 +1,32 @@
 {% for trial in recent_trials %}
-<tr class="hover:bg-white/5 transition-colors">
-    <td class="px-4 py-3 whitespace-nowrap">
-        <div class="text-sm font-medium text-white">
-            {% if trial.username %}
-            {{ trial.username }}
-            {% else %}
-            {{ trial.telegram_id }}
-            {% endif %}
+<tr class="transition-colors border-b border-white/5 last:border-0 group">
+    <td class="px-5 py-4 whitespace-nowrap">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40">
+                <span class="material-symbols-outlined text-sm">timer</span>
+            </div>
+            <div>
+                <div class="text-sm font-bold text-white">
+                    {% if trial.username %}
+                    {{ trial.username }}
+                    {% else %}
+                    User {{ trial.telegram_id }}
+                    {% endif %}
+                </div>
+                <div class="text-[10px] text-white/50 font-mono tracking-wide">{{ trial.telegram_id }}</div>
+            </div>
         </div>
-        {% if trial.username %}
-        <div class="text-xs text-white/50">{{ trial.telegram_id }}</div>
-        {% endif %}
     </td>
-    <td class="px-4 py-3 whitespace-nowrap">
+    <td class="px-5 py-4 whitespace-nowrap">
         <div class="text-sm text-white">{% if trial.created_at %}{{ trial.created_at.split(' ')[0] }}{% else %}N/A{%
             endif %}</div>
         <div class="text-xs text-white/50">{{ trial.created_at | relative_time }}</div>
     </td>
-    <td class="px-4 py-3 whitespace-nowrap text-right">
+    <td class="px-5 py-4 whitespace-nowrap text-right">
         <a href="{{ url_for('users_page', q=trial.telegram_id) }}"
-            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white/50 hover:bg-white/20 hover:text-white transition-colors"
+            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 text-white/30 hover:bg-primary/20 hover:text-primary transition-all duration-300"
             title="Профиль">
-            <span class="material-symbols-outlined text-sm">person</span>
+            <span class="material-symbols-outlined text-sm">arrow_forward</span>
         </a>
     </td>
 </tr>

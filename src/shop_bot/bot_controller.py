@@ -11,6 +11,8 @@ from shop_bot.bot.handlers import get_user_router
 from shop_bot.bot.admin_handlers import get_admin_router
 from shop_bot.bot.middlewares import BanMiddleware
 from shop_bot.bot import handlers
+from shop_bot.webhook_server.modules.security import get_security_router
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +50,8 @@ class BotController:
             self._dp = None
 
     def start(self):
-        if self._is_running:
-            return {"status": "error", "message": "Бот уже запущен."}
+        if self._is_running or self._task:
+            return {"status": "error", "message": "Бот уже запущен или запускается."}
         
         if not self._loop or not self._loop.is_running():
             return {"status": "error", "message": "Критическая ошибка: цикл событий не установлен."}
@@ -65,10 +67,18 @@ class BotController:
             }
 
         try:
+            if self._bot:
+                try:
+                    asyncio.run_coroutine_threadsafe(self._bot.close(), self._loop)
+                except Exception:
+                    pass
+                self._bot = None
+            
+            if self._dp:
+                self._dp = None
+            
             self._bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
             self._dp = Dispatcher()
-            
-
 
             self._dp.message.middleware(BanMiddleware())
             self._dp.callback_query.middleware(BanMiddleware())
@@ -83,9 +93,10 @@ class BotController:
             
             self._dp.include_router(user_router)
             self._dp.include_router(admin_router)
+            self._dp.include_router(get_security_router())
             
             try:
-                asyncio.run_coroutine_threadsafe(self._bot.delete_webhook(drop_pending_updates=True), self._loop)
+                asyncio.run_coroutine_threadsafe(self._bot.delete_webhook(drop_pending_updates=True), self._loop).result(timeout=5)
             except Exception as e:
                 logger.warning(f"Не удалось удалить вебхук перед запуском опроса: {e}")
 
@@ -103,11 +114,8 @@ class BotController:
             tonconnect_enabled = bool(ton_wallet_address and tonapi_key)
             heleket_enabled = bool(heleket_shop_id and heleket_api_key)
 
-
-
             yoomoney_flag = (rw_repo.get_setting("yoomoney_enabled") or 'false').strip().lower() == 'true'
             yoomoney_enabled = bool(yoomoney_flag)
-
 
             stars_flag = (rw_repo.get_setting("stars_enabled") or 'false').strip().lower() == 'true'
             try:
@@ -132,25 +140,31 @@ class BotController:
             handlers.TELEGRAM_BOT_USERNAME = bot_username
             handlers.ADMIN_ID = admin_id
 
+            self._is_running = True
             self._task = asyncio.run_coroutine_threadsafe(self._start_polling(), self._loop)
             logger.info("Команда на запуск передана в цикл событий.")
             return {"status": "success", "message": "Команда на запуск бота отправлена."}
             
         except Exception as e:
             logger.error(f"Не удалось запустить бота: {e}", exc_info=True)
+            self._is_running = False
             self._bot = None
             self._dp = None
+            self._task = None
             return {"status": "error", "message": f"Ошибка при запуске: {e}"}
 
     def stop(self):
-        if not self._is_running:
+        if not self._is_running and not self._task:
             return {"status": "error", "message": "Бот не запущен."}
 
         if not self._loop or not self._dp:
             return {"status": "error", "message": "Критическая ошибка: компоненты бота недоступны."}
 
         logger.info("Отправляю сигнал на корректную остановку...")
-        asyncio.run_coroutine_threadsafe(self._dp.stop_polling(), self._loop)
+        try:
+            asyncio.run_coroutine_threadsafe(self._dp.stop_polling(), self._loop).result(timeout=2)
+        except Exception as e:
+            logger.warning(f"Ошибка при остановке: {e}")
         
         return {"status": "success", "message": "Команда на остановку бота отправлена."}
 

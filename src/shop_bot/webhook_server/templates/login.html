@@ -1,15 +1,19 @@
 <!DOCTYPE html>
-<html class="dark" lang="ru">
+<html lang="ru">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Вход в Панель управления</title>
-    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+    <title>Вход в панель управления | Login</title>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}" />
+    <meta name="theme-color" content="#13ec80" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap"
+        rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
 
@@ -20,203 +24,571 @@
                 extend: {
                     colors: {
                         "primary": "#13ec80",
-                        "background-light": "#f6f8f7",
-                        "background-dark": "#102219",
+                        "background-dark": "#050a08",
                     },
-                    fontFamily: { "display": ["Inter", "sans-serif"] }
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    }
                 },
             },
-        }
+        };
     </script>
+
     <style>
-        #scene {
+        :root {
+            --site-scale: 0.85;
+            --primary-rgb: 19, 236, 128;
+        }
+
+        html {
+            font-size: calc(15px * var(--site-scale));
+        }
+
+        body {
+            background-color: #050a08;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            color: white;
+        }
+
+        /* Animated Background Particles */
+        .particles {
             position: fixed;
-            inset: 0;
-            z-index: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
+            z-index: 0;
         }
 
-        .login-container {
-            position: relative;
-            z-index: 10;
-        }
-
-        .toggle-password {
+        .particle {
             position: absolute;
-            right: 12px;
+            background: rgba(19, 236, 128, 0.4);
+            border-radius: 50%;
+            filter: blur(2px);
+            animation: float-around var(--duration) linear infinite;
+        }
+
+        @keyframes float-around {
+            from {
+                transform: translate(var(--x1), var(--y1));
+                opacity: 0;
+            }
+
+            20% {
+                opacity: var(--opacity);
+            }
+
+            80% {
+                opacity: var(--opacity);
+            }
+
+            to {
+                transform: translate(var(--x2), var(--y2));
+                opacity: 0;
+            }
+        }
+
+        /* Main Card Styles */
+        .main-card {
+            background: rgba(15, 23, 19, 0.6);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            width: 100%;
+            max-width: 1050px;
+            min-height: 650px;
+            display: flex;
+            border-radius: 3rem;
+            overflow: hidden;
+            animation: cardAppear 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* Branding Panel */
+        .brand-panel {
+            flex: 1.2;
+            background: linear-gradient(135deg, rgba(15, 23, 19, 0.95) 0%, rgba(5, 10, 8, 0.95) 100%);
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(19, 236, 128, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(19, 236, 128, 0.05) 0%, transparent 50%);
+            z-index: 1;
+        }
+
+        /* Form Panel */
+        .form-panel {
+            flex: 1;
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        /* Modern Input Styling */
+        .modern-input {
+            background: rgba(255, 255, 255, 0.02) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            border-radius: 2rem !important;
+            padding: 1.25rem 1.5rem 1.25rem 4.2rem !important;
+            color: white !important;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            display: block !important;
+            appearance: none;
+            -webkit-appearance: none;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (min-width: 900px) {
+            .modern-input:focus {
+                background: rgba(19, 236, 128, 0.04) !important;
+                border-color: rgba(19, 236, 128, 0.4) !important;
+                box-shadow: 0 0 20px rgba(19, 236, 128, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+                outline: none !important;
+            }
+        }
+
+        .modern-input:focus {
+            outline: none !important;
+        }
+
+        .modern-input {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .input-icon-wrapper {
+            position: absolute;
+            left: 0.75rem;
             top: 50%;
             transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: rgba(255, 255, 255, 0.5);
-            padding: 4px;
+            width: 2.75rem;
+            height: 2.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.2);
         }
 
-        .toggle-password:hover {
-            color: rgba(255, 255, 255, 0.8);
+        @media (min-width: 900px) {
+            .group:focus-within .input-icon-wrapper {
+                background: rgba(19, 236, 128, 0.1);
+                border-color: rgba(19, 236, 128, 0.3);
+                color: #13ec80;
+                box-shadow: 0 0 15px rgba(19, 236, 128, 0.1);
+            }
+        }
+
+        /* Autofill fix */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+            -webkit-text-fill-color: white !important;
+            -webkit-box-shadow: 0 0 0px 1000px #0a110e inset !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        /* Animations for elements */
+        .animate-slide-up {
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .delay-100 {
+            animation-delay: 0.1s;
+        }
+
+        .delay-200 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-300 {
+            animation-delay: 0.3s;
+        }
+
+        .delay-400 {
+            animation-delay: 0.4s;
+        }
+
+        /* Floating elements in brand side */
+        .floating-stat {
+            animation: floating 4s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* Custom Checkbox */
+        .toggle-switch input:checked~.switch-slider {
+            background: var(--primary-color);
+        }
+
+        @media (max-width: 900px) {
+            .main-card {
+                flex-direction: column;
+                max-width: 500px;
+                min-height: auto;
+                border-radius: 2rem;
+            }
+
+            .brand-panel {
+                display: none;
+            }
+
+            .form-panel {
+                padding: 3rem 2rem;
+            }
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(19, 236, 128, 0.5), transparent);
+            animation: scan 3s linear infinite;
+            z-index: 2;
+        }
+
+        @keyframes scan {
+            0% {
+                top: -10%;
+            }
+
+            100% {
+                top: 110%;
+            }
+        }
+
+        .cyber-btn {
+            background: #13ec80;
+            color: #050a08;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .cyber-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px -10px rgba(19, 236, 128, 0.5);
+            background: #00ff85;
+        }
+
+        .cyber-btn:active {
+            transform: translateY(0);
+        }
+
+        .stats-badge {
+            background: rgba(19, 236, 128, 0.1);
+            border: 1px solid rgba(19, 236, 128, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #13ec80;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
     </style>
 </head>
 
-<body class="bg-background-dark font-display min-h-screen flex items-center justify-center p-4">
-    <canvas id="scene" draggable="false"></canvas>
+<body class="dark">
+    <div id="login-identifier-v2" class="hidden" data-login-page="true"></div>
+    <!-- Particles Layer -->
+    <div id="particles-container" class="particles"></div>
 
-    <div class="login-container w-full max-w-md">
-        <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-8 shadow-2xl">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-white mb-2">Вход в панель</h1>
-                <p class="text-white/50">Введите данные для входа</p>
-            </div>
+    <div class="relative z-10 w-full flex items-center justify-center p-6">
+        <div class="main-card">
+            <!-- LEFT: Branding & Aesthetics -->
+            <div class="brand-panel">
+                <div class="scan-line"></div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div
-                class="mb-4 p-3 rounded-lg {% if category == 'danger' %}bg-red-500/20 text-red-400{% elif category == 'success' %}bg-primary/20 text-primary{% else %}bg-yellow-500/20 text-yellow-400{% endif %}">
-                {{ message }}
-            </div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
+                <div class="relative z-10 space-y-12">
+                    <div class="animate-slide-up flex items-start justify-between gap-4">
+                        <div>
+                            <div
+                                class="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8">
+                                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+                                <span class="text-[9px] font-bold text-white/50 uppercase tracking-[0.3em]">Operational
+                                    Status: Live</span>
+                            </div>
+                            <h2 class="text-6xl font-black text-white leading-tight tracking-tighter">
+                                VPN Admin <br />
+                                <span class="text-primary italic">Console</span>
+                            </h2>
+                        </div>
 
-            <form method="post" class="space-y-5">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <!-- 3D Decorative Shield -->
+                        <div class="hidden xl:block relative pointer-events-none"
+                            style="perspective: 2000px; margin-top: -2rem;">
+                            <span class="material-symbols-outlined text-primary animate-pulse" style="font-size: 14rem; 
+                                         transform: rotateY(-25deg) rotateX(15deg) translateZ(60px); 
+                                         filter: drop-shadow(0 0 50px rgba(19, 236, 128, 0.25)); 
+                                         opacity: 0.15;
+                                         display: block;">security</span>
+                        </div>
+                    </div>
 
-                <div>
-                    <label for="username" class="block text-white/70 text-sm font-medium mb-2">Логин</label>
-                    <input type="text" id="username" name="username" required autocomplete="username"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" />
-                </div>
+                    <div class="grid grid-cols-2 gap-4 animate-slide-up delay-100">
+                        <div class="bg-white/5 border border-white/5 p-6 rounded-[2rem] backdrop-blur-lg floating-stat">
+                            <span class="material-symbols-outlined text-primary text-3xl mb-4">router</span>
+                            <div class="text-2xl font-black text-white">Active Nodes</div>
+                            <div class="text-[10px] text-white/30 uppercase font-bold tracking-widest mt-1">
+                                Infrastructure Control</div>
+                        </div>
+                        <div class="bg-white/5 border border-white/5 p-6 rounded-[2rem] backdrop-blur-lg floating-stat"
+                            style="animation-delay: -2s">
+                            <span class="material-symbols-outlined text-purple-400 text-3xl mb-4">vpn_lock</span>
+                            <div class="text-2xl font-black text-white">Encrypted</div>
+                            <div class="text-[10px] text-white/30 uppercase font-bold tracking-widest mt-1">End-to-End
+                                Tunnel
+                            </div>
+                        </div>
+                    </div>
 
-                <div>
-                    <label for="password" class="block text-white/70 text-sm font-medium mb-2">Пароль</label>
-                    <div class="relative">
-                        <input type="password" id="password" name="password" required autocomplete="current-password"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all pr-12" />
-                        <button type="button" id="toggle-login-pass" class="toggle-password"
-                            aria-label="Показать пароль" title="Показать пароль">
-                            <span class="material-symbols-outlined" id="icon-eye">visibility_off</span>
-                        </button>
+                    <div class="flex items-center gap-6 animate-slide-up delay-200">
+                        <div class="flex -space-x-3">
+                            <div
+                                class="w-10 h-10 rounded-full bg-primary/20 border-2 border-[#101815] flex items-center justify-center">
+                                <span class="material-symbols-outlined text-primary text-lg">admin_panel_settings</span>
+                            </div>
+                            <div
+                                class="w-10 h-10 rounded-full bg-blue-500/20 border-2 border-[#101815] flex items-center justify-center">
+                                <span class="material-symbols-outlined text-blue-400 text-lg">database</span>
+                            </div>
+                            <div
+                                class="w-10 h-10 rounded-full bg-purple-500/20 border-2 border-[#101815] flex items-center justify-center">
+                                <span
+                                    class="material-symbols-outlined text-purple-400 text-lg">settings_input_component</span>
+                            </div>
+                        </div>
+                        <p class="text-white/40 text-xs font-medium max-w-[200px] leading-relaxed">
+                            Персональная консоль управления вашей сетью и пользователями VPN.
+                        </p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" id="remember_me" name="remember_me"
-                        class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50 cursor-pointer" />
-                    <label for="remember_me" class="text-white/70 text-sm cursor-pointer">Запомнить меня</label>
-                </div>
 
-                <button type="submit"
-                    class="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold py-3 px-4 rounded-lg transition-colors duration-200">
-                    Войти
-                </button>
-            </form>
+            </div>
+
+            <!-- RIGHT: Form -->
+            <div class="form-panel">
+                <div class="max-w-[340px] mx-auto w-full">
+                    <div class="text-center mb-10 animate-slide-up">
+                        <div
+                            class="w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <span class="material-symbols-outlined text-primary text-3xl">verified_user</span>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mb-2 tracking-tight">Вход в Админку</h3>
+                        <p class="text-white/30 text-[10px] uppercase font-bold tracking-[0.2em]">Personal VPN Dashboard
+                        </p>
+                    </div>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <div class="mb-8 space-y-3 animate-slide-up">
+                        {% for category, message in messages %}
+                        <div
+                            class="p-4 rounded-2xl text-[11px] font-bold border flex items-center gap-3 backdrop-blur-xl {% if category == 'danger' %}bg-red-500/10 border-red-500/20 text-red-400{% else %}bg-primary/10 border-primary/20 text-primary{% endif %}">
+                            <span class="material-symbols-outlined text-lg">{% if category == 'danger'
+                                %}notification_important{% else %}verified{% endif %}</span>
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+
+                    {% if is_blocked %}
+                    <div class="text-center py-6 animate-slide-up">
+                        <div
+                            class="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(239,68,68,0.2)]">
+                            <span class="material-symbols-outlined text-4xl text-red-500">lock_person</span>
+                        </div>
+                        <h2 class="text-xl font-bold text-red-500 mb-2">Доступ заблокирован</h2>
+                        <p class="text-white/40 text-sm leading-relaxed">Система безопасности обнаружила подозрительную
+                            активность.</p>
+                    </div>
+                    {% else %}
+                    <form method="post" class="space-y-6 animate-slide-up delay-100" autocomplete="off">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+                        <div class="space-y-3 group">
+                            <label
+                                class="block text-[10px] font-black text-white/20 uppercase tracking-[0.3em] ml-6 transition-colors group-focus-within:text-primary">Логин
+                                пользователя</label>
+                            <div class="relative">
+                                <div class="input-icon-wrapper">
+                                    <span class="material-symbols-outlined text-xl">account_circle</span>
+                                </div>
+                                <input type="text" name="username" id="username" required
+                                    class="modern-input ring-0 outline-none" placeholder="Username / ID" />
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 group">
+                            <label
+                                class="block text-[10px] font-black text-white/20 uppercase tracking-[0.3em] ml-6 transition-colors group-focus-within:text-primary">Пароль
+                                доступа</label>
+                            <div class="relative">
+                                <div class="input-icon-wrapper">
+                                    <span class="material-symbols-outlined text-xl">lock_open</span>
+                                </div>
+                                <input type="password" name="password" id="password" required
+                                    class="modern-input ring-0 outline-none" placeholder="••••••••" />
+                                <button type="button" onclick="togglePassword()"
+                                    class="absolute right-5 top-1/2 -translate-y-1/2 text-white/10 hover:text-primary transition-colors">
+                                    <span class="material-symbols-outlined text-xl" id="eye-icon">visibility_off</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between px-2">
+                            <label class="flex items-center cursor-pointer group">
+                                <div class="relative">
+                                    <input type="checkbox" name="remember_me" id="remember_me" class="sr-only peer">
+                                    <div
+                                        class="w-9 h-5 bg-white/5 border border-white/10 rounded-full peer peer-checked:bg-primary/20 transition-all">
+                                    </div>
+                                    <div
+                                        class="absolute left-1 top-1 w-3 h-3 bg-white/20 rounded-full transition-all peer-checked:left-5 peer-checked:bg-primary">
+                                    </div>
+                                </div>
+                                <span
+                                    class="ml-3 text-[10px] font-bold text-white/30 uppercase tracking-widest group-hover:text-white/60 transition-colors">Запомнить
+                                    меня</span>
+                            </label>
+                        </div>
+
+                        <button type="submit"
+                            class="cyber-btn w-full font-black py-4 rounded-2xl shadow-lg flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-xs">
+                            Войти в терминал
+                            <span class="material-symbols-outlined text-lg">login</span>
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <div class="mt-12 text-center animate-slide-up delay-300">
+                        <div class="text-[9px] font-bold text-white/10 uppercase tracking-[0.4em]">Remnawave Shop Bot
+                            v.{{ project_info.version }}</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-            (() => {
-                const canvas = document.getElementById('scene');
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                let DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-                let t = 0;
+        // Create Particles (PC Only)
+        const container = document.getElementById('particles-container');
+        if (window.innerWidth >= 900) {
+            const particleCount = 25;
+            for (let i = 0; i < particleCount; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 4 + 1;
+                p.style.width = size + 'px';
+                p.style.height = size + 'px';
+                p.style.setProperty('--x1', Math.random() * 100 + 'vw');
+                p.style.setProperty('--y1', Math.random() * 100 + 'vh');
+                p.style.setProperty('--x2', Math.random() * 100 + 'vw');
+                p.style.setProperty('--y2', Math.random() * 100 + 'vh');
+                p.style.setProperty('--duration', (Math.random() * 10 + 10) + 's');
+                p.style.setProperty('--opacity', Math.random() * 0.5);
+                p.style.left = '0';
+                p.style.top = '0';
+                container.appendChild(p);
+            }
+        }
 
-                function resize() {
-                    DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-                    const { innerWidth: w, innerHeight: h } = window;
-                    canvas.width = Math.max(1, Math.floor(w * DPR));
-                    canvas.height = Math.max(1, Math.floor(h * DPR));
-                    canvas.style.width = w + 'px';
-                    canvas.style.height = h + 'px';
-                    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-                }
-
-                function draw() {
-                    const W = Math.max(1, Math.floor(canvas.width / DPR));
-                    const H = Math.max(1, Math.floor(canvas.height / DPR));
-                    ctx.clearRect(0, 0, W, H);
-
-                    const L = Math.hypot(W, H);
-                    const nx = H / L, ny = W / L;
-                    const lines = 120;
-                    const baseBand = H * 0.45 * 1.5 * 1.2;
-                    const bandPulse = 1 + 0.06 * Math.sin(t * 0.07);
-
-                    for (let i = 0; i < lines; i++) {
-                        const f = i / (lines - 1);
-                        const bias = f - 0.5;
-                        const sideFactor = 0.6 + 0.4 * f;
-                        const cornerFactor = 1 - 0.5 * (1 - f);
-                        const offset = bias * baseBand * bandPulse * sideFactor * cornerFactor;
-
-                        const lw = Math.max(0.55, 1.2 - f * 0.5);
-                        const alpha = Math.max(0.06, 0.32 * (0.95 - Math.abs(bias) * 0.75));
-                        ctx.beginPath();
-                        ctx.lineWidth = lw;
-                        ctx.strokeStyle = `rgba(19, 236, 128, ${alpha})`;
-
-                        const twistStrength = 0.12 * (1 + 0.3 * Math.sin(t * 0.2 + i * 0.15));
-
-                        for (let s = -0.2, first = true; s <= 1.2; s += 0.01) {
-                            const sd = s;
-                            const x0 = sd * W;
-                            const y0 = H - sd * H;
-                            const disp = Math.sin(t * 0.1 + i * 0.05) * (baseBand * 0.04);
-                            const twist = Math.sin(sd * Math.PI + t * 0.12 + i * 0.03) * twistStrength * baseBand;
-                            const x = x0 + (nx * disp) + Math.cos(sd * Math.PI) * twist;
-                            const y = y0 + offset + (ny * disp) + Math.sin(sd * Math.PI) * twist;
-                            if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
-                        }
-                        ctx.stroke();
-                    }
-                }
-
-                function animate() { t += 0.016; draw(); requestAnimationFrame(animate); }
-
-                window.addEventListener('resize', resize, { passive: true });
-                resize();
-                animate();
-            })();
-
-        // Toggle password visibility
-        (function () {
-            const btn = document.getElementById('toggle-login-pass');
+        function togglePassword() {
             const input = document.getElementById('password');
-            if (!btn || !input) return;
-            const icon = document.getElementById('icon-eye');
-            btn.addEventListener('click', () => {
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    if (icon) icon.textContent = 'visibility';
-                    btn.setAttribute('aria-label', 'Скрыть пароль');
-                    btn.title = 'Скрыть пароль';
-                } else {
-                    input.type = 'password';
-                    if (icon) icon.textContent = 'visibility_off';
-                    btn.setAttribute('aria-label', 'Показать пароль');
-                    btn.title = 'Показать пароль';
-                }
-            });
-        })();
+            const icon = document.getElementById('eye-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility';
+                icon.classList.add('text-primary');
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility_off';
+                icon.classList.remove('text-primary');
+            }
+        }
 
-        // Remember username
-        (function () {
-            const u = document.getElementById('username');
-            const r = document.getElementById('remember_me');
-            if (!u || !r) return;
-            try {
-                const saved = localStorage.getItem('login_username');
-                if (saved) { u.value = saved; r.checked = true; }
-            } catch (_) { }
-            u.form?.addEventListener('submit', () => {
-                try {
-                    if (r.checked) localStorage.setItem('login_username', u.value || '');
-                    else localStorage.removeItem('login_username');
-                } catch (_) { }
-            });
-        })();
+        // Remember login logic
+        const uIn = document.getElementById('username');
+        const rem = document.getElementById('remember_me');
+        if (uIn && rem) {
+            const saved = localStorage.getItem('login_persist');
+            if (saved) { uIn.value = saved; rem.checked = true; }
+            uIn.form.onsubmit = () => {
+                if (rem.checked) localStorage.setItem('login_persist', uIn.value);
+                else localStorage.removeItem('login_persist');
+            };
+        }
     </script>
 </body>
 

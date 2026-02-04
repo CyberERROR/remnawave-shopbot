@@ -8,6 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from shop_bot.data_manager.remnawave_repository import get_setting
 from shop_bot.data_manager.database import get_button_configs
+from shop_bot.config import get_msk_time
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +417,7 @@ def create_payment_method_keyboard(
             builder.button(text="🏦 Банковская карта", callback_data="pay_yookassa")
     
     if pm.get("platega"):
-        builder.button(text="💳 СБП", callback_data="pay_platega")
+        builder.button(text="💳 СБП / Platega", callback_data="pay_platega")
     if pm.get("cryptobot"):
         builder.button(text="💎 Криптовалюта", callback_data="pay_cryptobot")
     elif pm.get("heleket"):
@@ -499,7 +500,7 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
     if pm.get("yoomoney"):
         builder.button(text="💜 ЮMoney (кошелёк)", callback_data="topup_pay_yoomoney")
     if pm.get("platega"):
-        builder.button(text="💳 СБП", callback_data="topup_pay_platega")
+        builder.button(text="💳 СБП / Platega", callback_data="topup_pay_platega")
 
     builder.button(text="⬅️ Назад", callback_data="show_profile")
     builder.adjust(1)
@@ -514,7 +515,13 @@ def get_declension(n, forms):
     return forms[2]
 
 def get_time_str(expiry_date: datetime) -> str:
-    diff = expiry_date - datetime.now()
+    # Ensure comparisons are done in naive MSK
+    now = get_msk_time().replace(tzinfo=None)
+    
+    if expiry_date.tzinfo:
+        expiry_date = expiry_date.astimezone(get_msk_time().tzinfo).replace(tzinfo=None)
+    
+    diff = expiry_date - now
     total_seconds = int(diff.total_seconds())
     
     if total_seconds < 0:
@@ -545,11 +552,17 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
 
     if keys:
         for i, key in enumerate(keys):
-            expiry_date = datetime.fromisoformat(key['expiry_date'])
-            status_icon = "✅" if expiry_date > datetime.now() else "❌"
+            try:
+                expiry_dt = datetime.fromisoformat(key['expiry_date'])
+                if expiry_dt.tzinfo:
+                     expiry_dt = expiry_dt.astimezone(get_msk_time().tzinfo).replace(tzinfo=None)
+            except:
+                expiry_dt = datetime.min
+
+            status_icon = "✅" if expiry_dt > get_msk_time().replace(tzinfo=None) else "❌"
             host_name = key.get('host_name', 'Неизвестный хост')
             
-            time_str = get_time_str(expiry_date)
+            time_str = get_time_str(expiry_dt)
 
             # button_text = f"{status_icon} Ключ #{i+1} ({host_name}) {time_str}"
             button_text = f"{status_icon} #{i+1} ({host_name}) {time_str}"
@@ -738,6 +751,8 @@ def create_admin_keys_for_host_keyboard(
 
         try:
             dt = datetime.fromisoformat(str(expiry_raw))
+            if dt.tzinfo:
+                dt = dt.astimezone(get_msk_time().tzinfo)
             expiry = dt.strftime('%d.%m.%Y')
         except Exception:
             expiry = str(expiry_raw)[:10]
@@ -931,3 +946,9 @@ def create_dynamic_support_menu_keyboard() -> InlineKeyboardMarkup:
 def create_dynamic_key_info_keyboard(key_id: int, connection_string: str | None = None) -> InlineKeyboardMarkup:
     """Create key info keyboard using dynamic configuration"""
     return create_dynamic_keyboard("key_info_menu", key_id=key_id, connection_string=connection_string)
+
+def create_back_to_profile_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="⬅️ Назад в профиль", callback_data="show_profile")
+    builder.adjust(1)
+    return builder.as_markup()

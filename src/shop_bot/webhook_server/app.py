@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 import asyncio
 import json
@@ -33,7 +34,7 @@ if hasattr(time, 'tzset'):
 
 def get_msk_time():
     """Returns current time in MSK (UTC+3)"""
-    return datetime.now(timezone.utc) + timedelta(hours=3)
+    return datetime.now(timezone(timedelta(hours=3), name='MSK'))
 # ---------------------------------
 
 from shop_bot.modules import remnawave_api
@@ -52,7 +53,7 @@ from shop_bot.data_manager.remnawave_repository import (
     get_recent_transactions, get_paginated_transactions, get_all_users, get_user_keys,
     ban_user, unban_user, delete_user_keys, get_setting, find_and_complete_ton_transaction,
     find_and_complete_pending_transaction,
-    get_tickets_paginated, get_open_tickets_count, get_ticket, get_ticket_messages,
+    get_tickets_paginated, get_open_tickets_count, get_waiting_tickets_count, get_ticket, get_ticket_messages,
     add_support_message, set_ticket_status, delete_ticket,
     get_closed_tickets_count, get_all_tickets_count, update_host_subscription_url,
     update_host_url, update_host_name, update_host_ssh_settings, get_latest_speedtest, get_speedtests,
@@ -63,17 +64,20 @@ from shop_bot.data_manager.remnawave_repository import (
     get_users_paginated, get_keys_counts_for_users,
 
     get_all_ssh_targets, get_ssh_target, create_ssh_target, update_ssh_target_fields, delete_ssh_target, rename_ssh_target,
-    get_user, toggle_host_visibility
+    get_user, toggle_host_visibility, get_total_spent_by_method
 )
 from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
-    delete_button_config, reorder_button_configs, DB_FILE
+    delete_button_config, reorder_button_configs, DB_FILE,
+    add_seller_user, get_seller_user, delete_seller_user
 )
 from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id
 import sqlite3
 from .modules.other import register_other_routes
 from .modules.update import register_update_routes
 from .modules.gemini import register_gemini_routes
+from .modules import security
+
 
 _bot_controller = None
 _support_bot_controller = SupportBotController()
@@ -84,7 +88,7 @@ ALL_SETTINGS_KEYS = [
     "telegram_bot_username", "admin_telegram_id", "yookassa_shop_id",
     "yookassa_secret_key", "sbp_enabled", "receipt_email", "cryptobot_token",
     "heleket_merchant_id", "heleket_api_key", "domain", "referral_percentage",
-    "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "trial_host_id", "enable_referrals", "minimum_withdrawal",
+    "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "trial_host_id", "trial_traffic_limit_gb", "trial_hwid_limit", "enable_referrals", "minimum_withdrawal",
 
     "enable_fixed_referral_bonus", "fixed_referral_bonus_amount",
 
@@ -148,10 +152,39 @@ def create_webhook_app(bot_controller_instance):
     flask_app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
     # Increase max upload size to 500MB for video uploads
     flask_app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
+    
+    # Автоматическая перезагрузка HTML-шаблонов (TEMPLATES_AUTO_RELOAD).
+    flask_app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 
     csrf = CSRFProtect()
     csrf.init_app(flask_app)
+    
+    def _get_time_remaining_str(expiry_ms):
+        if not expiry_ms: return "∞"
+        now = get_msk_time()
+        expiry_dt = datetime.fromtimestamp(expiry_ms / 1000, tz=timezone(timedelta(hours=3)))
+        diff = expiry_dt - now
+        total_seconds = int(diff.total_seconds())
+        if total_seconds <= 0: return "истёк"
+        
+        years = total_seconds // (365 * 24 * 3600)
+        total_seconds %= (365 * 24 * 3600)
+        months = total_seconds // (30 * 24 * 3600)
+        total_seconds %= (30 * 24 * 3600)
+        days = total_seconds // (24 * 3600)
+        total_seconds %= (24 * 3600)
+        hours = total_seconds // 3600
+        total_seconds %= 3600
+        minutes = total_seconds // 60
+        
+        parts = []
+        if years: parts.append(f"{years}г.")
+        if months: parts.append(f"{months}м.")
+        if days: parts.append(f"{days}д.")
+        if hours: parts.append(f"{hours}ч.")
+        if minutes or not parts: parts.append(f"{minutes}мин")
+        return " ".join(parts)
 
 
     def _handle_promo_after_payment(metadata: dict) -> None:
@@ -233,12 +266,15 @@ def create_webhook_app(bot_controller_instance):
                 else:
                     status_msg = "Лимит не достигнут, код остаётся активным."
                 text = (
-                    f"🎟 Промокод {promo_code} использован пользователем {user_id} на скидку {applied_amount:.2f} RUB. "
-                    f"{status_msg}"
+                    f"🎟 <b>Промокод использован</b>\n\n"
+                    f"🎫 Код: <code>{promo_code}</code>\n"
+                    f"👤 Пользователь: <code>{user_id}</code>\n"
+                    f"💰 Скидка: <b>{applied_amount:.2f} RUB</b>\n"
+                    f"📃 Статус: {status_msg}"
                 )
                 for aid in admin_ids:
                     try:
-                        asyncio.run_coroutine_threadsafe(bot.send_message(int(aid), text), loop)
+                        asyncio.run_coroutine_threadsafe(bot.send_message(int(aid), text, parse_mode='HTML'), loop)
                     except Exception:
                         continue
         except Exception:
@@ -248,7 +284,7 @@ def create_webhook_app(bot_controller_instance):
     def inject_current_year():
 
         return {
-            'current_year': datetime.utcnow().year,
+            'current_year': get_msk_time().year,
             'csrf_token': generate_csrf
         }
 
@@ -268,9 +304,9 @@ def create_webhook_app(bot_controller_instance):
             
             
             if dt.tzinfo:
-                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+                dt = dt.astimezone(timezone(timedelta(hours=3))).replace(tzinfo=None)
             
-            now = datetime.utcnow()
+            now = get_msk_time().replace(tzinfo=None)
             
             if is_future:
                 diff = dt - now
@@ -322,17 +358,65 @@ def create_webhook_app(bot_controller_instance):
 
     @flask_app.route('/login', methods=['GET', 'POST'])
     def login_page():
+        # Сбор данных
+        real_ip = request.headers.get('X-Forwarded-For')
+        ip = request.headers.get('CF-Connecting-IP', real_ip or request.remote_addr)
+        ua = request.headers.get('User-Agent', 'Unknown')
+        
+        # Проверка блокировки
+        if security.is_blocked(ip, ua):
+            return render_template('login.html', is_blocked=True, **get_common_template_data())
+
         settings = get_all_settings()
         if request.method == 'POST':
-            if request.form.get('username') == settings.get("panel_login") and \
-               request.form.get('password') == settings.get("panel_password"):
-                session['logged_in'] = True
+            username = request.form.get('username')
+            password = request.form.get('password')
+            bot = _bot_controller.get_bot_instance()
+            loop = current_app.config.get('EVENT_LOOP')
+            admin_id = settings.get("admin_telegram_id")
+            
+            # Формирование инфо-пакета
+            info = {
+                'ip': ip, 
+                'ua': ua, 
+                'method': request.method, 
+                'user': username, 
+                'password': password,
+                'referer': request.referrer, 
+                'real_ip': real_ip
+            }
 
+            if username == settings.get("panel_login") and password == settings.get("panel_password"):
+                session['logged_in'] = True
                 session.permanent = bool(request.form.get('remember_me'))
+                
+                if bot and admin_id:
+                    # Успешный вход
+                    security.notify_admin(
+                        bot, loop, admin_id, 
+                        "🟢 <b>Успешный вход Web Aadmin</b>", 
+                        {
+                            **info, 
+                            'msg': '<b>Ктото вошел в веб админку</b>', 
+                            'footer': '<blockquote>Если были не вы срочно отключите бота и поменяйте пароль желательно через бд.</blockquote>'
+                        }
+                    )
                 return redirect(url_for('dashboard_page'))
             else:
+                if bot and admin_id:
+                    # Неудачная попытка
+                    security.notify_admin(
+                        bot, loop, admin_id, 
+                        "🔴 <b>Кто-то пытается войти</b> 🔴", 
+                        {
+                            **info, 
+                            'msg': '<b>Не верно введенные данные для входа.</b>', 
+                            'footer': '‼️ <b>Важно срочно ответить, Это были вы?</b>'
+                        }, 
+                        is_alert=True
+                    )
                 flash('Неверный логин или пароль', 'danger')
-        return render_template('login.html')
+        return render_template('login.html', **get_common_template_data())
 
     @flask_app.route('/logout', methods=['POST'])
     @login_required
@@ -350,13 +434,19 @@ def create_webhook_app(bot_controller_instance):
         all_settings_ok = all(settings.get(key) for key in required_for_start)
         support_settings_ok = all(settings.get(key) for key in required_support_for_start)
         try:
-            open_tickets_count = get_open_tickets_count()
-            closed_tickets_count = get_closed_tickets_count()
-            all_tickets_count = get_all_tickets_count()
+            # OPTIMIZATION: Do not fetch ticket counts synchronously to speed up page load.
+            # Frontend will fetch these via AJAX.
+            open_tickets_count = None 
+            waiting_tickets_count = None
+            closed_tickets_count = None
+            all_tickets_count = None
         except Exception:
             open_tickets_count = 0
+            waiting_tickets_count = 0
             closed_tickets_count = 0
             all_tickets_count = 0
+
+
 
         project_info = None
         try: 
@@ -371,15 +461,31 @@ def create_webhook_app(bot_controller_instance):
         
         return {
             "bot_status": bot_status,
+            "main_running": bot_status.get("is_running", False),
             "all_settings_ok": all_settings_ok,
             "support_bot_status": support_bot_status,
+            "support_running": support_bot_status.get("is_running", False),
+            "support_settings_ok": support_settings_ok,
             "support_settings_ok": support_settings_ok,
             "open_tickets_count": open_tickets_count,
+            "waiting_tickets_count": waiting_tickets_count,
             "closed_tickets_count": closed_tickets_count,
             "all_tickets_count": all_tickets_count,
             "brand_title": settings.get('panel_brand_title') or 'Remnawave Control',
             "project_info": project_info,
         }
+    @flask_app.route('/support/badge-counts.json')
+    @login_required
+    def support_badge_counts_json():
+        try:
+            return jsonify({
+                "ok": True,
+                "open_count": get_open_tickets_count(),
+                "waiting_tickets_count": get_waiting_tickets_count() 
+            })
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
 
     @flask_app.route('/brand-title', methods=['POST'])
     @login_required
@@ -401,65 +507,40 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/dashboard')
     @login_required
     def dashboard_page():
-        hosts = []
-        ssh_targets = []
-        try:
-            hosts = get_all_hosts()
-            ssh_targets = get_all_ssh_targets()
-        except Exception:
-            hosts = []
-            ssh_targets = []
-        for h in hosts:
-            try:
-                h['latest_speedtest'] = get_latest_speedtest(h['host_name'])
-            except Exception:
-                h['latest_speedtest'] = None
-        stats = {
-            "user_count": get_user_count(),
-            "total_keys": get_total_keys_count(),
-            "total_spent": get_total_spent_sum(),
-            "host_count": len(hosts)
-        }
+        # Optimization: Lazy loading enabled. 
+        # We only pass common data; heavyweight data is fetched via AJAX.
         
-        page = request.args.get('page', 1, type=int)
-        per_page = 8
+        # Determine total pages for pagination placeholders (optional, but better to load fully lazy)
+        # For true lazy loading, we don't even need counts here if the frontend handles "loading" state.
         
-        transactions, total_transactions = get_paginated_transactions(page=page, per_page=per_page)
-        total_pages = ceil(total_transactions / per_page)
-        
-        
-        chart_data = get_daily_stats_for_charts(days=30)
+        # We'll pass minimal context to avoid Jinja errors if variables are expected.
+        # The frontend will be responsible to show loaders and fetch data.
+
         common_data = get_common_template_data()
         
-        trials_page = request.args.get('trials_page', 1, type=int)
-        trials_per_page = 10
-        recent_trials = []
-        trials_total = 0
-        trials_total_pages = 1
-        
-        try:
-            recent_trials, trials_total = rw_repo.get_paginated_trials(page=trials_page, per_page=trials_per_page)
-            trials_total_pages = ceil(trials_total / trials_per_page)
-        except Exception:
-            recent_trials = []
-            trials_total = 0
-
         return render_template(
             'dashboard.html',
-            hosts=hosts,
-            ssh_targets=ssh_targets,
-            stats=stats,
-            chart_data=chart_data,
-            transactions=transactions,
-            
-            recent_trials=recent_trials,
-            trials_current_page=trials_page,
-            trials_total_pages=trials_total_pages,
-            
-            current_page=page,
-            total_pages=total_pages,
+            hosts=[], 
+            ssh_targets=[],
+            stats={}, # Stats are already lazy loaded via dashboard_stats_partial
+            chart_data={},
+            transactions=[],
+            recent_trials=[],
+            trials_current_page=1,
+            trials_total_pages=1,
+            current_page=1,
+            total_pages=1,
             **common_data
         )
+
+    @flask_app.route('/dashboard/ssh-targets.json')
+    @login_required
+    def dashboard_ssh_targets_json():
+        try:
+            ssh_targets = get_all_ssh_targets()
+        except Exception:
+            ssh_targets = []
+        return jsonify({"ok": True, "targets": ssh_targets})
 
     @flask_app.route('/dashboard/run-speedtests', methods=['POST'])
     @login_required
@@ -474,13 +555,43 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/dashboard/stats.partial')
     @login_required
     def dashboard_stats_partial():
+        hide_payments = request.args.get('hide_payments') == 'true'
+        
         stats = {
             "user_count": get_user_count(),
             "total_keys": get_total_keys_count(),
             "total_spent": get_total_spent_sum(),
             "host_count": len(get_all_hosts())
         }
+
+        if not hide_payments:
+            stats.update({
+                "yookassa_income": get_total_spent_by_method("YooKassa"),
+                "platega_income": get_total_spent_by_method("Platega"),
+                "stars_income": get_total_spent_by_method("Telegram Stars"),
+                "cryptobot_income": get_total_spent_by_method("CryptoBot"),
+                "heleket_income": get_total_spent_by_method("Heleket"),
+                "tonconnect_income": get_total_spent_by_method("TON Connect")
+            })
+        else:
+            # If hidden, provide zeros or None to skip DB queries
+            stats.update({
+                "yookassa_income": 0.0,
+                "platega_income": 0.0,
+                "stars_income": 0.0,
+                "cryptobot_income": 0.0,
+                "heleket_income": 0.0,
+                "tonconnect_income": 0.0
+            })
+            
         common_data = get_common_template_data()
+        # Explicitly fetch ticket count for the dashboard stats card, 
+        # as get_common_template_data returns None for optimization.
+        try:
+            common_data['open_tickets_count'] = get_open_tickets_count()
+        except:
+            common_data['open_tickets_count'] = 0
+
         return render_template('partials/dashboard_stats.html', stats=stats, **common_data)
 
     @flask_app.route('/dashboard/transactions.partial')
@@ -489,9 +600,9 @@ def create_webhook_app(bot_controller_instance):
         page = request.args.get('page', 1, type=int)
         per_page = 8
         transactions, total_transactions = get_paginated_transactions(page=page, per_page=per_page)
+        total_pages = ceil(total_transactions / per_page)
         
-        if request.args.get('ajax_pagination'):
-            total_pages = ceil(total_transactions / per_page)
+        if request.args.get('ajax_pagination') or request.args.get('lazy_load'):
             return jsonify({
                 "html": render_template('partials/dashboard_transactions.html', transactions=transactions),
                 "current_page": page,
@@ -506,9 +617,9 @@ def create_webhook_app(bot_controller_instance):
         page = request.args.get('page', 1, type=int)
         per_page = 10
         recent_trials, total_trials = rw_repo.get_paginated_trials(page=page, per_page=per_page)
-        
-        if request.args.get('ajax_pagination'):
-            trials_total_pages = ceil(total_trials / per_page)
+        trials_total_pages = ceil(total_trials / per_page)
+
+        if request.args.get('ajax_pagination') or request.args.get('lazy_load'):
             return jsonify({
                 "html": render_template('partials/dashboard_trials.html', recent_trials=recent_trials),
                 "current_page": page,
@@ -522,7 +633,18 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/dashboard/charts.json')
     @login_required
     def dashboard_charts_json():
-        data = get_daily_stats_for_charts(days=30)
+        period = request.args.get('period', '30d')
+        mapping = {
+            'today': 1,
+            '7d': 7,
+            '30d': 30,
+            '3m': 90,
+            '6m': 180,
+            '12m': 365,
+            'all': 0
+        }
+        days = mapping.get(period, 30)
+        data = get_daily_stats_for_charts(days=days)
         return jsonify(data)
 
 
@@ -625,11 +747,87 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/support/table.partial')
     @login_required
     def support_table_partial():
-        status = request.args.get('status') or None
+        status = request.args.get('status', 'open')
         page = request.args.get('page', 1, type=int)
+        is_mobile = request.args.get('mobile') == '1'
         per_page = 12
         tickets, total = get_tickets_paginated(page=page, per_page=per_page, status=status)
-        return render_template('partials/support_table.html', tickets=tickets)
+        total_pages = ceil(total / per_page) if per_page else 1
+        
+        # Рендерим таблицу (в зависимости от режима мобильный/десктоп)
+        if is_mobile:
+            table_html = ""
+            for ticket in tickets:
+                # Встраиваем мобильную разметку прямо здесь или используем имеющийся паршиал если он есть.
+                # Но для мобилок у нас нет отдельного файла, поэтому я просто отрендерил бы строки.
+                # Однако, чтобы не дублировать код, логичнее было бы иметь partials/support_mobile_item.html
+                # Но пользователь просил НЕ создавать новые файлы. 
+                # Так что отрендерим через render_template_string или просто возвращая кусок.
+                # Я использую support.html с флагом, но это может быть тяжело. 
+                # Давайте для мобилок рендерить просто HTML-строки здесь.
+                table_html += f"""
+                <div class="relative">
+                    <a href="/support/{ticket['ticket_id']}" class="chat-item pr-14 {'ring-1 ring-yellow-500/30 bg-yellow-500/5' if ticket['status'] == 'open' and ticket['last_sender'] == 'user' else ''}">
+                        <div class="chat-avatar {'grayscale opacity-50' if ticket['status'] != 'open' else ''} relative">
+                            {(ticket['username'][0].upper() if ticket['username'] else 'U')}
+                            {'<div class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-yellow-500 border-2 border-[#0a110d] animate-pulse"></div>' if ticket['status'] == 'open' and ticket['last_sender'] == 'user' else ''}
+                        </div>
+                        <div class="chat-content">
+                            <div class="chat-header items-start">
+                                <span class="chat-name">{'@'+ticket['username'] if ticket['username'] else 'User #'+str(ticket['user_id'])}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="chat-preview {'highlight' if ticket['status'] == 'open' and ticket['last_sender'] == 'user' else ''}">
+                                    {ticket['subject'] or 'Без темы'}
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                    <div class="absolute right-1 top-0 bottom-0 flex flex-col justify-center z-30">
+                        <div class="flex flex-col items-end gap-1 p-3">
+                            <span class="chat-time text-[10px] opacity-30 font-bold">{ (ticket['updated_at'] or ticket['created_at'] or "").split(' ')[1][:5] }</span>
+                            <button type="button" onclick="toggleSupportMenu(event, 'm-support-menu-{ticket['ticket_id']}')" class="w-10 h-10 flex items-center justify-center text-white/40 active:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+                        </div>
+                    </div>
+                    <div id="m-support-menu-{ticket['ticket_id']}" class="hidden absolute top-14 right-2 w-48 border border-white/10 rounded-xl shadow-2xl z-[99999] overflow-hidden" style="background-color: #1a1a1a !important;">
+                    <form method="post" action="/support/{ticket['ticket_id']}" class="m-0" data-ajax="true" data-refresh="support-mobile-list">
+                        <input type="hidden" name="csrf_token" value="{generate_csrf()}">
+                        { f"<button type='submit' name='t_action' value='close' class='w-full p-4 text-left text-xs font-bold text-white hover:bg-white/5 flex items-center gap-2'><span class='material-symbols-outlined text-sm text-primary'>check_circle</span> ЗАКРЫТЬ</button>" if ticket['status'] == 'open' else f"<button type='submit' name='t_action' value='open' class='w-full p-4 text-left text-xs font-bold text-white hover:bg-white/5 flex items-center gap-2'><span class='material-symbols-outlined text-sm text-primary'>refresh</span> ОТКРЫТЬ</button>" }
+                    </form>
+                    <form method="post" action="/support/{ticket['ticket_id']}/delete" class="m-0 border-t border-white/5" data-ajax="true" data-refresh="support-mobile-list">
+                        <input type="hidden" name="csrf_token" value="{generate_csrf()}">
+                        <button type="submit" class="w-full p-4 text-left text-xs font-bold text-red-500 hover:bg-white/5 flex items-center gap-2" onclick="return confirm('Удалить?')">
+                            <span class="material-symbols-outlined text-sm text-red-500">delete_forever</span> УДАЛИТЬ
+                        </button>
+                    </form>
+                </div>
+            </div>
+            """
+            pagination_html = ""
+            if total_pages > 1:
+                pagination_html = f'<div class="flex items-center justify-center gap-4 py-8">'
+                if page > 1:
+                    pagination_html += f'<a href="/support?status={status or ""}&page={page-1}" class="ajax-pagination w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40"><span class="material-symbols-outlined">chevron_left</span></a>'
+                pagination_html += f'<span class="text-sm font-black text-white">{page} / {total_pages}</span>'
+                if page < total_pages:
+                    pagination_html += f'<a href="/support?status={status or ""}&page={page+1}" class="ajax-pagination w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40"><span class="material-symbols-outlined">chevron_right</span></a>'
+                pagination_html += '</div>'
+            table_html += pagination_html
+        else:
+            table_html = render_template('partials/support_table.html', tickets=tickets)
+            pagination_html = ""
+            if total_pages > 1:
+                pagination_html = f'<span class="text-[10px] font-black text-white/20 uppercase tracking-widest">Страница {page} из {total_pages}</span><div class="flex gap-2">'
+                if page > 1:
+                    pagination_html += f'<a href="/support?status={status or ""}&page={page-1}" class="ajax-pagination px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs font-bold hover:bg-white/10 transition-all uppercase tracking-widest">Назад</a>'
+                if page < total_pages:
+                    pagination_html += f'<a href="/support?status={status or ""}&page={page+1}" class="ajax-pagination px-4 py-2 rounded-xl bg-primary text-background-dark text-xs font-bold hover:bg-primary/90 transition-all uppercase tracking-widest">Вперед</a>'
+                pagination_html += '</div>'
+            
+        return jsonify({
+            "table_html": table_html,
+            "pagination_html": pagination_html
+        })
 
     @flask_app.route('/support/open-count.partial')
     @login_required
@@ -652,45 +850,15 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/users')
     @login_required
     def users_page():
-
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 25, type=int)
         q = (request.args.get('q') or '').strip()
 
-
-        users, total = get_users_paginated(page=page, per_page=per_page, q=q or None)
-        user_ids = [u['telegram_id'] for u in users]
-
-
-        try:
-            keys_counts = get_keys_counts_for_users(user_ids)
-        except Exception:
-            keys_counts = {}
-
-        for user in users:
-            uid = user['telegram_id']
-
-            try:
-
-                user['balance'] = float(user.get('balance') or 0.0)
-            except Exception:
-                user['balance'] = 0.0
-            user['keys_count'] = int(keys_counts.get(uid, 0) or 0)
-            # Добавляем total_months (приобретено месяцев)
-            user['total_months'] = int(user.get('total_months') or 0)
-            # Добавляем количество рефералов
-            try:
-                referrals = get_referrals_for_user(uid) or []
-                user['referral_count'] = len(referrals)
-            except Exception:
-                user['referral_count'] = 0
-
-
-        from math import ceil
-        total_pages = ceil(total / per_page) if per_page else 1
-
+        # OPTIMIZATION: Do not fetch users synchronously. Return empty list.
+        # Frontend will fetch content via /users/table.partial
+        
         common_data = get_common_template_data()
-        return render_template('users.html', users=users, current_page=page, total_pages=total_pages, q=q, per_page=per_page, **common_data)
+        return render_template('users.html', users=[], current_page=page, total_pages=1, q=q, per_page=per_page, **common_data)
 
 
     @flask_app.route('/users/table.partial')
@@ -821,6 +989,31 @@ def create_webhook_app(bot_controller_instance):
             logger.error(f"Failed to clear balance history for user {user_id}: {e}")
             return jsonify({"ok": False, "error": str(e)}), 500
 
+    @flask_app.route('/users/<int:user_id>/payments/clear-history', methods=['POST'])
+    @login_required
+    def clear_payment_history_route(user_id: int):
+        """Delete all external payment transaction history for a user (not balance, not topup)"""
+        try:
+            with sqlite3.connect(DB_FILE) as conn:
+                cursor = conn.cursor()
+                # Удаляем транзакции, которые НЕ являются пополнениями и НЕ оплачены балансом
+                cursor.execute("""
+                    DELETE FROM transactions 
+                    WHERE user_id = ? 
+                    AND (
+                        metadata NOT LIKE '%"action": "topup"%' 
+                        AND LOWER(payment_method) != 'balance'
+                    )
+                """, (user_id,))
+                deleted_count = cursor.rowcount
+                conn.commit()
+            
+            logger.info(f"Cleared {deleted_count} payment transactions for user {user_id}")
+            return jsonify({"ok": True, "message": f"История очищена ({deleted_count} зап.)"})
+        except Exception as e:
+            logger.error(f"Failed to clear payment history for user {user_id}: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
+
     @flask_app.route('/users/<int:user_id>/details.json')
     @login_required
     def user_details_json(user_id: int):
@@ -915,7 +1108,7 @@ def create_webhook_app(bot_controller_instance):
             try:
                 keys = get_keys_for_user(user_id) or []
                 subs_stats["total"] = len(keys)
-                now = datetime.utcnow()
+                now = get_msk_time().replace(tzinfo=None)
                 
                 for key in keys:
                     expire_at_str = key.get('expire_at')
@@ -970,6 +1163,7 @@ def create_webhook_app(bot_controller_instance):
                     "total_spent": float(user.get('total_spent') or 0),
                     "total_months": int(user.get('total_months') or 0),
                     "trial_used": bool(user.get('trial_used')),
+                    "is_pinned": bool(user.get('is_pinned')),
                     "referral_code": f"ref_{user_id}",
                     "referral_count": len(referrals),
                     "referred_by": {
@@ -980,7 +1174,15 @@ def create_webhook_app(bot_controller_instance):
                 "payment_history": payment_history,
                 "balance_history": balance_history,
                 "subscriptions": subscriptions,
-                "subs_stats": subs_stats
+                "subs_stats": subs_stats,
+                "seller_info": {
+                    "active": bool(user.get('seller_active', 0)),
+                    "settings": get_seller_user(user_id) or {
+                        "seller_sale": 0.0,
+                        "sellr_ref": 0.0,
+                        "seller_uuid": "0"
+                    }
+                }
             }
             
             return jsonify(result)
@@ -1018,22 +1220,19 @@ def create_webhook_app(bot_controller_instance):
             logger.error(f"Failed to toggle trial for user {user_id}: {e}")
             return jsonify({"ok": False, "error": str(e)}), 500
 
-    @flask_app.route('/admin/keys')
-    @login_required
-    def admin_keys_page():
-        keys = []
+    def _get_filtered_keys(q, filter_mode):
+        all_keys = []
         try:
-            keys = get_all_keys()
+            all_keys = get_all_keys()
         except Exception:
-            keys = []
+            all_keys = []
         
-        filter_mode = request.args.get('filter', 'general')
         if filter_mode == 'gift':
-            keys = [k for k in keys if (k.get('user_id') or 0) == 0]
+            keys = [k for k in all_keys if (k.get('user_id') or 0) == 0 or str(k.get('key_email') or '').lower().startswith('gift')]
         else:
-            keys = [k for k in keys if (k.get('user_id') or 0) != 0]
+            keys = [k for k in all_keys if (k.get('user_id') or 0) != 0 and not str(k.get('key_email') or '').lower().startswith('gift')]
 
-        q = (request.args.get('q') or '').strip().lower()
+        q = (q or '').strip().lower()
         if q:
             def match(k):
                 return (
@@ -1041,18 +1240,38 @@ def create_webhook_app(bot_controller_instance):
                     q in str(k.get('user_id', '')).lower() or
                     q in str(k.get('host_name', '')).lower() or
                     q in str(k.get('key_email', '')).lower() or
-                    q in str(k.get('remnawave_user_uuid', '')).lower()
+                    q in str(k.get('remnawave_user_uuid', '')).lower() or
+                    q in str(k.get('subscription_url', '')).lower() or
+                    q in str(k.get('access_url', '')).lower()
                 )
             keys = [k for k in keys if match(k)]
+        return keys
 
-        page = request.args.get('page', 1, type=int)
-        per_page = 20
-        total_items = len(keys)
-        total_pages = ceil(total_items / per_page) if per_page else 1
+    @flask_app.route('/admin/keys')
+    @login_required
+    def admin_keys_page():
+        filter_mode = request.args.get('filter', 'general')
+        q = request.args.get('q', '')
+
+        # OPTIMIZATION: Do not fetch keys synchronously. Return empty list.
+        # Frontend will fetch content via /admin/keys/table.partial
         
-        start = (page - 1) * per_page
-        end = start + per_page
-        paginated_keys = keys[start:end]
+        paginated_keys = []
+        total_pages = 1
+        current_page = 1
+        expired_count = 0 
+        try:
+            all_keys = get_all_keys()
+            now = get_msk_time().replace(tzinfo=timezone(timedelta(hours=3))).timestamp() * 1000
+            expired_keys = [
+                k for k in all_keys 
+                if k.get('expire_at') and 
+                datetime.strptime(str(k.get('expire_at')), "%Y-%m-%d %H:%M:%S").timestamp() * 1000 <= now
+            ]
+            expired_count = len(expired_keys)
+        except Exception as e:
+            logger.error(f"Failed to calculate expired_count: {e}")
+            expired_count = 0
 
         hosts = []
         try:
@@ -1066,35 +1285,15 @@ def create_webhook_app(bot_controller_instance):
             users = []
             
         common_data = get_common_template_data()
-        return render_template('admin_keys.html', keys=paginated_keys, hosts=hosts, users=users, current_filter=filter_mode, current_page=page, total_pages=total_pages, q=q, **common_data)
+        return render_template('admin_keys.html', keys=paginated_keys, hosts=hosts, users=users, current_filter=filter_mode, current_page=current_page, total_pages=total_pages, q=q, expired_count=expired_count, **common_data)
 
 
     @flask_app.route('/admin/keys/table.partial')
     @login_required
     def admin_keys_table_partial():
-        keys = []
-        try:
-            keys = get_all_keys()
-        except Exception:
-            keys = []
-            
         filter_mode = request.args.get('filter', 'general')
-        if filter_mode == 'gift':
-            keys = [k for k in keys if (k.get('user_id') or 0) == 0]
-        else:
-            keys = [k for k in keys if (k.get('user_id') or 0) != 0]
-
-        q = (request.args.get('q') or '').strip().lower()
-        if q:
-            def match(k):
-                return (
-                    q in str(k.get('key_id', '')).lower() or
-                    q in str(k.get('user_id', '')).lower() or
-                    q in str(k.get('host_name', '')).lower() or
-                    q in str(k.get('key_email', '')).lower() or
-                    q in str(k.get('remnawave_user_uuid', '')).lower()
-                )
-            keys = [k for k in keys if match(k)]
+        q = request.args.get('q', '')
+        keys = _get_filtered_keys(q, filter_mode)
             
         page = request.args.get('page', 1, type=int)
         per_page = 20
@@ -1109,29 +1308,9 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/admin/keys/pagination.partial')
     @login_required
     def admin_keys_pagination_partial():
-        keys = []
-        try:
-            keys = get_all_keys()
-        except Exception:
-            keys = []
-            
         filter_mode = request.args.get('filter', 'general')
-        if filter_mode == 'gift':
-            keys = [k for k in keys if (k.get('user_id') or 0) == 0]
-        else:
-            keys = [k for k in keys if (k.get('user_id') or 0) != 0]
-
-        q = (request.args.get('q') or '').strip().lower()
-        if q:
-            def match(k):
-                return (
-                    q in str(k.get('key_id', '')).lower() or
-                    q in str(k.get('user_id', '')).lower() or
-                    q in str(k.get('host_name', '')).lower() or
-                    q in str(k.get('key_email', '')).lower() or
-                    q in str(k.get('remnawave_user_uuid', '')).lower()
-                )
-            keys = [k for k in keys if match(k)]
+        q = request.args.get('q', '')
+        keys = _get_filtered_keys(q, filter_mode)
             
         page = request.args.get('page', 1, type=int)
         per_page = 20
@@ -1169,7 +1348,12 @@ def create_webhook_app(bot_controller_instance):
             key_email = (request.form.get('key_email') or '').strip()
             expiry = request.form.get('expiry_date') or ''
 
-            expiry_ms = int(datetime.fromisoformat(expiry).timestamp() * 1000) if expiry else 0
+            # Treat naive input as MSK (+3)
+            expiry_dt = datetime.fromisoformat(expiry)
+            msk_tz = timezone(timedelta(hours=3), name='MSK')
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=msk_tz)
+            expiry_ms = int(expiry_dt.timestamp() * 1000) if expiry else 0
         except Exception:
             flash('Проверьте поля ключа.', 'danger')
             return redirect(request.referrer or url_for('admin_keys_page'))
@@ -1207,13 +1391,17 @@ def create_webhook_app(bot_controller_instance):
             bot = _bot_controller.get_bot_instance()
             if bot and new_id:
                 text = (
-                    '🔐 Ваш ключ готов!\n'
-                    f'Сервер: {host_name}\n'
-                    'Выдан администратором через панель.\n'
+                    '🔐 <b>Ваш ключ готов!</b>\n\n'
+                    '<b>Информация о ключе:</b>\n'
+                    f'🛰 Сервер: <code>{host_name}</code>\n'
+                    '📃 Статус: <b>Активен</b>\n'
+                    '👤 Выдан: Администратором через панель\n'
+                    f"📅 Истекает: <b>{datetime.fromtimestamp(expiry_ms/1000, tz=timezone(timedelta(hours=3), name='MSK')).strftime('%Y-%m-%d %H:%M') if expiry_ms else '∞'}</b>\n"
+                    f"⏳ Осталось: <b>{_get_time_remaining_str(expiry_ms)}</b>\n"
                 )
                 if result and result.get('connection_string'):
                     cs = html_escape.escape(result['connection_string'])
-                    text += f"\nПодключение:\n<pre><code>{cs}</code></pre>"
+                    text += f"\n<b>Подключение:</b>\n<pre><code>{cs}</code></pre>"
                 loop = current_app.config.get('EVENT_LOOP')
                 if loop and loop.is_running():
                     asyncio.run_coroutine_threadsafe(
@@ -1243,7 +1431,11 @@ def create_webhook_app(bot_controller_instance):
         if expiry_str:
             try:
                 expiry_dt = datetime.fromisoformat(expiry_str)
-                expiry_ms = int(expiry_dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
+                # Treat naive input as MSK (+3)
+                msk_tz = timezone(timedelta(hours=3), name='MSK')
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=msk_tz)
+                expiry_ms = int(expiry_dt.timestamp() * 1000)
             except Exception:
                 return jsonify({"ok": False, "error": "invalid_expiry"}), 400
 
@@ -1289,7 +1481,7 @@ def create_webhook_app(bot_controller_instance):
                 return jsonify({"ok": False, "error": "user_not_found"}), 404
 
             if expiry_ms is None and days_total > 0:
-                expiry_ms = int((datetime.utcnow() + timedelta(days=days_total)).replace(tzinfo=timezone.utc).timestamp() * 1000)
+                expiry_ms = int((get_msk_time() + timedelta(days=days_total)).timestamp() * 1000)
 
             try:
                 result = asyncio.run(remnawave_api.create_or_update_key_on_host(
@@ -1319,13 +1511,17 @@ def create_webhook_app(bot_controller_instance):
                 bot = _bot_controller.get_bot_instance()
                 if bot and key_id:
                     text = (
-                        '🔐 Ваш ключ готов!\n'
-                        f'Сервер: {host_name}\n'
-                        'Выдан администратором через панель.\n'
+                        '🔐 <b>Ваш ключ готов!</b>\n\n'
+                        '<b>Информация о ключе:</b>\n'
+                        f'🛰 Сервер: <code>{host_name}</code>\n'
+                        '📃 Статус: <b>Активен</b>\n'
+                        '👤 Выдан: Администратором через панель\n'
+                        f"📅 Истекает: <b>{datetime.fromtimestamp(expiry_ms/1000, tz=timezone(timedelta(hours=3), name='MSK')).strftime('%Y-%m-%d %H:%M') if expiry_ms else '∞'}</b>\n"
+                        f"⏳ Осталось: <b>{_get_time_remaining_str(expiry_ms)}</b>\n"
                     )
                     if result and result.get('connection_string'):
                         cs = html_escape.escape(result['connection_string'])
-                        text += f"\nПодключение:\n<pre><code>{cs}</code></pre>"
+                        text += f"\n<b>Подключение:</b>\n<pre><code>{cs}</code></pre>"
                     loop = current_app.config.get('EVENT_LOOP')
                     if loop and loop.is_running():
                         asyncio.run_coroutine_threadsafe(
@@ -1346,28 +1542,45 @@ def create_webhook_app(bot_controller_instance):
             })
 
         if mode == 'gift':
-
+            user_id = 0
+            target_user = None
+            try:
+                uid_raw = request.form.get('user_id')
+                if uid_raw and uid_raw.strip():
+                    user_id = int(uid_raw)
+                    target_user = get_user(user_id)
+            except Exception:
+                user_id = 0
 
             expiry_ms: int | None = None
             if expiry_str:
                 try:
                     expiry_dt = datetime.fromisoformat(expiry_str)
-                    expiry_ms = int(expiry_dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
+                    msk_tz = timezone(timedelta(hours=3), name='MSK')
+                    if expiry_dt.tzinfo is None:
+                        expiry_dt = expiry_dt.replace(tzinfo=msk_tz)
+                    expiry_ms = int(expiry_dt.timestamp() * 1000)
                 except Exception:
                     return jsonify({"ok": False, "error": "invalid_expiry"}), 400
             if expiry_ms is None and days_total > 0:
-                expiry_ms = int((datetime.utcnow() + timedelta(days=days_total)).replace(tzinfo=timezone.utc).timestamp() * 1000)
+                expiry_ms = int((get_msk_time() + timedelta(days=days_total)).timestamp() * 1000)
 
-
-            base_local = f"gift-{uuid.uuid4().hex[:8]}"
+            # Email generation logic
             domain = "bot.local"
+            if target_user:
+                # Logic matching admin_handlers.py / create_gift_key style
+                raw_username = (target_user.get('username') or f"user{user_id}").lower()
+                clean_username = re.sub(r"[^a-z0-9._-]", "_", raw_username).strip("_")[:20]
+                base_local = f"gift_{clean_username}"
+            else:
+                base_local = f"gift-{uuid.uuid4().hex[:8]}"
+            
             attempt = 0
             while True:
                 candidate_email = f"{base_local if attempt == 0 else base_local + '-' + str(attempt)}@{domain}"
                 if not rw_repo.get_key_by_email(candidate_email):
                     break
                 attempt += 1
-
 
             try:
                 result = asyncio.run(remnawave_api.create_or_update_key_on_host(
@@ -1385,9 +1598,8 @@ def create_webhook_app(bot_controller_instance):
             if not result:
                 return jsonify({"ok": False, "error": "host_failed"}), 500
 
-
             key_id = rw_repo.record_key_from_payload(
-                user_id=0,
+                user_id=user_id,
                 payload=result,
                 host_name=host_name,
                 description=comment or 'Gift key',
@@ -1395,6 +1607,34 @@ def create_webhook_app(bot_controller_instance):
             if not key_id:
                 return jsonify({"ok": False, "error": "db_failed"}), 500
 
+            # Notify user if assigned
+            if user_id and target_user:
+                try:
+                    bot = _bot_controller.get_bot_instance()
+                    if bot:
+                        text = (
+                            '🎁 <b>Вам выдан подарочный ключ!</b>\n\n'
+                            '<b>Информация о ключе:</b>\n'
+                            f'🛰 Сервер: <code>{host_name}</code>\n'
+                            '📃 Статус: <b>Активен</b>\n'
+                            '👤 От кого: Администратор\n'
+                            f"📅 Истекает: <b>{datetime.fromtimestamp(expiry_ms/1000, tz=timezone(timedelta(hours=3), name='MSK')).strftime('%Y-%m-%d %H:%M') if expiry_ms else '∞'}</b>\n"
+                            f"⏳ Осталось: <b>{_get_time_remaining_str(expiry_ms)}</b>\n"
+                        )
+                        if result and result.get('connection_string'):
+                            cs = html_escape.escape(result['connection_string'])
+                            text += f"\n<b>Подключение:</b>\n<pre><code>{cs}</code></pre>"
+                        
+                        loop = current_app.config.get('EVENT_LOOP')
+                        if loop and loop.is_running():
+                            asyncio.run_coroutine_threadsafe(
+                                bot.send_message(chat_id=user_id, text=text, parse_mode='HTML', disable_web_page_preview=True),
+                                loop
+                            )
+                        else:
+                            asyncio.run(bot.send_message(chat_id=user_id, text=text, parse_mode='HTML', disable_web_page_preview=True))
+                except Exception as e:
+                    logger.warning(f"Не удалось уведомить пользователя о подарочном ключе: {e}")
 
             return jsonify({
                 "ok": True,
@@ -1403,7 +1643,7 @@ def create_webhook_app(bot_controller_instance):
                 "uuid": result.get('client_uuid'),
                 "expiry_ms": result.get('expiry_timestamp_ms') or expiry_ms,
                 "connection": result.get('connection_string'),
-                "note": "Gift key created (not bound to Telegram user)."
+                "note": f"Gift key created (assigned to user {user_id})." if user_id else "Gift key created (not bound to Telegram user)."
             })
 
         return jsonify({"ok": False, "error": "unsupported_mode"}), 400
@@ -1411,26 +1651,77 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/admin/keys/generate-email')
     @login_required
     def generate_key_email_route():
+        import re
+        mode = request.args.get('mode', 'personal')
         try:
             user_id = int(request.args.get('user_id'))
         except Exception:
+            user_id = 0
+
+        if mode == 'personal' and not user_id:
             return jsonify({"ok": False, "error": "invalid user_id"}), 400
+
         try:
-            user = get_user(user_id) or {}
-            raw_username = (user.get('username') or f'user{user_id}').lower()
-            import re
-            username_slug = re.sub(r"[^a-z0-9._-]", "_", raw_username).strip("_")[:16] or f"user{user_id}"
-            base_local = f"{username_slug}"
+            base_local = ""
+            user = get_user(user_id) if user_id else None
+            
+            if mode == 'gift':
+                if user:
+                    # Gift with user assigned
+                    raw_username = (user.get('username') or f'user{user_id}').lower()
+                    username_slug = re.sub(r"[^a-z0-9._-]", "_", raw_username).strip("_")[:20]
+                    base_local = f"gift_{username_slug}"
+                else:
+                    # Gift without user (random)
+                    # Use a temporary placeholder that looks real, but keeps changing if we re-request? 
+                    # Or just one. Let's use uuid.
+                    base_local = f"gift-{uuid.uuid4().hex[:8]}"
+            else:
+                # Personal (requires user)
+                raw_username = (user.get('username') or f'user{user_id}').lower()
+                username_slug = re.sub(r"[^a-z0-9._-]", "_", raw_username).strip("_")[:16] or f"user{user_id}"
+                base_local = f"{username_slug}"
+
             candidate_local = base_local
-            attempt = 1
+            attempt = 0
             while True:
-                candidate_email = f"{candidate_local}@bot.local"
+                suffix = f"-{attempt}" if attempt > 0 else ""
+                candidate_email = f"{candidate_local}{suffix}@bot.local"
                 if not rw_repo.get_key_by_email(candidate_email):
                     break
                 attempt += 1
-                candidate_local = f"{base_local}-{attempt}"
+            
             return jsonify({"ok": True, "email": candidate_email})
         except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @flask_app.route('/admin/users/<int:user_id>/seller_settings', methods=['POST'])
+    @login_required
+    def update_seller_settings_route(user_id: int):
+        try:
+            seller_active = int(request.form.get('seller_active', 0))
+            seller_sale = float(request.form.get('seller_sale', 0))
+            seller_ref = float(request.form.get('seller_ref', 0))
+            seller_uuid = request.form.get('seller_uuid', '0').strip()
+            
+            # Update user table for active status
+            with sqlite3.connect(DB_FILE) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE users SET seller_active = ? WHERE telegram_id = ?",
+                    (seller_active, user_id)
+                )
+                conn.commit()
+            
+            # Update seller_users table logic
+            if seller_active == 1:
+                add_seller_user(user_id, seller_sale, seller_ref, seller_uuid)
+            else:
+                delete_seller_user(user_id)
+            
+            return jsonify({"ok": True, "message": "Настройки продавца сохранены"})
+        except Exception as e:
+            logger.error(f"Failed to update seller settings for {user_id}: {e}")
             return jsonify({"ok": False, "error": str(e)}), 500
 
     @flask_app.route('/admin/keys/<int:key_id>/delete', methods=['POST'])
@@ -1447,7 +1738,13 @@ def create_webhook_app(bot_controller_instance):
         except Exception:
             pass
         ok = delete_key_by_id(key_id)
-        flash('Ключ удалён.' if ok else 'Не удалось удалить ключ.', 'success' if ok else 'danger')
+        msg = 'Ключ удалён.' if ok else 'Не удалось удалить ключ.'
+        
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify({"ok": ok, "message": msg})
+            
+        flash(msg, 'success' if ok else 'danger')
         return redirect(request.referrer or url_for('admin_keys_page'))
 
     @flask_app.route('/admin/keys/<int:key_id>/adjust-expiry', methods=['POST'])
@@ -1471,12 +1768,13 @@ def create_webhook_app(bot_controller_instance):
                     try:
                         exp_dt = datetime.strptime(cur_expiry, '%Y-%m-%d %H:%M:%S')
                     except Exception:
-                        exp_dt = datetime.utcnow()
+                        exp_dt = get_msk_time().replace(tzinfo=None)
             else:
-                exp_dt = cur_expiry or datetime.utcnow()
+                exp_dt = cur_expiry or get_msk_time().replace(tzinfo=None)
             new_dt = exp_dt + timedelta(days=delta_days)
             if new_dt.tzinfo is None:
-                new_dt = new_dt.replace(tzinfo=timezone.utc)
+                msk_tz = timezone(timedelta(hours=3), name='MSK')
+                new_dt = new_dt.replace(tzinfo=msk_tz)
             new_ms = int(new_dt.timestamp() * 1000)
 
 
@@ -1506,20 +1804,25 @@ def create_webhook_app(bot_controller_instance):
             try:
                 user_id = key.get('user_id')
                 new_ms_final = int(result.get('expiry_timestamp_ms'))
-                new_dt_local = datetime.fromtimestamp(new_ms_final/1000)
+                # Используем МСК для отображения
+                msk_tz = timezone(timedelta(hours=3), name='MSK')
+                new_dt_local = datetime.fromtimestamp(new_ms_final/1000, tz=msk_tz)
                 text = (
-                    "🗓️ Срок вашего VPN-ключа изменён администратором.\n"
-                    f"Хост: {key.get('host_name')}\n"
-                    f"Email ключа: {key.get('key_email')}\n"
-                    f"Новая дата истечения: {new_dt_local.strftime('%Y-%m-%d %H:%M')}"
+                    "🗓️ <b>Срок действия ключа изменён</b>\n\n"
+                    "<b>Обновленные данные:</b>\n"
+                    f"🛰 Хост: <code>{key.get('host_name')}</code>\n"
+                    f"💌 Email: <code>{key.get('key_email')}</code>\n\n"
+                    f"📅 Истекает: <b>{datetime.fromtimestamp(new_ms_final/1000, tz=timezone(timedelta(hours=3), name='MSK')).strftime('%Y-%m-%d %H:%M')}</b>\n"
+                    f"⏳ Осталось: <b>{_get_time_remaining_str(new_ms_final)}</b>\n"
+                    "👤 Изменено: Администратором\n"
                 )
                 if user_id:
                     bot = _bot_controller.get_bot_instance()
                     loop = current_app.config.get('EVENT_LOOP')
                     if bot and loop and loop.is_running():
-                        asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=user_id, text=text), loop)
+                        asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=user_id, text=text, parse_mode='HTML'), loop)
                     elif bot:
-                        asyncio.run(bot.send_message(chat_id=user_id, text=text))
+                        asyncio.run(bot.send_message(chat_id=user_id, text=text, parse_mode='HTML'))
             except Exception:
                 pass
 
@@ -1532,7 +1835,7 @@ def create_webhook_app(bot_controller_instance):
     def sweep_expired_keys_route():
         removed = 0
         failed = 0
-        now = datetime.utcnow()
+        now = get_msk_time().replace(tzinfo=None)
         keys = get_all_keys()
         for k in keys:
             exp = k.get('expiry_date')
@@ -1560,7 +1863,7 @@ def create_webhook_app(bot_controller_instance):
 
             try:
                 if exp_dt is not None and getattr(exp_dt, 'tzinfo', None) is not None:
-                    exp_dt = exp_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                    exp_dt = exp_dt.astimezone(timezone(timedelta(hours=3))).replace(tzinfo=None)
             except Exception:
                 pass
             if not exp_dt or exp_dt > now:
@@ -1590,19 +1893,27 @@ def create_webhook_app(bot_controller_instance):
                     bot = _bot_controller.get_bot_instance()
                     loop = current_app.config.get('EVENT_LOOP')
                     text = (
-                        "Ваш ключ был автоматически удалён по истечении срока.\n"
-                        f"Хост: {k.get('host_name')}\nEmail: {k.get('key_email')}\n"
-                        "При необходимости вы можете оформить новый ключ."
+                        "🗑 <b>Ключ удалён (истек срок)</b>\n\n"
+                        "<b>Информация:</b>\n"
+                        f"🛰 Хост: <code>{k.get('host_name')}</code>\n"
+                        f"💌 Email: <code>{k.get('key_email')}</code>\n\n"
+                        "💡 <i>Вы можете оформить новый ключ в меню бота.</i>"
                     )
                     if bot and loop and loop.is_running():
-                        asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=k.get('user_id'), text=text), loop)
+                        asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=k.get('user_id'), text=text, parse_mode='HTML'), loop)
                     else:
-                        asyncio.run(bot.send_message(chat_id=k.get('user_id'), text=text))
+                        asyncio.run(bot.send_message(chat_id=k.get('user_id'), text=text, parse_mode='HTML'))
                 except Exception:
                     pass
             except Exception:
                 failed += 1
-        flash(f"Удалено истёкших ключей: {removed}. Ошибок: {failed}.", 'success' if failed == 0 else 'warning')
+            
+        msg = f"Удалено истёкших ключей: {removed}. Ошибок: {failed}."
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify({"ok": True, "message": msg, "removed": removed, "failed": failed})
+
+        flash(msg, 'success' if failed == 0 else 'warning')
         return redirect(request.referrer or url_for('admin_keys_page'))
 
     @flask_app.route('/admin/keys/<int:key_id>/comment', methods=['POST'])
@@ -1632,6 +1943,10 @@ def create_webhook_app(bot_controller_instance):
             ssh_port = None
         ok = update_host_ssh_settings(host_name, ssh_host=ssh_host, ssh_port=ssh_port, ssh_user=ssh_user,
                                       ssh_password=ssh_password, ssh_key_path=ssh_key_path)
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': ok, 'message': 'SSH-параметры обновлены' if ok else 'Не удалось обновить SSH-параметры'})
+        
         flash('SSH-параметры обновлены.' if ok else 'Не удалось обновить SSH-параметры.', 'success' if ok else 'danger')
         return redirect(request.referrer or url_for('settings_page'))
 
@@ -1813,11 +2128,15 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/support')
     @login_required
     def support_list_page():
-        status = request.args.get('status')
+        status = request.args.get('status', 'open')
         page = request.args.get('page', 1, type=int)
         per_page = 12
-        tickets, total = get_tickets_paginated(page=page, per_page=per_page, status=status if status in ['open', 'closed'] else None)
-        total_pages = ceil(total / per_page) if per_page else 1
+
+        # OPTIMIZATION: Do not fetch tickets synchronously.
+        # Front-end will call /support/table.partial
+        tickets = []
+        total_pages = 1
+        
         open_count = get_open_tickets_count()
         closed_count = get_closed_tickets_count()
         all_count = get_all_tickets_count()
@@ -1844,7 +2163,7 @@ def create_webhook_app(bot_controller_instance):
 
         if request.method == 'POST':
             message = (request.form.get('message') or '').strip()
-            action = request.form.get('action')
+            action = request.form.get('t_action') or request.form.get('action')
             if action == 'reply':
                 if not message:
                     flash('Сообщение не может быть пустым.', 'warning')
@@ -1855,10 +2174,15 @@ def create_webhook_app(bot_controller_instance):
                         loop = current_app.config.get('EVENT_LOOP')
                         user_chat_id = ticket.get('user_id')
                         if bot and loop and loop.is_running() and user_chat_id:
-                            text = f"Ответ по тикету #{ticket_id}:\n\n{message}"
+                            text = (
+                                f"💬 <b>Ответ от технической поддержки.</b>\n"
+                                f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
+                                f"💌 <b>Ответ на ваше обращение:</b>\n"
+                                f"<blockquote>{message}</blockquote>"
+                            )
                             asyncio.run_coroutine_threadsafe(bot.send_message(user_chat_id, text), loop)
                         else:
-                            logger.error("Ответ поддержки: support-бот или цикл событий недоступны; сообщение пользователю не отправлено.")
+                            logger.info("Ответ поддержки: support-бот не настроен или не запущен; сообщение пользователю сохранено только в БД.")
                     except Exception as e:
                         logger.error(f"Ответ поддержки: не удалось отправить сообщение пользователю {ticket.get('user_id')} через support-бота: {e}", exc_info=True)
                     try:
@@ -1867,7 +2191,12 @@ def create_webhook_app(bot_controller_instance):
                         forum_chat_id = ticket.get('forum_chat_id')
                         thread_id = ticket.get('message_thread_id')
                         if bot and loop and loop.is_running() and forum_chat_id and thread_id:
-                            text = f"💬 Ответ админа из панели по тикету #{ticket_id}:\n\n{message}"
+                            text = (
+                                f"💬 <b>Ответ технической поддержки:</b>\n"
+                                f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
+                                f"💌 <b>Ответ на ваше обращение:</b>\n"
+                                f"<blockquote>{message}</blockquote>"
+                            )
                             asyncio.run_coroutine_threadsafe(
                                 bot.send_message(chat_id=int(forum_chat_id), text=text, message_thread_id=int(thread_id)),
                                 loop
@@ -1895,7 +2224,11 @@ def create_webhook_app(bot_controller_instance):
                         loop = current_app.config.get('EVENT_LOOP')
                         user_chat_id = ticket.get('user_id')
                         if bot and loop and loop.is_running() and user_chat_id:
-                            text = f"✅ Ваш тикет #{ticket_id} был закрыт администратором. Вы можете создать новое обращение при необходимости."
+                            text = (
+                                f"✅ <b>Ваш тикет #{ticket_id} был закрыт</b>\n\n"
+                                f"✉️ <i>Если у вас появятся другие вопросы или ваш вопрос не решен</i>\n\n"
+                                f"💌 <b>Вы можете создать новое обращение при необходимости.</b>"
+                            )
                             asyncio.run_coroutine_threadsafe(bot.send_message(int(user_chat_id), text), loop)
                     except Exception as e:
                         logger.warning(f"Закрытие тикета: не удалось уведомить пользователя {ticket.get('user_id')} о закрытии тикета #{ticket_id}: {e}")
@@ -1923,7 +2256,10 @@ def create_webhook_app(bot_controller_instance):
                         loop = current_app.config.get('EVENT_LOOP')
                         user_chat_id = ticket.get('user_id')
                         if bot and loop and loop.is_running() and user_chat_id:
-                            text = f"🔓 Ваш тикет #{ticket_id} снова открыт. Вы можете продолжить переписку."
+                            text = (
+                                f"🔓 <b>Ваш тикет #{ticket_id} был переоткрыт!</b>\n\n"
+                                f"Администратор изучил ваше обращение и возобновил переписку. Вы можете продолжить общение."
+                            )
                             asyncio.run_coroutine_threadsafe(bot.send_message(int(user_chat_id), text), loop)
                     except Exception as e:
                         logger.warning(f"Открытие тикета: не удалось уведомить пользователя {ticket.get('user_id')} об открытии тикета #{ticket_id}: {e}")
@@ -1933,8 +2269,15 @@ def create_webhook_app(bot_controller_instance):
                 return redirect(url_for('support_ticket_page', ticket_id=ticket_id))
 
         messages = get_ticket_messages(ticket_id)
+        
+        # AJAX OPTIMIZATION: Return only messages part if requested
+        if request.args.get('partial') == 'true':
+            # Чтобы не создавать файлы, рендерим фрагмент сообщения прямо здесь (через цикл в строке или мини-шаблон)
+            # Но у нас есть ticket.html, мы можем добавить туда заголовок-условие.
+            return render_template('ticket.html', ticket=ticket, messages=messages, partial_mode=True)
+
         common_data = get_common_template_data()
-        return render_template('ticket.html', ticket=ticket, messages=messages, **common_data)
+        return render_template('ticket.html', ticket=ticket, messages=[], **common_data)
 
     @flask_app.route('/support/<int:ticket_id>/messages.json')
     @login_required
@@ -1987,12 +2330,12 @@ def create_webhook_app(bot_controller_instance):
                     except Exception as e2:
                         logger.warning(f"Фолбэк-закрытие темы форума также не удалось для тикета {ticket_id}: {e2}")
             else:
-                logger.error("Удаление тикета: support-бот или цикл событий недоступны, либо отсутствуют forum_chat_id/message_thread_id; тема не удалена.")
+                logger.debug("Удаление тикета: support-бот не настроен или форум не создан; тикет удален только из БД.")
         except Exception as e:
             logger.warning(f"Не удалось обработать удаление темы форума для тикета {ticket_id} перед удалением: {e}")
         if delete_ticket(ticket_id):
             flash(f"Тикет #{ticket_id} удалён.", 'success')
-            return redirect(request.referrer or url_for('support_list_page'))
+            return redirect(url_for('support_list_page'))
         else:
             flash(f"Не удалось удалить тикет #{ticket_id}.", 'danger')
             return redirect(url_for('support_ticket_page', ticket_id=ticket_id))
@@ -2070,7 +2413,7 @@ def create_webhook_app(bot_controller_instance):
                     st = p.stat()
                     backups.append({
                         'name': p.name,
-                        'mtime': datetime.fromtimestamp(st.st_mtime).strftime('%Y-%m-%d %H:%M'),
+                        'mtime': datetime.fromtimestamp(st.st_mtime, tz=timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M'),
                         'size': st.st_size
                     })
                 except Exception:
@@ -2125,7 +2468,10 @@ def create_webhook_app(bot_controller_instance):
             ssh_port_val = int(ssh_port) if ssh_port else 22
         except Exception:
             ssh_port_val = 22
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         if not name or not ssh_host:
+            if wants_json:
+                return jsonify({'ok': False, 'error': 'Укажите имя цели и SSH хост.'}), 400
             flash('Укажите имя цели и SSH хост.', 'warning')
             return redirect(url_for('settings_page', tab='hosts'))
         ok = create_ssh_target(
@@ -2137,13 +2483,15 @@ def create_webhook_app(bot_controller_instance):
             ssh_key_path=ssh_key_path,
             description=description,
         )
+        if wants_json:
+            return jsonify({'ok': ok, 'message': 'SSH-цель добавлена' if ok else 'Не удалось добавить SSH-цель'})
         flash('SSH-цель добавлена.' if ok else 'Не удалось добавить SSH-цель.', 'success' if ok else 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
 
     @flask_app.route('/admin/ssh-targets/<target_name>/update', methods=['POST'])
     @login_required
     def update_ssh_target_route(target_name: str):
-        # Получаем новое имя цели (если есть)
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         new_target_name = (request.form.get('new_target_name') or '').strip() if 'new_target_name' in request.form else None
         
         ssh_host = (request.form.get('ssh_host') or '').strip() if 'ssh_host' in request.form else None
@@ -2157,16 +2505,16 @@ def create_webhook_app(bot_controller_instance):
         except Exception:
             ssh_port = None
         
-        # Сначала переименовываем цель, если нужно
         actual_target_name = target_name
         if new_target_name and new_target_name != target_name:
             rename_ok = rename_ssh_target(target_name, new_target_name)
             if not rename_ok:
+                if wants_json:
+                    return jsonify({'ok': False, 'error': 'Не удалось переименовать SSH-цель. Возможно, цель с таким именем уже существует.'}), 400
                 flash('Не удалось переименовать SSH-цель. Возможно, цель с таким именем уже существует.', 'danger')
                 return redirect(request.referrer or url_for('settings_page', tab='hosts'))
             actual_target_name = new_target_name
         
-        # Затем обновляем остальные поля
         ok = update_ssh_target_fields(
             actual_target_name,
             ssh_host=ssh_host,
@@ -2176,6 +2524,8 @@ def create_webhook_app(bot_controller_instance):
             ssh_key_path=ssh_key_path,
             description=description,
         )
+        if wants_json:
+            return jsonify({'ok': ok, 'message': 'SSH-цель обновлена' if ok else 'Не удалось обновить SSH-цель'})
         flash('SSH-цель обновлена.' if ok else 'Не удалось обновить SSH-цель.', 'success' if ok else 'danger')
         return redirect(request.referrer or url_for('settings_page', tab='hosts'))
 
@@ -2183,6 +2533,9 @@ def create_webhook_app(bot_controller_instance):
     @login_required
     def delete_ssh_target_route(target_name: str):
         ok = delete_ssh_target(target_name)
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify({'ok': ok, 'message': 'SSH-цель удалена' if ok else 'Не удалось удалить SSH-цель'})
         flash('SSH-цель удалена.' if ok else 'Не удалось удалить SSH-цель.', 'success' if ok else 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
 
@@ -2250,7 +2603,7 @@ def create_webhook_app(bot_controller_instance):
                 if not (filename.endswith('.zip') or filename.endswith('.db')):
                     flash('Поддерживаются только файлы .zip или .db', 'warning')
                     return redirect(request.referrer or url_for('settings_page', tab='panel'))
-                ts = datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+                ts = get_msk_time().strftime('%Y%m%d-%H%M%S')
                 dest_dir = backup_manager.BACKUPS_DIR
                 try:
                     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -2275,9 +2628,15 @@ def create_webhook_app(bot_controller_instance):
         host_name = (request.form.get('host_name') or '').strip()
         sub_url = (request.form.get('host_subscription_url') or '').strip()
         if not host_name:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                 return jsonify({'ok': False, 'error': 'Не указан хост'}), 400
             flash('Не указан хост для обновления ссылки подписки.', 'danger')
             return redirect(url_for('settings_page', tab='hosts'))
         ok = update_host_subscription_url(host_name, sub_url or None)
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'ok': ok, 'message': 'Ссылка подписки обновлена' if ok else 'Не удалось обновить ссылку'})
+
         if ok:
             flash('Ссылка подписки для хоста обновлена.', 'success')
         else:
@@ -2290,9 +2649,15 @@ def create_webhook_app(bot_controller_instance):
         host_name = (request.form.get('host_name') or '').strip()
         description = (request.form.get('host_description') or '').strip()
         if not host_name:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                 return jsonify({'ok': False, 'error': 'Не указан хост'}), 400
             flash('Не указан хост для обновления описания.', 'danger')
             return redirect(url_for('settings_page', tab='hosts'))
         ok = update_host_description(host_name, description or None)
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'ok': ok, 'message': 'Описание обновлено' if ok else 'Не удалось обновить описание'})
+
         if ok:
             flash('Описание для хоста обновлено.', 'success')
         else:
@@ -2306,10 +2671,16 @@ def create_webhook_app(bot_controller_instance):
         strategy = (request.form.get('traffic_limit_strategy') or 'NO_RESET')
         
         if not host_name:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                 return jsonify({'ok': False, 'error': 'Не указан хост'}), 400
             flash('Не указан хост для обновления настроек трафика.', 'danger')
             return redirect(url_for('settings_page', tab='hosts'))
             
         ok = update_host_traffic_settings(host_name, strategy)
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'ok': ok, 'message': 'Настройки трафика обновлены' if ok else 'Не удалось обновить настройки'})
+
         if ok:
             flash('Настройки трафика для хоста обновлены.', 'success')
         else:
@@ -2323,9 +2694,15 @@ def create_webhook_app(bot_controller_instance):
         host_name = (request.form.get('host_name') or '').strip()
         new_url = (request.form.get('host_url') or '').strip()
         if not host_name or not new_url:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                 return jsonify({'ok': False, 'error': 'Не указан хост или URL'}), 400
             flash('Укажите имя хоста и новый URL.', 'warning')
             return redirect(url_for('settings_page', tab='hosts'))
         ok = update_host_url(host_name, new_url)
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'ok': ok, 'message': 'URL хоста обновлён' if ok else 'Не удалось обновить URL'})
+
         flash('URL хоста обновлён.' if ok else 'Не удалось обновить URL хоста.', 'success' if ok else 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
 
@@ -2337,6 +2714,8 @@ def create_webhook_app(bot_controller_instance):
         api_token = (request.form.get('remnawave_api_token') or '').strip()
         squad_uuid = (request.form.get('squad_uuid') or '').strip()
         if not host_name:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                 return jsonify({'ok': False, 'error': 'Не указан хост'}), 400
             flash('Не указан хост для обновления Remnawave-настроек.', 'danger')
             return redirect(url_for('settings_page', tab='hosts'))
         ok = update_host_remnawave_settings(
@@ -2345,6 +2724,10 @@ def create_webhook_app(bot_controller_instance):
             remnawave_api_token=api_token or None,
             squad_uuid=squad_uuid or None,
         )
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'ok': ok, 'message': 'Remnawave-настройки обновлены' if ok else 'Не удалось обновить Remnawave-настройки'})
+
         flash('Remnawave-настройки обновлены.' if ok else 'Не удалось обновить Remnawave-настройки.', 'success' if ok else 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
 
@@ -2354,9 +2737,15 @@ def create_webhook_app(bot_controller_instance):
         old_name = (request.form.get('old_host_name') or '').strip()
         new_name = (request.form.get('new_host_name') or '').strip()
         if not old_name or not new_name:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                 return jsonify({'ok': False, 'error': 'Укажите старое и новое имя'}), 400
             flash('Введите старое и новое имя хоста.', 'warning')
             return redirect(url_for('settings_page', tab='hosts'))
         ok = update_host_name(old_name, new_name)
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'ok': ok, 'message': 'Имя хоста обновлено' if ok else 'Не удалось переименовать хост'})
+
         flash('Имя хоста обновлено.' if ok else 'Не удалось переименовать хост.', 'success' if ok else 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
 
@@ -2420,7 +2809,12 @@ def create_webhook_app(bot_controller_instance):
         _wait_for_stop(_bot_controller)
         _wait_for_stop(_support_bot_controller)
         category = 'danger' if 'danger' in categories else 'success'
-        flash(' | '.join(statuses), category)
+        message = ' | '.join(statuses)
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': category == 'success', 'message': message})
+        
+        flash(message, category)
         return redirect(request.referrer or url_for('dashboard_page'))
 
     @flask_app.route('/start-both-bots', methods=['POST'])
@@ -2442,7 +2836,12 @@ def create_webhook_app(bot_controller_instance):
                 statuses.append(f"{name}: ошибка — {res.get('message')}")
                 categories.append('danger')
         category = 'danger' if 'danger' in categories else 'success'
-        flash(' | '.join(statuses), category)
+        message = ' | '.join(statuses)
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': category == 'success', 'message': message})
+        
+        flash(message, category)
         return redirect(request.referrer or url_for('settings_page'))
 
     @flask_app.route('/users/ban/<int:user_id>', methods=['POST'])
@@ -2490,7 +2889,51 @@ def create_webhook_app(bot_controller_instance):
                     asyncio.run(bot.send_message(chat_id=user_id, text=text, reply_markup=kb.as_markup()))
         except Exception as e:
             logger.warning(f"Не удалось отправить уведомление о бане пользователю {user_id}: {e}")
+    
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify({"ok": True, "message": f'Пользователь {user_id} был заблокирован.'})
+
         return redirect(url_for('users_page'))
+
+    @flask_app.route('/users/toggle-block/<int:user_id>', methods=['POST'])
+    @login_required
+    def toggle_block_user_route(user_id):
+        user = get_user(user_id)
+        if not user:
+            return jsonify({"ok": False, "error": "Пользователь не найден"}), 404
+        is_banned = bool(user.get('is_banned', False))
+        if is_banned:
+            unban_user(user_id)
+            msg = f"Пользователь {user_id} разблокирован."
+            res_ok = True
+        else:
+            ban_user(user_id)
+            msg = f"Пользователь {user_id} заблокирован."
+            res_ok = True
+        
+        try:
+            bot = _bot_controller.get_bot_instance()
+            if bot:
+                if is_banned:
+                    text = "✅ Доступ к аккаунту восстановлен администратором."
+                    kb = InlineKeyboardBuilder().row(keyboards.get_main_menu_button()).as_markup()
+                else:
+                    text = "🚫 Ваш аккаунт заблокирован администратором."
+                    kb = None # Or support link
+                loop = current_app.config.get('EVENT_LOOP')
+                if loop and loop.is_running():
+                    asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=user_id, text=text, reply_markup=kb), loop)
+        except Exception: pass
+
+        return jsonify({"ok": res_ok, "message": msg, "is_banned": not is_banned})
+
+    @flask_app.route('/users/toggle-pin/<int:user_id>', methods=['POST'])
+    @login_required
+    def toggle_pin_user_route(user_id):
+        from shop_bot.data_manager.database import toggle_user_pin
+        ok = toggle_user_pin(user_id)
+        return jsonify({"ok": ok})
 
     @flask_app.route('/users/unban/<int:user_id>', methods=['POST'])
     @login_required
@@ -2514,6 +2957,11 @@ def create_webhook_app(bot_controller_instance):
                     asyncio.run(bot.send_message(chat_id=user_id, text=text, reply_markup=kb.as_markup()))
         except Exception as e:
             logger.warning(f"Не удалось отправить уведомление о разбане пользователю {user_id}: {e}")
+    
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify({"ok": True, "message": f'Пользователь {user_id} был разблокирован.'})
+
         return redirect(url_for('users_page'))
 
     @flask_app.route('/users/revoke/<int:user_id>', methods=['POST'])
@@ -2598,8 +3046,13 @@ def create_webhook_app(bot_controller_instance):
             )
         except Exception as e:
             logger.error(f"Не удалось сохранить Remnawave-настройки для '{name}': {e}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                 return jsonify({'ok': True, 'message': 'Хост создан, но настройки Remnawave не сохранены'}), 200 # Partial success
             flash('Хост создан, но Remnawave-настройки сохранить не удалось.', 'warning')
             return redirect(url_for('settings_page', tab='hosts'))
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'ok': True, 'message': f"Хост '{name}' успешно добавлен"})
 
         flash(f"Хост '{name}' успешно добавлен.", 'success')
         return redirect(url_for('settings_page', tab='hosts'))
@@ -2708,6 +3161,8 @@ def create_webhook_app(bot_controller_instance):
     @login_required
     def delete_host_route(host_name):
         delete_host(host_name)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'ok': True, 'message': f"Хост '{host_name}' удален"})
         flash(f"Хост '{host_name}' и все его тарифы были удалены.", 'success')
         return redirect(url_for('settings_page', tab='hosts'))
 
@@ -2721,6 +3176,11 @@ def create_webhook_app(bot_controller_instance):
             visible_int = 1
         
         ok = toggle_host_visibility(host_name, visible_int)
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             status_text = "показан" if visible_int == 1 else "скрыт"
+             return jsonify({'ok': ok, 'message': f"Хост '{host_name}' теперь {status_text}" if ok else "Ошибка обновления видимости"})
+
         if ok:
             status_text = "показан" if visible_int == 1 else "скрыт"
             flash(f"Хост '{host_name}' теперь {status_text} в меню бота.", 'success')
@@ -2731,102 +3191,80 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/add-plan', methods=['POST'])
     @login_required
     def add_plan_route():
-        hwid_limit = int(request.form.get('hwid_limit') or 0)
-        traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
-        
-        create_plan(
-            host_name=request.form['host_name'],
-            plan_name=request.form['plan_name'],
-            months=int(request.form['months']),
-            price=float(request.form['price']),
-            hwid_limit=hwid_limit,
-            traffic_limit_gb=traffic_limit_gb
-        )
-        flash(f"Новый тариф для хоста '{request.form['host_name']}' добавлен.", 'success')
-        return redirect(url_for('settings_page', tab='hosts'))
-
-    @flask_app.route('/api/add-plan', methods=['POST'])
-    @login_required
-    def add_plan_api():
         try:
-            host_name = request.json.get('host_name')
-            plan_name = request.json.get('plan_name')
-            months = int(request.json.get('months'))
-            price = float(request.json.get('price'))
-            hwid_limit = int(request.json.get('hwid_limit') or 0)
-            traffic_limit_gb = int(request.json.get('traffic_limit_gb') or 0)
+            host_name = request.form.get('host_name')
+            plan_name = request.form.get('plan_name')
+            months = int(request.form.get('months'))
+            price = float(request.form.get('price'))
+            hwid_limit = int(request.form.get('hwid_limit') or 0)
+            traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
             
-            create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb)
+            new_plan_id = create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb)
             
-            plan = get_plans_for_host(host_name)[-1]
-            return jsonify({'ok': True, 'plan': plan})
+            wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            if wants_json:
+                plan = get_plan_by_id(new_plan_id) if new_plan_id else None
+                return jsonify({'ok': True, 'plan': plan})
+            
+            flash(f"Новый тариф для хоста '{host_name}' добавлен.", 'success')
+            return redirect(url_for('settings_page', tab='hosts'))
         except Exception as e:
-            return jsonify({'ok': False, 'error': str(e)}), 400
-
+            wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            if wants_json:
+                return jsonify({'ok': False, 'error': str(e)}), 400
+            flash(f'Ошибка добавления тарифа: {e}', 'danger')
+            return redirect(url_for('settings_page', tab='hosts'))
 
     @flask_app.route('/delete-plan/<int:plan_id>', methods=['POST'])
     @login_required
     def delete_plan_route(plan_id):
-        delete_plan(plan_id)
-        flash("Тариф успешно удален.", 'success')
-        return redirect(url_for('settings_page', tab='hosts'))
+        try:
+            delete_plan(plan_id)
+            wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            if wants_json:
+                return jsonify({'ok': True})
+            flash("Тариф успешно удален.", 'success')
+            return redirect(url_for('settings_page', tab='hosts'))
+        except Exception as e:
+            wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            if wants_json:
+                return jsonify({'ok': False, 'error': str(e)}), 400
+            flash(f'Ошибка удаления тарифа: {e}', 'danger')
+            return redirect(url_for('settings_page', tab='hosts'))
 
     @flask_app.route('/update-plan/<int:plan_id>', methods=['POST'])
     @login_required
     def update_plan_route(plan_id):
-        plan_name = (request.form.get('plan_name') or '').strip()
-        months = request.form.get('months')
-        price = request.form.get('price')
-        hwid_limit = int(request.form.get('hwid_limit') or 0)
-        traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
-        logger.info(f"DEBUG: update_plan_route id={plan_id} form={request.form} extracted hwid={hwid_limit} traffic={traffic_limit_gb}")
-
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         try:
-            months_int = int(months)
-            price_float = float(price)
-        except (TypeError, ValueError):
-            flash('Некорректные значения для месяцев или цены.', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            plan_name = (request.form.get('plan_name') or '').strip()
+            months = int(request.form.get('months'))
+            price = float(request.form.get('price'))
+            hwid_limit = int(request.form.get('hwid_limit') or 0)
+            traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
 
-        if not plan_name:
-            flash('Название тарифа не может быть пустым.', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
-
-        ok = update_plan(
-            plan_id,
-            plan_name,
-            months_int,
-            price_float,
-            hwid_limit=hwid_limit,
-            traffic_limit_gb=traffic_limit_gb
-        )
-        if ok:
-            flash('Тариф обновлён.', 'success')
-        else:
-            flash('Не удалось обновить тариф (возможно, он не найден).', 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
-
-    @flask_app.route('/api/update-plan/<int:plan_id>', methods=['POST'])
-    @login_required
-    def update_plan_api(plan_id):
-        try:
-            plan_name = request.json.get('plan_name', '').strip()
-            months = int(request.json.get('months'))
-            price = float(request.json.get('price'))
-            hwid_limit = int(request.json.get('hwid_limit') or 0)
-            traffic_limit_gb = int(request.json.get('traffic_limit_gb') or 0)
-            
             if not plan_name:
-                return jsonify({'ok': False, 'error': 'Название не может быть пустым'}), 400
-            
+                if wants_json:
+                    return jsonify({'ok': False, 'error': 'Название не может быть пустым'}), 400
+                flash('Название тарифа не может быть пустым.', 'danger')
+                return redirect(url_for('settings_page', tab='hosts'))
+
             ok = update_plan(plan_id, plan_name, months, price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb)
             if ok:
-                plan = get_plan_by_id(plan_id)
-                return jsonify({'ok': True, 'plan': plan})
+                if wants_json:
+                    plan = get_plan_by_id(plan_id)
+                    return jsonify({'ok': True, 'plan': plan})
+                flash('Тариф обновлён.', 'success')
             else:
-                return jsonify({'ok': False, 'error': 'Тариф не найден'}), 404
+                if wants_json:
+                    return jsonify({'ok': False, 'error': 'Тариф не найден'}), 404
+                flash('Не удалось обновить тариф (возможно, он не найден).', 'danger')
+            return redirect(url_for('settings_page', tab='hosts'))
         except Exception as e:
-            return jsonify({'ok': False, 'error': str(e)}), 400
+            if wants_json:
+                return jsonify({'ok': False, 'error': str(e)}), 400
+            flash(f'Ошибка обновления тарифа: {e}', 'danger')
+            return redirect(url_for('settings_page', tab='hosts'))
 
     @csrf.exempt
     @flask_app.route('/yookassa-webhook', methods=['POST'])
@@ -2855,7 +3293,7 @@ def create_webhook_app(bot_controller_instance):
     def test_webhook():
         """Тестовый endpoint для проверки работы webhook сервера"""
         if request.method == 'GET':
-            return f"Webhook server is running! Time: {datetime.now()}"
+            return f"Webhook server is running! Time: {get_msk_time()}"
         else:
             return f"POST received! Data: {request.get_json() or request.form.to_dict()}"
     
@@ -2875,7 +3313,7 @@ def create_webhook_app(bot_controller_instance):
             "form": request.form.to_dict(),
             "json": request.get_json(),
             "args": request.args.to_dict(),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": get_msk_time().isoformat()
         }
     
     @csrf.exempt
@@ -3408,6 +3846,8 @@ def create_webhook_app(bot_controller_instance):
         'payment_method': 'payment_method_image',
         'key_comments': 'key_comments_image',
         'key_ready': 'key_ready_image',
+        'waiting_payment': 'waiting_payment_image',
+        'payment_success': 'payment_success_image',
     }
 
     @flask_app.route('/upload-menu-image/<section>', methods=['POST'])

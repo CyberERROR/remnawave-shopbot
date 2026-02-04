@@ -2,360 +2,382 @@
 {% block title %}Управление Ключами{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="mb-6">
-    <h2 class="text-2xl font-bold text-white">Ключи</h2>
-    <p class="text-white/50 text-sm">Просмотр, создание и удаление ключей</p>
+<!-- ===== ЗАГОЛОВОК СТРАНИЦЫ ===== -->
+<!-- Верхняя панель управления с названием раздела и кратким описанием -->
+<div class="mb-8 flex items-center justify-between">
+    <div class="space-y-1">
+        <h2 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            Ключи
+            <span
+                class="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-widest border border-primary/20">Доступ</span>
+        </h2>
+        <p class="text-white/40 text-xs font-medium uppercase tracking-[0.2em] ml-1">Управление VPN ключами и
+            пользователями</p>
+    </div>
 </div>
+<!-- ===== окончание заголовка ===== -->
 
-<!-- Create Key Form -->
-<!-- Create Key Form -->
-<div
-    class="relative overflow-hidden rounded-2xl bg-[#102219]/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 hover:border-primary/20 hover:shadow-primary/5 mb-8 group">
-    <!-- Decorative glow -->
-    <div
-        class="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none group-hover:bg-primary/30 transition-all duration-500">
+<!-- ===== ФОРМА СОЗДАНИЯ КЛЮЧА ===== -->
+<!-- Основной контейнер для создания новых VPN-доступов с переключателем режимов -->
+<div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md mb-8 relative">
+    <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+        <div
+            class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2">
+        </div>
     </div>
 
-    <div class="p-5 sm:p-6 relative z-10">
-        <form action="{{ url_for('create_key_ajax_route') }}" method="post" id="create-key-form" autocomplete="off">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <input type="hidden" name="mode" id="create_mode" value="personal" />
+    <form action="{{ url_for('create_key_ajax_route') }}" method="post" id="create-key-form" autocomplete="off"
+        class="relative z-10 ajax-form" data-success-msg="Ключ создан">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="mode" id="create_mode" value="personal" />
 
-            <!-- Header & Mode Switcher -->
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 rounded-lg bg-primary/10 text-primary">
-                        <span class="material-symbols-outlined text-2xl">add_circle</span>
-                    </div>
-                    <div>
-                        <h2 class="text-lg font-bold text-white leading-tight">Создать ключ</h2>
-                        <p class="text-xs text-white/50 font-medium">Новый доступ VPN</p>
-                    </div>
+        <!-- ШАПКА ФОРМЫ И ПЕРЕКЛЮЧАТЕЛЬ -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                    <span class="material-symbols-outlined text-2xl">add_circle</span>
                 </div>
-
-                <!-- Segmented Control -->
-                <div class="bg-black/40 p-1 rounded-xl flex w-full sm:w-auto overflow-hidden relative shadow-inner border border-white/5"
-                    id="mode_switch">
-                    <div class="absolute inset-y-1 w-[calc(50%-4px)] bg-primary rounded-lg shadow-lg shadow-primary/20 transition-all duration-300 ease-out"
-                        id="mode_indicator"></div>
-
-                    <button type="button" data-mode="personal"
-                        class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-[#102219] w-full sm:w-36 text-center">
-                        Персональный
-                    </button>
-                    <button type="button" data-mode="gift"
-                        class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-white/60 w-full sm:w-36 text-center hover:text-white">
-                        Подарочный
-                    </button>
+                <div>
+                    <h3 class="text-lg font-bold text-white tracking-tight">Создать ключ</h3>
+                    <p class="text-white/60 text-xs font-medium">Новый доступ VPN</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- User ID (Personal Only) -->
-                <div class="mode-section mode-personal relative group/input">
-                    <label
-                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Пользователь</label>
-                    <div class="relative">
-                        <span
-                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-colors">person</span>
-                        <input id="user_id" name="user_id" placeholder="ID или @username"
-                            class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-inner" />
-                    </div>
-                </div>
+            <div class="bg-black/30 p-1 rounded-xl flex w-full sm:w-auto border border-white/5" id="mode_switch">
+                <div class="absolute inset-y-1 w-[calc(50%-4px)] bg-primary rounded-lg shadow-lg shadow-primary/20 transition-all duration-300 ease-out hidden"
+                    id="mode_indicator"></div>
+                <!-- Note: The indicator implementation in original code relied on absolute positioning which might need adjustment with new structure, 
+                     but for simplicity we use class toggling logic in JS. 
+                     Here we will use the same structure but updated classes for buttons. -->
+                <button type="button" data-mode="personal"
+                    class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 text-background-dark bg-primary w-full sm:w-36 text-center shadow-lg shadow-primary/20">Персональный</button>
+                <button type="button" data-mode="gift"
+                    class="relative z-10 flex-1 sm:flex-none px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 text-white/40 hover:text-white hover:bg-white/5 w-full sm:w-36 text-center">Подарочный</button>
+            </div>
+        </div>
 
-                <!-- Host -->
-                <div class="relative min-w-0 group/input transition-all duration-300" id="host_container">
-                    <label
-                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Хост</label>
-                    <div class="soft-select min-w-0 max-w-full" data-target="host_name">
+        <!-- СЕТКА ПОЛЕЙ ВВОДА -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="mode-section mode-personal mode-gift relative group/input" id="user_id_container">
+                <label
+                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Пользователь</label>
+                <div class="relative group">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">person</span>
+                    <input id="user_id" name="user_id" placeholder="ID или @username"
+                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all placeholder:text-white/20" />
+                </div>
+            </div>
+
+            <div class="relative min-w-0 group/input transition-all duration-300" id="host_container">
+                <label
+                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Хост</label>
+                <div class="soft-select min-w-0 max-w-full" data-target="host_name">
+                    <button type="button"
+                        class="soft-select-toggle w-full truncate text-left rounded-xl pl-10 pr-3 py-2.5 bg-black/30 border border-white/10 text-sm text-white focus:ring-1 focus:ring-primary/40 outline-none transition-all relative"
+                        id="host_name_toggle">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-hover/input:text-primary transition-colors">dns</span>
+                        <span class="ml-1 text-white/70">Выберите хост...</span>
+                    </button>
+                    <div class="soft-select-menu rounded-xl border-white/10 bg-[#15261d] backdrop-blur-xl shadow-2xl"
+                        id="host_name_menu"></div>
+                    <select id="host_name" name="host_name" required
+                        style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;">
+                        <option value="" disabled selected>Выберите хост...</option>
+                        {% for h in hosts %}<option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}"
+                            data-traffic-strategy="{{ h.default_traffic_strategy or 'NO_RESET' }}"
+                            data-traffic-limit-gb="{% if h.default_traffic_limit_bytes is not none %}{{ (h.default_traffic_limit_bytes / 1024 / 1024 / 1024)|round(2) }}{% else %}0{% endif %}">
+                            {{ h.host_name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="relative min-w-0 group/input">
+                <label
+                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Тариф</label>
+                <div class="flex gap-2">
+                    <div class="soft-select flex-1 min-w-0 max-w-full" data-target="plan_select">
                         <button type="button"
-                            class="soft-select-toggle w-full truncate text-left rounded-xl pl-10 py-3 bg-black/20 border-white/10 text-sm focus:ring-1 focus:ring-primary/50 shadow-inner text-white"
-                            id="host_name_toggle">
+                            class="soft-select-toggle w-full truncate text-left rounded-xl pl-10 pr-3 py-2.5 bg-black/30 border border-white/10 text-sm text-white focus:ring-1 focus:ring-primary/40 outline-none transition-all relative"
+                            id="plan_select_toggle">
                             <span
-                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-hover/input:text-primary transition-colors">dns</span>
-                            <span class="ml-6">Выберите хост...</span>
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm">payments</span>
+                            <span class="ml-1">—</span>
                         </button>
                         <div class="soft-select-menu rounded-xl border-white/10 bg-[#15261d] backdrop-blur-xl shadow-2xl"
-                            id="host_name_menu"></div>
-                        <select id="host_name" name="host_name" required
-                            style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;">
-                            <option value="" disabled selected>Выберите хост...</option>
-                            {% for h in hosts %}
-                            <option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}"
-                                data-traffic-strategy="{{ h.default_traffic_strategy or 'NO_RESET' }}"
-                                data-traffic-limit-gb="{% if h.default_traffic_limit_bytes is not none %}{{ (h.default_traffic_limit_bytes / 1024 / 1024 / 1024)|round(2) }}{% else %}0{% endif %}">
-                                {{ h.host_name }}
-                            </option>
-                            {% endfor %}
+                            id="plan_select_menu"></div>
+                        <select id="plan_select" name="plan_id" class="hidden">
+                            <option value="">— Не выбран —</option>
                         </select>
                     </div>
-                </div>
-
-                <!-- Plan -->
-                <div class="relative min-w-0 group/input">
-                    <label
-                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Тариф</label>
-                    <div class="flex gap-2">
-                        <div class="soft-select flex-1 min-w-0 max-w-full" data-target="plan_select">
-                            <button type="button"
-                                class="soft-select-toggle w-full truncate text-left rounded-xl pl-10 py-3 bg-black/20 border-white/10 text-sm text-white focus:ring-1 focus:ring-primary/50 shadow-inner"
-                                id="plan_select_toggle">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">payments</span>
-                                <span class="ml-6">—</span>
-                            </button>
-                            <div class="soft-select-menu rounded-xl border-white/10 bg-[#15261d] backdrop-blur-xl shadow-2xl"
-                                id="plan_select_menu"></div>
-                            <select id="plan_select" name="plan_id"
-                                style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;">
-                                <option value="">— Не выбран —</option>
-                            </select>
-                        </div>
-                        <!-- Price Badge -->
-                        <div class="hidden flex-shrink-0" id="plan_price_wrapper">
-                            <span id="plan_price"
-                                class="h-full flex items-center px-4 rounded-xl bg-primary/10 text-primary font-bold text-sm whitespace-nowrap border border-primary/20 shadow-inner">0₽</span>
-                        </div>
+                    <div class="hidden flex-shrink-0" id="plan_price_wrapper">
+                        <span id="plan_price"
+                            class="h-full flex items-center px-4 rounded-xl bg-primary/10 text-primary font-bold text-sm whitespace-nowrap border border-primary/20">0₽</span>
                     </div>
-                </div>
-
-                <!-- Days -->
-                <div class="relative group/input">
-                    <label
-                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Дней</label>
-                    <div class="relative">
-                        <input id="custom_days" name="custom_days" type="number" min="1" placeholder="30"
-                            class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-center font-mono text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner" />
-                    </div>
-                </div>
-
-                <!-- Expiry Date (Personal Mode) -->
-                <div class="mode-section mode-personal col-span-1 md:col-span-2">
-                    <label class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Дата
-                        истечения <span id="expiry_days_label"
-                            class="text-white/50 text-[10px] ml-1 lowercase font-normal"></span></label>
-                    <div
-                        class="bg-black/20 border border-white/10 rounded-xl p-1.5 flex flex-wrap sm:flex-nowrap items-center gap-2 shadow-inner">
-                        <div class="relative flex-1 min-w-[140px]">
-                            <span
-                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">calendar_today</span>
-                            <input id="expiry_date" name="expiry_date" type="text" placeholder="Укажите дату"
-                                class="w-full bg-transparent border-none py-2 pl-10 pr-2 text-sm text-white focus:ring-0 placeholder:text-white/30" />
-                        </div>
-
-                        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 px-1">
-                            <button type="button" data-preset="30"
-                                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+30</button>
-                            <button type="button" data-preset="90"
-                                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+90</button>
-                            <button type="button" data-preset="180"
-                                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+180</button>
-                            <button type="button" data-preset="365"
-                                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+365</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Comment -->
-                <div class="col-span-1 md:col-span-2" id="comment_container">
-                    <label
-                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Комментарий</label>
-                    <textarea id="comment" name="comment" rows="1" placeholder="Заметка..."
-                        class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all resize-none shadow-inner min-h-[48px]"></textarea>
                 </div>
             </div>
 
-            <!-- Details Expander -->
-            <details class="mt-4 group/details">
-                <summary
-                    class="flex items-center gap-2 text-xs font-medium text-white/40 cursor-pointer hover:text-white/70 transition-colors select-none w-max">
-                    <span
-                        class="material-symbols-outlined text-base transition-transform group-open/details:rotate-90">chevron_right</span>
-                    Технические детали (Inbound, Email)
-                </summary>
+            <div class="relative group/input">
+                <label
+                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Дней</label>
+                <div class="relative">
+                    <input id="custom_days" name="custom_days" type="number" min="1" value="30" placeholder="30"
+                        class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-center font-mono text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all" />
+                </div>
+            </div>
+
+            <div class="mode-section mode-personal col-span-1 md:col-span-2">
+                <label class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Дата
+                    истечения <span id="expiry_days_label"
+                        class="text-white/50 text-[10px] ml-1 lowercase font-normal"></span></label>
                 <div
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3 pl-6 border-l border-white/5 ml-1.5">
-                    <div>
-                        <label class="block text-[10px] text-white/30 mb-1">Inbound ID</label>
-                        <input id="inbound_id" type="text" placeholder="—" readonly
-                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                    class="bg-black/30 border border-white/10 rounded-xl p-1.5 flex flex-wrap sm:flex-nowrap items-center gap-2">
+                    <div class="relative flex-1 min-w-[140px]">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm">calendar_today</span>
+                        <input id="expiry_date" name="expiry_date" type="text" placeholder="Укажите дату"
+                            class="w-full bg-transparent border-none py-1.5 pl-9 pr-2 text-sm text-white focus:ring-0 placeholder:text-white/20" />
                     </div>
-                    <div class="mode-section mode-personal">
-                        <label class="block text-[10px] text-white/30 mb-1">Email</label>
-                        <input id="key_email" name="key_email" type="email" placeholder="—" readonly
-                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-white/30 mb-1">GB (хост)</label>
-                        <input id="host_traffic_gb" type="text" placeholder="—" readonly
-                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-white/30 mb-1">Стратегия сброса</label>
-                        <input id="host_traffic_strategy" type="text" placeholder="—" readonly
-                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-white/30 mb-1">HWID (хост)</label>
-                        <input id="host_hwid_limit" type="text" placeholder="—" readonly
-                            class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
-                    </div>
-                </div>
-            </details>
-
-            <!-- Gift Info -->
-            <div class="mode-section mode-gift hidden mt-4 animate-fade-in">
-                <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex gap-3 items-start">
-                    <span class="material-symbols-outlined text-blue-400 mt-0.5">card_giftcard</span>
-                    <div class="text-xs text-blue-200">
-                        <strong class="block text-blue-100 text-sm mb-1">Подарочный ключ</strong>
-                        Ключ будет создан без привязки к пользователю. Ссылка будет сгенерирована автоматически.
+                    <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 px-1">
+                        <button type="button" data-preset="30"
+                            class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-[10px] font-bold uppercase transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+30</button>
+                        <button type="button" data-preset="90"
+                            class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-[10px] font-bold uppercase transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+90</button>
+                        <button type="button" data-preset="180"
+                            class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-[10px] font-bold uppercase transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+180</button>
+                        <button type="button" data-preset="365"
+                            class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-[10px] font-bold uppercase transition-colors border border-transparent hover:border-white/10 whitespace-nowrap">+365</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Submit -->
-            <button type="button" id="btn-submit-create"
-                class="mt-6 w-full py-3.5 rounded-xl bg-gradient-to-r from-primary/90 to-primary text-background-dark font-bold text-sm uppercase tracking-wide shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 group">
+            <div class="col-span-1 md:col-span-2" id="comment_container">
+                <label
+                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Комментарий</label>
+                <textarea id="comment" name="comment" rows="1" placeholder="Заметка..."
+                    class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all resize-y min-h-[46px]"></textarea>
+            </div>
+        </div>
+
+        <!-- ТЕХНИЧЕСКИЕ ДЕТАЛИ -->
+        <details class="mt-4 group/details">
+            <summary
+                class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/30 cursor-pointer hover:text-white/60 transition-colors select-none w-max">
                 <span
-                    class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">vpn_key</span>
-                Создать ключ
-            </button>
-        </form>
-    </div>
-</div>
+                    class="material-symbols-outlined text-sm transition-transform group-open/details:rotate-90">chevron_right</span>
+                Технические детали
+            </summary>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3 pl-6 border-l border-white/5 ml-1.5">
+                <div><label class="block text-[9px] font-bold uppercase text-white/20 mb-1">Inbound ID</label><input
+                        id="inbound_id" type="text" placeholder="—" readonly
+                        class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                </div>
+                <div class="mode-section mode-personal mode-gift"><label
+                        class="block text-[9px] font-bold uppercase text-white/20 mb-1">Email</label><input
+                        id="key_email" name="key_email" type="email" placeholder="—" readonly
+                        class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                </div>
+                <div><label class="block text-[9px] font-bold uppercase text-white/20 mb-1">GB Limit</label><input
+                        id="host_traffic_gb" type="text" placeholder="—" readonly
+                        class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                </div>
+                <div><label class="block text-[9px] font-bold uppercase text-white/20 mb-1">Reset</label><input
+                        id="host_traffic_strategy" type="text" placeholder="—" readonly
+                        class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                </div>
+                <div><label class="block text-[9px] font-bold uppercase text-white/20 mb-1">HWID</label><input
+                        id="host_hwid_limit" type="text" placeholder="—" readonly
+                        class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                </div>
+                <div><label class="block text-[9px] font-bold uppercase text-white/20 mb-1">Period</label><input
+                        id="key_period_days" type="text" placeholder="0" readonly
+                        class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                </div>
+            </div>
+        </details>
 
+        <div class="mode-section mode-gift hidden mt-6 animate-fade-in">
+            <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-center">
+                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                    <span class="material-symbols-outlined">card_giftcard</span>
+                </div>
+                <div class="flex-1">
+                    <h5 class="text-sm font-bold text-blue-300">Подарочный ключ</h5>
+                    <p class="text-xs text-blue-300/60 mt-0.5">Ключ будет создан с привязкой к пользователю (если
+                        указан) или без неё. Ссылка будет сгенерирована автоматически.</p>
+                </div>
+            </div>
+        </div>
 
-
-<!-- Filter & Sweep -->
-<!-- Filter & Sweep -->
-<div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
-    <div class="flex gap-2">
-        <a href="{{ url_for('admin_keys_page', filter='general') }}"
-            class="px-4 py-2 rounded-lg text-sm font-medium {% if current_filter == 'general' %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
-            Общие
-        </a>
-        <a href="{{ url_for('admin_keys_page', filter='gift') }}"
-            class="px-4 py-2 rounded-lg text-sm font-medium {% if current_filter == 'gift' %}bg-primary text-background-dark{% else %}bg-white/10 text-white hover:bg-white/20{% endif %}">
-            Gift
-        </a>
-    </div>
-
-    <!-- Search Bar -->
-    <div class="relative flex-1 w-full md:w-auto">
-        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/50">search</span>
-        <input id="keys-search" type="text" value="{{ q or '' }}"
-            class="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
-            placeholder="Поиск..." />
-    </div>
-
-    <form action="{{ url_for('sweep_expired_keys_route') }}" method="post"
-        data-confirm="Удалить все истёкшие ключи? Это действие необратимо.">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit"
-            class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 flex items-center gap-2 whitespace-nowrap">
-            <span class="material-symbols-outlined text-base">delete_sweep</span>
-            Удалить истёкшие
+        <button type="submit" id="btn-submit-create"
+            class="mt-6 w-full py-3 rounded-xl bg-primary/10 border border-primary/20 text-primary font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all flex items-center justify-center gap-2 group overflow-hidden relative">
+            <div
+                class="absolute inset-0 bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+            </div>
+            <span
+                class="material-symbols-outlined text-lg relative z-10 transition-transform group-hover:rotate-12">vpn_key</span>
+            <span class="relative z-10">Создать ключ</span>
         </button>
     </form>
 </div>
+<!-- ===== окончание формы создания ===== -->
 
-<!-- Keys Table -->
-<div class="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+<!-- ===== ФИЛЬТРЫ И ПОИСК ===== -->
+<!-- Инструменты фильтрации списка ключей и массового удаления истёкших -->
+<!-- ===== ФИЛЬТРЫ И ПОИСК ===== -->
+<div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+    <div class="flex gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+        <a href="{{ url_for('admin_keys_page', filter='general') }}"
+            class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all {% if current_filter == 'general' %}bg-primary text-background-dark{% else %}text-white/60 hover:text-white hover:bg-white/5{% endif %} ajax-nav">Общие</a>
+        <a href="{{ url_for('admin_keys_page', filter='gift') }}"
+            class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all {% if current_filter == 'gift' %}bg-primary text-background-dark{% else %}text-white/60 hover:text-white hover:bg-white/5{% endif %} ajax-nav">Gift</a>
+    </div>
+
+    <div class="relative flex-1 w-full md:w-auto max-w-md">
+        <span
+            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">search</span>
+        <input id="keys-search" type="text" value="{{ q or '' }}"
+            class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
+            placeholder="Поиск по ID, имени, email..." />
+    </div>
+
+    <form action="{{ url_for('sweep_expired_keys_route') }}" method="post" class="ajax-form"
+        data-confirm="Удалить все истёкшие ключи? Это действие необратимо." data-success-msg="Истёкшие ключи удалены">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit"
+            class="px-5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap group">
+            <span
+                class="material-symbols-outlined text-base group-hover:rotate-12 transition-transform">delete_sweep</span>
+            Удалить истёкшие
+            {% if expired_count and expired_count > 0 %}
+            <span
+                class="ml-1 bg-red-500/20 text-white group-hover:bg-white/20 px-1.5 py-0.5 rounded text-[9px] min-w-[16px] text-center transition-colors">{{
+                expired_count }}</span>
+            {% endif %}
+        </button>
+    </form>
+</div>
+<!-- ===== окончание фильтров ===== -->
+
+<!-- ===== ТАБЛИЦА КЛЮЧЕЙ ===== -->
+<!-- Основной реестр ключей с пагинацией и действиями -->
+<!-- ===== ТАБЛИЦА КЛЮЧЕЙ ===== -->
+<div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md">
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="bg-white/5">
-                <tr>
-                    <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">ID</th>
-                    <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">User</th>
-                    <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Хост</th>
-                    <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Email</th>
-                    <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">UUID</th>
-                    <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Истекает</th>
-                    <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Создан</th>
-                    <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Действия</th>
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-white/5 bg-white/[0.02]">
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">ID</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">User</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Хост</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Email</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">UUID</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Истекает</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Создан</th>
+                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40 text-right">
+                        Действия</th>
                 </tr>
             </thead>
-            <tbody id="keys-tbody" class="divide-y divide-white/10"
+            <tbody id="keys-tbody" class="divide-y divide-white/5"
                 data-fetch-url="{{ url_for('admin_keys_table_partial', filter=current_filter, q=q, page=current_page) }}"
-                data-fetch-interval="100000">
-                {% include 'partials/admin_keys_table.html' %}
+                data-fetch-interval="120000">
+                <tr>
+                    <td colspan="8" class="p-8 text-center">
+                        <div class="flex flex-col items-center justify-center text-white/30">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                            <span class="text-xs">Загрузка ключей...</span>
+                        </div>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
 </div>
+<!-- ===== окончание таблицы ===== -->
 
-<!-- Pagination -->
-<div class="flex justify-center mt-4 gap-2" id="keys-pagination"
-    data-src="{{ url_for('admin_keys_pagination_partial', page=current_page, q=q, filter=current_filter) }}">
-    {% include 'partials/admin_keys_pagination.html' %}
-</div>
+<!-- ===== ПАГИНАЦИЯ ===== -->
+<!-- Блок навигации по страницам -->
+<!-- ===== ПАГИНАЦИЯ ===== -->
+<div class="flex justify-center mt-6 gap-2" id="keys-pagination"
+    data-src="{{ url_for('admin_keys_pagination_partial', page=current_page, q=q, filter=current_filter) }}">{% include
+    'partials/admin_keys_pagination.html' %}</div>
+<!-- ===== окончание пагинации ===== -->
 
-<!-- Comment Modal -->
+<!-- ===== МОДАЛЬНОЕ ОКНО КОММЕНТАРИЯ ===== -->
+<!-- Окно быстрого редактирования заметки к выбранному ключу -->
 <div id="commentModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <h5 class="text-white font-bold">Комментарий к ключу</h5>
-            <button onclick="closeModal('commentModal')" class="text-white/50 hover:text-white">
+    <div class="modal-content bg-[#101815] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
+            <h5 class="text-white font-bold text-lg">Комментарий к ключу</h5>
+            <button onclick="closeModal('commentModal')" class="text-white/40 hover:text-white transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
         <div class="p-6">
             <input type="text" id="commentInput" placeholder="Введите комментарий"
-                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/40" />
         </div>
-        <div class="p-4 border-t border-white/10 flex justify-end gap-2">
+        <div class="p-6 border-t border-white/5 flex justify-end gap-3">
             <button onclick="closeModal('commentModal')"
-                class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
+                class="px-5 py-2.5 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 hover:text-white text-xs font-bold uppercase tracking-widest transition-all">Отмена</button>
             <button id="commentSaveBtn"
-                class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Сохранить</button>
+                class="px-5 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background-dark text-xs font-bold uppercase tracking-widest transition-all">Сохранить</button>
         </div>
     </div>
 </div>
+<!-- ===== окончание окна комментария ===== -->
 
-<!-- Expiry Modal -->
+<!-- ===== МОДАЛЬНОЕ ОКНО СРОКА ===== -->
 <div id="expiryModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <h5 class="text-white font-bold">Изменить срок действия</h5>
-            <button onclick="closeModal('expiryModal')" class="text-white/50 hover:text-white">
+    <div class="modal-content bg-[#101815] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
+            <h5 class="text-white font-bold text-lg">Изменить срок действия</h5>
+            <button onclick="closeModal('expiryModal')" class="text-white/40 hover:text-white transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <div class="p-6">
-            <label class="block text-white/70 text-sm mb-2">Сколько дней прибавить/убавить</label>
-            <input type="number" id="expiryDelta" placeholder="Например, 7 или -7"
-                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-            <p class="text-white/50 text-sm mt-2">Введите положительное число для продления, отрицательное — для
-                уменьшения срока.</p>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-white/40 text-[10px] uppercase font-bold tracking-wider mb-2">Прибавить /
+                    Убавить дней</label>
+                <input type="number" id="expiryDelta" placeholder="Например: 7 или -7"
+                    class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/40" />
+            </div>
+            <p class="text-white/40 text-xs bg-white/5 p-3 rounded-lg border border-white/5">
+                <span class="text-primary font-bold">Совет:</span> Введите положительное число для продления,
+                отрицательное — для сокращения срока.
+            </p>
         </div>
-        <div class="p-4 border-t border-white/10 flex justify-end gap-2">
+        <div class="p-6 border-t border-white/5 flex justify-end gap-3">
             <button onclick="closeModal('expiryModal')"
-                class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
+                class="px-5 py-2.5 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 hover:text-white text-xs font-bold uppercase tracking-widest transition-all">Отмена</button>
             <button id="expirySaveBtn"
-                class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Сохранить</button>
+                class="px-5 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-background-dark text-xs font-bold uppercase tracking-widest transition-all">Сохранить</button>
         </div>
     </div>
 </div>
+<!-- ===== окончание окна срока ===== -->
 {% endblock %}
 
 {% block scripts %}
-<!-- Flatpickr CSS & JS -->
+<!-- ===== СТИЛИ И СКРИПТЫ FLATPICKR ===== -->
+<!-- Подключение необходимых библиотек для работы календаря -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
+<!-- ===== окончание внешних библиотек ===== -->
 
 <script>
     (function () {
+        // ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЕЙ =====
+        // Загрузка и маппинг пользователей для автодополнения
         const USERS = JSON.parse(String.raw`{{ users | tojson | safe }}`);
         const USER_MAP = {};
-        try {
-            (USERS || []).forEach(u => {
-                if (u && u.username) USER_MAP['@' + String(u.username).toLowerCase()] = u.telegram_id;
-            });
-        } catch (_) { }
+        try { (USERS || []).forEach(u => { if (u && u.username) USER_MAP['@' + String(u.username).toLowerCase()] = u.telegram_id; }); } catch (_) { }
+        // ===== окончание функции пользователей =====
 
         const STORAGE_KEY = 'admin_keys_form';
         const form = document.getElementById('create-key-form');
@@ -370,11 +392,15 @@
         const inboundEl = document.getElementById('inbound_id');
         const priceEl = document.getElementById('plan_price');
 
-        // Init soft selects
+        // ===== ИНИЦИАЛИЗАЦИЯ СЕЛЕКТОВ =====
+        // Настройка кастомных выпадающих списков
+        if (hostSel && !hostSel.value && hostSel.options.length > 1) { hostSel.selectedIndex = 1; updateInbound(); loadPlansAndRestore(); updateHostSettings(); }
         initSoftSelect('host_name', 'Выберите хост...');
         initSoftSelect('plan_select', '— Не выбран —');
+        // ===== окончание инициализации =====
 
-        // Init Flatpickr
+        // ===== ИНИЦИАЛИЗАЦИЯ ДАТЫ =====
+        // Настройка календаря Flatpickr
         if (expiryInput && window.flatpickr) {
             flatpickr(expiryInput, {
                 enableTime: true,
@@ -384,8 +410,10 @@
                 locale: flatpickr.l10ns.ru || 'ru',
             });
         }
+        // ===== окончание инициализации даты =====
 
-        // ========= State Persistence =========
+        // ===== УПРАВЛЕНИЕ СОСТОЯНИЕМ =====
+        // Сохранение и восстановление данных формы
         const stateFields = ['mode', 'user_id', 'host_name', 'plan_select', 'custom_days', 'expiry_date', 'comment'];
         function saveState() {
             const state = {};
@@ -407,98 +435,77 @@
         const restoredState = restoreState();
         form?.addEventListener('input', saveState);
         form?.addEventListener('change', saveState);
+        // ===== окончание управления состоянием =====
 
-        // Prefill from query ?user_id=
+        // ===== ПАРАМЕТРЫ URL =====
+        // Заполнение ID пользователя из параметров запроса
         try {
             const params = new URLSearchParams(location.search);
             const uid = params.get('user_id');
             if (uid && userInput) userInput.value = uid;
         } catch (_) { }
+        // ===== окончание параметров url =====
 
-        // ========= Inbound ID Update =========
+        // ===== ОБНОВЛЕНИЕ INBOUND =====
+        // Обновление ID входящего подключения для хоста
         function updateInbound() {
             if (!hostSel || !inboundEl) return;
             let opt = hostSel.options[hostSel.selectedIndex];
-            if ((!opt || !opt.getAttribute) && hostSel.value) {
-                opt = Array.from(hostSel.options || []).find(o => String(o.value) === String(hostSel.value));
-            }
+            if ((!opt || !opt.getAttribute) && hostSel.value) opt = Array.from(hostSel.options || []).find(o => String(o.value) === String(hostSel.value));
             inboundEl.value = (opt && opt.getAttribute('data-inbound')) ? opt.getAttribute('data-inbound') : '—';
         }
+        // ===== окончание обновления inbound =====
 
-        // ========= Update Host Settings (Traffic GB and Strategy) =========
+        // ===== НАСТРОЙКИ ХОСТА =====
+        // Обновление стратегии трафика и лимитов
         function updateHostSettings() {
             if (!hostSel) return;
-
             let opt = hostSel.options[hostSel.selectedIndex];
-            if ((!opt || !opt.getAttribute) && hostSel.value) {
-                opt = Array.from(hostSel.options || []).find(o => String(o.value) === String(hostSel.value));
-            }
-
+            if ((!opt || !opt.getAttribute) && hostSel.value) opt = Array.from(hostSel.options || []).find(o => String(o.value) === String(hostSel.value));
             if (opt) {
                 const trafficStrategy = opt.getAttribute('data-traffic-strategy') || 'NO_RESET';
-
                 const strategyInput = document.getElementById('host_traffic_strategy');
-
                 if (strategyInput) {
-                    const strategyLabels = {
-                        'NO_RESET': 'Никогда',
-                        'DAY': 'Ежедневно',
-                        'WEEK': 'Еженедельно',
-                        'MONTH': 'Ежемесячно'
-                    };
-                    strategyInput.value = strategyLabels[trafficStrategy] || trafficStrategy;
+                    const labels = { 'NO_RESET': 'Никогда', 'DAY': 'Ежедневно', 'WEEK': 'Еженедельно', 'MONTH': 'Ежемесячно' };
+                    strategyInput.value = labels[trafficStrategy] || trafficStrategy;
                 }
-
-                // GB и HWID обновляются при выборе тарифа, а не при выборе хоста
             }
         }
+        // ===== окончание настроек хоста =====
 
-        // ========= Set Expiry Days =========
+        // ===== МЕТКА ИСТЕЧЕНИЯ =====
+        // Отображение количества оставшихся дней
         function updateExpiryLabel(dateStr) {
             const lbl = document.getElementById('expiry_days_label');
-            if (!lbl) return;
-            if (!dateStr) { lbl.textContent = ''; return; }
-
-            const d = new Date(dateStr);
-            const now = new Date();
-            const diffTime = d.getTime() - now.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays > 0) {
-                lbl.textContent = `(на ${diffDays} дн.)`;
-            } else {
-                lbl.textContent = '';
-            }
+            if (!lbl || !dateStr) { if (lbl) lbl.textContent = ''; return; }
+            const diffDays = Math.ceil((new Date(dateStr).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+            lbl.textContent = diffDays > 0 ? `(на ${diffDays} дн.)` : '';
         }
+        // ===== окончание метки истечения =====
 
+        // ===== УСТАНОВКА СРОКА =====
+        // Вычисление даты истечения по количеству дней
         function setExpiryDays(days) {
             if (!expiryInput) return;
-            const d = new Date();
-            d.setDate(d.getDate() + Number(days || 0));
+            const d = new Date(); d.setDate(d.getDate() + Number(days || 0));
             const pad = n => String(n).padStart(2, '0');
             const val = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
             expiryInput.value = val;
-            if (window.flatpickr && expiryInput._flatpickr) {
-                expiryInput._flatpickr.setDate(val, true, 'Y-m-d H:i');
-            }
+            if (daysInput && daysInput.value != days) daysInput.value = days;
+            const periodInput = document.getElementById('key_period_days'); if (periodInput) periodInput.value = days;
+            if (window.flatpickr && expiryInput._flatpickr) expiryInput._flatpickr.setDate(val, true, 'Y-m-d H:i');
             updateExpiryLabel(val);
         }
+        if (expiryInput) expiryInput.addEventListener('change', () => updateExpiryLabel(expiryInput.value));
+        // ===== окончание установки срока =====
 
-        if (expiryInput) {
-            expiryInput.addEventListener('change', () => updateExpiryLabel(expiryInput.value));
-            // Flatpickr might trigger change, or we verify with hooks if needed, but 'change' is standard.
-        }
-
-        // ========= Load Plans =========
+        // ===== ЗАГРУЗКА ТАРИФОВ =====
+        // Получение списка планов для выбранного хоста
         async function loadPlansAndRestore() {
             if (!hostSel || !planSel) return;
             updateInbound();
             const host = hostSel.value;
-            if (!host) {
-                planSel.innerHTML = '<option value="">— Не выбран —</option>';
-                if (priceEl) priceEl.textContent = '— RUB';
-                return;
-            }
+            if (!host) { planSel.innerHTML = '<option value="">— Не выбран —</option>'; if (priceEl) priceEl.textContent = '— ₽'; return; }
             planSel.innerHTML = '<option value="">Загрузка...</option>';
             try {
                 const res = await fetch(`{{ url_for('admin_get_plans_for_host_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(host)));
@@ -506,366 +513,457 @@
                 const items = (d && d.ok && d.items) ? d.items : [];
                 const saved = (JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}).plan_select;
                 planSel.innerHTML = '<option value="">— Не выбран —</option>' + items.map(p =>
-                    `<option value="${p.plan_id}" 
-                        data-months="${p.months}" 
-                        data-price="${p.price || 0}"
-                        data-hwid="${p.hwid_limit || 0}"
-                        data-traffic-gb="${p.traffic_limit_gb || 0}">${p.plan_name} (${p.months} мес.) — ${Number(p.price || 0).toFixed(0)} RUB</option>`
+                    `<option value="${p.plan_id}" data-months="${p.months}" data-price="${p.price || 0}" data-hwid="${p.hwid_limit || 0}" data-traffic-gb="${p.traffic_limit_gb || 0}">${p.plan_name} (${p.months} мес.) — ${Number(p.price || 0).toFixed(0)} ₽</option>`
                 ).join('');
-                // Restore selected plan
                 if (saved) {
                     planSel.value = saved;
                     const opt = planSel.options[planSel.selectedIndex];
                     const price = opt ? Number(opt.getAttribute('data-price') || 0) : 0;
-                    if (priceEl) priceEl.textContent = saved ? `${price.toFixed(0)} RUB` : '— RUB';
+                    if (priceEl) priceEl.textContent = saved ? `${price.toFixed(0)} ₽` : '— ₽';
                     const months = opt ? Number(opt.getAttribute('data-months') || 0) : 0;
                     if (months > 0) setExpiryDays(months * 30);
-
-                    // Restore HWID and GB from selected plan
                     const hwid = opt ? opt.getAttribute('data-hwid') || '0' : '0';
                     const trafficGb = opt ? opt.getAttribute('data-traffic-gb') || '0' : '0';
                     const hwidInput = document.getElementById('host_hwid_limit');
                     const gbInput = document.getElementById('host_traffic_gb');
-
-                    if (hwidInput) {
-                        hwidInput.value = (hwid === '0') ? '—' : hwid;
-                    }
-                    if (gbInput) {
-                        gbInput.value = (trafficGb === '0') ? '—' : Number(trafficGb).toFixed(2);
-                    }
+                    if (hwidInput) hwidInput.value = (hwid === '0') ? '—' : hwid;
+                    if (gbInput) gbInput.value = (trafficGb === '0') ? '—' : Number(trafficGb).toFixed(2);
                 } else {
-                    if (priceEl) priceEl.textContent = '— RUB';
+                    if (priceEl) priceEl.textContent = '— ₽';
+                    if (planSel.options.length > 1) {
+                        planSel.selectedIndex = 1;
+                        const opt = planSel.options[planSel.selectedIndex];
+                        if (opt) {
+                            if (priceEl) priceEl.textContent = `${Number(opt.getAttribute('data-price') || 0).toFixed(0)} ₽`;
+                            const dVal = Number(daysInput.value || 0); if (dVal > 0) setExpiryDays(dVal);
+                            const hwidInput = document.getElementById('host_hwid_limit');
+                            const gbInput = document.getElementById('host_traffic_gb');
+                            if (hwidInput) hwidInput.value = (opt.getAttribute('data-hwid') || '0' === '0') ? '—' : opt.getAttribute('data-hwid');
+                            if (gbInput) gbInput.value = (opt.getAttribute('data-traffic-gb') || '0' == 0) ? '—' : Number(opt.getAttribute('data-traffic-gb')).toFixed(2);
+                        }
+                    }
                 }
                 initSoftSelect('plan_select', '— Не выбран —');
-            } catch (_) {
-                planSel.innerHTML = '<option value="">— Не выбран —</option>';
-                if (priceEl) priceEl.textContent = '— RUB';
-            }
+            } catch (_) { planSel.innerHTML = '<option value="">— Не выбран —</option>'; if (priceEl) priceEl.textContent = '— ₽'; }
         }
+        if (hostSel && hostSel.value) { updateInbound(); loadPlansAndRestore(); updateHostSettings(); }
+        if (hostSel) hostSel.addEventListener('change', () => { updateInbound(); loadPlansAndRestore(); updateHostSettings(); });
+        // ===== окончание загрузки тарифов =====
 
-        // Init if host was restored
-        if (hostSel && hostSel.value) {
-            updateInbound();
-            loadPlansAndRestore();
-            updateHostSettings();
-        }
-
-        if (hostSel) hostSel.addEventListener('change', () => {
-            updateInbound();
-            loadPlansAndRestore();
-            updateHostSettings();
-        });
-
-        // Plan change -> set expiry and update price, hwid, traffic GB
+        // ===== ВЫБОР ТАРИФА =====
+        // Обновление параметров при смене плана
         if (planSel) planSel.addEventListener('change', () => {
             const opt = planSel.options[planSel.selectedIndex];
             const months = opt ? Number(opt.getAttribute('data-months') || 0) : 0;
             const price = opt ? Number(opt.getAttribute('data-price') || 0) : 0;
-            const hwid = opt ? opt.getAttribute('data-hwid') || '0' : '0';
-            const trafficGb = opt ? opt.getAttribute('data-traffic-gb') || '0' : '0';
-
-            if (months > 0) setExpiryDays(months * 30);
-            if (priceEl) priceEl.textContent = planSel.value ? `${price.toFixed(0)} RUB` : '— RUB';
-
-            // Update HWID and GB fields from plan
+            if (months > 0) setExpiryDays(months * 30); else { const dVal = Number(daysInput.value || 0); if (dVal > 0) setExpiryDays(dVal); }
+            if (priceEl) priceEl.textContent = planSel.value ? `${price.toFixed(0)} ₽` : '— ₽';
             const hwidInput = document.getElementById('host_hwid_limit');
             const gbInput = document.getElementById('host_traffic_gb');
-
-            if (hwidInput) {
-                hwidInput.value = (hwid === '0' || !planSel.value) ? '—' : hwid;
-            }
-
-            if (gbInput) {
-                if (!planSel.value || trafficGb === '0') {
-                    gbInput.value = '—';
-                } else {
-                    gbInput.value = Number(trafficGb).toFixed(2);
-                }
-            }
-
+            if (hwidInput) hwidInput.value = (opt?.getAttribute('data-hwid') === '0' || !planSel.value) ? '—' : opt?.getAttribute('data-hwid') || '—';
+            if (gbInput) gbInput.value = (!planSel.value || opt?.getAttribute('data-traffic-gb') === '0') ? '—' : Number(opt?.getAttribute('data-traffic-gb')).toFixed(2);
             saveState();
         });
+        if (daysInput) daysInput.addEventListener('input', () => { const days = Number(daysInput.value || 0); if (days > 0) setExpiryDays(days); });
+        document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => setExpiryDays(Number(btn.getAttribute('data-preset') || 0))));
+        // ===== окончание выбора тарифа =====
 
-        // Days input
-        if (daysInput) daysInput.addEventListener('input', () => {
-            const days = Number(daysInput.value || 0);
-            if (days > 0) setExpiryDays(days);
-        });
-
-        // Preset buttons
-        document.querySelectorAll('[data-preset]').forEach(btn => {
-            btn.addEventListener('click', () => setExpiryDays(Number(btn.getAttribute('data-preset') || 0)));
-        });
-
-        // ========= User Autocomplete Suggestions =========
+        // ===== ПРЕДЛОЖЕНИЯ ПОЛЬЗОВАТЕЛЕЙ =====
+        // Автодополнение при вводе ID или username
         function initUserSuggest() {
             if (!userInput) return;
-            let menu = document.createElement('div');
-            menu.className = 'soft-select-menu';
-            menu.style.position = 'fixed';
-            menu.style.display = 'none';
-            document.body.appendChild(menu);
-
-            function place() {
-                const r = userInput.getBoundingClientRect();
-                menu.style.left = `${Math.round(r.left)}px`;
-                menu.style.top = `${Math.round(r.bottom + 6)}px`;
-                menu.style.width = `${Math.round(r.width)}px`;
-                menu.style.zIndex = '1065';
-            }
-            function close() { menu.style.display = 'none'; }
-            function open() { place(); menu.style.display = 'block'; }
-
-            function render(list) {
+            let menu = document.createElement('div'); menu.className = 'soft-select-menu'; menu.style.position = 'fixed'; menu.style.display = 'none'; document.body.appendChild(menu);
+            const place = () => { const r = userInput.getBoundingClientRect(); menu.style.left = `${Math.round(r.left)}px`; menu.style.top = `${Math.round(r.bottom + 6)}px`; menu.style.width = `${Math.round(r.width)}px`; menu.style.zIndex = '1065'; };
+            const close = () => menu.style.display = 'none';
+            const open = () => { place(); menu.style.display = 'block'; };
+            const render = (list) => {
                 menu.innerHTML = '';
                 list.slice(0, 8).forEach(u => {
-                    const item = document.createElement('div');
-                    item.className = 'soft-select-item';
-                    const username = u.username ? '@' + String(u.username) : '—';
-                    item.innerHTML = `<div style="font-weight:600">${u.telegram_id}</div><div style="opacity:.75">${username}</div>`;
-                    item.onclick = async () => {
-                        userInput.value = String(u.telegram_id);
-                        close();
-                        try { await normalizeUserId(); await maybeGenEmail(); } catch (_) { }
-                    };
+                    const item = document.createElement('div'); item.className = 'soft-select-item';
+                    item.innerHTML = `<div style="font-weight:600">${u.telegram_id}</div><div style="opacity:.75">${u.username ? '@' + u.username : '—'}</div>`;
+                    item.onclick = async () => { userInput.value = String(u.telegram_id); close(); await normalizeUserId(); await maybeGenEmail(); };
                     menu.appendChild(item);
                 });
-                if (list.length === 0) {
-                    const none = document.createElement('div');
-                    none.className = 'soft-select-item';
-                    none.style.opacity = '.7';
-                    none.textContent = 'Ничего не найдено';
-                    menu.appendChild(none);
-                }
-            }
-
-            function applyFilter() {
+                if (list.length === 0) { const none = document.createElement('div'); none.className = 'soft-select-item'; none.style.opacity = '.7'; none.textContent = 'Ничего не найдено'; menu.appendChild(none); }
+            };
+            const applyFilter = () => {
                 const q = String(userInput.value || '').trim().toLowerCase();
                 if (!q) { close(); return; }
-                const arr = (USERS || []).filter(u => {
-                    const idm = String(u.telegram_id || '').includes(q);
-                    const unm = (u.username ? ('@' + String(u.username).toLowerCase()) : '').includes(q);
-                    return idm || unm;
-                });
-                render(arr);
+                render((USERS || []).filter(u => String(u.telegram_id || '').includes(q) || (u.username ? ('@' + u.username.toLowerCase()) : '').includes(q)));
                 open();
-            }
-
-            userInput.addEventListener('focus', applyFilter);
-            userInput.addEventListener('input', applyFilter);
-            window.addEventListener('scroll', place, true);
-            window.addEventListener('resize', place, true);
+            };
+            userInput.addEventListener('focus', applyFilter); userInput.addEventListener('input', applyFilter);
+            window.addEventListener('scroll', place, true); window.addEventListener('resize', place, true);
             document.addEventListener('click', e => { if (!menu.contains(e.target) && e.target !== userInput) close(); });
             document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
         }
         initUserSuggest();
+        // ===== окончание предложений =====
 
-        // ========= Normalize User ID =========
+        // ===== НОРМАЛИЗАЦИЯ ID =====
+        // Преобразование @username в цифровой ID
         async function normalizeUserId() {
             if (!userInput) return;
-            const raw = String(userInput.value || '').trim();
-            if (!raw) return;
-            if (!/^[0-9]+$/.test(raw)) {
-                const key = raw.startsWith('@') ? raw.toLowerCase() : ('@' + raw.toLowerCase());
-                if (USER_MAP[key]) {
-                    userInput.value = String(USER_MAP[key]);
-                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'), user_id: userInput.value })); } catch (_) { }
-                }
-            }
+            const raw = String(userInput.value || '').trim(); if (!raw || /^[0-9]+$/.test(raw)) return;
+            const key = raw.startsWith('@') ? raw.toLowerCase() : ('@' + raw.toLowerCase());
+            if (USER_MAP[key]) { userInput.value = String(USER_MAP[key]); try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'), user_id: userInput.value })); } catch (_) { } }
         }
+        // ===== окончание нормализации id =====
 
-        // ========= Generate Email =========
+        // ===== ГЕНЕРАЦИЯ EMAIL =====
+        // Создание почтового адреса для ключа
         async function maybeGenEmail() {
-            if (!emailInput || !userInput) return;
-            const userId = String(userInput.value || '').trim();
-            if (!userId || !/^\d+$/.test(userId)) return; // Only call API for numeric IDs
+            if (!emailInput) return;
+            const mode = modeInput?.value || 'personal', userId = String(userInput?.value || '').trim();
+            if (mode === 'personal' && (!userId || !/^\d+$/.test(userId))) return;
             try {
-                const res = await fetch(`{{ url_for('generate_key_email_route') }}?user_id=${encodeURIComponent(userId)}`);
-                const data = await res.json();
-                if (data && data.ok && data.email) emailInput.value = data.email;
+                let url = `{{ url_for('generate_key_email_route') }}?mode=${mode}`; if (userId && /^\d+$/.test(userId)) url += `&user_id=${encodeURIComponent(userId)}`;
+                const data = await (await fetch(url)).json(); if (data?.ok && data.email) emailInput.value = data.email;
             } catch (_) { }
         }
-
         if (userInput) {
             userInput.addEventListener('blur', async () => { await normalizeUserId(); await maybeGenEmail(); });
             userInput.addEventListener('change', async () => { await normalizeUserId(); await maybeGenEmail(); });
-            // Generate on load
             (async () => { await normalizeUserId(); await maybeGenEmail(); })();
         }
+        // ===== окончание генерации email =====
 
-        // ========= Mode Switch =========
-        const modeSwitch = document.getElementById('mode_switch');
-        const modeSections = document.querySelectorAll('.mode-section');
+        // ===== СМЕНА РЕЖИМА =====
+        // Переключение между персональным и подарочным ключом
+        const modeSwitch = document.getElementById('mode_switch'), modeSections = document.querySelectorAll('.mode-section');
         function applyMode(mode) {
             if (modeInput) modeInput.value = mode;
+            modeSections.forEach(s => s.classList.toggle('hidden', !s.classList.contains(`mode-${mode}`)));
+            if (modeSwitch) {
+                const indicator = document.getElementById('mode_indicator'), commentContainer = document.getElementById('comment_container'), userIdContainer = document.getElementById('user_id_container');
 
-            // Toggle visibility of sections
-            modeSections.forEach(section => {
-                const isCurrent = section.classList.contains(`mode-${mode}`);
-                section.classList.toggle('hidden', !isCurrent);
-            });
-
-            // Update visual state of buttons (Segmented Control)
-            if (modeSwitch && typeof window.updateModeIndicator === 'function') {
-                const btn = modeSwitch.querySelector(`[data-mode="${mode}"]`);
-                if (btn) window.updateModeIndicator(btn);
-            } else if (modeSwitch) {
-                // Fallback logic
-                const indicator = document.getElementById('mode_indicator');
-                const commentContainer = document.getElementById('comment_container');
-                const btn = modeSwitch.querySelector(`[data-mode="${mode}"]`);
-
-                modeSwitch.querySelectorAll('button').forEach(b => {
-                    b.classList.remove('text-[#102219]');
-                    b.classList.add('text-white/60');
+                // Update button styles
+                const btns = modeSwitch.querySelectorAll('button');
+                btns.forEach(b => {
+                    if (b.dataset.mode === mode) {
+                        b.classList.remove('text-white/40', 'hover:text-white', 'hover:bg-white/5');
+                        b.classList.add('text-background-dark', 'bg-primary', 'shadow-lg', 'shadow-primary/20');
+                    } else {
+                        b.classList.add('text-white/40', 'hover:text-white', 'hover:bg-white/5');
+                        b.classList.remove('text-background-dark', 'bg-primary', 'shadow-lg', 'shadow-primary/20');
+                    }
                 });
-                if (btn) {
-                    btn.classList.add('text-[#102219]');
-                    btn.classList.remove('text-white/60');
-                }
 
+                // Update layout based on mode
                 if (mode === 'personal') {
                     if (indicator) indicator.style.transform = 'translateX(0)';
-                    // Personal: Comment fills 2 cols in row 2 (leaving Expiry 2 cols)
                     if (commentContainer) commentContainer.classList.add('md:col-span-2');
+                    if (userIdContainer) userIdContainer.classList.remove('md:col-span-4');
                 } else {
                     if (indicator) indicator.style.transform = 'translateX(100%)';
-                    // Gift: Comment fits in 1 col (4th in row 1)
                     if (commentContainer) commentContainer.classList.remove('md:col-span-2');
+                    if (userIdContainer) userIdContainer.classList.add('md:col-span-4');
                 }
             }
-
             if (userInput) userInput.required = (mode === 'personal');
-            if (emailInput) emailInput.required = false;
-            saveState();
+            saveState(); maybeGenEmail();
         }
+        if (modeSwitch) modeSwitch.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => applyMode(btn.getAttribute('data-mode') || 'personal')));
+        applyMode(restoredState.mode || modeInput?.value || 'personal');
+        // ===== окончание смены режима =====
 
-        // Attach listeners
-        if (modeSwitch) {
-            modeSwitch.querySelectorAll('[data-mode]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    // Prevent default to avoid double firing if onclick is also set (though onclick handles visual, we want logic here)
-                    // Actually, onclick in HTML calls updateModeIndicator. 
-                    // We should let this listener handle the LOGIC (applyMode).
-                    applyMode(btn.getAttribute('data-mode') || 'personal');
-                });
+        // ===== УНИВЕРСАЛЬНЫЙ ЗАПРОС =====
+        // Вспомогательная функция для API запросов
+        async function apiRequest(url, method, body, successMsg) {
+            try {
+                const fd = body instanceof FormData ? body : new FormData();
+                if (!(body instanceof FormData) && typeof body === 'object') Object.entries(body).forEach(([k, v]) => fd.append(k, v));
+                fd.append('csrf_token', getCsrfToken());
+                const resp = await fetch(url, { method, body: fd, credentials: 'same-origin' });
+                const data = await resp.json().catch(() => ({ ok: resp.ok }));
+                if (data.ok) { if (successMsg) showToast('success', successMsg); return data; }
+                showToast('danger', 'Ошибка операции'); return null;
+            } catch (_) { showToast('danger', 'Ошибка сети'); return null; }
+        }
+        // ===== окончание универсального запроса =====
+
+        // ===== СОЗДАНИЕ КЛЮЧА =====
+        // Отправка формы создания нового ключа
+        // ===== УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК ФОРМ =====
+        // Обработка AJAX форм (создание, удаление, очистка)
+        const handleAjaxSubmit = async (e) => {
+            const form = e.target.closest('.ajax-form');
+            if (!form) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const performSubmit = async () => {
+                const btn = form.querySelector('button[type="submit"]') || form.querySelector('button:not([type="button"])');
+                let originalContent = '';
+
+                if (btn) {
+                    btn.disabled = true;
+                    originalContent = btn.innerHTML;
+                    btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-base">sync</span>';
+                }
+
+                try {
+                    const fd = new FormData(form);
+                    // Специальная логика для формы создания ключа
+                    if (form.id === 'create-key-form' && modeInput) {
+                        fd.set('mode', modeInput.value || 'personal');
+                        await maybeGenEmail(); // Обновляем email перед отправкой если нужно
+                    }
+
+                    const successMsg = form.getAttribute('data-success-msg') || 'Успешно';
+                    const data = await apiRequest(form.action, form.method || 'POST', fd, successMsg);
+
+                    if (data) {
+                        const refreshTarget = form.getAttribute('data-refresh-target') || 'keys-tbody';
+                        await refreshContainerById(refreshTarget);
+
+                        // Дополнительные действия после успеха
+                        if (form.id === 'create-key-form') {
+                            // Можно очистить форму или обновить email
+                            await maybeGenEmail();
+                        }
+                    }
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalContent;
+                    }
+                }
+            };
+
+            const confirmMsg = form.getAttribute('data-confirm');
+            if (confirmMsg) {
+                showConfirmModal(confirmMsg, performSubmit);
+            } else {
+                await performSubmit();
+            }
+        };
+
+        // Делегирование событий submit для всех ajax-форм
+        document.addEventListener('submit', (e) => {
+            if (e.target.matches('.ajax-form')) {
+                handleAjaxSubmit(e);
+            }
+        });
+
+        // Удаляем старый обработчик кнопки создания, так как теперь используем событийную модель формы
+        // submitBtn?.addEventListener('click', doSubmit);
+        form?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+        // ===== окончание универсального обработчика =====
+
+        // ===== МОДАЛЬНЫЕ ОКНА =====
+        // Обработка сохранения комментария и срока действия
+        let currentKeyId = null;
+        document.addEventListener('click', e => {
+            const commentBtn = e.target.closest('.btn-edit-comment'), expiryBtn = e.target.closest('.btn-open-expiry');
+            if (commentBtn) { currentKeyId = commentBtn.getAttribute('data-key-id'); document.getElementById('commentInput').value = commentBtn.getAttribute('data-current-comment') || ''; openModal('commentModal'); }
+            if (expiryBtn) { currentKeyId = expiryBtn.getAttribute('data-key-id'); document.getElementById('expiryDelta').value = ''; openModal('expiryModal'); }
+        });
+        document.getElementById('commentSaveBtn')?.addEventListener('click', async () => {
+            const url = `{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0/', `/${currentKeyId}/`);
+            if (await apiRequest(url, 'POST', { comment: document.getElementById('commentInput').value }, 'Комментарий сохранён')) { closeModal('commentModal'); refreshContainerById('keys-tbody'); }
+        });
+        document.getElementById('expirySaveBtn')?.addEventListener('click', async () => {
+            const delta = document.getElementById('expiryDelta').value; if (!delta) return showToast('warning', 'Введите количество дней');
+            const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0/', `/${currentKeyId}/`);
+            if (await apiRequest(url, 'POST', { delta_days: delta }, 'Срок обновлён')) { closeModal('expiryModal'); refreshContainerById('keys-tbody'); }
+        });
+        // ===== окончание модальных окон =====
+
+        // ===== УПРАВЛЕНИЕ АКТИВАЦИЕЙ ФИЛЬТРОВ =====
+        // Обновление стилей кнопок фильтров
+        function updateFilterActiveState(urlStr) {
+            const url = new URL(urlStr, location.origin);
+            const currentFilter = url.searchParams.get('filter') || 'general';
+            document.querySelectorAll('.ajax-nav').forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href) return;
+                const linkUrl = new URL(href, location.origin);
+                const filterVal = linkUrl.searchParams.get('filter') || 'general';
+                // Простая проверка для фильтров (не пагинации)
+                if (link.textContent.trim().match(/^(Общие|Gift)$/i)) {
+                    if (filterVal === currentFilter) {
+                        link.classList.remove('text-white/60', 'hover:text-white', 'hover:bg-white/5');
+                        link.classList.add('bg-primary', 'text-background-dark');
+                    } else {
+                        link.classList.add('text-white/60', 'hover:text-white', 'hover:bg-white/5');
+                        link.classList.remove('bg-primary', 'text-background-dark');
+                    }
+                }
             });
         }
 
-        // Initial apply
-        applyMode(restoredState.mode || (modeInput?.value || 'personal'));
+        // ===== AJAX НАВИГАЦИЯ =====
+        // Обработка кликов по фильтрам и пагинации
+        // ===== AJAX НАВИГАЦИЯ И LAZY LOAD =====
 
-        // ========= Submit =========
-        async function doSubmit() {
-            await maybeGenEmail();
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Создаю...';
+        // Основная функция загрузки таблицы
+        const loadKeysTable = async () => {
+            const tbody = document.getElementById('keys-tbody');
+            if (!tbody) return;
+
+            const url = new URL(tbody.dataset.fetchUrl, location.origin);
             try {
-                const fd = new FormData(form);
-                if (modeInput) fd.set('mode', modeInput.value || 'personal');
-                const res = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' });
-                const data = await res.json().catch(() => ({ ok: false }));
-                if (data && data.ok) {
-                    showToast('success', 'Ключ создан');
-                    refreshContainerById('keys-tbody');
-                } else {
-                    showToast('danger', 'Не удалось создать ключ');
+                const resp = await fetch(url, { headers: { 'Accept': 'text/html' } });
+                if (resp.ok) {
+                    tbody.innerHTML = await resp.text();
+                    updatePagination(url);
                 }
-            } catch (_) { showToast('danger', 'Ошибка при создании ключа'); }
-            finally { submitBtn.disabled = false; submitBtn.textContent = 'Создать'; }
-        }
+            } catch (e) {
+                console.error("Failed to load keys:", e);
+                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-red-500">Ошибка загрузки</td></tr>';
+            }
+        };
 
-        submitBtn?.addEventListener('click', doSubmit);
-        form?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+        // Обновление пагинации
+        const updatePagination = async (currentUrl) => {
+            const pagEl = document.getElementById('keys-pagination');
+            if (pagEl) {
+                const pagUrl = new URL(pagEl.dataset.src, location.origin);
+                // Копируем параметры (q, filter, page) из URL таблицы в URL пагинации
+                currentUrl.searchParams.forEach((v, k) => pagUrl.searchParams.set(k, v));
+                try {
+                    const resp = await fetch(pagUrl, { headers: { 'Accept': 'text/html' } });
+                    if (resp.ok) {
+                        pagEl.innerHTML = await resp.text();
+                        // Обновляем data-src чтобы он был актуальным (хотя мы все равно перезаписываем params)
+                        pagEl.dataset.src = pagUrl.pathname + pagUrl.search;
+                    }
+                } catch (_) { }
+            }
+        };
 
-        // ========= Comment Modal =========
-        let currentKeyId = null;
-        document.addEventListener('click', e => {
-            const btn = e.target.closest('.btn-edit-comment');
-            if (!btn) return;
-            currentKeyId = btn.getAttribute('data-key-id');
-            document.getElementById('commentInput').value = btn.getAttribute('data-current-comment') || '';
-            openModal('commentModal');
+        // Обработка кликов (Пагинация и Фильтры)
+        document.addEventListener('click', async (e) => {
+            const link = e.target.closest('.ajax-nav');
+            if (!link) return;
+
+            e.preventDefault();
+            const href = link.getAttribute('href');
+            if (!href) return;
+
+            // Обновляем URL в браузере
+            history.pushState(null, '', href);
+            updateFilterActiveState(href);
+
+            const tbody = document.getElementById('keys-tbody');
+            if (tbody) {
+                // Вычисляем новый URL для fetch based on link href
+                const newPageUrl = new URL(href, location.origin);
+                const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+
+                // Переносим параметры
+                newPageUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
+
+                // Если клик по фильтру (не пагинация), сбрасываем page=1
+                // (Обычно фильтры имеют href="...?filter=gift", без page, или page=1)
+                // Логика users.html: просто копируем все params.
+                // Если в href нет page, значит ли это page=1?
+                if (!newPageUrl.searchParams.has('page')) {
+                    fetchUrl.searchParams.set('page', '1');
+                }
+
+                tbody.dataset.fetchUrl = fetchUrl.toString();
+
+                // Спиннер
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center"><div class="flex flex-col items-center justify-center text-white/30"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div><span class="text-xs">Загрузка...</span></div></td></tr>`;
+
+                await loadKeysTable();
+            }
         });
 
-        document.getElementById('commentSaveBtn')?.addEventListener('click', async () => {
-            const comment = document.getElementById('commentInput').value;
-            if (!currentKeyId) return;
-            try {
-                const fd = new FormData();
-                fd.append('csrf_token', getCsrfToken());
-                fd.append('comment', comment);
-                const url = `{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0/', `/${currentKeyId}/`);
-                const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
-                if (resp.ok) {
-                    showToast('success', 'Комментарий сохранён');
-                    closeModal('commentModal');
-                    refreshContainerById('keys-tbody');
-                } else { showToast('danger', 'Ошибка сохранения'); }
-            } catch (_) { showToast('danger', 'Ошибка сети'); }
+        // Обработка Popstate (Назад/Вперед)
+        window.addEventListener('popstate', async () => {
+            updateFilterActiveState(location.href);
+            const tbody = document.getElementById('keys-tbody');
+            if (tbody) {
+                const currentUrl = new URL(location.href);
+                const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+                currentUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
+                tbody.dataset.fetchUrl = fetchUrl.toString();
+                await loadKeysTable();
+            }
         });
 
-        // ========= Expiry Modal =========
-        let expiryKeyId = null;
-        document.addEventListener('click', e => {
-            const btn = e.target.closest('.btn-open-expiry');
-            if (!btn) return;
-            expiryKeyId = btn.getAttribute('data-key-id');
-            document.getElementById('expiryDelta').value = '';
-            openModal('expiryModal');
-        });
-
-        document.getElementById('expirySaveBtn')?.addEventListener('click', async () => {
-            const delta = document.getElementById('expiryDelta').value;
-            if (!expiryKeyId || !delta) { showToast('warning', 'Введите количество дней'); return; }
-            try {
-                const fd = new FormData();
-                fd.append('csrf_token', getCsrfToken());
-                fd.append('delta_days', delta);
-                const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0/', `/${expiryKeyId}/`);
-                const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
-                if (resp.ok) {
-                    showToast('success', 'Срок обновлён');
-                    closeModal('expiryModal');
-                    refreshContainerById('keys-tbody');
-                } else { showToast('danger', 'Ошибка'); }
-            } catch (_) { showToast('danger', 'Ошибка сети'); }
-        });
+        // Поиск
         const searchInput = document.getElementById('keys-search');
         if (searchInput) {
             let searchTimeout = null;
             searchInput.addEventListener('input', () => {
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(async () => {
+                    const q = searchInput.value || '';
+                    const params = new URLSearchParams(location.search);
+                    params.set('q', q);
+                    params.set('page', '1'); // Сброс страницы при поиске
+
+                    const newUrl = `${location.pathname}?${params.toString()}`;
+                    history.replaceState(null, '', newUrl);
+
                     const tbody = document.getElementById('keys-tbody');
-                    if (!tbody) return;
-
-                    const url = new URL(tbody.getAttribute('data-fetch-url'), location.origin);
-                    url.searchParams.set('q', searchInput.value || '');
-                    url.searchParams.set('page', '1');
-
-                    try {
-                        const resp = await fetch(url, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
-                        if (resp.ok) {
-                            tbody.innerHTML = await resp.text();
-
-                            const pagEl = document.getElementById('keys-pagination');
-                            if (pagEl) {
-                                const pagUrl = new URL(pagEl.getAttribute('data-src'), location.origin);
-                                pagUrl.searchParams.set('q', searchInput.value || '');
-                                pagUrl.searchParams.set('page', '1');
-                                const r2 = await fetch(pagUrl, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
-                                if (r2.ok) {
-                                    pagEl.innerHTML = await r2.text();
-                                    pagEl.setAttribute('data-src', pagUrl.toString());
-                                }
-                            }
-                        }
-                    } catch (e) { console.error(e); }
+                    if (tbody) {
+                        const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+                        fetchUrl.searchParams.set('q', q);
+                        fetchUrl.searchParams.set('page', '1');
+                        tbody.dataset.fetchUrl = fetchUrl.toString();
+                        await loadKeysTable();
+                    }
                 }, 400);
             });
         }
 
+        // Загрузка при открытии страницы
+        loadKeysTable();
+
+        // Автообновление
+        const tbodyAutoload = document.getElementById('keys-tbody');
+        if (tbodyAutoload && tbodyAutoload.dataset.fetchInterval) {
+            setInterval(loadKeysTable, parseInt(tbodyAutoload.dataset.fetchInterval));
+        }
+        // ===== окончание поиска ключей =====
     })();
+
+    // Функция копирования ключа
+    window.copyKey = function (btn) {
+        const key = btn.getAttribute('data-key');
+        if (!key) {
+            if (window.showToast) showToast('warning', 'Нет ключа');
+            return;
+        }
+
+        const success = () => {
+            if (window.showToast) showToast('success', 'Ключ скопирован');
+            const icon = btn.querySelector('.material-symbols-outlined');
+            if (icon) {
+                const original = icon.textContent;
+                icon.textContent = 'check';
+                setTimeout(() => icon.textContent = original, 2000);
+            }
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(key).then(success).catch(err => {
+                console.error(err);
+                if (window.showToast) showToast('danger', 'Ошибка копирования');
+            });
+        } else {
+            // Fallback
+            let textArea = document.createElement("textarea");
+            textArea.value = key;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                success();
+            } catch (err) {
+                if (window.showToast) showToast('danger', 'Ошибка копирования');
+            }
+            document.body.removeChild(textArea);
+        }
+    };
 </script>
 {% endblock %}

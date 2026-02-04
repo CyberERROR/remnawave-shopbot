@@ -20,10 +20,7 @@
                         class="px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 flex items-center gap-1">
                         <span class="material-symbols-outlined text-base">add</span> Добавить
                     </button>
-                    <button type="button" id="save-layout-btn"
-                        class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20 flex items-center gap-1">
-                        <span class="material-symbols-outlined text-base">save</span> Сохранить
-                    </button>
+
                     <button type="button" id="preview-btn"
                         class="px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 text-sm font-medium hover:bg-blue-500/30 flex items-center gap-1">
                         <span class="material-symbols-outlined text-base">visibility</span> Предпросмотр
@@ -582,25 +579,6 @@
         background: rgba(var(--primary-rgb), 0.2);
         color: var(--primary);
     }
-
-    .custom-scroll::-webkit-scrollbar {
-        width: 5px;
-        height: 5px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 10px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-thumb {
-        background: rgba(19, 236, 128, 0.2);
-        border-radius: 10px;
-    }
-
-    .custom-scroll::-webkit-scrollbar-thumb:hover {
-        background: rgba(19, 236, 128, 0.4);
-    }
 </style>
 {% endblock %}
 
@@ -688,7 +666,17 @@
             this.selectedButton = null;
             this.buttons = [];
             this.isPreviewLoading = false;
+            this.debouncedSave = this.debounce(() => this.saveButtonProperties(true), 800);
             this.init();
+        }
+
+        debounce(func, wait) {
+            let timeout;
+            return function (...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), wait);
+            };
         }
 
         init() {
@@ -727,7 +715,7 @@
             });
 
             document.getElementById('add-button-btn').addEventListener('click', () => this.showAddModal());
-            document.getElementById('save-layout-btn').addEventListener('click', () => this.saveLayout());
+
             document.getElementById('preview-btn').addEventListener('click', () => this.showPreview());
             document.getElementById('refresh-preview-btn').addEventListener('click', () => this.showPreview());
             document.getElementById('clear-preview-btn').addEventListener('click', () => this.clearPreview());
@@ -742,9 +730,19 @@
             document.getElementById('delete-button-btn').addEventListener('click', () => this.deleteButton());
             document.getElementById('confirm-add-button').addEventListener('click', () => this.addNewButton());
 
-            // Обработчик изменения ширины в реальном времени
+            // Обработчик изменения ширины в реальном времени + автосохранение
             document.getElementById('button-width').addEventListener('change', (e) => {
                 this.updateButtonWidthPreview(parseInt(e.target.value));
+                this.saveButtonProperties(true);
+            });
+
+            // Автосохранение для остальных полей (текст, позиция, сортировка)
+            const autoSaveIds = ['button-text', 'row-position', 'column-position', 'sort-order'];
+            autoSaveIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', () => this.debouncedSave());
+                }
             });
         }
 
@@ -767,29 +765,32 @@
             grid.innerHTML = '';
             hiddenGrid.innerHTML = '';
 
-            if (this.buttons.length === 0) {
-                grid.innerHTML = '<div class="col-span-2 text-center text-white/50 py-8">Нет кнопок. Нажмите "Добавить" для создания.</div>';
-                hiddenGrid.innerHTML = '<div class="col-span-2 text-center text-white/30 py-4">Нет скрытых кнопок</div>';
-                return;
-            }
-
             const sorted = [...this.buttons].sort((a, b) => {
                 if (a.row_position !== b.row_position) return a.row_position - b.row_position;
                 if (a.column_position !== b.column_position) return a.column_position - b.column_position;
                 return (a.sort_order || 0) - (b.sort_order || 0);
             });
 
+            let visibleCount = 0;
+            let hiddenCount = 0;
+
             sorted.forEach(btn => {
                 const el = this.createButtonElement(btn);
                 if (btn.is_active === 1 || btn.is_active === true) {
                     grid.appendChild(el);
+                    visibleCount++;
                 } else {
                     hiddenGrid.appendChild(el);
+                    hiddenCount++;
                 }
             });
 
-            if (!grid.children.length) grid.innerHTML = '<div class="col-span-2 text-center text-white/50 py-8">Нет видимых кнопок</div>';
-            if (!hiddenGrid.children.length) hiddenGrid.innerHTML = '<div class="col-span-2 text-center text-white/30 py-4">Нет скрытых кнопок</div>';
+            if (visibleCount === 0) {
+                grid.innerHTML = '<div class="col-span-2 text-center text-white/50 py-8 empty-placeholder">Нет кнопок. Нажмите "Добавить" для создания.</div>';
+            }
+            if (hiddenCount === 0) {
+                hiddenGrid.innerHTML = '<div class="col-span-2 text-center text-white/30 py-4 empty-placeholder">Нет скрытых кнопок</div>';
+            }
 
             this.initSortable();
         }
@@ -804,9 +805,9 @@
             if (this.selectedButton && this.selectedButton.id === btn.id) div.classList.add('selected');
 
             div.innerHTML = `
-            <div class="button-text text-white font-medium mb-1">${btn.text || btn.button_id}</div>
-            <div class="button-id text-white/50 text-xs">${btn.button_id}</div>
-            <div class="button-width-indicator text-primary text-xs mt-1">${width}×</div>
+            <div class="button-text text-white font-medium mb-1 pointer-events-none">${btn.text || btn.button_id}</div>
+            <div class="button-id text-white/50 text-xs pointer-events-none">${btn.button_id}</div>
+            <div class="button-width-indicator text-primary text-xs mt-1 pointer-events-none">${width}×</div>
             <div class="button-actions">
                 <button type="button" class="p-1 rounded bg-white/10 hover:bg-white/20 text-white/70" onclick="buttonConstructor.editButton(${btn.id})">
                     <span class="material-symbols-outlined text-sm">edit</span>
@@ -825,17 +826,40 @@
             const grid = document.getElementById('button-grid');
             const hiddenGrid = document.getElementById('hidden-button-grid');
 
-            if (grid.children.length && !grid.querySelector('.text-center')) {
-                new Sortable(grid, { group: 'buttons', animation: 150, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen', onEnd: () => this.updateButtonPositions() });
-            }
-            if (hiddenGrid.children.length && !hiddenGrid.querySelector('.text-center')) {
-                new Sortable(hiddenGrid, { group: 'buttons', animation: 150, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen', onEnd: () => this.updateButtonPositions() });
-            }
+            if (this.sortableGrid) this.sortableGrid.destroy();
+            if (this.sortableHiddenGrid) this.sortableHiddenGrid.destroy();
+
+            const commonOptions = {
+                group: 'buttons',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                emptyInsertThreshold: 5,
+                onStart: (evt) => {
+                    // При начале перетаскивания можно что-то делать
+                },
+                onEnd: () => this.updateButtonPositions()
+            };
+
+            this.sortableGrid = new Sortable(grid, commonOptions);
+            this.sortableHiddenGrid = new Sortable(hiddenGrid, commonOptions);
         }
 
         updateButtonPositions() {
             const grid = document.getElementById('button-grid');
             const hiddenGrid = document.getElementById('hidden-button-grid');
+
+            // Удаляем плейсхолдеры, если в списках появились элементы
+            const gridPlaceholder = grid.querySelector('.empty-placeholder');
+            const hiddenGridPlaceholder = hiddenGrid.querySelector('.empty-placeholder');
+
+            if (grid.querySelectorAll('.button-item').length > 0 && gridPlaceholder) {
+                gridPlaceholder.remove();
+            }
+            if (hiddenGrid.querySelectorAll('.button-item').length > 0 && hiddenGridPlaceholder) {
+                hiddenGridPlaceholder.remove();
+            }
+
             const buttonOrders = [];
 
             // Обработка активных кнопок
@@ -904,6 +928,7 @@
             this.saveButtonOrders(buttonOrders);
             this.updateButtonWidthClasses();
         }
+
 
         // Обновление ширины кнопки в реальном времени
         updateButtonWidthPreview(newWidth) {
@@ -997,8 +1022,8 @@
             document.getElementById('new-url-group').classList.toggle('hidden', type !== 'url');
         }
 
-        async saveButtonProperties() {
-            if (!this.selectedButton) { showToast('warning', 'Выберите кнопку'); return; }
+        async saveButtonProperties(silent = false) {
+            if (!this.selectedButton) { if (!silent) showToast('warning', 'Выберите кнопку'); return; }
 
             const data = {
                 text: document.getElementById('button-text').value,
@@ -1018,7 +1043,18 @@
                     body: JSON.stringify(data)
                 });
                 const result = await resp.json();
-                if (result.success) { showToast('success', 'Кнопка обновлена'); this.loadButtons(); }
+                if (result.success) {
+                    if (!silent) showToast('success', 'Кнопка обновлена');
+                    // При автосохранении не перерисовываем всё, чтобы не сбить фокус, если только это не критично
+                    // Но нам нужно обновить отображение в сетке
+                    // Чтобы не сбить фокус, запоминаем активный элемент
+                    const activeElementId = document.activeElement ? document.activeElement.id : null;
+                    await this.loadButtons();
+                    if (activeElementId) {
+                        const el = document.getElementById(activeElementId);
+                        if (el) el.focus();
+                    }
+                }
                 else { showToast('danger', 'Ошибка: ' + result.error); }
             } catch (e) { showToast('danger', 'Ошибка сети'); }
         }
@@ -1079,20 +1115,7 @@
             } catch (e) { showToast('danger', 'Ошибка сети'); }
         }
 
-        async saveLayout() {
-            this.updateButtonPositions();
-            let success = true;
-            for (const btn of this.buttons) {
-                try {
-                    await fetch(`/api/button-configs/${btn.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                        body: JSON.stringify({ row_position: btn.row_position, column_position: btn.column_position, sort_order: btn.sort_order, is_active: btn.is_active })
-                    });
-                } catch (e) { success = false; }
-            }
-            if (success) { showToast('success', 'Раскладка сохранена'); } else { showToast('warning', 'Некоторые кнопки не сохранились'); }
-        }
+
 
         // Расширенный предпросмотр с заголовками и интерактивностью
         showPreview() {

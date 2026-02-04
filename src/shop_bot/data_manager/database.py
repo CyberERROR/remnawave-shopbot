@@ -24,15 +24,19 @@ else:
     DB_FILE = Path("users.db")
 
 
+def get_msk_time() -> datetime:
+    return datetime.now(timezone(timedelta(hours=3)))
+
+
 def _now_str() -> str:
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    return get_msk_time().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _to_datetime_str(ts_ms: int | None) -> str | None:
     if ts_ms is None:
         return None
     try:
-        dt = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
+        dt = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).astimezone(get_msk_time().tzinfo)
         return dt.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return None
@@ -146,7 +150,9 @@ def initialize_db():
                     referred_by INTEGER,
                     referral_balance REAL DEFAULT 0,
                     referral_balance_all REAL DEFAULT 0,
-                    referral_start_bonus_received BOOLEAN DEFAULT 0
+                    referral_start_bonus_received BOOLEAN DEFAULT 0,
+                    is_pinned BOOLEAN DEFAULT 0,
+                    seller_active INTEGER DEFAULT 0
                 )
             ''')
 
@@ -230,6 +236,16 @@ def initialize_db():
                 INSERT OR IGNORE INTO other (key, value) 
                 VALUES (?, ?)
             ''', ('newsletter', json.dumps({})))
+            
+            cursor.execute('''
+                INSERT OR IGNORE INTO other (key, value) 
+                VALUES (?, ?)
+            ''', ('sg_promt', ''))
+
+            cursor.execute('''
+                INSERT OR IGNORE INTO other (key, value) 
+                VALUES (?, ?)
+            ''', ('theme_newsletter', json.dumps({})))
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS button_configs (
@@ -315,6 +331,19 @@ def initialize_db():
                     FOREIGN KEY (ticket_id) REFERENCES support_tickets (ticket_id)
                 )
             ''')
+
+
+
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS seller_users (
+                    id_seller INTEGER PRIMARY KEY AUTOINCREMENT,
+                    seller_sale REAL DEFAULT 0,
+                    seller_ref REAL DEFAULT 0,
+                    seller_uuid TEXT DEFAULT '0',
+                    user_id INTEGER UNIQUE
+                )
+            ''')
+            _ensure_unique_index(cursor, "idx_seller_users_user_id", "seller_users", "user_id")
 
             try:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_thread ON support_tickets(forum_chat_id, message_thread_id)")
@@ -514,6 +543,8 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
         "referral_balance": "REAL DEFAULT 0",
         "referral_balance_all": "REAL DEFAULT 0",
         "referral_start_bonus_received": "BOOLEAN DEFAULT 0",
+        "is_pinned": "BOOLEAN DEFAULT 0",
+        "seller_active": "INTEGER DEFAULT 0",
     }
     for column, definition in mapping.items():
         _ensure_table_column(cursor, "users", column, definition)
@@ -736,6 +767,14 @@ def run_migration():
             _ensure_ssh_targets_table(cursor)
             _ensure_gift_tokens_table(cursor)
             _ensure_promo_tables(cursor)
+            try:
+                # Rename sellr_ref to seller_ref if exists (migration fix)
+                cursor.execute("ALTER TABLE seller_users RENAME COLUMN sellr_ref TO seller_ref")
+                logging.info("Renamed column sellr_ref to seller_ref in seller_users")
+            except Exception:
+                pass
+
+            _ensure_seller_users_table(cursor)
 
             try:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_thread ON support_tickets(forum_chat_id, message_thread_id)")
@@ -770,6 +809,14 @@ def run_migration():
                     INSERT OR IGNORE INTO bot_settings (key, value) 
                     VALUES (?, ?)
                 ''', ('enable_wal_mode', '0'))
+            except Exception:
+                pass
+
+            try:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO other (key, value) 
+                    VALUES (?, ?)
+                ''', ('theme_newsletter', json.dumps({})))
             except Exception:
                 pass
             
@@ -855,7 +902,7 @@ def get_metrics_series(scope: str, object_name: str, *, since_hours: int = 24, l
                 SELECT created_at, cpu_percent, mem_percent, disk_percent, load1
                 FROM resource_metrics
                 WHERE scope = ? AND object_name = ?
-                  AND created_at >= datetime('now', ?)
+                  AND created_at >= datetime('now', '+3 hours', ?)
                 ORDER BY created_at ASC
                 LIMIT ?
                 ''',
@@ -1012,6 +1059,55 @@ def update_host_url(host_name: str, new_url: str) -> bool:
             return cursor.rowcount > 0
     except sqlite3.Error as e:
         logging.error(f"Не удалось обновить host_url для хоста '{host_name}': {e}")
+        return False
+
+def add_seller_user(user_id: int, seller_sale: float = 0, seller_ref: float = 0, seller_uuid: str = "0") -> int | None:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            # Используем UPSERT (INSERT OR REPLACE)
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO seller_users (user_id, seller_sale, seller_ref, seller_uuid) 
+                VALUES (?, ?, ?, ?)
+                """,
+                (user_id, seller_sale, seller_ref, str(seller_uuid))
+            )
+            conn.commit()
+            return cursor.lastrowid
+    except sqlite3.Error as e:
+        logging.error(f"Failed to add seller user: {e}")
+        return None
+
+def get_seller_user(user_id: int) -> dict | None:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM seller_users WHERE user_id = ?", (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                # Если записи нет, возвращаем дефолтную (UUID="0", sale=0, ref=0)
+                return {
+                    "user_id": user_id,
+                    "seller_sale": 0.0,
+                    "seller_ref": 0.0,
+                    "seller_uuid": "0",
+                }
+            return dict(row)
+    except sqlite3.Error as e:
+        logging.error(f"Failed to get seller user {user_id}: {e}")
+        return None
+
+def delete_seller_user(user_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM seller_users WHERE user_id = ?", (user_id,))
+            conn.commit()
+            return True
+    except sqlite3.Error as e:
+        logging.error(f"Failed to delete seller user {user_id}: {e}")
         return False
 
 def update_host_remnawave_settings(
@@ -1331,7 +1427,7 @@ def insert_host_speedtest(
             method_s = 'ssh'
         
         # Moscow time is UTC+3
-        created_at_val = (datetime.utcnow() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
+        created_at_val = get_msk_time().strftime("%Y-%m-%d %H:%M:%S")
 
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
@@ -1431,6 +1527,44 @@ def _ensure_gift_tokens_table(cursor: sqlite3.Cursor) -> None:
     )
     _ensure_index(cursor, "idx_gift_token_claims_token", "gift_token_claims", "token")
     _ensure_index(cursor, "idx_gift_token_claims_user", "gift_token_claims", "user_id")
+
+
+def _ensure_seller_users_table(cursor: sqlite3.Cursor) -> None:
+    """Миграция для таблицы seller_users."""
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS seller_users (
+            id_seller INTEGER PRIMARY KEY AUTOINCREMENT,
+            seller_sale REAL DEFAULT 0,
+            seller_ref REAL DEFAULT 0,
+            seller_uuid TEXT DEFAULT '0',
+            user_id INTEGER UNIQUE
+        )
+    ''')
+    
+    # Ensure columns exist (for migration)
+    mapping = {
+        "seller_sale": "REAL DEFAULT 0",
+        "seller_ref": "REAL DEFAULT 0",
+        "seller_uuid": "TEXT DEFAULT '0'",
+        "user_id": "INTEGER UNIQUE"
+    }
+    for column, definition in mapping.items():
+        _ensure_table_column(cursor, "seller_users", column, definition)
+
+    _ensure_unique_index(cursor, "idx_seller_users_user_id", "seller_users", "user_id")
+
+
+def get_user_id_by_gift_token(token: str) -> int | None:
+    """Найти user_id пользователя, который активировал данный токен."""
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id FROM gift_token_claims WHERE token = ? ORDER BY claimed_at DESC LIMIT 1", (token,))
+            row = cursor.fetchone()
+            return row[0] if row else None
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка поиска user_id по токену {token}: {e}")
+        return None
 
 
 def _ensure_promo_tables(cursor: sqlite3.Cursor) -> None:
@@ -1766,7 +1900,7 @@ def get_admin_stats() -> dict:
 
 
             cursor.execute(
-                "SELECT COUNT(*) FROM users WHERE date(registration_date) = date('now')"
+                "SELECT COUNT(*) FROM users WHERE date(registration_date) = date('now', '+3 hours')"
             )
             row = cursor.fetchone()
             stats["today_new_users"] = (row[0] or 0) if row else 0
@@ -1777,7 +1911,7 @@ def get_admin_stats() -> dict:
                 SELECT COALESCE(SUM(amount_rub), 0)
                 FROM transactions
                 WHERE status IN ('paid','success','succeeded')
-                  AND date(created_date) = date('now')
+                  AND date(created_date) = date('now', '+3 hours')
                   AND LOWER(COALESCE(payment_method, '')) <> 'balance'
                 """
             )
@@ -1786,7 +1920,7 @@ def get_admin_stats() -> dict:
 
 
             cursor.execute(
-                "SELECT COUNT(*) FROM vpn_keys WHERE date(COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)) = date('now')"
+                "SELECT COUNT(*) FROM vpn_keys WHERE date(COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)) = date('now', '+3 hours')"
             )
             row = cursor.fetchone()
             stats["today_issued_keys"] = (row[0] or 0) if row else 0
@@ -1822,9 +1956,9 @@ def create_gift_key(user_id: int, host_name: str, key_email: str, months: int, r
         from datetime import timedelta
 
         months_value = max(1, int(months or 1))
-        expiry_dt = datetime.utcnow() + timedelta(days=30 * months_value)
+        expiry_dt = get_msk_time() + timedelta(days=30 * months_value)
         expiry_ms = int(expiry_dt.timestamp() * 1000)
-        uuid_value = remnawave_user_uuid or f"GIFT-{user_id}-{int(datetime.utcnow().timestamp())}"
+        uuid_value = remnawave_user_uuid or f"GIFT-{user_id}-{int(get_msk_time().timestamp())}"
         return add_new_key(
             user_id=user_id,
             host_name=host_name,
@@ -2494,16 +2628,7 @@ def initialize_default_button_configs():
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                     """, ("key_info_menu", button_id, text, callback_data, url, row_pos, col_pos, sort_order, width))
             
-            # Ensure comments button exists even if menu wasn't empty
-            cursor.execute("SELECT 1 FROM button_configs WHERE menu_type='key_info_menu' AND button_id='comments'")
-            if not cursor.fetchone():
-                 cursor.execute("""
-                    INSERT INTO button_configs 
-                    (menu_type, button_id, text, callback_data, url, row_position, column_position, sort_order, button_width, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                """, ("key_info_menu", "comments", "📝 Комментарии", "key_comments_{key_id}", None, 3, 0, 4, 1))
-                 # Shift 'back' button if it conflicts
-                 cursor.execute("UPDATE button_configs SET row_position = 4, sort_order = 5 WHERE menu_type='key_info_menu' AND button_id='back' AND row_position=3")
+
 
 
             
@@ -2525,9 +2650,12 @@ def create_plan(host_name: str, plan_name: str, months: int, price: float, hwid_
                 (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb)
             )
             conn.commit()
+            new_id = cursor.lastrowid
             logging.info(f"Created new plan '{plan_name}' for host '{host_name}' with HWID={hwid_limit}, Traffic={traffic_limit_gb}GB.")
+            return new_id
     except sqlite3.Error as e:
         logging.error(f"Failed to create plan for host '{host_name}': {e}")
+        return None
 
 def get_plans_for_host(host_name: str) -> list[dict]:
     try:
@@ -2592,7 +2720,7 @@ def register_user_if_not_exists(telegram_id: int, username: str, referrer_id):
 
                 cursor.execute(
                     "INSERT INTO users (telegram_id, username, registration_date, referred_by) VALUES (?, ?, ?, ?)",
-                    (telegram_id, username, datetime.now().replace(microsecond=0), referrer_id)
+                    (telegram_id, username, get_msk_time().replace(tzinfo=None).replace(microsecond=0), referrer_id)
                 )
             else:
 
@@ -2857,6 +2985,25 @@ def get_total_spent_sum() -> float:
         logging.error(f"Failed to get total spent sum: {e}")
         return 0.0
 
+def get_total_spent_by_method(payment_method: str) -> float:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COALESCE(SUM(amount_rub), 0.0)
+                FROM transactions
+                WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+                  AND LOWER(payment_method) = LOWER(?)
+                """,
+                (payment_method,)
+            )
+            val = cursor.fetchone()
+            return (val[0] if val else 0.0) or 0.0
+    except sqlite3.Error as e:
+        logging.error(f"Failed to get income for {payment_method}: {e}")
+        return 0.0
+
 def create_pending_transaction(payment_id: str, user_id: int, amount_rub: float, metadata: dict) -> int:
     try:
         with sqlite3.connect(DB_FILE) as conn:
@@ -2903,11 +3050,21 @@ def log_transaction(username: str, transaction_id: str | None, payment_id: str |
                 """INSERT INTO transactions
                    (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, created_date)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, datetime.now().replace(microsecond=0))
+                (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, get_msk_time().replace(tzinfo=None).replace(microsecond=0))
             )
             conn.commit()
     except sqlite3.Error as e:
         logging.error(f"Failed to log transaction for user {user_id}: {e}")
+
+def check_transaction_exists(payment_id: str) -> bool:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM transactions WHERE payment_id = ? LIMIT 1", (payment_id,))
+            return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logging.error(f"Failed to check transaction existence for {payment_id}: {e}")
+        return False
 
 def get_paginated_transactions(page: int = 1, per_page: int = 15) -> tuple[list[dict], int]:
     offset = (page - 1) * per_page
@@ -2931,9 +3088,11 @@ def get_paginated_transactions(page: int = 1, per_page: int = 15) -> tuple[list[
                 if metadata_str:
                     try:
                         metadata = json.loads(metadata_str)
+                        transaction_dict['action'] = metadata.get('action')
                         transaction_dict['host_name'] = metadata.get('host_name', 'N/A')
                         transaction_dict['plan_name'] = metadata.get('plan_name', 'N/A')
                     except json.JSONDecodeError:
+                        transaction_dict['action'] = None
                         transaction_dict['host_name'] = 'Error'
                         transaction_dict['plan_name'] = 'Error'
                 else:
@@ -3060,6 +3219,7 @@ def _apply_key_updates(key_id: int, updates: dict[str, Any]) -> bool:
 def update_key_fields(
     key_id: int,
     *,
+    user_id: int | None = None,
     host_name: str | None = None,
     squad_uuid: str | None = None,
     remnawave_user_uuid: str | None = None,
@@ -3074,6 +3234,8 @@ def update_key_fields(
     comment_key: str | None = None,
 ) -> bool:
     updates: dict[str, Any] = {}
+    if user_id is not None:
+        updates["user_id"] = user_id
     if host_name is not None:
         updates["host_name"] = normalize_host_name(host_name)
     if squad_uuid is not None:
@@ -3283,35 +3445,53 @@ def update_key_status_from_server(key_email: str, client_data) -> bool:
 
 
 def get_daily_stats_for_charts(days: int = 30) -> dict:
-    stats = {'users': {}, 'keys': {}}
+    stats = {'users': {}, 'keys': {}, 'income': {}}
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT date(registration_date) AS day, COUNT(*)
-                FROM users
-                WHERE registration_date >= date('now', ?)
-                GROUP BY day
-                ORDER BY day
-                """,
-                (f'-{days} days',),
-            )
-            for day, count in cursor.fetchall():
-                stats['users'][day] = count
+            
+            # Helper to determine time grouping and filtering
+            time_filter = ""
+            params = []
+            group_fmt = "%Y-%m-%d" # Default: Daily
+            
+            if days > 0:
+                time_filter = " >= datetime('now', '+3 hours', ?)"
+                params.append(f'-{days} days')
+                if days == 1:
+                    group_fmt = "%Y-%m-%d %H:00" # Hourly for Today
+            
+            def get_data(table, date_col, is_count=True):
+                nonlocal group_fmt
+                where_clause = f"WHERE {date_col} {time_filter}" if time_filter else ""
+                
+                if is_count:
+                    query = f"SELECT STRFTIME('{group_fmt}', {date_col}) AS period, COUNT(*) FROM {table} {where_clause} GROUP BY period ORDER BY period"
+                else:
+                    income_filter = "LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success') AND LOWER(COALESCE(payment_method, '')) <> 'balance'"
+                    if where_clause:
+                        where_clause += f" AND {income_filter}"
+                    else:
+                        where_clause = f"WHERE {income_filter}"
+                    query = f"SELECT STRFTIME('{group_fmt}', {date_col}) AS period, payment_method, SUM(amount_rub) FROM {table} {where_clause} GROUP BY period, payment_method ORDER BY period"
+                
+                cursor.execute(query, tuple(params))
+                return cursor.fetchall()
 
-            cursor.execute(
-                """
-                SELECT date(COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)) AS day, COUNT(*)
-                FROM vpn_keys
-                WHERE COALESCE(created_at, updated_at, CURRENT_TIMESTAMP) >= date('now', ?)
-                GROUP BY day
-                ORDER BY day
-                """,
-                (f'-{days} days',),
-            )
-            for day, count in cursor.fetchall():
-                stats['keys'][day] = count
+            # Users
+            for period, count in get_data("users", "registration_date"):
+                stats['users'][period] = count
+
+            # Keys
+            for period, count in get_data("vpn_keys", "COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)"):
+                stats['keys'][period] = count
+
+            # Income
+            for period, method, amount in get_data("transactions", "created_date", is_count=False):
+                if period not in stats['income']:
+                    stats['income'][period] = {}
+                stats['income'][period][method or 'Other'] = float(amount)
+
     except sqlite3.Error as e:
         logging.error("Failed to get daily stats for charts: %s", e)
     return stats
@@ -3396,7 +3576,7 @@ def get_users_paginated(page: int = 1, per_page: int = 30, q: str | None = None)
                     FROM users
                     WHERE (username LIKE ?)
                        OR (CAST(telegram_id AS TEXT) LIKE ?)
-                    ORDER BY registration_date DESC
+                    ORDER BY is_pinned DESC, registration_date DESC
                     LIMIT ? OFFSET ?
                     """,
                     (q_like, q_like, per_page, offset),
@@ -3405,7 +3585,7 @@ def get_users_paginated(page: int = 1, per_page: int = 30, q: str | None = None)
                 cursor.execute("SELECT COUNT(*) FROM users")
                 total = cursor.fetchone()[0] or 0
                 cursor.execute(
-                    "SELECT * FROM users ORDER BY registration_date DESC LIMIT ? OFFSET ?",
+                    "SELECT * FROM users ORDER BY is_pinned DESC, registration_date DESC LIMIT ? OFFSET ?",
                     (per_page, offset),
                 )
             users = [dict(row) for row in cursor.fetchall()]
@@ -3413,6 +3593,18 @@ def get_users_paginated(page: int = 1, per_page: int = 30, q: str | None = None)
     except sqlite3.Error as e:
         logging.error(f"Failed to get users paginated: {e}")
         return [], 0
+
+
+def toggle_user_pin(user_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET is_pinned = NOT COALESCE(is_pinned, 0) WHERE telegram_id = ?", (user_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Failed to toggle pin for user {user_id}: {e}")
+        return False
 
 def get_keys_counts_for_users(user_ids: list[int]) -> dict[int, int]:
     """Вернуть словарь {user_id: keys_count} по списку пользователей."""
@@ -3720,6 +3912,24 @@ def get_open_tickets_count() -> int:
         logging.error("Failed to get open tickets count: %s", e)
         return 0
 
+def get_waiting_tickets_count() -> int:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT COUNT(*) FROM support_tickets t
+                WHERE t.status = 'open' AND (
+                    SELECT sender FROM support_messages 
+                    WHERE ticket_id = t.ticket_id 
+                    ORDER BY created_at DESC LIMIT 1
+                ) != 'admin'
+            """
+            cursor.execute(query)
+            return cursor.fetchone()[0] or 0
+    except sqlite3.Error as e:
+        logging.error("Failed to get waiting tickets count: %s", e)
+        return 0
+
 def get_closed_tickets_count() -> int:
     try:
         with sqlite3.connect(DB_FILE) as conn:
@@ -3816,4 +4026,23 @@ def update_ssh_target_sort_order(target_name: str, sort_order: int) -> bool:
                 return False
     except sqlite3.Error as e:
         logging.error(f"Failed to update SSH target sort order: {e}")
+        return False
+def get_other_setting(key: str, default: Any = None) -> Any:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM other WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row[0] if row else default
+    except sqlite3.Error:
+        return default
+
+def update_other_setting(key: str, value: Any) -> bool:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO other (key, value) VALUES (?, ?)", (key, str(value)))
+            conn.commit()
+            return True
+    except sqlite3.Error:
         return False

@@ -3,10 +3,25 @@
 
 {% block content %}
 <style>
-    /* ========== ОБЩИЕ СТИЛИ ========== */
+    /* ========== ОБЩИЕ СТИЛИ (Премиум дизайн) ========== */
     .support-container {
         max-width: 1400px;
         margin: 0 auto;
+    }
+
+    /* Стеклянные карточки */
+    .premium-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1.25rem;
+        backdrop-filter: blur(12px);
+        transition: all 0.3s ease;
+    }
+
+    .dark .premium-card {
+        background: rgba(255, 255, 255, 0.05);
+        /* Чуть светлее в темной теме */
+        border-color: rgba(255, 255, 255, 0.1);
     }
 
     /* ========== DESKTOP СТИЛИ ========== */
@@ -24,180 +39,110 @@
         }
     }
 
-    /* Карточка статистики */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-bottom: 24px;
+        gap: 1.25rem;
+        margin-bottom: 2rem;
     }
 
     .stat-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        padding: 20px 24px;
+        padding: 1.5rem;
         display: flex;
         align-items: center;
-        gap: 16px;
-        transition: all 0.3s ease;
-        cursor: pointer;
+        gap: 1.25rem;
         text-decoration: none;
+        cursor: pointer;
     }
 
     .stat-card:hover {
         background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.15);
-        transform: translateY(-2px);
+        border-color: rgba(19, 236, 128, 0.2);
+        transform: translateY(-4px);
     }
 
     .stat-card.active {
-        background: rgba(19, 236, 128, 0.1);
-        border-color: rgba(19, 236, 128, 0.3);
+        background: rgba(19, 236, 128, 0.08);
+        border-color: rgba(19, 236, 128, 0.4);
+        box-shadow: 0 10px 30px -10px rgba(19, 236, 128, 0.2);
     }
 
     .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.75rem;
         display: flex;
         align-items: center;
         justify-content: center;
+        background: rgba(255, 255, 255, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         flex-shrink: 0;
     }
 
-    .stat-icon.all {
-        background: rgba(255, 255, 255, 0.1);
-    }
-
-    .stat-icon.open {
-        background: rgba(19, 236, 128, 0.15);
-    }
-
-    .stat-icon.closed {
-        background: rgba(239, 68, 68, 0.15);
-    }
-
-    .stat-icon .material-symbols-outlined {
-        font-size: 24px;
-    }
-
-    .stat-icon.all .material-symbols-outlined {
-        color: #fff;
-    }
-
-    .stat-icon.open .material-symbols-outlined {
+    /* Цвета для подложек иконок */
+    .icon-box-primary {
+        background: rgba(19, 236, 128, 0.1);
         color: #13ec80;
+        box-shadow: 0 4px 15px -5px rgba(19, 236, 128, 0.4);
     }
 
-    .stat-icon.closed .material-symbols-outlined {
-        color: #ef4444;
+    .icon-box-orange {
+        background: rgba(251, 146, 60, 0.1);
+        color: #fb923c;
+        box-shadow: 0 4px 15px -5px rgba(251, 146, 60, 0.4);
     }
 
-    .stat-info {
-        flex: 1;
+    .icon-box-blue {
+        background: rgba(96, 165, 250, 0.1);
+        color: #60a5fa;
+        box-shadow: 0 4px 15px -5px rgba(96, 165, 250, 0.4);
+    }
+
+    .stat-card:hover .stat-icon,
+    .stat-card.active .stat-icon {
+        transform: scale(1.05) rotate(5deg);
+        box-shadow: 0 8px 20px -5px currentColor;
     }
 
     .stat-value {
-        font-size: 28px;
-        font-weight: 700;
+        font-size: 1.75rem;
+        font-weight: 900;
         color: #fff;
         line-height: 1;
-        margin-bottom: 4px;
+        margin-bottom: 0.25rem;
     }
 
     .stat-label {
-        font-size: 13px;
-        color: rgba(255, 255, 255, 0.5);
-        font-weight: 500;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: rgba(255, 255, 255, 0.3);
     }
 
-    /* Таблица тикетов */
+    /* Таблица */
     .tickets-table-wrapper {
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        overflow: hidden;
+        margin-bottom: 2rem;
     }
 
     .tickets-table {
         width: 100%;
+        border-collapse: collapse;
     }
 
     .tickets-table thead {
         background: rgba(255, 255, 255, 0.03);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .tickets-table th {
-        padding: 14px 20px;
+        padding: 1rem 1.5rem;
         text-align: left;
-        font-size: 11px;
-        font-weight: 600;
+        font-size: 0.7rem;
+        font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: rgba(255, 255, 255, 0.5);
-    }
-
-    .tickets-table tbody tr {
+        letter-spacing: 0.15em;
+        color: rgba(255, 255, 255, 0.3);
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        transition: all 0.2s ease;
-    }
-
-    .tickets-table tbody tr:last-child {
-        border-bottom: none;
-    }
-
-    .tickets-table tbody tr:hover {
-        background: rgba(255, 255, 255, 0.03);
-    }
-
-    .tickets-table tbody tr.priority {
-        background: rgba(234, 179, 8, 0.05);
-    }
-
-    .tickets-table tbody tr.priority:hover {
-        background: rgba(234, 179, 8, 0.08);
-    }
-
-    .tickets-table td {
-        padding: 16px 20px;
-        vertical-align: middle;
-    }
-
-    /* Пагинация */
-    .pagination-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px 20px;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.02);
-    }
-
-    .pagination-info {
-        font-size: 13px;
-        color: rgba(255, 255, 255, 0.5);
-    }
-
-    .pagination-buttons {
-        display: flex;
-        gap: 8px;
-    }
-
-    .pagination-btn {
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 500;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        background: rgba(255, 255, 255, 0.08);
-        color: #fff;
-    }
-
-    .pagination-btn:hover {
-        background: rgba(255, 255, 255, 0.15);
     }
 
     /* ========== MOBILE СТИЛИ ========== */
@@ -213,680 +158,472 @@
         .mobile-app-header {
             position: sticky;
             top: 0;
-            z-index: 100;
-            background: rgba(16, 34, 25, 0.95);
+            z-index: 1;
+            background: rgba(16, 34, 25, 0.8);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 16px;
-            margin: -24px -24px 0 -24px;
+            padding: 1rem;
+            margin: -1.5rem -1.5rem 1rem -1.5rem;
         }
 
-        .mobile-header-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-
-        .mobile-header-title {
-            font-size: 28px;
-            font-weight: 800;
-            color: #fff;
-            letter-spacing: -0.5px;
-        }
-
-        .mobile-stats-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .mobile-stat-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            background: rgba(255, 255, 255, 0.08);
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .mobile-stat-badge.open {
-            background: rgba(19, 236, 128, 0.15);
-            color: #13ec80;
-        }
-
-        .mobile-stat-badge .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        .mobile-stat-badge.open .dot {
-            animation: pulse-dot 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-dot {
-
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.5;
-                transform: scale(0.8);
-            }
-        }
-
-        .mobile-filter-scroll {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            padding: 4px 0;
-        }
-
-        .mobile-filter-scroll::-webkit-scrollbar {
-            display: none;
-        }
-
-        .mobile-filter-btn {
-            flex-shrink: 0;
-            padding: 10px 18px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-            background: rgba(255, 255, 255, 0.06);
-            color: rgba(255, 255, 255, 0.6);
-            text-decoration: none;
-            border: 1px solid transparent;
-        }
-
-        .mobile-filter-btn.active {
-            background: rgba(19, 236, 128, 0.15);
-            color: #13ec80;
-            border-color: rgba(19, 236, 128, 0.3);
-        }
-
-        /* Список чатов */
-        .chat-list {
-            padding: 12px 0;
+        .dark .mobile-app-header {
+            background: rgba(0, 0, 0, 0.82);
         }
 
         .chat-item {
             display: flex;
             align-items: center;
-            padding: 12px 16px;
-            margin: 0 -16px;
+            padding: 1rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 0.75rem;
             text-decoration: none;
-            transition: background 0.2s;
-            position: relative;
+            transition: all 0.2s;
         }
 
         .chat-item:active {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .chat-item.priority {
-            background: rgba(234, 179, 8, 0.05);
-        }
-
-        .chat-item.priority::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 12px;
-            bottom: 12px;
-            width: 3px;
-            background: #eab308;
-            border-radius: 0 3px 3px 0;
+            transform: scale(0.98);
+            background: rgba(19, 236, 128, 0.05);
         }
 
         .chat-avatar {
-            width: 52px;
-            height: 52px;
+            width: 3.25rem;
+            height: 3.25rem;
             border-radius: 50%;
+            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            font-weight: 700;
+            font-size: 1.25rem;
+            font-weight: 900;
             color: #fff;
-            margin-right: 14px;
-            flex-shrink: 0;
-            position: relative;
-            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
-            box-shadow: 0 4px 12px rgba(19, 236, 128, 0.25);
-        }
-
-        .chat-avatar.closed {
-            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .avatar-status {
-            position: absolute;
-            bottom: 1px;
-            right: 1px;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 2.5px solid #102219;
-        }
-
-        .avatar-status.green {
-            background: #13ec80;
-        }
-
-        .avatar-status.yellow {
-            background: #eab308;
-            animation: blink-yellow 1s ease-in-out infinite;
-        }
-
-        .avatar-status.red {
-            background: rgba(239, 68, 68, 0.5);
-        }
-
-        @keyframes blink-yellow {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.3;
-            }
+            margin-right: 1rem;
+            box-shadow: 0 4px 12px rgba(19, 236, 128, 0.2);
         }
 
         .chat-content {
             flex: 1;
             min-width: 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 6px 0 18px 0;
-        }
-
-        .chat-item:last-child .chat-content {
-            border-bottom: none;
         }
 
         .chat-header {
             display: flex;
-            align-items: baseline;
             justify-content: space-between;
-            margin-bottom: 4px;
+            align-items: baseline;
+            margin-bottom: 0.125rem;
         }
 
         .chat-name {
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 1rem;
+            font-weight: 800;
             color: #fff;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 70%;
         }
 
         .chat-time {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.4);
-            flex-shrink: 0;
-        }
-
-        .chat-preview-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.3);
+            font-weight: 700;
+            white-space: nowrap;
         }
 
         .chat-preview {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.4);
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 85%;
-            line-height: 1.4;
         }
 
         .chat-preview.highlight {
-            color: #fff;
-            font-weight: 500;
-        }
-
-        .chat-badge {
-            background: #13ec80;
-            color: #000;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-left: 8px;
-        }
-
-        .chat-chevron {
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 18px;
-        }
-
-        .closed-chat {
-            opacity: 0.55;
-        }
-
-        .closed-chat:active {
-            opacity: 0.75;
-        }
-
-        /* Мобильная пагинация */
-        .mobile-pagination {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            padding: 24px 16px;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 14px;
-        }
-
-        .mobile-pagination a {
             color: #13ec80;
-            text-decoration: none;
-            font-weight: 600;
-            padding: 10px 20px;
-            background: rgba(19, 236, 128, 0.1);
-            border-radius: 10px;
-            transition: all 0.2s;
-        }
-
-        .mobile-pagination a:hover {
-            background: rgba(19, 236, 128, 0.2);
-        }
-
-        /* Пустое состояние */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .empty-state-icon {
-            font-size: 64px;
-            color: rgba(255, 255, 255, 0.15);
-            margin-bottom: 16px;
-        }
-
-        .empty-state-text {
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 16px;
+            font-weight: 700;
         }
     }
 </style>
 
 <!-- ========== MOBILE HEADER ========== -->
 <div class="mobile-app-header">
-    <div class="mobile-header-top">
-        <div class="mobile-header-title">Поддержка</div>
-        <div class="mobile-stats-row">
-            {% if open_count > 0 %}
-            <div class="mobile-stat-badge open">
-                <span class="dot"></span>
-                {{ open_count }} открыт{{ 'о' if open_count == 1 else 'ых' }}
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-black text-white tracking-tighter">Поддержка</h2>
+        <div class="flex items-center gap-2">
+            <div
+                class="px-3 py-1 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                {{ open_count }} открыто
             </div>
-            {% endif %}
         </div>
     </div>
-    <div class="mobile-filter-scroll">
-        <a href="{{ url_for('support_list_page') }}"
-            class="mobile-filter-btn {% if not filter_status %}active{% endif %}">
-            Все ({{ all_count }})
+    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+        {% for s, l, c in [('', 'Все', all_count), ('open', 'Открытые', open_count), ('closed', 'Закрытые',
+        closed_count)] %}
+        <a href="{{ url_for('support_list_page', status=s) }}"
+            class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border {% if filter_status == s %}bg-primary text-background-dark border-primary{% else %}bg-white/5 text-white/40 border-white/5{% endif %}">
+            {{ l }} ({{ c }})
         </a>
-        <a href="{{ url_for('support_list_page', status='open') }}"
-            class="mobile-filter-btn {% if filter_status == 'open' %}active{% endif %}">
-            Открытые ({{ open_count }})
-        </a>
-        <a href="{{ url_for('support_list_page', status='closed') }}"
-            class="mobile-filter-btn {% if filter_status == 'closed' %}active{% endif %}">
-            Закрытые ({{ closed_count }})
-        </a>
+        {% endfor %}
     </div>
 </div>
 
 <!-- ========== DESKTOP VIEW ========== -->
-<div class="desktop-view">
-    <div class="support-container">
-        <!-- Заголовок -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h2 class="text-2xl font-bold text-white">Поддержка</h2>
-                <p class="text-white/50 text-sm mt-1">Управление обращениями пользователей</p>
-            </div>
-            <button onclick="openGeminiModal()"
-                class="w-12 h-12 rounded-xl flex items-center justify-center bg-white/5 hover:bg-white/10 transition-colors text-white/70 hover:text-white"
-                title="Настройки AI-ассистента">
-                <span class="material-symbols-outlined" style="font-size: 24px;">settings</span>
-            </button>
+<div class="desktop-view support-container">
+    <div class="flex items-center justify-between mb-8">
+        <div class="space-y-1">
+            <h2 class="text-3xl font-black text-white tracking-tight flex items-center gap-3 uppercase">Поддержка</h2>
+            <p class="text-white/30 text-[10px] font-bold uppercase tracking-[0.3em] ml-1">Центр управления обращениями
+            </p>
         </div>
-
-        <!-- Статистика -->
-        <div class="stats-grid">
-            <a href="{{ url_for('support_list_page') }}" class="stat-card {% if not filter_status %}active{% endif %}">
-                <div class="stat-icon all">
-                    <span class="material-symbols-outlined">inbox</span>
-                </div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ all_count }}</div>
-                    <div class="stat-label">Все обращения</div>
-                </div>
-            </a>
-            <a href="{{ url_for('support_list_page', status='open') }}"
-                class="stat-card {% if filter_status == 'open' %}active{% endif %}">
-                <div class="stat-icon open">
-                    <span class="material-symbols-outlined">mark_chat_unread</span>
-                </div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ open_count }}</div>
-                    <div class="stat-label">Открытые</div>
-                </div>
-            </a>
-            <a href="{{ url_for('support_list_page', status='closed') }}"
-                class="stat-card {% if filter_status == 'closed' %}active{% endif %}">
-                <div class="stat-icon closed">
-                    <span class="material-symbols-outlined">check_circle</span>
-                </div>
-                <div class="stat-info">
-                    <div class="stat-value">{{ closed_count }}</div>
-                    <div class="stat-label">Закрытые</div>
-                </div>
-            </a>
-        </div>
-
-        {% if tickets %}
-        <!-- Таблица тикетов -->
-        <div class="tickets-table-wrapper">
-            <table class="tickets-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Пользователь</th>
-                        <th>Тема</th>
-                        <th>Статус</th>
-                        <th>Обновлен</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody id="support-tbody"
-                    data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
-                    data-fetch-interval="10000">
-                    {% include 'partials/support_table.html' %}
-                </tbody>
-            </table>
-
-            {% if total_pages > 1 %}
-            <div class="pagination-wrapper">
-                <div class="pagination-info">Страница {{ current_page }} из {{ total_pages }}</div>
-                <div class="pagination-buttons">
-                    {% if current_page > 1 %}
-                    <a href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}"
-                        class="pagination-btn">← Назад</a>
-                    {% endif %}
-                    {% if current_page < total_pages %} <a
-                        href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}"
-                        class="pagination-btn">Вперед →</a>
-                        {% endif %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        {% else %}
-        <div class="tickets-table-wrapper">
-            <div class="empty-state">
-                <span class="material-symbols-outlined empty-state-icon">forum</span>
-                <p class="empty-state-text">Обращений пока нет</p>
-            </div>
-        </div>
-        {% endif %}
+        <button onclick="openGeminiModal()"
+            class="w-12 h-12 rounded-2xl premium-card flex items-center justify-center text-white/40 hover:text-primary transition-all group">
+            <span
+                class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-500">settings</span>
+        </button>
     </div>
-</div>
 
-<!-- ========== MOBILE VIEW ========== -->
-<div class="mobile-view">
-    {% if tickets %}
-    <div class="chat-list">
-        {% for ticket in tickets %}
-        <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}"
-            class="chat-item {% if ticket.status == 'open' and ticket.last_sender == 'user' %}priority{% endif %}{% if ticket.status != 'open' %} closed-chat{% endif %}">
-            <div class="chat-avatar {% if ticket.status != 'open' %}closed{% endif %}">
-                {{ ticket.username[0]|upper if ticket.username else 'U' }}
-                {% if ticket.status == 'open' %}
-                {% if ticket.last_sender == 'admin' %}
-                <div class="avatar-status green"></div>
-                {% elif ticket.last_sender == 'user' %}
-                <div class="avatar-status yellow"></div>
-                {% endif %}
-                {% else %}
-                <div class="avatar-status red"></div>
-                {% endif %}
+    <!-- Статистика -->
+    <div class="stats-grid" data-refresh-part="support-stats">
+        {% for s, l, icon, count, box_class in [
+        ('', 'Все обращения', 'forum', all_count, 'icon-box-primary'),
+        ('open', 'В ожидании', 'pending', open_count, 'icon-box-orange'),
+        ('closed', 'Завершенные', 'task_alt', closed_count, 'icon-box-blue')
+        ] %}
+        <a href="{{ url_for('support_list_page', status=s) }}"
+            class="premium-card stat-card ajax-nav {% if filter_status == s %}active{% endif %}" data-target="{{ s }}">
+            <div class="stat-icon {{ box_class }}">
+                <span class="material-symbols-outlined text-2xl">{{ icon }}</span>
             </div>
-
-            <div class="chat-content">
-                <div class="chat-header">
-                    <span class="chat-name">
-                        {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
-                    </span>
-                    <span class="chat-time mobile-relative-time"
-                        data-timestamp="{{ ticket.updated_at or ticket.created_at }}">
-                        {{ (ticket.updated_at or ticket.created_at or "").split(' ')[1][:5] }}
-                    </span>
-                </div>
-                <div class="chat-preview-row">
-                    <span
-                        class="chat-preview {% if ticket.status == 'open' and ticket.last_sender == 'user' %}highlight{% endif %}">
-                        {% if ticket.subject %}
-                        {{ ticket.subject }}
-                        {% else %}
-                        Чат #{{ ticket.ticket_id }}
-                        {% endif %}
-                    </span>
-                    <span class="material-symbols-outlined chat-chevron">chevron_right</span>
-                </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ count }}</div>
+                <div class="stat-label">{{ l }}</div>
             </div>
         </a>
         {% endfor %}
     </div>
 
-    {% if total_pages > 1 %}
-    <div class="mobile-pagination">
-        {% if current_page > 1 %}
-        <a href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">← Назад</a>
-        {% endif %}
-        <span>{{ current_page }} / {{ total_pages }}</span>
-        {% if current_page < total_pages %} <a
-            href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">Вперед →</a>
-            {% endif %}
+    <div class="premium-card tickets-table-wrapper bg-black/20" data-refresh-part="support-table">
+        <table class="tickets-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Пользователь</th>
+                    <th>Тема</th>
+                    <th>Статус</th>
+                    <th>Обновлен</th>
+                    <th class="text-right">Действия</th>
+                </tr>
+            </thead>
+            <tbody id="support-tbody"
+                data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
+                data-fetch-interval="20000">
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-white/30">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                            <span class="text-[10px] font-bold uppercase tracking-widest">Загрузка обращений...</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Пагинация Desktop -->
+        <div id="support-pagination"
+            class="p-5 border-t border-white/5 flex items-center justify-between bg-white/[0.01]"
+            data-src="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}">
+            <!-- Will be populated by JS -->
+        </div>
     </div>
-    {% endif %}
-    {% else %}
-    <div class="empty-state">
-        <span class="material-symbols-outlined empty-state-icon">forum</span>
-        <p class="empty-state-text">Обращений пока нет</p>
+</div>
+
+<!-- ========== MOBILE VIEW ========== -->
+<div class="mobile-view">
+    <div id="support-mobile-list" class="space-y-3 pt-4"
+        data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page, mobile=1) }}">
+        <div class="flex flex-col items-center justify-center p-20 opacity-20">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
     </div>
-    {% endif %}
 </div>
 
 <!-- Gemini Settings Modal -->
-<div id="geminiModal"
-    class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeGeminiModal()"></div>
-    <div
-        class="relative bg-[#1a2c24] border border-white/10 rounded-2xl w-full max-w-md p-3 transform scale-95 transition-transform duration-300 shadow-2xl">
-        <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[#13ec80]">smart_toy</span>
-            Настройки AI-ассистента
-        </h3>
+<div id="geminiModal" class="modal-overlay" onclick="if(event.target===this)event.stopPropagation()">
+    <div class="modal-content premium-card !bg-[#0a0f0d] !border-primary/20 w-full max-w-3xl p-0 overflow-hidden transform transition-all duration-300 scale-95 opacity-0"
+        id="geminiModalContent">
+        <div class="p-6 border-b border-white/5 bg-primary/5 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-10 h-10 rounded-xl bg-primary/20 border border-primary/20 flex items-center justify-center text-primary shadow-[0_0_15px_rgba(19,236,128,0.3)]">
+                    <span class="material-symbols-outlined text-xl">auto_awesome</span>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+                        AI Assistant
+                        <span class="px-1.5 py-0.5 rounded bg-primary text-[#0a0f0d] text-[10px] font-bold">PRO</span>
+                    </h3>
+                    <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Генерация ответов</p>
+                </div>
+            </div>
+            <button onclick="closeGeminiModal()"
+                class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
 
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Gemini API
-                    Key</label>
-                <div class="relative">
-                    <input type="password" id="geminiKeyInput"
-                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-[#13ec80]/50 focus:bg-white/10 transition-all"
-                        placeholder="Введите API ключ...">
+        <div class="p-6 space-y-6">
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] ml-1">API Key</label>
+                <div class="relative group">
+                    <input type="password" id="geminiKeyInput" name="gemini_secret_key" autocomplete="new-password"
+                        data-lpignore="true"
+                        class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white text-sm focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                        placeholder="••••••••••••••••••••••••">
                     <button onclick="toggleKeyVisibility()"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors">
+                        class="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
                         <span class="material-symbols-outlined text-xl" id="keyVisibilityIcon">visibility</span>
                     </button>
                 </div>
-                <p class="mt-2 text-xs text-white/30">
-                    Ключ используется для автоматических ответов на обращения пользователей.
-                </p>
-
-                <div class="mt-3 p-3 rounded-lg bg-white/5 border border-white/5 text-xs text-white/60 leading-relaxed">
-                    <p class="mb-1">
-                        <span class="text-white/80 font-medium">Модель:</span> Используется бесплатная версия <code
-                            class="bg-black/30 px-1 py-0.5 rounded text-[#13ec80]">gemini-2.5-flash</code>.
-                    </p>
-                    <p>
-                        Получить ключ можно в <a href="https://aistudio.google.com/api-keys?hl=ru" target="_blank"
-                            class="text-[#13ec80] hover:underline font-medium">Google AI Studio</a>.
-                    </p>
-                </div>
             </div>
 
-            <div class="pt-2 flex justify-end gap-3">
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] ml-1">System Prompt
+                    (sg_promt)</label>
+                <textarea id="geminiPromptInput" name="gemini_system_prompt" autocomplete="off"
+                    class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white text-xs focus:ring-1 focus:ring-primary/50 outline-none transition-all min-h-[150px] resize-y"
+                    placeholder="Введите системные инструкции для ИИ..."></textarea>
+            </div>
+
+            <div class="flex gap-3">
                 <button onclick="closeGeminiModal()"
-                    class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-all">
-                    Отмена
-                </button>
+                    class="flex-1 px-5 py-4 rounded-xl bg-white/5 text-white/60 font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all">Отмена</button>
                 <button onclick="saveGeminiKey()"
-                    class="px-5 py-2.5 rounded-xl text-sm font-bold text-[#000] bg-[#13ec80] hover:bg-[#10c96d] transition-all shadow-lg shadow-[#13ec80]/20 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-lg">save</span>
-                    Сохранить
-                </button>
+                    class="flex-[1.5] px-5 py-4 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-widest hover:scale-[1.02] shadow-xl shadow-primary/20 transition-all">Сохранить</button>
             </div>
         </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-    // Relative time conversion for mobile
-    function formatRelativeTimeMobile(dateStr) {
-        if (!dateStr) return '';
-        const parts = dateStr.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
-        if (!parts) return dateStr;
+    document.addEventListener('DOMContentLoaded', () => {
+        // ===== AJAX НАВИГАЦИЯ И LAZY LOAD =====
 
-        // Server returns UTC, parsing as UTC
-        const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5]));
-        const now = new Date();
-        const diffMs = now - date;
-        const diffSec = Math.floor(diffMs / 1000);
-        const diffMin = Math.floor(diffSec / 60);
-        const diffHour = Math.floor(diffMin / 60);
-        const diffDay = Math.floor(diffHour / 24);
+        const loadSupportTable = async () => {
+            const tbody = document.getElementById('support-tbody');
+            const mobileList = document.getElementById('support-mobile-list');
+            if (!tbody && !mobileList) return;
 
-        if (diffDay >= 7) {
-            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-        } else if (diffDay >= 1) {
-            return diffDay + ' д.';
-        } else if (diffHour >= 1) {
-            return diffHour + ' ч.';
-        } else if (diffMin >= 1) {
-            return diffMin + ' мин.';
-        } else {
-            return 'сейчас';
+            const fetchUrlTbody = tbody ? new URL(tbody.dataset.fetchUrl, location.origin) : null;
+            const fetchUrlMobile = mobileList ? new URL(mobileList.dataset.fetchUrl, location.origin) : null;
+
+            try {
+                if (tbody) {
+                    const res = await fetch(fetchUrlTbody, { headers: { 'Accept': 'application/json' } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        tbody.innerHTML = data.table_html || '<tr><td colspan="6" class="p-20 text-center opacity-20"><span class="material-symbols-outlined text-5xl mb-4">forum</span><p class="text-[10px] font-black uppercase tracking-widest">Обращений пока нет</p></td></tr>';
+                        tbody.style.opacity = '1';
+                        const pagEl = document.getElementById('support-pagination');
+                        if (pagEl) pagEl.innerHTML = data.pagination_html;
+                    }
+                }
+
+                if (mobileList) {
+                    const resM = await fetch(fetchUrlMobile, { headers: { 'Accept': 'application/json' } });
+                    if (resM.ok) {
+                        const dataM = await resM.json();
+                        mobileList.innerHTML = dataM.table_html || '<div class="flex flex-col items-center justify-center py-20 opacity-20"><span class="material-symbols-outlined text-6xl mb-4">forum</span><p class="text-[10px] font-black uppercase tracking-widest">Обращений пока нет</p></div>';
+                        mobileList.style.opacity = '1';
+                    }
+                }
+
+                if (window.updateRelativeTimes) window.updateRelativeTimes();
+            } catch (err) {
+                console.error('Fetch error:', err);
+            }
+        };
+
+        const updatePagination = async (currentUrl) => {
+            const pagEl = document.getElementById('support-pagination');
+            if (!pagEl) return;
+
+            // Нам нужен целый фрагмент с пагинацией. 
+            // В support_table_partial сейчас рендерится только tbody.
+            // Но мы можем использовать support_list_page с флагом или просто вырезать пагинатор.
+            // Однако, в support_table_partial нет пагинации.
+            // Я добавлю пагинатор в support_table_partial (в app.py) сейчас или изменю подход.
+            // Хотя подожди, в app.py support_table_partial возвращает только строки.
+            // Ок, я обновлю app.py чуть позже чтобы он возвращал и пагинатор или просто подгружал его.
+        };
+
+        // AJAX Навигация по фильтрам и пагинации
+        document.addEventListener('click', async (e) => {
+            const link = e.target.closest('.ajax-nav, .ajax-pagination');
+            if (!link) return;
+
+            e.preventDefault();
+            const href = link.getAttribute('href');
+            if (!href) return;
+
+            history.pushState(null, '', href);
+
+            // Обновление активного класса на карточках (фильтрах)
+            const currentStatus = new URL(href, location.origin).searchParams.get('status') || '';
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.classList.toggle('active', card.getAttribute('data-target') === currentStatus);
+            });
+
+            const tbody = document.getElementById('support-tbody');
+            const mobileList = document.getElementById('support-mobile-list');
+
+            if (tbody) {
+                const newUrl = new URL(href, location.origin);
+                const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+                newUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
+                tbody.dataset.fetchUrl = fetchUrl.toString();
+                tbody.style.opacity = '0.5';
+            }
+
+            if (mobileList) {
+                const newUrl = new URL(href, location.origin);
+                const fetchUrl = new URL(mobileList.dataset.fetchUrl, location.origin);
+                newUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
+                mobileList.dataset.fetchUrl = fetchUrl.toString();
+                mobileList.style.opacity = '0.5';
+            }
+
+            await loadSupportTable();
+        });
+
+        // Первичная загрузка
+        loadSupportTable();
+
+        window.addEventListener('popstate', () => location.reload()); // Для простоты при возврате назад
+
+        // Relative time formatting
+        window.updateRelativeTimes = function () {
+            const fmt = (s) => {
+                if (!s) return '';
+                const p = s.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
+                if (!p) return s;
+                const d = new Date(Date.UTC(p[1], p[2] - 1, p[3], p[4], p[5]));
+                const now = new Date();
+                const diffMin = Math.floor((now - d) / 60000);
+                if (diffMin < 1) return 'сейчас';
+                if (diffMin < 60) return diffMin + ' мин. назад';
+                if (diffMin < 1440) return Math.floor(diffMin / 60) + ' ч. назад';
+                if (diffMin < 10080) return Math.floor(diffMin / 1440) + ' д. назад';
+                return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            };
+            document.querySelectorAll('.desktop-rel-time, .mobile-relative-time').forEach(el => {
+                el.textContent = fmt(el.dataset.timestamp);
+            });
+        };
+
+        const tbody = document.getElementById('support-tbody');
+        if (tbody && tbody.dataset.fetchInterval) {
+            setInterval(loadSupportTable, parseInt(tbody.dataset.fetchInterval));
         }
-    }
 
-    document.querySelectorAll('.mobile-relative-time').forEach(el => {
-        const timestamp = el.getAttribute('data-timestamp');
-        if (timestamp) {
-            el.textContent = formatRelativeTimeMobile(timestamp);
-        }
+        window.updateRelativeTimes();
     });
 
-    // Gemini Modal Functions
-    const modal = document.getElementById('geminiModal');
-    const keyInput = document.getElementById('geminiKeyInput');
+    async function openGeminiModal() {
+        const keyInp = document.getElementById('geminiKeyInput');
+        const promptInp = document.getElementById('geminiPromptInput');
+        const content = document.getElementById('geminiModalContent');
 
-    function openGeminiModal() {
-        modal.classList.remove('pointer-events-none', 'opacity-0');
-        modal.querySelector('div.transform').classList.remove('scale-95');
-        modal.querySelector('div.transform').classList.add('scale-100');
+        keyInp.value = '';
+        promptInp.value = '';
 
-        // Load current key
-        fetch('/admin/gemini/key')
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok && data.key) {
-                    keyInput.value = data.key;
-                }
-            })
-            .catch(err => console.error('Failed to load Gemini key:', err));
+        try {
+            const res = await fetch("{{ url_for('gemini_settings') }}");
+            const data = await res.json();
+            if (data.ok) {
+                if (data.key) keyInp.value = data.key;
+                if (data.prompt) promptInp.value = data.prompt;
+            }
+        } catch (e) {
+            console.error("Failed to fetch gemini settings:", e);
+        }
+
+        openModal('geminiModal');
+        // Animation in
+        requestAnimationFrame(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        });
     }
 
     function closeGeminiModal() {
-        modal.classList.add('opacity-0');
-        modal.querySelector('div.transform').classList.remove('scale-100');
-        modal.querySelector('div.transform').classList.add('scale-95');
+        const content = document.getElementById('geminiModalContent');
+        // Animation out
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+
+        // Wait for animation to finish
         setTimeout(() => {
-            modal.classList.add('pointer-events-none');
+            closeModal('geminiModal');
         }, 300);
     }
-
     function toggleKeyVisibility() {
-        if (keyInput.type === 'password') {
-            keyInput.type = 'text';
-            document.getElementById('keyVisibilityIcon').textContent = 'visibility_off';
+        const inp = document.getElementById('geminiKeyInput');
+        const icon = document.getElementById('keyVisibilityIcon');
+        if (inp.type === 'password') {
+            inp.type = 'text';
+            icon.textContent = 'visibility_off';
         } else {
-            keyInput.type = 'password';
-            document.getElementById('keyVisibilityIcon').textContent = 'visibility';
+            inp.type = 'password';
+            icon.textContent = 'visibility';
         }
     }
 
-    function saveGeminiKey() {
-        const key = keyInput.value.trim();
-        const csrfToken = "{{ csrf_token() }}";
-
-        fetch('/admin/gemini/key', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({ key: key })
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok) {
-                    // Show success feedback
-                    const btn = document.querySelector('button[onclick="saveGeminiKey()"]');
-                    const originalText = btn.innerHTML;
-                    btn.innerHTML = '<span class="material-symbols-outlined text-lg">check</span> Сохранено';
-                    btn.classList.add('bg-white', 'text-black');
-
-                    setTimeout(() => {
-                        closeGeminiModal();
-                        // Reset button style after delay
-                        setTimeout(() => {
-                            btn.innerHTML = originalText;
-                            btn.classList.remove('bg-white', 'text-black');
-                        }, 300);
-                    }, 1000);
-                } else {
-                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
-                }
-            })
-            .catch(err => {
-                console.error('Error saving key:', err);
-                alert('Ошибка сети при сохранении ключа');
+    async function saveGeminiKey() {
+        const key = document.getElementById('geminiKeyInput').value.trim();
+        const prompt = document.getElementById('geminiPromptInput').value.trim();
+        try {
+            const res = await fetch("{{ url_for('gemini_settings') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({ key: key, prompt: prompt })
             });
+            if (res.ok) {
+                showToast('success', 'Настройки Gemini сохранены');
+                closeGeminiModal();
+            } else showToast('danger', 'Ошибка сохранения');
+        } catch (e) { showToast('danger', 'Ошибка сети'); }
     }
+
+    // Функция переключения меню (универсальная)
+    window.toggleSupportMenu = function (e, id) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const menu = document.getElementById(id) || document.getElementById('support-menu-' + id) || document.getElementById('m-support-menu-' + id);
+
+        // Закрываем все остальные открытые меню
+        document.querySelectorAll('[id*="dropdown"], [id*="menu-"]').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+
+        if (menu) {
+            menu.classList.toggle('hidden');
+        }
+    }
+
+    // Закрытие меню при клике вне его области
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('button')) {
+            document.querySelectorAll('[id*="dropdown"], [id*="menu-"]').forEach(m => {
+                m.classList.add('hidden');
+            });
+        }
+    });
+
 </script>
 {% endblock %}
+```

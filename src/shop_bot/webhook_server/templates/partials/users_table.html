@@ -1,7 +1,13 @@
 {% for user in users %}
-<tr class="hover:bg-white/5">
+<tr class="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0 group">
     <td class="px-6 py-4 whitespace-nowrap user-id">
-        <span class="text-sm font-medium text-white">{{ user.telegram_id }}</span>
+        <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-white">{{ user.telegram_id }}</span>
+            {% if user.is_pinned %}
+            <span class="material-symbols-outlined text-[16px] text-primary"
+                title="Закрепленный пользователь">push_pin</span>
+            {% endif %}
+        </div>
     </td>
     <td class="px-6 py-4 whitespace-nowrap user-name">
         <span class="text-sm text-white">@{{ user.username or 'N/A' }}</span>
@@ -45,7 +51,7 @@
             {% endif %}
         </div>
     </td>
-    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ '%.2f'|format(user.balance or 0) }} RUB</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ '%.2f'|format(user.balance or 0) }} ₽</td>
     <td class="px-6 py-4 whitespace-nowrap text-right">
         <div class="flex items-center justify-end gap-1.5 flex-wrap">
             <!-- Give Key -->
@@ -83,7 +89,8 @@
             </button>
             <!-- Ban/Unban -->
             {% if user.is_banned %}
-            <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post" class="inline">
+            <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post"
+                class="inline ajax-form" data-refresh="users-tbody" data-success-msg="Пользователь разбанен">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit"
                     class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
@@ -92,8 +99,9 @@
                 </button>
             </form>
             {% else %}
-            <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post" class="inline"
-                data-confirm="Вы уверены, что хотите забанить этого пользователя?">
+            <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post"
+                class="inline ajax-form" data-confirm="Вы уверены, что хотите забанить этого пользователя?"
+                data-refresh="users-tbody" data-success-msg="Пользователь забанен">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit"
                     class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
@@ -104,8 +112,10 @@
             {% endif %}
             <!-- Revoke Keys -->
             {% if (user.keys_count or 0) > 0 %}
-            <form action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post" class="inline"
-                data-confirm="ВНИМАНИЕ! Это действие удалит ВСЕ ключи пользователя. Вы уверены?">
+            <form action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post"
+                class="inline ajax-form"
+                data-confirm="ВНИМАНИЕ! Это действие удалит ВСЕ ключи пользователя. Вы уверены?"
+                data-refresh="users-tbody" data-success-msg="Ключи отозваны">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit"
                     class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
@@ -114,6 +124,17 @@
                 </button>
             </form>
             {% endif %}
+            <!-- Pin/Unpin -->
+            <form action="{{ url_for('toggle_pin_user_route', user_id=user.telegram_id) }}" method="post"
+                class="inline ajax-form" data-refresh="users-tbody">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg {{ 'bg-primary/20 text-primary border border-primary/20 shadow-lg shadow-primary/10' if user.is_pinned else 'bg-white/5 text-white/30 border border-white/5' }} hover:bg-primary/30 transition-all group"
+                    title="{{ 'Открепить' if user.is_pinned else 'Закрепить' }}">
+                    <span
+                        class="material-symbols-outlined text-base {{ 'rotate-45' if user.is_pinned else 'group-hover:rotate-45' }} transition-transform">push_pin</span>
+                </button>
+            </form>
             <!-- Details -->
             <button type="button"
                 class="btn-user-details inline-flex items-center gap-1 px-3 h-8 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors text-sm"

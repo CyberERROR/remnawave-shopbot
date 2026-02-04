@@ -3,8 +3,12 @@ import time
 import json
 import logging
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from shop_bot.data_manager import remnawave_repository as rw_repo
+
+
+def get_msk_time() -> datetime:
+    return datetime.now(timezone(timedelta(hours=3)))
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +76,13 @@ class ServerScheduler:
                 if not interval_value:
                     continue
 
-                now = datetime.now()
+                now = get_msk_time()
 
                 if not last_run_timestamp:
                     self._update_last_run(target['target_name'], config, now.timestamp())
                     continue
 
-                last_run = datetime.fromtimestamp(last_run_timestamp)
+                last_run = datetime.fromtimestamp(last_run_timestamp, tz=timezone(timedelta(hours=3)))
                 delta = now - last_run
                 
                 due = False
@@ -113,7 +117,7 @@ class ServerScheduler:
             command="reboot"
         )
         
-        now_ts = datetime.now().timestamp()
+        now_ts = get_msk_time().timestamp()
         
         if result['ok']:
             msg = f"✅ [Планировщик авто-перезапуска] Сервер {target_name} / {ssh_host} - Успешно перезапущен"

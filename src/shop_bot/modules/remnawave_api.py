@@ -22,37 +22,46 @@ class RemnawaveAPIError(RuntimeError):
     """Base error for Remnawave API interactions."""
 
 
+def get_msk_time() -> datetime:
+    return datetime.now(timezone(timedelta(hours=3)))
+
+
 def _normalize_email_for_remnawave(email: str) -> str:
     """Normalize and validate email for Remnawave API.
-
+    
     - Lowercases the email
-    - If domain is missing or email invalid, tries to sanitize local-part by replacing
-      any characters outside [a-z0-9._+-] with '_'
-    - Validates with a conservative regex that excludes '/'
-    - Raises RemnawaveAPIError if validation still fails
+    - Sanitizes local-part: only [a-z0-9._+-] allowed
+    - Ensures it doesn't start with invalid chars
+    - Collapses multiple dots and cleans leading/trailing dots/dashes
     """
     if not email:
         raise RemnawaveAPIError("email is required")
     e = (email or "").strip().lower()
 
     if "@" not in e:
-        raise RemnawaveAPIError(f"Invalid email (no domain): {email}")
-    local, domain = e.split("@", 1)
+        local, domain = e, "bot.local"
+    else:
+        local, domain = e.rsplit("@", 1)
 
     local = re.sub(r"[^a-z0-9._+\-]", "_", local)
-
     local = re.sub(r"\.+", ".", local)
-
     local = local.strip("._-")
 
     if not local or not re.match(r"^[a-z0-9]", local):
-        local = f"u{local}" if local else f"user{int(datetime.utcnow().timestamp())}"
+        local = f"u{local}" if local else f"user{int(get_msk_time().timestamp())}"
+    
     e_sanitized = f"{local}@{domain}"
-
+    
     pattern = re.compile(r"^[a-z0-9](?:[a-z0-9._+\-]*[a-z0-9])?@[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)+$")
 
     if ".." in e_sanitized or not pattern.match(e_sanitized):
-        raise RemnawaveAPIError(f"Invalid email after normalization: {e_sanitized}")
+        if "@" not in e_sanitized:
+             e_sanitized = f"{local}@bot.local"
+        
+        if not pattern.match(e_sanitized):
+             safe_local = re.sub(r"[^a-z0-9]", "", local) or "user"
+             e_sanitized = f"{safe_local}@{domain if '.' in domain else 'bot.local'}"
+
     return e_sanitized
 
 
@@ -70,13 +79,13 @@ def _normalize_username_for_remnawave(name: str | None) -> str:
     base = re.sub(r"[^a-z0-9_\-]", "_", base)
     base = base.strip("_-")
     if not base or not re.match(r"^[a-z0-9]", base):
-        base = f"u{base}" if base else f"user{int(datetime.utcnow().timestamp())}"
+        base = f"u{base}" if base else f"user{int(get_msk_time().timestamp())}"
     if len(base) > 32:
         base = base[:32].rstrip("_-") or base[:32]
 
     if len(base) < 3:
 
-        suffix = str(int(datetime.utcnow().timestamp()))
+        suffix = str(int(get_msk_time().timestamp()))
         base = (base + suffix)[:3]
 
         if len(base) < 3:
@@ -323,6 +332,7 @@ async def ensure_user(
     telegram_id: int | str | None = None,
     force_expiry: bool = False,
     hwid_limit: int | None = None,
+    external_squad_uuid: str | None = None,
 ) -> dict[str, Any]:
     if not email:
         raise RemnawaveAPIError("email is required for ensure_user")
@@ -371,6 +381,10 @@ async def ensure_user(
             "activeInternalSquads": [squad_uuid],
             "email": email,
         }
+        
+        # Добавляем внешний сквад для seller
+        if external_squad_uuid:
+            payload["externalSquadUuid"] = external_squad_uuid
 
         # Apply HWID limit if enabled globally OR if we have a specific non-zero limit?
         # Usually checking host_hwid_enabled is safer to avoid sending unsupported fields.
@@ -409,6 +423,10 @@ async def ensure_user(
             "activeInternalSquads": [squad_uuid],
             "email": email,
         }
+        
+        # Добавляем внешний сквад для seller
+        if external_squad_uuid:
+            payload["externalSquadUuid"] = external_squad_uuid
 
         # Apply HWID limit
         if effective_hwid_limit is not None:
@@ -446,6 +464,7 @@ async def ensure_user(
         action,
         result.get("expireAt"),
     )
+    
     return result
 
 
@@ -527,6 +546,25 @@ async def set_user_status(user_uuid: str, active: bool) -> bool:
     return True
 
 
+async def add_users_to_external_squad(host_name: str, squad_uuid: str, user_uuids: list[str]) -> bool:
+    if not squad_uuid or not user_uuids:
+        return False
+    
+    try:
+        path = "/api/external-squads/add-users"
+        payload = {
+            "squadUuid": squad_uuid,
+            "userUuids": user_uuids
+        }
+        
+        response = await _request_for_host(host_name, "POST", path, json_payload=payload, expected_status=(200, 201))
+        logger.info(f"Remnawave[{host_name}]: добавлено {len(user_uuids)} пользователей в external squad {squad_uuid}")
+        return True
+    except RemnawaveAPIError as e:
+        logger.error(f"Remnawave[{host_name}]: ошибка добавления во external squad {squad_uuid}: {e}")
+        return False
+
+
 def extract_subscription_url(user_payload: dict[str, Any] | None) -> str | None:
     if not user_payload:
         return None
@@ -547,6 +585,7 @@ async def create_or_update_key_on_host(
     force_expiry: bool = False,
     hwid_limit: int | None = None,  # Added
     traffic_limit_gb: int | None = None,  # Added
+    external_squad_uuid: str | None = None,  # Added for seller
 ) -> dict | None:
     """Legacy совместимость: создаёт/обновляет пользователя Remnawave и возвращает данные по ключу."""
     try:
@@ -560,7 +599,8 @@ async def create_or_update_key_on_host(
             return None
 
         if expiry_timestamp_ms is not None:
-            target_dt = datetime.fromtimestamp(expiry_timestamp_ms / 1000, tz=timezone.utc)
+            msk_tz = timezone(timedelta(hours=3))
+            target_dt = datetime.fromtimestamp(expiry_timestamp_ms / 1000, tz=msk_tz)
         else:
             days = days_to_add if days_to_add is not None else int(rw_repo.get_setting('default_extension_days') or 30)
             if days <= 0:
@@ -575,11 +615,11 @@ async def create_or_update_key_on_host(
                         base_dt = datetime.fromisoformat(current_expire.replace("Z", "+00:00")) 
                         target_dt = base_dt + timedelta(days=days)
                     except Exception:
-                        target_dt = datetime.now(timezone.utc) + timedelta(days=days)
+                        target_dt = get_msk_time() + timedelta(days=days)
                 else:
-                    target_dt = datetime.now(timezone.utc) + timedelta(days=days)
+                    target_dt = get_msk_time() + timedelta(days=days)
             else:
-                target_dt = datetime.now(timezone.utc) + timedelta(days=days)
+                target_dt = get_msk_time() + timedelta(days=days)
 
         # Default traffic strategy from host
         traffic_limit_strategy = squad.get('default_traffic_strategy') or 'NO_RESET'
@@ -587,7 +627,7 @@ async def create_or_update_key_on_host(
         # Resolve traffic limit:
         # 1. if traffic_limit_gb is passed (from plan), convert to bytes
         # 2. else no limit override
-        if traffic_limit_gb is not None and traffic_limit_gb > 0:
+        if traffic_limit_gb is not None:
              effective_traffic_bytes = traffic_limit_gb * 1024 * 1024 * 1024
         else:
              effective_traffic_bytes = None
@@ -604,7 +644,8 @@ async def create_or_update_key_on_host(
             username=email.split('@')[0] if email else None,
             telegram_id=telegram_id,
             force_expiry=force_expiry,  
-            hwid_limit=None if hwid_limit == 0 else hwid_limit,
+            hwid_limit=hwid_limit,
+            external_squad_uuid=external_squad_uuid,
         )
 
         subscription_url = extract_subscription_url(user_payload) or ''

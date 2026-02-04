@@ -3,93 +3,146 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="flex items-center justify-between mb-6">
-    <div>
-        <h2 class="text-2xl font-bold text-white">📊 Мониторинг системы</h2>
-        <p class="text-white/50 text-sm">Состояние панели и серверов в реальном времени</p>
-    </div>
-    <div class="flex items-center gap-2">
-        <button type="button" id="clear-metrics"
-            class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 flex items-center gap-2 group"
-            title="БЕЗОПАСНО: Удалить старые замеры для графиков. Это НЕ влияет на работу системы и статистику пользователей. Просто освобождает место в БД, удаляя исторические данные мониторинга.">
-            <span class="material-symbols-outlined text-base">delete_sweep</span>
-            <span class="hidden sm:inline">Очистить метрики</span>
-        </button>
-        <button type="button" id="refresh-all"
-            class="px-4 py-2 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary/30 flex items-center gap-2">
-            <span class="material-symbols-outlined text-base">refresh</span>
-            Обновить все
-        </button>
+<div class="mb-8">
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+            <div
+                class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                <span class="material-symbols-outlined text-3xl">monitoring</span>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-white tracking-tight">Мониторинг системы</h2>
+                <p class="text-white/60 text-sm font-medium">Состояние панели и серверов в реальном времени</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <button type="button" id="clear-metrics"
+                class="px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2 group"
+                title="БЕЗОПАСНО: Удалить старые замеры">
+                <span
+                    class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">delete_sweep</span>
+                <span class="hidden sm:inline">Очистить метрики</span>
+            </button>
+            <button type="button" id="refresh-all"
+                class="px-4 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 hover:border-primary/40 transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2 group">
+                <span class="material-symbols-outlined text-lg group-hover:animate-spin">refresh</span>
+                Обновить все
+            </button>
+        </div>
     </div>
 </div>
 
 <!-- Stats Cards -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-        <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center mx-auto mb-2">
-            <span class="material-symbols-outlined text-2xl text-primary">memory</span>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-primary/30 transition-all duration-300 group">
+        <div class="flex flex-col items-center text-center">
+            <div
+                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-primary/10">
+                <span class="material-symbols-outlined text-2xl text-primary">memory</span>
+            </div>
+            <div class="text-3xl font-bold text-white mb-1 tracking-tight" id="cpu-stat">—</div>
+            <div class="text-white/50 text-xs font-bold uppercase tracking-widest">Процессор</div>
+            <div class="text-white/30 text-[10px] mt-2 font-mono bg-white/5 px-2 py-0.5 rounded-full" id="cpu-trend">
+            </div>
         </div>
-        <div class="text-2xl font-bold text-white" id="cpu-stat">—</div>
-        <div class="text-white/50 text-sm">Процессор</div>
-        <div class="text-white/30 text-xs mt-1" id="cpu-trend"></div>
     </div>
-    <div class="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-        <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mx-auto mb-2">
-            <span class="material-symbols-outlined text-2xl text-green-400">storage</span>
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-green-500/30 transition-all duration-300 group">
+        <div class="flex flex-col items-center text-center">
+            <div
+                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-500/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-green-500/10">
+                <span class="material-symbols-outlined text-2xl text-green-400">storage</span>
+            </div>
+            <div class="text-3xl font-bold text-white mb-1 tracking-tight" id="memory-stat">—</div>
+            <div class="text-white/50 text-xs font-bold uppercase tracking-widest">Память</div>
+            <div class="text-white/30 text-[10px] mt-2 font-mono bg-white/5 px-2 py-0.5 rounded-full" id="memory-trend">
+            </div>
         </div>
-        <div class="text-2xl font-bold text-white" id="memory-stat">—</div>
-        <div class="text-white/50 text-sm">Память</div>
-        <div class="text-white/30 text-xs mt-1" id="memory-trend"></div>
     </div>
-    <div class="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-        <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center mx-auto mb-2">
-            <span class="material-symbols-outlined text-2xl text-yellow-400">hard_drive</span>
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-yellow-500/30 transition-all duration-300 group">
+        <div class="flex flex-col items-center text-center">
+            <div
+                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-yellow-500/10">
+                <span class="material-symbols-outlined text-2xl text-yellow-400">hard_drive</span>
+            </div>
+            <div class="text-3xl font-bold text-white mb-1 tracking-tight" id="disk-stat">—</div>
+            <div class="text-white/50 text-xs font-bold uppercase tracking-widest">Диск</div>
+            <div class="text-white/30 text-[10px] mt-2 font-mono bg-white/5 px-2 py-0.5 rounded-full" id="disk-trend">
+            </div>
         </div>
-        <div class="text-2xl font-bold text-white" id="disk-stat">—</div>
-        <div class="text-white/50 text-sm">Диск</div>
-        <div class="text-white/30 text-xs mt-1" id="disk-trend"></div>
     </div>
-    <div class="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-        <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mx-auto mb-2">
-            <span class="material-symbols-outlined text-2xl text-blue-400">lan</span>
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-blue-500/30 transition-all duration-300 group">
+        <div class="flex flex-col items-center text-center">
+            <div
+                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/10">
+                <span class="material-symbols-outlined text-2xl text-blue-400">lan</span>
+            </div>
+            <div class="text-3xl font-bold text-white mb-1 tracking-tight" id="network-stat">—</div>
+            <div class="text-white/50 text-xs font-bold uppercase tracking-widest">Сеть</div>
+            <div class="text-white/30 text-[10px] mt-2 font-mono bg-white/5 px-2 py-0.5 rounded-full"
+                id="network-trend"></div>
         </div>
-        <div class="text-2xl font-bold text-white" id="network-stat">—</div>
-        <div class="text-white/50 text-sm">Сеть</div>
-        <div class="text-white/30 text-xs mt-1" id="network-trend"></div>
     </div>
 </div>
 
 <!-- Charts Row -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
     <!-- Main Chart -->
-    <div class="lg:col-span-2 bg-white/5 border border-white/10 rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-white font-bold">График производительности</h3>
-            <div class="flex gap-2">
-                <button class="period-btn px-3 py-1 rounded bg-primary/20 text-primary text-sm"
+    <div class="lg:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary text-xl">ssid_chart</span>
+                <h3 class="text-white font-bold text-lg">Производительность</h3>
+            </div>
+            <div class="flex bg-black/30 p-1 rounded-lg border border-white/5">
+                <button
+                    class="period-btn px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all bg-primary/20 text-primary hover:bg-primary/30"
                     data-period="1">1ч</button>
-                <button class="period-btn px-3 py-1 rounded bg-white/10 text-white/70 text-sm"
+                <button
+                    class="period-btn px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all text-white/50 hover:text-white hover:bg-white/5"
                     data-period="6">6ч</button>
-                <button class="period-btn px-3 py-1 rounded bg-white/10 text-white/70 text-sm"
+                <button
+                    class="period-btn px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all text-white/50 hover:text-white hover:bg-white/5"
                     data-period="24">24ч</button>
             </div>
         </div>
-        <div class="h-72"><canvas id="main-chart"></canvas></div>
+        <div class="h-72 w-full"><canvas id="main-chart"></canvas></div>
     </div>
+
     <!-- Local Server Info -->
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-white font-bold" id="server-title">Текущий сервер</h3>
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-sm flex flex-col">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-400 text-xl">server</span>
+            </div>
+
             {% if hosts %}
-            <div class="soft-select" data-target="server-selector">
-                <button type="button" class="soft-select-toggle">Локальная панель</button>
-                <div class="soft-select-menu">
-                    <div class="soft-select-item is-active" data-value="local">Локальная панель</div>
+            <div class="soft-select relative z-20" data-target="server-selector">
+                <button type="button"
+                    class="soft-select-toggle px-3 py-1.5 bg-black/30 border border-white/10 rounded-lg text-xs font-bold text-white/90 hover:border-primary/50 transition-all flex items-center gap-2">
+                    <span>Локальная панель</span>
+                    <span class="material-symbols-outlined text-sm text-white/50">expand_more</span>
+                </button>
+                <div
+                    class="soft-select-menu absolute right-0 mt-2 w-48 bg-[#0a1812] border border-white/10 rounded-xl shadow-xl overflow-hidden hidden transform origin-top-right transition-all">
+                    <div class="soft-select-item px-4 py-2.5 hover:bg-white/5 cursor-pointer text-xs font-bold text-white/80 transition-colors border-l-2 border-transparent hover:border-primary flex items-center gap-2 is-active"
+                        data-value="local">
+                        <span class="material-symbols-outlined text-sm text-primary">dns</span>
+                        Локальная панель
+                    </div>
                     {% for h in hosts %}
-                    <div class="soft-select-item" data-value="remote:{{ h.host_name }}">{{ h.host_name }}</div>
+                    <div class="soft-select-item px-4 py-2.5 hover:bg-white/5 cursor-pointer text-xs font-bold text-white/80 transition-colors border-l-2 border-transparent hover:border-blue-400 flex items-center gap-2"
+                        data-value="remote:{{ h.host_name }}">
+                        <span class="material-symbols-outlined text-sm text-blue-400">cloud</span>
+                        {{ h.host_name }}
+                    </div>
                     {% endfor %}
                 </div>
-                <select id="server-selector" style="position: absolute; opacity: 0; pointer-events: none;">
+                <select id="server-selector" class="absolute inset-0 opacity-0 pointer-events-none">
                     <option value="local" selected>Локальная панель</option>
                     {% for h in hosts %}
                     <option value="remote:{{ h.host_name }}">{{ h.host_name }}</option>
@@ -98,96 +151,142 @@
             </div>
             {% endif %}
         </div>
-        <div id="local-metrics" class="space-y-3 text-sm text-white/70">Загрузка…</div>
-        <div class="h-32 mt-4"><canvas id="local-mini-chart"></canvas></div>
+
+        <div id="local-metrics" class="flex-1 space-y-4 text-sm text-white/70">
+            <div class="flex flex-col items-center justify-center h-full text-white/30 gap-2">
+                <span class="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
+                <span class="text-xs uppercase tracking-widest font-bold">Сбор данных...</span>
+            </div>
+        </div>
+        <div class="h-32 mt-6 relative"><canvas id="local-mini-chart"></canvas></div>
     </div>
 </div>
 
 <!-- Servers & SSH Targets Grid -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Серверы (xui_hosts) -->
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-white font-bold flex items-center gap-2">
-                <span class="material-symbols-outlined text-blue-400">dns</span>
-                Серверы (Remna_hosts)
-            </h3>
-            <span class="px-2 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium" id="hosts-count">{{
-                hosts|length }}</span>
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/10">
+                    <span class="material-symbols-outlined text-blue-400 text-xl">dns</span>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-base">Серверы Remnawave</h3>
+                    <p class="text-white/40 text-[10px] font-medium uppercase tracking-wider">Удаленные панели
+                        управления</p>
+                </div>
+            </div>
+            <span
+                class="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold font-mono"
+                id="hosts-count">{{ hosts|length }}</span>
         </div>
-        <div class="space-y-3">
+
+        <div class="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {% if hosts %}
             {% for h in hosts %}
-            <div class="bg-white/5 rounded-lg p-3 border border-white/10" data-host="{{ h.host_name }}">
-                <div class="flex items-center justify-between mb-2">
+            <div class="bg-black/20 border border-white/5 rounded-xl p-4 hover:border-blue-500/30 transition-all duration-300 group"
+                data-host="{{ h.host_name }}">
+                <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full bg-white/30" id="host-status-{{ loop.index }}"></div>
+                        <div class="relative">
+                            <div class="w-2.5 h-2.5 rounded-full bg-white/20 transition-all duration-500"
+                                id="host-status-{{ loop.index }}"></div>
+                        </div>
                         <div>
-                            <div class="text-white font-medium text-sm">{{ h.host_name }}</div>
-                            <div class="text-white/40 text-xs">{{ h.host_url or 'URL не указан' }}</div>
+                            <div class="text-white font-bold text-sm tracking-tight flex items-center gap-2">
+                                {{ h.host_name }}
+                                <span
+                                    class="material-symbols-outlined text-[10px] text-white/30 group-hover:text-blue-400 transition-colors">open_in_new</span>
+                            </div>
+                            <div class="text-white/30 text-[10px] font-mono mt-0.5">{{ h.host_url or 'URL не указан' }}
+                            </div>
                         </div>
                     </div>
-                    <button class="host-refresh-btn p-2 rounded bg-white/10 hover:bg-white/20 text-white/70"
-                        data-host="{{ h.host_name }}" data-target="#host-metrics-{{ loop.index }}">
-                        <span class="material-symbols-outlined text-sm">refresh</span>
+                    <button
+                        class="host-refresh-btn p-2 rounded-lg bg-white/5 hover:bg-blue-500/20 text-white/50 hover:text-blue-400 transition-all"
+                        data-host="{{ h.host_name }}" data-target="#host-metrics-{{ loop.index }}" title="Обновить">
+                        <span class="material-symbols-outlined text-lg">refresh</span>
                     </button>
                 </div>
-                <div class="server-metrics text-sm text-white/60" id="host-metrics-{{ loop.index }}">
-                    <div class="flex items-center gap-2 text-white/40">
+                <div class="server-metrics bg-white/5 rounded-lg p-3 text-xs" id="host-metrics-{{ loop.index }}">
+                    <div class="flex items-center justify-center gap-2 text-white/30 py-1">
                         <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                        Загрузка...
+                        <span class="uppercase tracking-widest font-bold text-[10px]">Ожидание</span>
                     </div>
                 </div>
             </div>
             {% endfor %}
             {% else %}
-            <div class="text-center py-8 text-white/40">
+            <div
+                class="flex flex-col items-center justify-center py-12 text-white/20 border-2 border-dashed border-white/5 rounded-xl">
                 <span class="material-symbols-outlined text-4xl mb-2">dns</span>
-                <p>Хосты не добавлены</p>
+                <p class="text-xs font-bold uppercase tracking-widest">Список пуст</p>
             </div>
             {% endif %}
         </div>
     </div>
 
     <!-- SSH-цели -->
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-white font-bold flex items-center gap-2">
-                <span class="material-symbols-outlined text-yellow-400">terminal</span>
-                SSH-цели
-            </h3>
-            <span class="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs font-medium"
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/10">
+                    <span class="material-symbols-outlined text-yellow-400 text-xl">terminal</span>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-base">SSH-цели</h3>
+                    <p class="text-white/40 text-[10px] font-medium uppercase tracking-wider">Прямое подключение</p>
+                </div>
+            </div>
+            <span
+                class="px-2.5 py-1 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-bold font-mono"
                 id="targets-count">{{ ssh_targets|length }}</span>
         </div>
-        <div class="space-y-3">
+
+        <div class="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {% if ssh_targets %}
             {% for t in ssh_targets %}
-            <div class="bg-white/5 rounded-lg p-3 border border-white/10" data-target="{{ t.target_name }}">
-                <div class="flex items-center justify-between mb-2">
+            <div class="bg-black/20 border border-white/5 rounded-xl p-4 hover:border-yellow-500/30 transition-all duration-300 group"
+                data-target="{{ t.target_name }}">
+                <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full bg-white/30" id="target-status-{{ loop.index }}"></div>
+                        <div class="relative">
+                            <div class="w-2.5 h-2.5 rounded-full bg-white/20 transition-all duration-500"
+                                id="target-status-{{ loop.index }}"></div>
+                        </div>
                         <div>
-                            <div class="text-white font-medium text-sm">{{ t.target_name }}</div>
-                            <div class="text-white/40 text-xs">{{ t.ssh_host }}:{{ t.ssh_port or 22 }}</div>
+                            <div class="text-white font-bold text-sm tracking-tight flex items-center gap-2">
+                                {{ t.target_name }}
+                                <span
+                                    class="material-symbols-outlined text-[10px] text-white/30 group-hover:text-yellow-400 transition-colors">code</span>
+                            </div>
+                            <div class="text-white/30 text-[10px] font-mono mt-0.5">{{ t.ssh_host }}:{{ t.ssh_port or 22
+                                }}</div>
                         </div>
                     </div>
-                    <button class="target-refresh-btn p-2 rounded bg-white/10 hover:bg-white/20 text-white/70"
-                        data-target-name="{{ t.target_name }}" data-target="#target-metrics-{{ loop.index }}">
-                        <span class="material-symbols-outlined text-sm">refresh</span>
+                    <button
+                        class="target-refresh-btn p-2 rounded-lg bg-white/5 hover:bg-yellow-500/20 text-white/50 hover:text-yellow-400 transition-all"
+                        data-target-name="{{ t.target_name }}" data-target="#target-metrics-{{ loop.index }}"
+                        title="Обновить">
+                        <span class="material-symbols-outlined text-lg">refresh</span>
                     </button>
                 </div>
-                <div class="server-metrics text-sm text-white/60" id="target-metrics-{{ loop.index }}">
-                    <div class="flex items-center gap-2 text-white/40">
+                <div class="server-metrics bg-white/5 rounded-lg p-3 text-xs" id="target-metrics-{{ loop.index }}">
+                    <div class="flex items-center justify-center gap-2 text-white/30 py-1">
                         <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                        Загрузка...
+                        <span class="uppercase tracking-widest font-bold text-[10px]">Ожидание</span>
                     </div>
                 </div>
             </div>
             {% endfor %}
             {% else %}
-            <div class="text-center py-8 text-white/40">
+            <div
+                class="flex flex-col items-center justify-center py-12 text-white/20 border-2 border-dashed border-white/5 rounded-xl">
                 <span class="material-symbols-outlined text-4xl mb-2">terminal</span>
-                <p>SSH-цели не добавлены</p>
+                <p class="text-xs font-bold uppercase tracking-widest">Список пуст</p>
             </div>
             {% endif %}
         </div>
@@ -317,7 +416,7 @@
 
         function renderLocal(el, data) {
             if (!data || !data.ok) {
-                el.innerHTML = `<div class="text-red-400">Ошибка: ${data?.error || 'Неизвестная'}</div>`;
+                el.innerHTML = `<div class="flex items-center justify-center h-full text-red-400 gap-2"><span class="material-symbols-outlined">error</span> ${data?.error || 'Неизвестная ошибка'}</div>`;
                 return;
             }
             const cpu = data.cpu || {};
@@ -326,32 +425,90 @@
             const net = data.net || {};
             const networkSpeed = calculateNetworkSpeed(net, 'local_details');
             const disks = (data.disks || []).map(d => `
-            <div class="flex items-center justify-between py-1">
-                <span class="text-white/50 text-xs">${d.mountpoint || d.device}</span>
-                <div class="flex items-center gap-2">
-                    <div class="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div class="h-full ${d.percent >= 90 ? 'bg-red-500' : d.percent >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${d.percent || 0}%"></div>
-                    </div>
-                    <span class="text-xs ${getStatusColor(d.percent)}">${fmtPct(d.percent)}</span>
+            <div class="flex flex-col gap-1 mb-2 last:mb-0">
+                <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/40">
+                    <span>${d.mountpoint || d.device}</span>
+                    <span class="${getStatusColor(d.percent)}">${fmtPct(d.percent)}</span>
+                </div>
+                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div class="h-full ${d.percent >= 90 ? 'bg-red-500' : d.percent >= 70 ? 'bg-yellow-500' : 'bg-primary'} transition-all duration-500" style="width: ${d.percent || 0}%"></div>
                 </div>
             </div>
         `).join('');
             el.innerHTML = `
-        <div class="space-y-2">
-            <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base text-primary">dns</span> <strong class="text-white">${data.hostname || '—'}</strong> <span class="text-white/50">(${data.platform || ''})</span></div>
-            <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base text-blue-400">schedule</span> Uptime: ${secsToDHMS(data.uptime_sec)}</div>
-            <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base text-primary">memory</span> CPU: <span class="${getStatusColor(cpu.percent)}">${fmtPct(cpu.percent)}</span> <span class="text-white/50">(${cpu.count_logical || '—'} лог, ${cpu.count_physical || '—'} физ)</span></div>
-            <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base text-green-400">storage</span> RAM: <span class="${getStatusColor(mem.percent)}">${fmtPct(mem.percent)}</span> <span class="text-white/50">(${fmtBytes(mem.used || 0)} / ${fmtBytes(mem.total || 0)})</span></div>
-            ${sw.total ? `<div class="flex items-center gap-2"><span class="material-symbols-outlined text-base text-purple-400">swap_horiz</span> Swap: <span class="${getStatusColor(sw.percent)}">${fmtPct(sw.percent)}</span></div>` : ''}
-            <div class="flex items-center gap-2"><span class="material-symbols-outlined text-base text-yellow-400">lan</span> Сеть: ↑${fmtBytes(net.bytes_sent || 0)} ↓${fmtBytes(net.bytes_recv || 0)}</div>
-            <div class="text-blue-400 text-xs ml-6">Скорость: ↑${fmtBytes(networkSpeed.upSpeed)}/с ↓${fmtBytes(networkSpeed.downSpeed)}/с</div>
-        </div>
-        ${disks ? `<div class="mt-3 pt-3 border-t border-white/10"><div class="text-white/50 text-xs mb-2">Диски:</div>${disks}</div>` : ''}`;
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                 <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Система</div>
+                    <div class="text-xs font-bold text-white truncate" title="${data.hostname}">${data.hostname || '—'}</div>
+                    <div class="text-[10px] text-white/30 truncate">${data.platform || ''}</div>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Uptime</div>
+                    <div class="text-xs font-bold text-blue-400">${secsToDHMS(data.uptime_sec)}</div>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                <!-- CPU -->
+                <div>
+                   <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
+                        <span>CPU (${cpu.count_logical || '—'})</span>
+                        <span class="${getStatusColor(cpu.percent)}">${fmtPct(cpu.percent)}</span>
+                   </div>
+                   <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary transition-all duration-500" style="width: ${cpu.percent || 0}%"></div>
+                   </div>
+                </div>
+                
+                <!-- RAM -->
+                <div>
+                   <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
+                        <span>RAM</span>
+                        <span class="${getStatusColor(mem.percent)}">${fmtPct(mem.percent)}</span>
+                   </div>
+                   <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div class="h-full bg-green-500 transition-all duration-500" style="width: ${mem.percent || 0}%"></div>
+                   </div>
+                   <div class="text-[10px] text-right text-white/30 mt-0.5">${fmtBytes(mem.used || 0)} / ${fmtBytes(mem.total || 0)}</div>
+                </div>
+
+                <!-- SWAP -->
+                ${sw.total ? `
+                <div>
+                   <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
+                        <span>SWAP</span>
+                        <span class="${getStatusColor(sw.percent)}">${fmtPct(sw.percent)}</span>
+                   </div>
+                   <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div class="h-full bg-purple-500 transition-all duration-500" style="width: ${sw.percent || 0}%"></div>
+                   </div>
+                </div>` : ''}
+            </div>
+
+            <!-- Network -->
+            <div class="bg-white/5 rounded-xl p-3 border border-white/5 flex items-center justify-between">
+                <div>
+                    <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Загрузка</div>
+                     <div class="flex gap-2 text-[10px] font-mono text-cyan-400">
+                        <span>↓${fmtBytes(networkSpeed.downSpeed)}/s</span>
+                    </div>
+                </div>
+                 <div class="text-right">
+                    <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Отдача</div>
+                    <div class="flex gap-2 text-[10px] font-mono text-blue-400">
+                        <span>↑${fmtBytes(networkSpeed.upSpeed)}/s</span>
+                    </div>
+                </div>
+            </div>
+
+            ${disks ? `<div class="pt-2 border-t border-white/5">${disks}</div>` : ''}
+        </div>`;
         }
 
         function renderRemote(el, data) {
             if (!data || !data.ok) {
-                el.innerHTML = `<div class="text-red-400">Ошибка: ${data?.error || 'Недоступен'}</div>`;
+                el.innerHTML = `<div class="flex items-center justify-center p-4 text-red-400 gap-2"><span class="material-symbols-outlined">error</span> ${data?.error || 'Недоступен'}</div>`;
                 return;
             }
             const cpu = { percent: data.cpu_percent || 0, count: data.cpu_count || '—' };
@@ -359,16 +516,66 @@
             const disk = { percent: data.disk_percent || 0, mountpoint: data.disk_mountpoint || '/' };
             const net = { bytes_sent: data.network_sent || 0, bytes_recv: data.network_recv || 0 };
             const networkSpeed = calculateNetworkSpeed(net, 'remote_' + (data.uname || 'unknown'));
+
             el.innerHTML = `
-            <div class="space-y-1 text-sm">
-                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-yellow-400">terminal</span> <span class="text-white">${data.uname || '—'}</span></div>
-                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-blue-400">schedule</span> Uptime: ${secsToDHMS(data.uptime_sec)}</div>
-                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-primary">memory</span> CPU: <span class="${getStatusColor(cpu.percent)}">${fmtPct(cpu.percent)}</span> (${cpu.count} ядер)</div>
-                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-orange-400">speed</span> Load: ${(data.loadavg || []).join(', ') || '—'}</div>
-                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-green-400">storage</span> RAM: <span class="${getStatusColor(mem.percent)}">${fmtPct(mem.percent)}</span> (${mem.used_mb} / ${mem.total_mb} МБ)</div>
-                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-amber-400">hard_drive</span> Диск: <span class="${getStatusColor(disk.percent)}">${fmtPct(disk.percent)}</span> (${disk.mountpoint})</div>
-                <div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-cyan-400">lan</span> Сеть: ↑${fmtBytes(net.bytes_sent)} ↓${fmtBytes(net.bytes_recv)}</div>
-                <div class="flex items-center gap-2 text-blue-400 text-xs"><span class="material-symbols-outlined text-sm">network_check</span> Скорость: ↑${fmtBytes(networkSpeed.upSpeed)}/с ↓${fmtBytes(networkSpeed.downSpeed)}/с</div>
+            <div class="space-y-4">
+                 <div class="grid grid-cols-2 gap-3">
+                     <div class="bg-white/5 rounded-lg p-2 border border-white/5">
+                        <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Система</div>
+                        <div class="text-xs font-bold text-white truncate" title="${data.uname}">${data.uname || '—'}</div>
+                    </div>
+                    <div class="bg-white/5 rounded-lg p-2 border border-white/5">
+                        <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Uptime</div>
+                        <div class="text-xs font-bold text-blue-400">${secsToDHMS(data.uptime_sec)}</div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- CPU -->
+                    <div>
+                       <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
+                            <span>CPU (${cpu.count} ядра)</span>
+                            <span class="${getStatusColor(cpu.percent)}">${fmtPct(cpu.percent)}</span>
+                       </div>
+                       <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary transition-all duration-500" style="width: ${cpu.percent || 0}%"></div>
+                       </div>
+                       <div class="text-[10px] text-right text-white/30 mt-0.5">Load: ${(data.loadavg || []).join(', ') || '—'}</div>
+                    </div>
+                    
+                    <!-- RAM -->
+                    <div>
+                       <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
+                            <span>RAM</span>
+                            <span class="${getStatusColor(mem.percent)}">${fmtPct(mem.percent)}</span>
+                       </div>
+                       <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div class="h-full bg-green-500 transition-all duration-500" style="width: ${mem.percent || 0}%"></div>
+                       </div>
+                       <div class="text-[10px] text-right text-white/30 mt-0.5">${mem.used_mb} / ${mem.total_mb} MB</div>
+                    </div>
+
+                    <!-- Disk -->
+                    <div>
+                       <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
+                            <span>Disk (${disk.mountpoint})</span>
+                            <span class="${getStatusColor(disk.percent)}">${fmtPct(disk.percent)}</span>
+                       </div>
+                       <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div class="h-full bg-yellow-500 transition-all duration-500" style="width: ${disk.percent || 0}%"></div>
+                       </div>
+                    </div>
+                </div>
+
+                <!-- Network -->
+                <div class="bg-white/5 rounded-lg p-2 border border-white/5 flex items-center justify-between">
+                     <div class="text-[10px] font-mono text-cyan-400">
+                        ↓ ${fmtBytes(networkSpeed.downSpeed)}/s
+                    </div>
+                     <div class="text-[10px] font-mono text-blue-400">
+                        ↑ ${fmtBytes(networkSpeed.upSpeed)}/s
+                    </div>
+                </div>
             </div>`;
         }
 
@@ -380,23 +587,104 @@
                 data: {
                     labels: [],
                     datasets: [
-                        { label: 'CPU %', data: [], borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.1)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 6 },
-                        { label: 'RAM %', data: [], borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 6 },
-                        { label: 'Диск %', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 6 }
+                        {
+                            label: 'CPU %',
+                            data: [],
+                            borderColor: '#3b82f6', // Blue-500
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#3b82f6'
+                        },
+                        {
+                            label: 'RAM %',
+                            data: [],
+                            borderColor: '#22c55e', // Green-500 
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#22c55e'
+                        },
+                        {
+                            label: 'Диск %',
+                            data: [],
+                            borderColor: '#eab308', // Yellow-500
+                            backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#eab308'
+                        }
                     ]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
                     interaction: { intersect: false, mode: 'index' },
                     plugins: {
-                        legend: { position: 'top', labels: { color: '#e0e0e0', usePointStyle: true, padding: 20 } },
-                        tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleColor: '#fff', bodyColor: '#fff', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, cornerRadius: 8 }
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                color: '#9ca3af', // Gray-400
+                                usePointStyle: true,
+                                boxWidth: 6,
+                                padding: 20,
+                                font: { family: "'Inter', sans-serif", size: 11, weight: 500 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1f2937', // Gray-800
+                            titleColor: '#f3f4f6', // Gray-100
+                            bodyColor: '#d1d5db', // Gray-300
+                            borderColor: '#374151', // Gray-700
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                            displayColors: true,
+                            boxPadding: 4,
+                            titleFont: { size: 13, weight: 600 },
+                            bodyFont: { size: 12 }
+                        }
                     },
                     scales: {
-                        x: { ticks: { color: 'rgba(255,255,255,0.5)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                        y: { min: 0, max: 100, ticks: { color: 'rgba(255,255,255,0.5)', callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        x: {
+                            ticks: {
+                                color: '#6b7280', // Gray-500
+                                font: { size: 10 },
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 8
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.03)',
+                                drawBorder: false
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                color: '#6b7280', // Gray-500
+                                font: { size: 10 },
+                                callback: v => v + '%',
+                                stepSize: 20
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.03)',
+                                drawBorder: false
+                            }
+                        }
                     },
-                    animation: { duration: 1000, easing: 'easeInOutQuart' }
+                    animation: { duration: 800, easing: 'easeOutQuart' }
                 }
             });
             return mainChart;

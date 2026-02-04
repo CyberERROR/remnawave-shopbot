@@ -30,6 +30,8 @@ from shop_bot.data_manager.remnawave_repository import (
 
 logger = logging.getLogger(__name__)
 
+NEW_TICKET_PHOTO_URL = "https://github.com/CyberERROR/remnawave-shopbot/blob/main/docs/screenshots/suppshor.png?raw=true"
+
 class SupportDialog(StatesGroup):
     waiting_for_subject = State()
     waiting_for_message = State()
@@ -41,8 +43,101 @@ class AdminDialog(StatesGroup):
     waiting_for_reply = State()
 
 
+def _get_username_display(user, user_id: int = None) -> str:
+    if hasattr(user, 'username') and user.username:
+        return f"@{user.username}"
+    if hasattr(user, 'full_name') and user.full_name:
+        return user.full_name
+    return str(user_id if user_id else (user.id if hasattr(user, 'id') else 'Unknown'))
+
+
+def _parse_star_subject(subject: str) -> tuple[bool, str]:
+    if not subject:
+        return False, 'Обращение без темы'
+    is_star = subject.strip().startswith('⭐')
+    display_subj = subject.lstrip('⭐️ ').strip() if is_star else subject
+    return is_star, display_subj or 'Обращение без темы'
+
+
+def _build_topic_name(ticket_id: int, subject: str, author_tag: str) -> str:
+    is_star, display_subj = _parse_star_subject(subject)
+    trimmed = display_subj[:40]
+    important_prefix = '🔴 Важно: ' if is_star else ''
+    return f"#{ticket_id} {important_prefix}{trimmed} • от {author_tag}"
+
+
+def _get_author_tag(message: types.Message) -> str:
+    if not message.from_user:
+        return 'пользователь'
+    return _get_username_display(message.from_user, message.from_user.id)
+
+
+def _build_notification_text(ticket_id: int, user_id: int, username_display: str, subject: str, message_content: str, created_new: bool) -> str:
+    subj_display = subject or "—"
+    header = "🆘 <b>Новое обращение:</b>\n\n" if created_new else "✅ <b>Сообщение добавлено в тикет</b>\n\n"
+    return (
+        f"{header}"
+        f"👤 <b>USER:</b> (<code>{user_id}</code> - {username_display})\n"
+        f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n"
+        f"💬 <b>Тема:</b> <i>{subj_display}</i>\n\n"
+        f"💌 Сообщения:\n"
+        f"<blockquote>{message_content}</blockquote>"
+    )
+
+
 def get_support_router() -> Router:
     router = Router()
+
+    # ==========================================
+    # 1) UNIVERSAL MESSAGES (CONSTANTS)
+    # ==========================================
+    TXT_TICKET_NOT_FOUND = "❌ <b>Тикет не найден.</b>"
+    TXT_ACCESS_DENIED = "❌ <b>Тикет не найден или доступ запрещён.</b>"
+    TXT_CANNOT_REPLY = "❌ <b>Нельзя ответить на этот тикет.</b>"
+    TXT_ALREADY_CLOSED = "🔒 <b>Тикет уже закрыт.</b>"
+    TXT_ALREADY_OPEN = "⚠️ <b>Тикет уже открыт.</b>"
+    TXT_BAN_RESTRICTED = "<b>🚫 Доступ ограничен</b>\n\nВаш аккаунт заблокирован. Вы не можете обращаться в поддержку."
+    TXT_BAN_ERROR = "❌ Не удалось изменить статус блокировки: {}"
+    
+    # ==========================================
+    # 2) UNIVERSAL FUNCTIONS (HELPERS)
+    # ==========================================
+    
+    async def _safe_edit(call: types.CallbackQuery, text: str, reply_markup=None):
+        try:
+            await call.message.edit_text(text, reply_markup=reply_markup)
+        except Exception:
+            pass
+
+    def _extract_content(message: types.Message) -> str:
+        text = (message.text or message.caption or "").strip()
+        if message.photo: return f"[Фото] {text}".strip()
+        if message.video: return f"[Видео] {text}".strip()
+        return text
+
+    def _support_contact_markup() -> types.InlineKeyboardMarkup | None:
+        support = (get_setting("support_bot_username") or get_setting("support_user") or "").strip()
+        if not support:
+            return None
+        url: str | None = None
+        if support.startswith("@"):
+            url = f"tg://resolve?domain={support[1:]}"
+        elif support.startswith("tg://"):
+            url = support
+        elif support.startswith("http://") or support.startswith("https://"):
+            try:
+                part = support.split("/")[-1].split("?")[0]
+                if part:
+                    url = f"tg://resolve?domain={part}"
+                else:
+                    url = support
+            except Exception:
+                url = support
+        else:
+            url = f"tg://resolve?domain={support}"
+        if not url:
+            return None
+        return types.InlineKeyboardMarkup(inline_keyboard=[[types.InlineKeyboardButton(text="🆘 Написать в поддержку", url=url)]])
 
     def _user_main_reply_kb() -> types.ReplyKeyboardMarkup:
         return types.ReplyKeyboardMarkup(
@@ -53,42 +148,7 @@ def get_support_router() -> Router:
             resize_keyboard=True
         )
 
-    def _is_user_banned(user_id: int) -> bool:
-        if not user_id:
-            return False
-        try:
-            user = get_user(int(user_id)) or {}
-        except Exception:
-            return False
-        return bool(user.get('is_banned'))
-
-    def _get_latest_open_ticket(user_id: int) -> dict | None:
-        try:
-            tickets = get_user_tickets(user_id) or []
-            open_tickets = [t for t in tickets if t.get('status') == 'open']
-            if not open_tickets:
-                return None
-            return max(open_tickets, key=lambda t: int(t['ticket_id']))
-        except Exception:
-            return None
-
-    def _admin_actions_kb(ticket_id: int) -> types.InlineKeyboardMarkup:
-        try:
-            t = get_ticket(ticket_id)
-            status = (t and t.get('status')) or 'open'
-        except Exception:
-            status = 'open'
-        try:
-            user_id = int((t or {}).get('user_id')) if t else None
-        except Exception:
-            user_id = None
-        is_banned = None
-        if user_id:
-            try:
-                user_info = get_user(user_id) or {}
-                is_banned = bool(user_info.get('is_banned'))
-            except Exception:
-                is_banned = None
+    def _admin_kb_build(status, ticket_id, user_id, is_banned) -> types.InlineKeyboardMarkup:
         first_row: list[types.InlineKeyboardButton] = []
         if status == 'open':
             first_row.append(types.InlineKeyboardButton(text="✅ Закрыть", callback_data=f"admin_close_{ticket_id}"))
@@ -115,20 +175,390 @@ def get_support_router() -> Router:
                 ])
         return types.InlineKeyboardMarkup(inline_keyboard=inline_kb)
 
+    def _admin_actions_kb(ticket_id: int) -> types.InlineKeyboardMarkup:
+        try:
+            t = get_ticket(ticket_id)
+            status = (t and t.get('status')) or 'open'
+        except Exception:
+            status = 'open'
+        try:
+            user_id = int((t or {}).get('user_id')) if t else None
+        except Exception:
+            user_id = None
+        is_banned = None
+        if user_id:
+            try:
+                user_info = get_user(user_id) or {}
+                is_banned = bool(user_info.get('is_banned'))
+            except Exception:
+                is_banned = None
+        return _admin_kb_build(status, ticket_id, user_id, is_banned)
+
     def _admin_dm_reply_kb(ticket_id: int) -> types.InlineKeyboardMarkup:
         return types.InlineKeyboardMarkup(inline_keyboard=[
             [types.InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply_dm_{ticket_id}")]
         ])
 
-    async def _is_admin(bot: Bot, chat_id: int, user_id: int) -> bool:
-        is_admin_by_setting = is_admin(user_id)
+    def _is_user_banned(user_id: int) -> bool:
+        if not user_id:
+            return False
+        try:
+            user = get_user(int(user_id)) or {}
+        except Exception:
+            return False
+        return bool(user.get('is_banned'))
+    
+    async def _check_banned(event: types.Message | types.CallbackQuery, state: FSMContext = None) -> bool:
+        user_id = event.from_user.id
+        if not _is_user_banned(user_id):
+            return False
+        
+        markup = _support_contact_markup()
+        if isinstance(event, types.CallbackQuery):
+             try:
+                 await event.answer(TXT_BAN_RESTRICTED, show_alert=True)
+             except Exception:
+                 pass
+        else:
+             if markup:
+                 await event.answer(TXT_BAN_RESTRICTED, reply_markup=markup)
+             else:
+                 await event.answer(TXT_BAN_RESTRICTED)
+        
+        if state:
+            await state.clear()
+        return True
+
+    def _get_latest_open_ticket(user_id: int) -> dict | None:
+        try:
+            tickets = get_user_tickets(user_id) or []
+            open_tickets = [t for t in tickets if t.get('status') == 'open']
+            if not open_tickets:
+                return None
+            return max(open_tickets, key=lambda t: int(t['ticket_id']))
+        except Exception:
+            return None
+
+    async def _check_active_ticket(message: types.Message | types.CallbackQuery, user_id: int) -> bool:
+        existing = _get_latest_open_ticket(user_id)
+        if existing:
+            text = (
+                f"⚠️ <b>Активный тикет найден</b>\n\n"
+                f"У вас уже есть открытый тикет <b>#{existing['ticket_id']}</b>.\n"
+                f"Пожалуйста, продолжайте переписку в нём."
+            )
+            if isinstance(message, types.CallbackQuery):
+                await message.message.edit_text(text)
+            else:
+                await message.answer(text)
+            return True
+        return False
+
+    async def _send_subject_prompt(message: types.Message | types.CallbackQuery, state: FSMContext):
+        text = (
+            "📝 <b>Шаг 1/2: Тема обращения</b>\n\n"
+            "Напишите <b>краткий заголовок</b> (3-5 слов).\n"
+            "<i>Пример: «Не работает VPN», «Проблема с оплатой»</i>"
+        )
+        if isinstance(message, types.CallbackQuery):
+            await message.message.edit_text(text)
+        else:
+            await message.answer(text)
+        await state.set_state(SupportDialog.waiting_for_subject)
+    
+    async def _send_user_tickets_list(event: types.Message | types.CallbackQuery, user_id: int):
+        tickets = get_user_tickets(user_id)
+        text = "<b>📨 Ваши обращения:</b>" if tickets else "<b>📂 У вас пока нет обращений.</b>"
+        rows = []
+        if tickets:
+            for t in tickets:
+                status_text = "🟢 Открыт" if t.get('status') == 'open' else "🔒 Закрыт"
+                is_star = (t.get('subject') or '').startswith('⭐ ')
+                star = '⭐ ' if is_star else ''
+                title = f"{star}#{t['ticket_id']} • {status_text}"
+                if t.get('subject'):
+                    title += f" • {t['subject'][:20]}"
+                rows.append([types.InlineKeyboardButton(text=title, callback_data=f"support_view_{t['ticket_id']}")])
+        
+        reply_markup = types.InlineKeyboardMarkup(inline_keyboard=rows)
+        if isinstance(event, types.CallbackQuery):
+            await event.message.edit_text(text, reply_markup=reply_markup)
+        else:
+            await event.answer(text, reply_markup=reply_markup)
+
+    async def _send_ticket_confirmation(message: types.Message, ticket_id: int, subject: str, content_text: str, created_new: bool):
+        if created_new:
+            text = (
+                f"✅ <b>Обращение #{ticket_id} создано!</b>\n\n"
+                f"📝 <b>Сообщения:</b>\n"
+                f"💬 <b>Тема:</b> <i>{subject}</i>\n"
+                f"<blockquote>{content_text}</blockquote>\n\n"
+                f"💌 Ожидайте ответа поддержки. Мы скоро свяжемся с вами."
+            )
+        else:
+            text = (
+                f"✅ <b>Сообщение добавлено в ваш открытый тикет</b>\n\n"
+                f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
+                f"✉️ Сообщения:\n"
+                f"<blockquote>{content_text}</blockquote>\n\n"
+                f"💌 Ожидайте ответа поддержки. Мы скоро свяжемся с вами."
+            )
+        try:
+            await message.answer(text, reply_markup=_user_main_reply_kb())
+        except Exception:
+            pass
+
+    async def _send_ticket_closed_notification(bot: Bot, user_id: int, ticket_id: int, is_user_action: bool = False, message_obj: types.Message = None):
+        text = (
+            f"✅ <b>Ваш тикет #{ticket_id} был закрыт</b>\n\n"
+            f"✉️ <i>Если у вас появятся другие вопросы или ваш вопрос не решен</i>\n\n"
+            f"💌 <b>Вы можете создать новое обращение при необходимости.</b>"
+        )
+        
+        try:
+             if is_user_action and message_obj:
+                 await message_obj.edit_text(
+                     text,
+                     reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[[types.InlineKeyboardButton(text="⬅️ К списку", callback_data="support_my_tickets")]])
+                 )
+             else:
+                 await bot.send_message(chat_id=user_id, text=text)
+        except Exception:
+             pass
+
+    async def _send_admin_reply_to_user(bot: Bot, user_id: int, ticket_id: int, message: types.Message, content: str):
+        full_text = (
+            f"💬 <b>Ответ от технической поддержки.</b>\n"
+            f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
+            f"💌 <b>Ответ на ваше обращение:</b>\n"
+            f"<blockquote>{content}</blockquote>" 
+        )
+        try:
+            if message.text:
+                await bot.send_message(chat_id=user_id, text=full_text)
+            else:
+                 await bot.copy_message(
+                    chat_id=user_id,
+                    from_chat_id=message.chat.id,
+                    message_id=message.message_id,
+                    caption=full_text
+                )
+        except Exception as e:
+            logger.warning(f"Failed to send reply to user {user_id}: {e}")
+            raise e
+
+    async def _notify_admins(bot: Bot, message: types.Message, ticket_id: int, subject: str = None, created_new: bool = False):
+        username_display = _get_username_display(message.from_user, message.from_user.id)
+        message_content = message.text or message.caption or ("[Фото]" if message.photo else "[Видео]" if message.video else "")
+        notification_text = _build_notification_text(ticket_id, message.from_user.id, username_display, subject, message_content, created_new)
+        
+        for aid in get_admin_ids():
+            try:
+                if message.text or (message.caption and not created_new):
+                    send_method = bot.send_photo if created_new else bot.send_message
+                    await send_method(
+                        chat_id=int(aid),
+                        **(({"photo": NEW_TICKET_PHOTO_URL, "caption": notification_text} if created_new else {"text": notification_text})),
+                        reply_markup=_admin_dm_reply_kb(ticket_id)
+                    )
+                else:
+                    if created_new:
+                        await bot.send_photo(
+                            chat_id=int(aid),
+                            photo=NEW_TICKET_PHOTO_URL,
+                            caption=notification_text,
+                            reply_markup=_admin_dm_reply_kb(ticket_id)
+                        )
+                    else:
+                        await bot.copy_message(
+                            chat_id=int(aid),
+                            from_chat_id=message.chat.id,
+                            message_id=message.message_id,
+                            caption=notification_text,
+                            reply_markup=_admin_dm_reply_kb(ticket_id)
+                        )
+            except Exception as e:
+                logger.warning(f"Не удалось уведомить админа {aid} о тикете {ticket_id}: {e}")
+
+    async def _notify_user_about_ban(bot: Bot, user_id: int, text: str) -> None:
+        try:
+            markup = _support_contact_markup()
+            if markup:
+                await bot.send_message(user_id, text, reply_markup=markup)
+            else:
+                await bot.send_message(user_id, text)
+        except Exception:
+            pass
+
+    async def _ensure_forum_topic(bot: Bot, ticket_id: int, subject: str, message_from: types.User) -> tuple[int | None, int | None]:
+        ticket = get_ticket(ticket_id)
+        if not ticket:
+            return None, None
+            
+        forum_chat_id = ticket.get('forum_chat_id')
+        thread_id = ticket.get('message_thread_id')
+        support_forum_chat_id = get_setting("support_forum_chat_id")
+        
+        if support_forum_chat_id and not (forum_chat_id and thread_id):
+            try:
+                chat_id = int(support_forum_chat_id)
+                author_tag = _get_username_display(message_from, message_from.id)
+                topic_name = _build_topic_name(ticket_id, subject or 'Обращение без темы', author_tag)
+                
+                forum_topic = await bot.create_forum_topic(chat_id=chat_id, name=topic_name)
+                thread_id = forum_topic.message_thread_id
+                forum_chat_id = chat_id
+                update_ticket_thread_info(ticket_id, str(chat_id), int(thread_id))
+                return int(forum_chat_id), int(thread_id)
+            except Exception as e:
+                error_msg = str(e).lower()
+                if 'not a forum' in error_msg or 'chat_not_found' in error_msg:
+                    logger.debug(f"Форум не настроен: {error_msg}")
+                else:
+                    logger.warning(f"Не удалось создать тему форума: {e}")
+                return None, None
+
+        if forum_chat_id and thread_id:
+            try:
+                author_tag = _get_username_display(message_from, message_from.id)
+                topic_name = _build_topic_name(ticket_id, subject or 'Обращение без темы', author_tag)
+                await bot.edit_forum_topic(chat_id=int(forum_chat_id), message_thread_id=int(thread_id), name=topic_name)
+                return int(forum_chat_id), int(thread_id)
+            except Exception as e:
+                logger.warning(f"Не удалось переименовать тему форума: {e}")
+                return int(forum_chat_id), int(thread_id)
+        
+        return None, None
+
+    async def _mirror_to_forum(bot: Bot, message: types.Message, ticket_id: int, forum_chat_id: int, thread_id: int, subject: str = None, created_new: bool = False):
+        try:
+            username_display = _get_username_display(message.from_user, message.from_user.id)
+            text_header = _build_notification_text(ticket_id, message.from_user.id, username_display, subject, "", created_new).split("💌 Сообщения:")[0] + "💌 Сообщения:"
+            kb = _admin_actions_kb(ticket_id) if created_new else None
+
+            await bot.send_message(
+                chat_id=int(forum_chat_id),
+                text=text_header,
+                message_thread_id=int(thread_id),
+                reply_markup=kb
+            )
+            await bot.copy_message(
+                chat_id=int(forum_chat_id), 
+                from_chat_id=message.chat.id, 
+                message_id=message.message_id, 
+                message_thread_id=int(thread_id)
+            )
+        except Exception as e:
+            logger.warning(f"Не удалось отзеркалить сообщение пользователя в форум: {e}")
+
+    async def _manage_forum_topic(bot: Bot, ticket: dict, action: str):
+        """Action: close, reopen, delete"""
+        chat_id = ticket.get('forum_chat_id')
+        tid = ticket.get('message_thread_id')
+        if not (chat_id and tid): return
+        try:
+            if action == 'close': await bot.close_forum_topic(chat_id=int(chat_id), message_thread_id=int(tid))
+            elif action == 'reopen': await bot.reopen_forum_topic(chat_id=int(chat_id), message_thread_id=int(tid))
+            elif action == 'delete': await bot.delete_forum_topic(chat_id=int(chat_id), message_thread_id=int(tid))
+        except Exception:
+            pass
+
+    async def _process_ticket_message_flow(bot: Bot, message: types.Message, state: FSMContext, ticket_id: int, subject: str, created_new: bool):
+        content = _extract_content(message)
+        add_support_message(ticket_id, sender="user", content=content)
+        
+        forum_chat_id, thread_id = await _ensure_forum_topic(bot, ticket_id, subject, message.from_user)
+        if forum_chat_id and thread_id:
+             await _mirror_to_forum(bot, message, ticket_id, forum_chat_id, thread_id, subject=subject, created_new=created_new)
+
+        await _send_ticket_confirmation(message, ticket_id, subject, content, created_new)
+        await _notify_admins(bot, message, ticket_id, subject=subject, created_new=created_new)
+        if state: await state.clear()
+
+    async def _change_ticket_status_common(bot: Bot, call: types.CallbackQuery, ticket_id: int, new_status: str, is_admin: bool):
+        action_name = "закрыть" if new_status == 'closed' else "переоткрыть"
+        ticket = get_ticket(ticket_id)
+        if not ticket:
+             if is_admin: return 
+             await _safe_edit(call, TXT_ACCESS_DENIED)
+             return
+
+        # Check permissions
+        if not is_admin:
+            if ticket.get('user_id') != call.from_user.id:
+                await _safe_edit(call, TXT_ACCESS_DENIED)
+                return
+            if ticket.get('status') == new_status:
+                await _safe_edit(call, TXT_ALREADY_CLOSED if new_status == 'closed' else TXT_ALREADY_OPEN)
+                return
+
+        if set_ticket_status(ticket_id, new_status):
+            # Forum update
+            await _manage_forum_topic(bot, ticket, 'close' if new_status == 'closed' else 'reopen')
+            # User Notification
+            if is_admin:
+                 user_id = int(ticket.get('user_id'))
+                 await _send_ticket_closed_notification(bot, user_id, ticket_id, is_user_action=False)
+                 status_text = f"✅ <b>Тикет #{ticket_id} закрыт.</b>" if new_status == 'closed' else f"🔓 <b>Тикет #{ticket_id} переоткрыт.</b>"
+                 try:
+                    await call.message.edit_text(status_text, reply_markup=_admin_actions_kb(ticket_id))
+                 except Exception:
+                    await call.answer("Без изменений")
+            else:
+                 username = _get_username_display(call.from_user, call.from_user.id)
+                 try:
+                    if ticket.get('forum_chat_id') and ticket.get('message_thread_id'):
+                        await bot.send_message(chat_id=int(ticket['forum_chat_id']), text=f"✅ Пользователь {username} закрыл тикет #{ticket_id}.", message_thread_id=int(ticket['message_thread_id']))
+                        await bot.send_message(chat_id=int(ticket['forum_chat_id']), text="Панель управления тикетом:", message_thread_id=int(ticket['message_thread_id']), reply_markup=_admin_actions_kb(ticket_id))
+                 except Exception: pass
+                 
+                 await _send_ticket_closed_notification(bot, call.from_user.id, ticket_id, is_user_action=True, message_obj=call.message)
+                 try: await call.message.answer("Меню поддержки:", reply_markup=_user_main_reply_kb())
+                 except Exception: pass
+        else:
+            if is_admin: await call.message.answer(f"❌ Не удалось {action_name} тикет.")
+            else: await call.message.edit_text(f"<b>❌ Ошибка</b>\nНе удалось {action_name} тикет.")
+
+    async def _get_ticket_and_check_admin(callback: types.CallbackQuery, bot: Bot) -> tuple[dict | None, int | None]:
+        try:
+            ticket_id = int(callback.data.split("_")[-1])
+        except Exception:
+            return None, None
+        
+        ticket = get_ticket(ticket_id)
+        if not ticket:
+            await _safe_edit(callback, TXT_TICKET_NOT_FOUND)
+            return None, None
+            
+        forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
+        
+        is_admin_by_setting = is_admin(callback.from_user.id)
         is_admin_in_chat = False
         try:
-            member = await bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            member = await bot.get_chat_member(chat_id=forum_chat_id, user_id=callback.from_user.id)
             is_admin_in_chat = member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]
         except Exception:
             pass
-        return bool(is_admin_by_setting or is_admin_in_chat)
+            
+        if not (is_admin_by_setting or is_admin_in_chat):
+             return None, None
+             
+        return ticket, ticket_id
+
+    async def _start_ticket_creation_flow(event: types.Message | types.CallbackQuery, state: FSMContext):
+         if isinstance(event, types.CallbackQuery):
+             await event.answer()
+         if await _check_banned(event, state):
+             return
+         if await _check_active_ticket(event, event.from_user.id):
+             return
+         await _send_subject_prompt(event, state)
+
+    # ==========================================
+    # 3) HANDLERS
+    # ==========================================
+
+
 
     @router.message(CommandStart(), F.chat.type == "private")
     async def start_handler(message: types.Message, state: FSMContext, bot: Bot):
@@ -137,32 +567,9 @@ def get_support_router() -> Router:
         if len(args) > 1:
             arg = args[1].strip()
         if arg == "new":
-            existing = _get_latest_open_ticket(message.from_user.id)
-            if existing:
-                await message.answer(
-                    f"<b>⚠️ Активный тикет найден</b>\n\n"
-                    f"У вас уже есть открытый тикет <b>#{existing['ticket_id']}</b>.\n"
-                    f"Пожалуйста, продолжайте переписку в нём."
-                )
-            else:
-                await message.answer(
-                    "<b>📝 Шаг 1/2: Тема обращения</b>\n\n"
-                    "Напишите <b>краткий заголовок</b> (3-5 слов).\n"
-                    "<i>Пример: «Не работает VPN», «Проблема с оплатой»</i>"
-                )
-                await state.set_state(SupportDialog.waiting_for_subject)
+            await _start_ticket_creation_flow(message, state)
             return
-        if _is_user_banned(message.from_user.id):
-            banned_text = (
-                "<b>🚫 Доступ ограничен</b>\n\n"
-                "Ваш аккаунт заблокирован. Вы не можете обращаться в поддержку."
-            )
-            markup = _support_contact_markup()
-            if markup:
-                await message.answer(banned_text, reply_markup=markup)
-            else:
-                await message.answer(banned_text)
-            await state.clear()
+        if await _check_banned(message, state):
             return
 
         support_text = get_setting("support_text") or "<b>👨‍💻 Поддержка</b>\n\nЗдесь вы можете создать обращение или посмотреть историю своих заявок."
@@ -179,56 +586,16 @@ def get_support_router() -> Router:
 
     @router.callback_query(F.data == "support_new_ticket")
     async def support_new_ticket_handler(callback: types.CallbackQuery, state: FSMContext):
-        await callback.answer()
-        if _is_user_banned(callback.from_user.id):
-            text = (
-                "<b>🚫 Доступ ограничен</b>\n\n"
-                "Ваш аккаунт заблокирован. Вы не можете обращаться в поддержку."
-            )
-            try:
-                await callback.answer(text, show_alert=True)
-            except Exception:
-                pass
-            markup = _support_contact_markup()
-            if markup:
-                await callback.message.answer(text, reply_markup=markup)
-            else:
-                await callback.message.answer(text)
-            await state.clear()
-            return
-        existing = _get_latest_open_ticket(callback.from_user.id)
-        if existing:
-            await callback.message.edit_text(
-                f"<b>⚠️ Активный тикет найден</b>\n\n"
-                f"У вас уже есть открытый тикет <b>#{existing['ticket_id']}</b>.\n"
-                f"Пожалуйста, продолжайте переписку в нём."
-            )
-        else:
-            await callback.message.edit_text(
-                "<b>📝 Шаг 1/2: Тема обращения</b>\n\n"
-                "Напишите <b>краткий заголовок</b> (3-5 слов).\n"
-                "<i>Пример: «Не работает VPN», «Проблема с оплатой»</i>"
-            )
-            await state.set_state(SupportDialog.waiting_for_subject)
+        await _start_ticket_creation_flow(callback, state)
 
     @router.message(SupportDialog.waiting_for_subject, F.chat.type == "private")
     async def support_subject_received(message: types.Message, state: FSMContext):
-        if _is_user_banned(message.from_user.id):
-            banned_text = (
-                "<b>🚫 Доступ ограничен</b>\n\n"
-                "Ваш аккаунт заблокирован. Вы не можете обращаться в поддержку."
-            )
-            markup = _support_contact_markup()
-            if markup:
-                await message.answer(banned_text, reply_markup=markup)
-            else:
-                await message.answer(banned_text)
-            await state.clear()
+        if await _check_banned(message, state):
             return
         subject = (message.text or "").strip()
         await state.update_data(subject=subject)
         await message.answer(
-            "<b>✉️ Шаг 2/2: Описание проблемы</b>\n\n"
+            "✉️ <b>Шаг 2/2: Описание проблемы</b>\n\n"
             "Теперь максимально подробно опишите ситуацию <b>одним сообщением</b>.\n"
             "<i>Можете прикрепить скриншот или видео.</i>"
         )
@@ -236,17 +603,7 @@ def get_support_router() -> Router:
 
     @router.message(SupportDialog.waiting_for_message, F.chat.type == "private")
     async def support_message_received(message: types.Message, state: FSMContext, bot: Bot):
-        if _is_user_banned(message.from_user.id):
-            banned_text = (
-                "<b>🚫 Доступ ограничен</b>\n\n"
-                "Ваш аккаунт заблокирован. Вы не можете обращаться в поддержку."
-            )
-            markup = _support_contact_markup()
-            if markup:
-                await message.answer(banned_text, reply_markup=markup)
-            else:
-                await message.answer(banned_text)
-            await state.clear()
+        if await _check_banned(message, state):
             return
         user_id = message.from_user.id
         data = await state.get_data()
@@ -257,194 +614,15 @@ def get_support_router() -> Router:
             await message.answer("❌ Не удалось создать обращение. Попробуйте позже.")
             await state.clear()
             return
-        # Prepare content text
-        content_text = (message.text or message.caption or "").strip()
+
+        await _process_ticket_message_flow(bot, message, state, ticket_id, subject, created_new)
         
-        media_file_path = None
-        media_type = None
-        
-        if message.photo:
-            media_type = 'photo'
-            content_text = f"[Фото] {content_text}".strip()
-        elif message.video:
-            media_type = 'video'
-            content_text = f"[Видео] {content_text}".strip()
-            
-        add_support_message(ticket_id, sender="user", content=content_text)
-        
-        # Download media if exists
-        if media_type:
-            try:
-                if message.photo:
-                    file_id = message.photo[-1].file_id
-                    ext = "jpg"
-                else:
-                    file_id = message.video.file_id
-                    ext = "mp4" # Basic assumption, or get from mime_type
-                
-                file_info = await bot.get_file(file_id)
-                folder_path = os.path.join("src", "shop_bot", "support_bot", "content")
-                os.makedirs(folder_path, exist_ok=True)
-                
-                media_file_path = os.path.join(folder_path, f"{ticket_id}_{file_info.file_unique_id}.{ext}")
-                await bot.download_file(file_info.file_path, media_file_path)
-            except Exception as e:
-                logger.error(f"Failed to download media for ticket {ticket_id}: {e}")
-                media_file_path = None
-
-        ticket = get_ticket(ticket_id)
-        support_forum_chat_id = get_setting("support_forum_chat_id")
-        thread_id = None
-        if support_forum_chat_id and not (ticket and ticket.get('message_thread_id')):
-            try:
-                chat_id = int(support_forum_chat_id)
-                author_tag = (
-                    (message.from_user.username and f"@{message.from_user.username}")
-                    or (message.from_user.full_name if message.from_user else None)
-                    or str(user_id)
-                )
-                subj_full = (subject or 'Обращение без темы')
-                is_star = subj_full.strip().startswith('⭐')
-                display_subj = (subj_full.lstrip('⭐️ ').strip() if is_star else subj_full)
-                trimmed_subject = display_subj[:40]
-                important_prefix = '🔴 Важно: ' if is_star else ''
-                topic_name = f"#{ticket_id} {important_prefix}{trimmed_subject} • от {author_tag}"
-                forum_topic = await bot.create_forum_topic(chat_id=chat_id, name=topic_name)
-                thread_id = forum_topic.message_thread_id
-                update_ticket_thread_info(ticket_id, str(chat_id), int(thread_id))
-                subj_display = (subject or '—')
-                header_text = (
-                    "🆘 Новое обращение\n"
-                    f"Тикет: #{ticket_id}\n"
-                    f"Пользователь: @{message.from_user.username or message.from_user.full_name} (ID: {user_id})\n"
-                    f"Тема: {subj_display} — от @{message.from_user.username or message.from_user.full_name} (ID: {user_id})\n\n"
-                    f"Сообщение:\n{message.text or message.caption or ''}"
-                )
-                if media_file_path:
-                    media_input = FSInputFile(media_file_path)
-                    if media_type == 'photo':
-                        await bot.send_photo(chat_id=chat_id, photo=media_input, caption=header_text, message_thread_id=thread_id, reply_markup=_admin_actions_kb(ticket_id))
-                    elif media_type == 'video':
-                        await bot.send_video(chat_id=chat_id, video=media_input, caption=header_text, message_thread_id=thread_id, reply_markup=_admin_actions_kb(ticket_id))
-                else:
-                    await bot.send_message(chat_id=chat_id, text=header_text, message_thread_id=thread_id, reply_markup=_admin_actions_kb(ticket_id))
-            except Exception as e:
-                logger.warning(f"Не удалось создать тему форума или отправить сообщение для тикета {ticket_id}: {e}")
-        try:
-            ticket = get_ticket(ticket_id)
-            forum_chat_id = ticket and ticket.get('forum_chat_id')
-            thread_id = ticket and ticket.get('message_thread_id')
-            if forum_chat_id and thread_id:
-                username = (message.from_user.username and f"@{message.from_user.username}") or message.from_user.full_name or str(message.from_user.id)
-                # For existing thread copy_message works best but if we have local file...
-                # Actually, copy_message works perfectly for media too, so we don't strictly NEED the local file for the FORUM mirror if we use copy_message.
-                # However, for DM notifications to admins, copy_message might not work if admins are in different chats (private chats).
-                # But wait, copy_message works across chats if the bot has access.
-                # But requirement was: "save to folder... send... delete".
-                
-                # Mirroring to forum using copy_message (original behavior preserved/enhanced)
-                await bot.send_message(
-                    chat_id=int(forum_chat_id),
-                    text=(
-                        f"🆕 Новое обращение от {username} (ID: {message.from_user.id}) по тикету #{ticket_id}:" if created_new
-                        else f"✉️ Новое сообщение по тикету #{ticket_id} от {username} (ID: {message.from_user.id}):"
-                    ),
-                    message_thread_id=int(thread_id)
-                )
-                await bot.copy_message(
-                    chat_id=int(forum_chat_id),
-                    from_chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    message_thread_id=int(thread_id)
-                )
-        except Exception as e:
-            logger.warning(f"Не удалось отзеркалить сообщение пользователя в форум: {e}")
-        await state.clear()
-        if created_new:
-            await message.answer(
-                f"<b>✅ Обращение #{ticket_id} создано!</b>\n\n"
-                "Ожидайте ответа поддержки. Мы скоро свяжемся с вами.",
-                reply_markup=_user_main_reply_kb()
-            )
-        else:
-            await message.answer(
-                f"<b>✉️ Сообщение добавлено в тикет #{ticket_id}</b>",
-                reply_markup=_user_main_reply_kb()
-            )
-
-        try:
-            for aid in get_admin_ids():
-                try:
-                    username_val = message.from_user.username
-                    user_tag = f"@{username_val}" if username_val else "@неуказан"
-                    user_info_str = f"({message.from_user.id}. {user_tag})"
-
-                    if created_new:
-                        header_line = f"🆘 Новое обращение {user_info_str}"
-                    else:
-                        header_line = f"✉️ Пользователь дополнил сообщение {user_info_str}"
-
-                    # If message is text, send as formatted message (copy_message fails with caption for text)
-                    if message.text:
-                         notification_text = (
-                            f"{header_line}\n"
-                            f"ID тикета: #{ticket_id}\n"
-                            f"Сообщение:\n{message.text}"
-                        )
-                         await bot.send_message(
-                            chat_id=int(aid),
-                            text=notification_text,
-                            reply_markup=_admin_dm_reply_kb(ticket_id)
-                        )
-                    else:
-                        # For media, use copy_message which supports caption
-                        caption_part = message.caption or ""
-                        
-                        if not caption_part and message.photo:
-                             caption_part = "[Фото]"
-                        elif not caption_part and message.video:
-                             caption_part = "[Видео]"
-
-                        notification_text = (
-                            f"{header_line}\n"
-                            f"ID тикета: #{ticket_id}\n"
-                            f"Сообщение:\n{caption_part}"
-                        )
-                        await bot.copy_message(
-                            chat_id=int(aid),
-                            from_chat_id=message.chat.id,
-                            message_id=message.message_id,
-                            caption=notification_text,
-                            reply_markup=_admin_dm_reply_kb(ticket_id)
-                        )
-                except Exception:
-                    pass
-        except Exception as e:
-            logger.warning(f"Не удалось уведомить админов о тикете {ticket_id}: {e}")
-            
-        # Cleanup
-        if media_file_path and os.path.exists(media_file_path):
-            try:
-                os.remove(media_file_path)
-            except Exception:
-                pass
+        # Old logic removed, used helper
 
     @router.callback_query(F.data == "support_my_tickets")
     async def support_my_tickets_handler(callback: types.CallbackQuery):
         await callback.answer()
-        tickets = get_user_tickets(callback.from_user.id)
-        text = "<b>📨 Ваши обращения:</b>" if tickets else "<b>📂 У вас пока нет обращений.</b>"
-        rows = []
-        if tickets:
-            for t in tickets:
-                status_text = "🟢 Открыт" if t.get('status') == 'open' else "🔒 Закрыт"
-                is_star = (t.get('subject') or '').startswith('⭐ ')
-                star = '⭐ ' if is_star else ''
-                title = f"{star}#{t['ticket_id']} • {status_text}"
-                if t.get('subject'):
-                    title += f" • {t['subject'][:20]}"
-                rows.append([types.InlineKeyboardButton(text=title, callback_data=f"support_view_{t['ticket_id']}")])
-        await callback.message.edit_text(text, reply_markup=types.InlineKeyboardMarkup(inline_keyboard=rows))
+        await _send_user_tickets_list(callback, callback.from_user.id)
 
     @router.callback_query(F.data.startswith("support_view_"))
     async def support_view_ticket_handler(callback: types.CallbackQuery):
@@ -452,7 +630,7 @@ def get_support_router() -> Router:
         ticket_id = int(callback.data.split("_")[-1])
         ticket = get_ticket(ticket_id)
         if not ticket or ticket.get('user_id') != callback.from_user.id:
-            await callback.message.edit_text("Тикет не найден или доступ запрещён.")
+            await _safe_edit(callback, TXT_ACCESS_DENIED)
             return
         messages = get_ticket_messages(ticket_id)
         human_status = "🟢 Открыт" if ticket.get('status') == 'open' else "🔒 Закрыт"
@@ -485,24 +663,18 @@ def get_support_router() -> Router:
         await callback.answer()
         ticket_id = int(callback.data.split("_")[-1])
         ticket = get_ticket(ticket_id)
-        if _is_user_banned(callback.from_user.id):
-            text = (
-                "<b>🚫 Доступ ограничен</b>\n\n"
-                "Ваш аккаунт заблокирован. Вы не можете обращаться в поддержку."
-            )
-            try:
-                await callback.answer(text, show_alert=True)
-            except Exception:
-                pass
-            markup = _support_contact_markup()
-            if markup:
-                await callback.message.edit_text(text, reply_markup=markup)
-            else:
-                await callback.message.edit_text(text)
-            await state.clear()
-            return
+        if await _check_banned(callback, state):
+             # Original code executed edit_text here if banned.
+             # Our _check_banned does answer(alert).
+             # To preserve UX of "replacing" the menu with banned message:
+             markup = _support_contact_markup()
+             if markup:
+                await callback.message.edit_text(TXT_BAN_RESTRICTED, reply_markup=markup)
+             else:
+                await callback.message.edit_text(TXT_BAN_RESTRICTED)
+             return
         if not ticket or ticket.get('user_id') != callback.from_user.id or ticket.get('status') != 'open':
-            await callback.message.edit_text("Нельзя ответить на этот тикет.")
+            await _safe_edit(callback, TXT_CANNOT_REPLY)
             return
         await state.update_data(reply_ticket_id=ticket_id)
         await callback.message.edit_text(
@@ -514,129 +686,17 @@ def get_support_router() -> Router:
 
     @router.message(SupportDialog.waiting_for_reply, F.chat.type == "private")
     async def support_reply_received(message: types.Message, state: FSMContext, bot: Bot):
-        if _is_user_banned(message.from_user.id):
-            banned_text = (
-                "<b>🚫 Доступ ограничен</b>\n\n"
-                "Ваш аккаунт заблокирован. Вы не можете обращаться в поддержку."
-            )
-            markup = _support_contact_markup()
-            if markup:
-                await message.answer(banned_text, reply_markup=markup)
-            else:
-                await message.answer(banned_text)
-            await state.clear()
+        if await _check_banned(message, state):
             return
         data = await state.get_data()
         ticket_id = data.get('reply_ticket_id')
         ticket = get_ticket(ticket_id)
         if not ticket or ticket.get('user_id') != message.from_user.id or ticket.get('status') != 'open':
-            await message.answer("Нельзя ответить на этот тикет.")
+            await message.answer(TXT_CANNOT_REPLY)
             await state.clear()
             return
-        add_support_message(ticket_id, sender='user', content=(message.text or message.caption or ''))
-        await state.clear()
-        await message.answer(
-            "<b>✅ Сообщение отправлено</b>\n"
-            "Ваш ответ передан поддержке."
-        )
-        try:
-            forum_chat_id = ticket.get('forum_chat_id')
-            thread_id = ticket.get('message_thread_id')
-            if not (forum_chat_id and thread_id):
-                support_forum_chat_id = get_setting("support_forum_chat_id")
-                if support_forum_chat_id:
-                    try:
-                        chat_id = int(support_forum_chat_id)
-                        subj_full = (ticket.get('subject') or 'Обращение без темы')
-                        is_star = subj_full.strip().startswith('⭐')
-                        display_subj = (subj_full.lstrip('⭐️ ').strip() if is_star else subj_full)
-                        trimmed_subject = display_subj[:40]
-                        author_tag = (
-                            (message.from_user.username and f"@{message.from_user.username}")
-                            or (message.from_user.full_name if message.from_user else None)
-                            or str(message.from_user.id)
-                        )
-                        important_prefix = '🔴 Важно: ' if is_star else ''
-                        topic_name = f"#{ticket_id} {important_prefix}{trimmed_subject} • от {author_tag}"
-                        forum_topic = await bot.create_forum_topic(chat_id=chat_id, name=topic_name)
-                        thread_id = forum_topic.message_thread_id
-                        forum_chat_id = chat_id
-                        update_ticket_thread_info(ticket_id, str(chat_id), int(thread_id))
-                        subj_display = (ticket.get('subject') or '—')
-                        header = (
-                            "📌 Тред создан автоматически\n"
-                            f"Тикет: #{ticket_id}\n"
-                            f"Пользователь: ID {ticket.get('user_id')}\n"
-                            f"Тема: {subj_display} — от ID {ticket.get('user_id')}"
-                        )
-                        await bot.send_message(chat_id=chat_id, text=header, message_thread_id=thread_id, reply_markup=_admin_actions_kb(ticket_id))
-                    except Exception as e:
-                        logger.warning(f"Не удалось автоматически создать тему форума для тикета {ticket_id}: {e}")
-            if forum_chat_id and thread_id:
-                try:
-                    subj_full = (ticket.get('subject') or 'Обращение без темы')
-                    is_star = subj_full.strip().startswith('⭐')
-                    display_subj = (subj_full.lstrip('⭐️ ').strip() if is_star else subj_full)
-                    trimmed = display_subj[:40]
-                    author_tag = (
-                        (message.from_user.username and f"@{message.from_user.username}")
-                        or (message.from_user.full_name if message.from_user else None)
-                        or str(message.from_user.id)
-                    )
-                    important_prefix = '🔴 Важно: ' if is_star else ''
-                    topic_name = f"#{ticket_id} {important_prefix}{trimmed} • от {author_tag}"
-                    await bot.edit_forum_topic(chat_id=int(forum_chat_id), message_thread_id=int(thread_id), name=topic_name)
-                except Exception as e:
-                    logger.warning(f"Не удалось переименовать существующую тему для тикета {ticket_id}: {e}")
-                username = (message.from_user.username and f"@{message.from_user.username}") or message.from_user.full_name or str(message.from_user.id)
-                await bot.send_message(
-                    chat_id=int(forum_chat_id),
-                    text=f"✉️ Новое сообщение по тикету #{ticket_id} от {username} (ID: {message.from_user.id}):",
-                    message_thread_id=int(thread_id)
-                )
-                await bot.copy_message(chat_id=int(forum_chat_id), from_chat_id=message.chat.id, message_id=message.message_id, message_thread_id=int(thread_id))
-        except Exception as e:
-            logger.warning(f"Не удалось отзеркалить ответ пользователя в форум: {e}")
-        admin_id = get_setting("admin_telegram_id")
-        if admin_id:
-            try:
-                username_val = message.from_user.username
-                user_tag = f"@{username_val}" if username_val else "@неуказан"
-                user_info_str = f"({message.from_user.id}. {user_tag})"
-                header_line = f"✉️ Ответ пользователя {user_info_str}"
-                
-                if message.text:
-                    notification_text = (
-                        f"{header_line}\n"
-                        f"ID тикета: #{ticket_id}\n"
-                        f"Сообщение:\n{message.text}"
-                    )
-                    await bot.send_message(
-                        int(admin_id),
-                        notification_text,
-                        reply_markup=_admin_dm_reply_kb(ticket_id)
-                    )
-                else:
-                    caption_part = message.caption or ""
-                    if not caption_part and message.photo:
-                        caption_part = "[Фото]"
-                    elif not caption_part and message.video:
-                        caption_part = "[Видео]"
-
-                    notification_text = (
-                        f"{header_line}\n"
-                        f"ID тикета: #{ticket_id}\n"
-                        f"Сообщение:\n{caption_part}"
-                    )
-                    await bot.copy_message(
-                        chat_id=int(admin_id),
-                        from_chat_id=message.chat.id,
-                        message_id=message.message_id,
-                        caption=notification_text,
-                        reply_markup=_admin_dm_reply_kb(ticket_id)
-                    )
-            except Exception as e:
-                logger.warning(f"Не удалось уведомить админа о сообщении тикета #{ticket_id}: {e}")
+        
+        await _process_ticket_message_flow(bot, message, state, ticket_id, ticket.get('subject'), created_new=False)
 
     @router.message(F.is_topic_message == True)
     async def forum_thread_message_handler(message: types.Message, bot: Bot, state: FSMContext):
@@ -655,16 +715,12 @@ def get_support_router() -> Router:
                     note_body = (message.text or message.caption or '').strip()
                     author_id = message.from_user.id if message.from_user else None
                     if author_id:
-                        username = None
-                        if message.from_user.username:
-                            username = f"@{message.from_user.username}"
-                        else:
-                            username = message.from_user.full_name or str(author_id)
+                        username = _get_username_display(message.from_user, author_id)
                         note_text = f"[Заметка от {username} (ID: {author_id})]\n{note_body}"
                     else:
                         note_text = note_body
                     add_support_message(int(ticket['ticket_id']), sender='note', content=note_text)
-                    await message.answer("📝 Внутренняя заметка сохранена.")
+                    await message.answer("✅ <b>Внутренняя заметка сохранена.</b>")
                     await state.clear()
                     return
             except Exception:
@@ -685,20 +741,7 @@ def get_support_router() -> Router:
             content = (message.text or message.caption or "").strip()
             if content:
                 add_support_message(ticket_id=int(ticket['ticket_id']), sender='admin', content=content)
-            header = await bot.send_message(
-                chat_id=user_id,
-                text=f"💬 Ответ поддержки по тикету #{ticket['ticket_id']}"
-            )
-            try:
-                await bot.copy_message(
-                    chat_id=user_id,
-                    from_chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    reply_to_message_id=header.message_id
-                )
-            except Exception:
-                if content:
-                    await bot.send_message(chat_id=user_id, text=content)
+            await _send_admin_reply_to_user(bot, user_id, int(ticket['ticket_id']), message, content)
         except Exception as e:
             logger.warning(f"Не удалось передать сообщение темы форума: {e}")
 
@@ -706,198 +749,50 @@ def get_support_router() -> Router:
     async def support_close_ticket_handler(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
         ticket_id = int(callback.data.split("_")[-1])
-        ticket = get_ticket(ticket_id)
-        if not ticket or ticket.get('user_id') != callback.from_user.id:
-            await callback.message.edit_text("Тикет не найден или доступ запрещён.")
-            return
-        if ticket.get('status') == 'closed':
-            await callback.message.edit_text("Тикет уже закрыт.")
-            return
-        ok = set_ticket_status(ticket_id, 'closed')
-        if ok:
-            try:
-                forum_chat_id = ticket.get('forum_chat_id')
-                thread_id = ticket.get('message_thread_id') or getattr(callback.message, 'message_thread_id', None)
-                if forum_chat_id and thread_id:
-                    try:
-                        username = (callback.from_user.username and f"@{callback.from_user.username}") or callback.from_user.full_name or str(callback.from_user.id)
-                        await bot.send_message(
-                            chat_id=int(forum_chat_id),
-                            text=f"✅ Пользователь {username} закрыл тикет #{ticket_id}.",
-                            message_thread_id=int(thread_id)
-                        )
-                        await bot.send_message(
-                            chat_id=int(forum_chat_id),
-                            text="Панель управления тикетом:",
-                            message_thread_id=int(thread_id),
-                            reply_markup=_admin_actions_kb(ticket_id)
-                        )
-                    except Exception:
-                        pass
-                    try:
-                        await bot.close_forum_topic(chat_id=int(forum_chat_id), message_thread_id=int(thread_id))
-                    except Exception:
-                        pass
-            except Exception as e:
-                logger.warning(f"Не удалось закрыть тему форума для тикета {ticket_id} из бота: {e}")
-            await callback.message.edit_text(
-                "<b>✅ Тикет успешно закрыт</b>\n\n"
-                "Спасибо за обращение! Если возникнут новые вопросы — создавайте новый тикет.",
-                reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[[types.InlineKeyboardButton(text="⬅️ К списку", callback_data="support_my_tickets")]])
-            )
-            try:
-                await callback.message.answer("Меню поддержки:", reply_markup=_user_main_reply_kb())
-            except Exception:
-                pass
-        else:
-            await callback.message.edit_text("<b>❌ Ошибка</b>\nНе удалось закрыть тикет.")
+        await _change_ticket_status_common(bot, callback, ticket_id, 'closed', is_admin=False)
 
     @router.callback_query(F.data.startswith("admin_close_"))
     async def admin_close_ticket(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
-        if not ticket:
-            await callback.message.edit_text("Тикет не найден.")
-            return
-        forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
-        if set_ticket_status(ticket_id, 'closed'):
-            try:
-                thread_id = ticket.get('message_thread_id') or getattr(callback.message, 'message_thread_id', None)
-                if thread_id:
-                    await bot.close_forum_topic(chat_id=forum_chat_id, message_thread_id=int(thread_id))
-            except Exception:
-                pass
-            try:
-                await callback.message.edit_text(
-                    f"✅ Тикет #{ticket_id} закрыт.",
-                    reply_markup=_admin_actions_kb(ticket_id)
-                )
-            except TelegramBadRequest as e:
-                if "message is not modified" in str(e):
-                    await callback.answer("Без изменений", show_alert=False)
-                else:
-                    raise
-            try:
-                user_id = int(ticket.get('user_id'))
-                await bot.send_message(chat_id=user_id, text=f"✅ Ваш тикет #{ticket_id} был закрыт администратором. Спасибо за обращение!")
-            except Exception:
-                pass
-        else:
-            await callback.message.answer("❌ Не удалось закрыть тикет.")
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
+        if not ticket: return
+        await _change_ticket_status_common(bot, callback, ticket_id, 'closed', is_admin=True)
 
     @router.callback_query(F.data.startswith("admin_reopen_"))
     async def admin_reopen_ticket(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
-        if not ticket:
-            await callback.message.edit_text("Тикет не найден.")
-            return
-        forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
-        if set_ticket_status(ticket_id, 'open'):
-            try:
-                thread_id = ticket.get('message_thread_id') or getattr(callback.message, 'message_thread_id', None)
-                if thread_id:
-                    await bot.reopen_forum_topic(chat_id=forum_chat_id, message_thread_id=int(thread_id))
-            except Exception:
-                pass
-            try:
-                await callback.message.edit_text(
-                    f"🔓 Тикет #{ticket_id} переоткрыт.",
-                    reply_markup=_admin_actions_kb(ticket_id)
-                )
-            except TelegramBadRequest as e:
-                if "message is not modified" in str(e):
-                    await callback.answer("Без изменений", show_alert=False)
-                else:
-                    raise
-            try:
-                user_id = int(ticket.get('user_id'))
-                await bot.send_message(chat_id=user_id, text=f"🔓 Ваш тикет #{ticket_id} был переоткрыт администратором. Вы можете продолжить переписку.")
-            except Exception:
-                pass
-        else:
-            await callback.message.answer("❌ Не удалось переоткрыть тикет.")
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
+        if not ticket: return
+        await _change_ticket_status_common(bot, callback, ticket_id, 'open', is_admin=True)
 
     @router.callback_query(F.data.startswith("admin_delete_"))
     async def admin_delete_ticket(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
-        if not ticket:
-
-            try:
-                await callback.answer("Тикет уже удалён или не найден.", show_alert=False)
-            except Exception:
-                pass
-            return
-        forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
-
-        try:
-            await callback.message.edit_text(
-                f"🗑 Удаляю тикет #{ticket_id}..."
-            )
-        except Exception:
-
-            pass
-
-
-        try:
-            thread_id = ticket.get('message_thread_id') or getattr(callback.message, 'message_thread_id', None)
-            if thread_id:
-                try:
-                    await bot.delete_forum_topic(chat_id=forum_chat_id, message_thread_id=int(thread_id))
-                except Exception:
-                    try:
-                        await bot.close_forum_topic(chat_id=forum_chat_id, message_thread_id=int(thread_id))
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-
-
-        ok = delete_ticket(ticket_id)
-        if ok:
-
-            try:
-                await callback.answer(f"🗑 Тикет #{ticket_id} удалён.", show_alert=False)
-            except Exception:
-                pass
+        # Custom logic for delete: separate check because of specific error message?
+        # The prompt said "same logic". Original had a try-catch and specific messages.
+        # But _get_ticket_and_check_admin is cleaner. 
+        # Let's keep specific message if we can't use helper, OR assume helper generic message is fine.
+        # Original: "Тикет уже удалён или не найден." (show_alert=False) vs helper "❌ Тикет не найден." (edit_text)
+        # Helper uses edit_text.
+        # Let's use helper for consistency.
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
+        if not ticket: return
+        
+        await _safe_edit(callback, f"🗑 Удаляю тикет #{ticket_id}...")
+        await _manage_forum_topic(bot, ticket, 'delete')
+        
+        if delete_ticket(ticket_id):
+            await callback.answer(f"🗑 Тикет #{ticket_id} удалён.", show_alert=False)
         else:
-            try:
-                await callback.answer("❌ Не удалось удалить тикет.", show_alert=True)
-            except Exception:
-                pass
+            await callback.answer("❌ Не удалось удалить тикет.", show_alert=True)
 
     @router.callback_query(F.data.startswith("admin_star_"))
     async def admin_toggle_star(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket:
             return
         forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
         subject = (ticket.get('subject') or '').strip()
         is_starred = subject.startswith("⭐ ")
         if is_starred:
@@ -921,12 +816,8 @@ def get_support_router() -> Router:
                             author_tag = f"ID {user_id}"
                     else:
                         author_tag = "пользователь"
-                    subj_full = (new_subject or 'Обращение без темы')
-                    is_star2 = subj_full.strip().startswith('⭐')
-                    display_subj2 = (subj_full.lstrip('⭐️ ').strip() if is_star2 else subj_full)
-                    trimmed = display_subj2[:40]
-                    important_prefix2 = '🔴 Важно: ' if is_star2 else ''
-                    topic_name = f"#{ticket_id} {important_prefix2}{trimmed} • от {author_tag}"
+                    is_star2, display_subj2 = _parse_star_subject(new_subject)
+                    topic_name = _build_topic_name(ticket_id, new_subject, author_tag)
                     await bot.edit_forum_topic(chat_id=int(ticket['forum_chat_id']), message_thread_id=int(thread_id), name=topic_name)
             except Exception:
                 pass
@@ -953,24 +844,17 @@ def get_support_router() -> Router:
             except Exception:
                 pass
             state_text = "включена" if not is_starred else "снята"
-            await callback.message.answer(f"⭐ Пометка важности {state_text}. Название темы обновлено.")
+            await callback.message.answer(f"✅ <b>Пометка важности {state_text}.</b>\nНазвание темы обновлено.")
         else:
             await callback.message.answer("❌ Не удалось обновить тему тикета.")
 
     @router.callback_query(F.data.startswith("admin_user_"))
     async def admin_show_user(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket:
-            await callback.message.edit_text("Тикет не найден.")
             return
         forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
 
         is_banned = None
         try:
@@ -990,7 +874,7 @@ def get_support_router() -> Router:
         try:
             if user_id_val:
                 u_obj = await bot.get_chat(int(user_id_val))
-                username_val = f"@{u_obj.username}" if u_obj.username else (u_obj.full_name or str(user_id_val))
+                username_val = _get_username_display(u_obj, user_id_val)
         except Exception:
             pass
             
@@ -1008,21 +892,14 @@ def get_support_router() -> Router:
     @router.callback_query(F.data.startswith("admin_reply_dm_"))
     async def admin_reply_dm_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-
-        ticket = get_ticket(ticket_id)
+        # Here logic was slightly different: only check is_admin(callback.from_user.id)
+        # Because Admin DM might happen from private chat where bot is not admin.
+        # _get_ticket_and_check_admin checks both is_admin setting and chat admin.
+        # It should be safe to use it.
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket:
-            await callback.message.answer("Тикет не найден.")
-            return
-            
-        # Проверка прав админа (хотя уведомления приходят только админам, перепроверка security-wise)
-        if not is_admin(callback.from_user.id):
-             await callback.message.answer("⛔ Нет доступа.")
              return
-
+             
         await state.update_data(admin_reply_ticket_id=ticket_id)
         await callback.message.answer(
             f"💬 Введите ответ для пользователя по тикету #{ticket_id}:",
@@ -1035,18 +912,18 @@ def get_support_router() -> Router:
         data = await state.get_data()
         ticket_id = data.get('admin_reply_ticket_id')
         if not ticket_id:
-            await message.answer("Ошибка контекст ответа потерян.")
+            await message.answer("❌ <b>Ошибка: контекст ответа потерян.</b>")
             await state.clear()
             return
             
         content = (message.text or message.caption or "").strip()
         if not content:
-            await message.answer("Сообщение не может быть пустым.")
+            await message.answer("⚠️ <b>Сообщение не может быть пустым.</b>")
             return
             
         ticket = get_ticket(ticket_id)
         if not ticket:
-            await message.answer("Тикет не найден.")
+            await message.answer(TXT_TICKET_NOT_FOUND)
             await state.clear()
             return
 
@@ -1057,19 +934,7 @@ def get_support_router() -> Router:
         
         # 2. Отправляем пользователю в ЛС
         try:
-            header = await bot.send_message(
-                chat_id=user_id,
-                text=f"💬 Ответ поддержки по тикету #{ticket_id}"
-            )
-            try:
-                await bot.copy_message(
-                    chat_id=user_id,
-                    from_chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    reply_to_message_id=header.message_id
-                )
-            except Exception:
-                await bot.send_message(chat_id=user_id, text=content)
+            await _send_admin_reply_to_user(bot, user_id, ticket_id, message, content)
         except Exception as e:
             logger.warning(f"Failed to send reply to user {user_id}: {e}")
             await message.answer("❌ Не удалось доставить сообщение пользователю (возможно, он заблокировал бота).")
@@ -1081,7 +946,7 @@ def get_support_router() -> Router:
             thread_id = ticket.get('message_thread_id')
             if forum_chat_id and thread_id:
                  # От своего имени (бота) пишем, что админ (с таким-то ID/именем) ответил через бота
-                 admin_tag = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
+                 admin_tag = _get_username_display(message.from_user, message.from_user.id)
                  await bot.send_message(
                     chat_id=int(forum_chat_id),
                     text=f"👨‍💻 Ответ администратора {admin_tag} через ЛС бота:\n\n{content}",
@@ -1090,56 +955,20 @@ def get_support_router() -> Router:
         except Exception as e:
             logger.warning(f"Failed to mirror admin reply to forum: {e}")
 
-        await message.answer("✅ Сообщение отправлено.")
+        await message.answer("✅ <b>Сообщение успешно отправлено пользователю.</b>")
         await state.clear()
 
-    def _support_contact_markup() -> types.InlineKeyboardMarkup | None:
-        support = (get_setting("support_bot_username") or get_setting("support_user") or "").strip()
-        if not support:
-            return None
-        url: str | None = None
-        if support.startswith("@"):
-            url = f"tg://resolve?domain={support[1:]}"
-        elif support.startswith("tg://"):
-            url = support
-        elif support.startswith("http://") or support.startswith("https://"):
-            try:
-                part = support.split("/")[-1].split("?")[0]
-                if part:
-                    url = f"tg://resolve?domain={part}"
-                else:
-                    url = support
-            except Exception:
-                url = support
-        else:
-            url = f"tg://resolve?domain={support}"
-        if not url:
-            return None
-        return types.InlineKeyboardMarkup(inline_keyboard=[[types.InlineKeyboardButton(text="🆘 Написать в поддержку", url=url)]])
+    # _support_contact_markup moved to top
 
-    async def _notify_user_about_ban(bot: Bot, user_id: int, text: str) -> None:
-        try:
-            markup = _support_contact_markup()
-            if markup:
-                await bot.send_message(user_id, text, reply_markup=markup)
-            else:
-                await bot.send_message(user_id, text)
-        except Exception:
-            pass
+    # _notify_user_about_ban moved to top
 
     @router.callback_query(F.data.startswith("admin_ban_user_"))
     async def admin_ban_user(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket:
             return
         forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
         try:
             user_id = int(ticket.get('user_id'))
         except Exception:
@@ -1150,7 +979,7 @@ def get_support_router() -> Router:
         except Exception as e:
             await callback.message.answer(f"❌ Не удалось забанить пользователя: {e}")
             return
-        await callback.message.answer(f"🚫 Пользователь {user_id} забанен.")
+        await callback.message.answer(f"🚫 <b>Пользователь {user_id} забанен.</b>")
 
         await _notify_user_about_ban(bot, user_id, "🚫 Ваш аккаунт был заблокирован администратором. Если это ошибка — свяжитесь с поддержкой.")
         try:
@@ -1161,16 +990,10 @@ def get_support_router() -> Router:
     @router.callback_query(F.data.startswith("admin_unban_user_"))
     async def admin_unban_user(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket:
-            return
+             return
         forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
         try:
             user_id = int(ticket.get('user_id'))
         except Exception:
@@ -1181,7 +1004,7 @@ def get_support_router() -> Router:
         except Exception as e:
             await callback.message.answer(f"❌ Не удалось разбанить пользователя: {e}")
             return
-        await callback.message.answer(f"✅ Пользователь {user_id} разбанен.")
+        await callback.message.answer(f"✅ <b>Пользователь {user_id} разбанен.</b>")
 
         try:
             await bot.send_message(user_id, "✅ Ваш аккаунт был разблокирован. Вы снова можете пользоваться ботом.")
@@ -1195,36 +1018,24 @@ def get_support_router() -> Router:
     @router.callback_query(F.data.startswith("admin_note_"))
     async def admin_note_prompt(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket:
-            return
+             return
         forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
         await state.update_data(note_ticket_id=ticket_id)
-        await callback.message.answer("📝 Отправьте внутреннюю заметку одним сообщением. Она не будет отправлена пользователю.")
+        await callback.message.answer("📝 <b>Отправьте внутреннюю заметку одним сообщением.</b>\nОна не будет отправлена пользователю.")
         await state.set_state(AdminDialog.waiting_for_note)
 
     @router.callback_query(F.data.startswith("admin_notes_"))
     async def admin_list_notes(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        try:
-            ticket_id = int(callback.data.split("_")[-1])
-        except Exception:
-            return
-        ticket = get_ticket(ticket_id)
+        ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket:
             return
         forum_chat_id = int(ticket.get('forum_chat_id') or callback.message.chat.id)
-        if not await _is_admin(bot, forum_chat_id, callback.from_user.id):
-            return
         notes = [m for m in get_ticket_messages(ticket_id) if m.get('sender') == 'note']
         if not notes:
-            await callback.message.answer("🗒 Внутренних заметок пока нет.")
+            await callback.message.answer("🗒 <b>Внутренних заметок пока нет.</b>")
             return
         lines = [f"🗒 Заметки по тикету #{ticket_id}:"]
         for m in notes:
@@ -1243,65 +1054,24 @@ def get_support_router() -> Router:
             await state.clear()
             return
         author_id = message.from_user.id if message.from_user else None
-        username = None
-        if message.from_user:
-            if message.from_user.username:
-                username = f"@{message.from_user.username}"
-            else:
-                username = message.from_user.full_name or str(author_id)
+        username = _get_username_display(message.from_user, author_id) if message.from_user else None
         note_body = (message.text or message.caption or '').strip()
         note_text = f"[Заметка от {username} (ID: {author_id})]\n{note_body}" if author_id else note_body
         add_support_message(int(ticket_id), sender='note', content=note_text)
-        await message.answer("📝 Внутренняя заметка сохранена.")
+        await message.answer("✅ <b>Внутренняя заметка сохранена.</b>")
         await state.clear()
 
     @router.message(F.text == "▶️ Начать", F.chat.type == "private")
     async def start_text_button(message: types.Message, state: FSMContext):
-        existing = _get_latest_open_ticket(message.from_user.id)
-        if existing:
-            await message.answer(
-                f"<b>⚠️ Активный тикет найден</b>\n\n"
-                f"У вас уже есть открытый тикет <b>#{existing['ticket_id']}</b>.\n"
-                f"Пожалуйста, продолжайте переписку в нём."
-            )
-        else:
-            await message.answer(
-                "<b>📝 Шаг 1/2: Тема обращения</b>\n\n"
-                "Напишите <b>краткий заголовок</b> (3-5 слов).\n"
-                "<i>Пример: «Не работает VPN», «Проблема с оплатой»</i>"
-            )
-            await state.set_state(SupportDialog.waiting_for_subject)
+        await _start_ticket_creation_flow(message, state)
 
     @router.message(F.text == "✍️ Новое обращение", F.chat.type == "private")
     async def new_ticket_text_button(message: types.Message, state: FSMContext):
-        existing = _get_latest_open_ticket(message.from_user.id)
-        if existing:
-            await message.answer(
-                f"<b>⚠️ Активный тикет найден</b>\n\n"
-                f"У вас уже есть открытый тикет <b>#{existing['ticket_id']}</b>.\n"
-                f"Пожалуйста, продолжайте переписку в нём."
-            )
-        else:
-            await message.answer(
-                "<b>📝 Шаг 1/2: Тема обращения</b>\n\n"
-                "Напишите <b>краткий заголовок</b> (3-5 слов).\n"
-                "<i>Пример: «Не работает VPN», «Проблема с оплатой»</i>"
-            )
-            await state.set_state(SupportDialog.waiting_for_subject)
+        await _start_ticket_creation_flow(message, state)
 
     @router.message(F.text == "📨 Мои обращения", F.chat.type == "private")
     async def my_tickets_text_button(message: types.Message):
-        tickets = get_user_tickets(message.from_user.id)
-        text = "<b>📨 Ваши обращения:</b>" if tickets else "<b>📂 У вас пока нет обращений.</b>"
-        rows = []
-        if tickets:
-            for t in tickets:
-                status_text = "🟢 Открыт" if t.get('status') == 'open' else "🔒 Закрыт"
-                title = f"#{t['ticket_id']} • {status_text}"
-                if t.get('subject'):
-                    title += f" • {t['subject'][:20]}"
-                rows.append([types.InlineKeyboardButton(text=title, callback_data=f"support_view_{t['ticket_id']}")])
-        await message.answer(text, reply_markup=types.InlineKeyboardMarkup(inline_keyboard=rows))
+        await _send_user_tickets_list(message, message.from_user.id)
 
     @router.message(F.chat.type == "private")
     async def relay_user_message_to_forum(message: types.Message, bot: Bot, state: FSMContext):
@@ -1313,141 +1083,17 @@ def get_support_router() -> Router:
         if not user_id:
             return
 
-        if _is_user_banned(user_id):
-            banned_text = (
-                "<b>🚫 Доступ ограничен</b>\n\n"
-                "Ваш аккаунт заблокирован. Вы не можете обращаться в поддержку."
-            )
-            markup = _support_contact_markup()
-            if markup:
-                await message.answer(banned_text, reply_markup=markup)
-            else:
-                await message.answer(banned_text)
-            await state.clear()
+        if await _check_banned(message, state):
             return
 
         content = (message.text or message.caption or '')
         ticket_id, created_new = get_or_create_open_ticket(user_id, None)
         if not ticket_id:
             return
-        add_support_message(ticket_id, sender='user', content=content)
+        
         ticket = get_ticket(ticket_id)
-
-        try:
-            forum_chat_id = ticket.get('forum_chat_id')
-            thread_id = ticket.get('message_thread_id')
-            if not (forum_chat_id and thread_id):
-                support_forum_chat_id = get_setting("support_forum_chat_id")
-                if support_forum_chat_id:
-                    try:
-                        chat_id = int(support_forum_chat_id)
-                        subj_full = (ticket.get('subject') or 'Обращение без темы')
-                        is_star = subj_full.strip().startswith('⭐')
-                        display_subj = (subj_full.lstrip('⭐️ ').strip() if is_star else subj_full)
-                        trimmed = display_subj[:40]
-                        author_tag = (
-                            (message.from_user.username and f"@{message.from_user.username}")
-                            or (message.from_user.full_name if message.from_user else None)
-                            or str(message.from_user.id)
-                        )
-                        important_prefix = '🔴 Важно: ' if is_star else ''
-                        topic_name = f"#{ticket_id} {important_prefix}{trimmed} • от {author_tag}"
-                        forum_topic = await bot.create_forum_topic(chat_id=chat_id, name=topic_name)
-                        thread_id = forum_topic.message_thread_id
-                        forum_chat_id = chat_id
-                        update_ticket_thread_info(ticket_id, str(chat_id), int(thread_id))
-                        subj_display = (ticket.get('subject') or '—')
-                        header = (
-                            ("🆘 Новое обращение\n" if created_new else "📌 Тред создан автоматически\n") +
-                            f"Тикет: #{ticket_id}\n" \
-                            f"Пользователь: @{message.from_user.username or message.from_user.full_name} (ID: {message.from_user.id})\n" \
-                            f"Тема: {subj_display} — от @{message.from_user.username or message.from_user.full_name} (ID: {message.from_user.id})"
-                        )
-                        await bot.send_message(chat_id=chat_id, text=header, message_thread_id=thread_id, reply_markup=_admin_actions_kb(ticket_id))
-                    except Exception as e:
-                        logger.warning(f"Не удалось автоматически создать тему форума для тикета {ticket_id}: {e}")
-            if forum_chat_id and thread_id:
-                try:
-                    subj_full = (ticket.get('subject') or 'Обращение без темы')
-                    is_star = subj_full.strip().startswith('⭐')
-                    display_subj = (subj_full.lstrip('⭐️ ').strip() if is_star else subj_full)
-                    trimmed = display_subj[:40]
-                    author_tag = (
-                        (message.from_user.username and f"@{message.from_user.username}")
-                        or (message.from_user.full_name if message.from_user else None)
-                        or str(message.from_user.id)
-                    )
-                    important_prefix = '🔴 Важно: ' if is_star else ''
-                    topic_name = f"#{ticket_id} {important_prefix}{trimmed} • от {author_tag}"
-                    await bot.edit_forum_topic(chat_id=int(forum_chat_id), message_thread_id=int(thread_id), name=topic_name)
-                except Exception as e:
-                    logger.warning(f"Не удалось переименовать тему для тикета свободного сообщения {ticket_id}: {e}")
-                username = (message.from_user.username and f"@{message.from_user.username}") or message.from_user.full_name or str(message.from_user.id)
-                await bot.send_message(
-                    chat_id=int(forum_chat_id),
-                    text=(
-                        f"🆘 Новое обращение от {username} (ID: {message.from_user.id}) по тикету #{ticket_id}:" if created_new
-                        else f"✉️ Новое сообщение по тикету #{ticket_id} от {username} (ID: {message.from_user.id}):"
-                    ),
-                    message_thread_id=int(thread_id)
-                )
-                await bot.copy_message(chat_id=int(forum_chat_id), from_chat_id=message.chat.id, message_id=message.message_id, message_thread_id=int(thread_id))
-        except Exception as e:
-            logger.warning(f"Не удалось отзеркалить свободное сообщение пользователя в форум для тикета {ticket_id}: {e}")
-
-        try:
-            for aid in get_admin_ids():
-                try:
-                    username_val = message.from_user.username
-                    user_tag = f"@{username_val}" if username_val else "@неуказан"
-                    user_info_str = f"({message.from_user.id}. {user_tag})"
-
-                    if created_new:
-                        header_line = f"🆘 Новое обращение {user_info_str}"
-                    else:
-                        header_line = f"✉️ Сообщение добавлено в тикет {user_info_str}"
-
-                    content_part = message.caption or ""
-                    if not content_part and message.photo:
-                         content_part = "[Фото]"
-                    elif not content_part and message.video:
-                         content_part = "[Видео]"
-
-                    if message.text:
-                         notification_text = (
-                            f"{header_line}\n"
-                            f"ID тикета: #{ticket_id}\n"
-                            f"Сообщение:\n{message.text}"
-                        )
-                         await bot.send_message(
-                            chat_id=int(aid),
-                            text=notification_text,
-                            reply_markup=_admin_dm_reply_kb(ticket_id)
-                        )
-                    else:
-                        notification_text = (
-                            f"{header_line}\n"
-                            f"ID тикета: #{ticket_id}\n"
-                            f"Сообщение:\n{content_part}"
-                        )
-                        await bot.copy_message(
-                            chat_id=int(aid),
-                            from_chat_id=message.chat.id,
-                            message_id=message.message_id,
-                            caption=notification_text,
-                            reply_markup=_admin_dm_reply_kb(ticket_id)
-                        )
-                except Exception:
-                    pass
-        except Exception as e:
-            logger.warning(f"Не удалось уведомить админов о тикете {ticket_id}: {e}")
-
-        try:
-            if created_new:
-                await message.answer(f"✅ Обращение создано: #{ticket_id}. Мы ответим вам как можно скорее.")
-            else:
-                await message.answer(f"✉️ Сообщение добавлено в ваш открытый тикет #{ticket_id}.")
-        except Exception:
-            pass
+        subject = ticket.get('subject') if ticket else None
+        
+        await _process_ticket_message_flow(bot, message, state, ticket_id, subject, created_new=created_new)
 
     return router

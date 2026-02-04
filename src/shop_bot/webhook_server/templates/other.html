@@ -3,418 +3,382 @@
 {% block title %}Прочее - Панель управления{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <h2 class="text-2xl font-bold text-white">Прочее</h2>
-    <p class="text-white/50 text-sm">Дополнительные функции и настройки</p>
+
+<div class="mb-8 flex items-center justify-between">
+    <div class="space-y-1">
+        <h2 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            Прочее
+            <span
+                class="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-widest border border-primary/20">Advanced</span>
+        </h2>
+        <p class="text-white/40 text-xs font-medium uppercase tracking-[0.2em] ml-1">Дополнительные функции и системные
+            настройки</p>
+    </div>
 </div>
 
-<div class="bg-white/5 border border-white/10 rounded-lg p-2 mb-6 overflow-x-auto">
-    <nav class="flex gap-1 min-w-max" id="other-nav">
-        <button type="button" data-tab="broadcast"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-primary text-background-dark transition-colors">Рассылка</button>
-        <button type="button" data-tab="promo"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Промо
-            коды</button>
-        <button type="button" data-tab="servers"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Сервера</button>
-        <button type="button" data-tab="logs"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Логи
-            Бота</button>
-        <button type="button" data-tab="remnawave"
-            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 transition-colors">Remnawave</button>
-    </nav>
+<div class="relative mb-10">
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl overflow-x-auto no-scrollbar">
+        <nav class="flex items-center gap-1 min-w-max" id="other-nav">
+            {% for item in [
+            {'id': 'broadcast', 'label': 'Рассылка', 'icon': 'send'},
+            {'id': 'promo', 'label': 'Промо коды', 'icon': 'confirmation_number'},
+            {'id': 'servers', 'label': 'Сервера', 'icon': 'dns'},
+            {'id': 'logs', 'label': 'Логи Бота', 'icon': 'article'},
+            {'id': 'remnawave', 'label': 'Remnawave', 'icon': 'graphic_eq'}
+            ] %}
+            <button type="button" data-tab="{{ item.id }}"
+                class="tab-btn px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 hover:border-white/20 border border-transparent">
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                {{ item.label }}
+            </button>
+            {% endfor %}
+        </nav>
+    </div>
 </div>
 
 <section id="tab-broadcast" class="tab-content">
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        <div class="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="material-symbols-outlined text-primary text-2xl">group</span>
-                <p class="text-white/50 text-sm">Всего пользователей</p>
-            </div>
-            <p class="text-2xl font-bold text-white" id="stat-total">-</p>
-        </div>
-        <div class="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="material-symbols-outlined text-primary text-2xl">key</span>
-                <p class="text-white/50 text-sm">С активными ключами</p>
-            </div>
-            <p class="text-2xl font-bold text-white" id="stat-with-keys">-</p>
-        </div>
-        <div class="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="material-symbols-outlined text-red-400 text-2xl">key_off</span>
-                <p class="text-white/50 text-sm">С истекшими ключами</p>
-            </div>
-            <p class="text-2xl font-bold text-white" id="stat-expired-keys">-</p>
-        </div>
-        <div class="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="material-symbols-outlined text-primary text-2xl">card_giftcard</span>
-                <p class="text-white/50 text-sm">Не использовали пробный</p>
-            </div>
-            <p class="text-2xl font-bold text-white" id="stat-no-trial">-</p>
-        </div>
-    </div>
-
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span class="material-symbols-outlined">bar_chart</span>
-            Последние результаты рассылки
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">✅</span>
-                <div>
-                    <p class="text-white/50 text-sm">Отправлено</p>
-                    <p class="text-lg font-bold text-white" id="result-sent">0</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">❌</span>
-                <div>
-                    <p class="text-white/50 text-sm">Не удалось отправить</p>
-                    <p class="text-lg font-bold text-white" id="result-failed">0</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">⏭</span>
-                <div>
-                    <p class="text-white/50 text-sm">Пропущено (забанены)</p>
-                    <p class="text-lg font-bold text-white" id="result-skipped">0</p>
-                </div>
-            </div>
-        </div>
-        <p class="text-white/50 text-xs mt-4" id="result-time">-</p>
-    </div>
-
-    <div
-        class="relative overflow-hidden rounded-2xl bg-[#102219]/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 hover:border-primary/20 hover:shadow-primary/5 mb-8 group">
-
-        <div
-            class="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none group-hover:bg-primary/30 transition-all duration-500">
-        </div>
-
-        <div class="p-5 sm:p-6 relative z-10">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="p-2 rounded-lg bg-primary/10 text-primary">
-                    <span class="material-symbols-outlined text-2xl">campaign</span>
+    <div class="space-y-6">
+        <!-- Header Card -->
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                    <span class="material-symbols-outlined text-3xl">campaign</span>
                 </div>
                 <div>
-                    <h2 class="text-lg font-bold text-white leading-tight">Создать рассылку</h2>
-                    <p class="text-xs text-white/50 font-medium">Массовая отправка сообщений пользователям</p>
+                    <h3 class="text-xl font-bold text-white tracking-tight">Создать рассылку</h3>
+                    <p class="text-white/60 text-xs font-medium">Массовая отправка сообщений и управление аудиторией</p>
                 </div>
             </div>
+        </div>
 
-            <form id="broadcast-form">
-
-                <div class="mb-6 relative group/input">
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="block text-[10px] uppercase tracking-wider text-white/40 font-bold ml-1">Текст
-                            сообщения</label>
-                        <button type="button" id="btn-preview"
-                            class="text-xs text-primary hover:text-primary/80 font-bold flex items-center gap-1 transition-colors">
-                            <span class="material-symbols-outlined text-sm">visibility</span>
-                            Предпросмотр
-                        </button>
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {% for card in [
+            {'label': 'Всего пользователей', 'val_id': 'stat-total', 'icon': 'groups', 'color': 'primary'},
+            {'label': 'С активными ключами', 'val_id': 'stat-with-keys', 'icon': 'vpn_key', 'color': 'primary'},
+            {'label': 'С истекшими ключами', 'val_id': 'stat-expired-keys', 'icon': 'timer_off', 'alpha': 'red-400'},
+            {'label': 'Не использовали пробный', 'val_id': 'stat-no-trial', 'icon': 'new_releases', 'color': 'primary'}
+            ] %}
+            <div
+                class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md group hover:border-primary/40 transition-all duration-300">
+                <div class="flex items-center gap-3 mb-3">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-{{ card.alpha or card.color }}/10 flex items-center justify-center text-{{ card.alpha or card.color }}">
+                        <span class="material-symbols-outlined text-xl">{{ card.icon }}</span>
                     </div>
+                    <p class="text-white/40 text-[10px] uppercase font-bold tracking-widest leading-tight">{{ card.label
+                        }}</p>
+                </div>
+                <p class="text-2xl font-bold text-white tracking-tight" id="{{ card.val_id }}">-</p>
+            </div>
+            {% endfor %}
+        </div>
 
-                    <textarea id="broadcast-text" rows="6"
-                        class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner resize-y min-h-[120px]"
-                        placeholder="Введите текст сообщения..."></textarea>
+        <!-- Results Card -->
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined text-xl">insights</span>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Последние результаты</h3>
+                        <p class="text-white/40 text-[10px] font-medium uppercase tracking-[0.1em] mt-0.5"
+                            id="result-time">Время не определено</p>
+                    </div>
+                </div>
 
-                    <div class="flex items-center gap-2 mt-2 px-1">
-                        <span class="text-[10px] text-white/30 font-mono">HTML OK:</span>
-                        <div class="flex gap-1">
-                            <span
-                                class="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/50 font-mono border border-white/5">&lt;b&gt;</span>
-                            <span
-                                class="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/50 font-mono border border-white/5">&lt;i&gt;</span>
-                            <span
-                                class="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/50 font-mono border border-white/5">&lt;a&gt;</span>
-                            <span
-                                class="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/50 font-mono border border-white/5">&lt;code&gt;</span>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {% for res in [
+                    {'l': 'Отправлено', 'id': 'result-sent', 'icon': 'check_circle', 'color': 'primary'},
+                    {'l': 'Заблокировали', 'id': 'result-failed', 'icon': 'block', 'color': 'red-400'},
+                    {'l': 'В ЧС (забанены)', 'id': 'result-skipped', 'icon': 'person_off', 'color': 'yellow-500'},
+                    {'l': 'Всего в ЧС (У нас)', 'id': 'stat-banned-count', 'icon': 'playlist_remove', 'color':
+                    'white/20'}
+                    ] %}
+                    <div class="bg-black/20 border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-{{ res.color }} text-sm">{{ res.icon }}</span>
+                            <p class="text-white/40 text-[9px] uppercase font-bold tracking-wider">{{ res.l }}</p>
                         </div>
+                        <p class="text-xl font-bold text-white" id="{{ res.id }}">0</p>
                     </div>
+                    {% endfor %}
                 </div>
+            </div>
+        </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Form Card -->
+        <div
+            class="bg-white/5 border border-white/10 rounded-3xl p-1.5 shadow-2xl backdrop-blur-xl overflow-hidden relative group hover:border-primary/30 transition-all duration-500">
+            <div
+                class="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 blur-[100px] rounded-full pointer-events-none transition-all duration-700">
+            </div>
 
-                    <div class="bg-black/20 rounded-xl p-4 border border-white/5">
-                        <label
-                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-3">Медиа</label>
-
-                        <div class="flex flex-col gap-3">
-                            <input type="file" id="media-input" accept="image/*,video/*,.gif" class="hidden" />
-                            <button type="button" id="btn-upload-media"
-                                class="w-full border-2 border-dashed border-white/10 rounded-lg p-4 hover:border-primary/40 hover:bg-primary/5 transition-all group/upload text-center">
-                                <span
-                                    class="material-symbols-outlined text-2xl text-white/30 mb-1 group-hover/upload:text-primary transition-colors">cloud_upload</span>
-                                <p class="text-xs text-white/50 group-hover/upload:text-white/80 transition-colors">
-                                    Нажмите для выбора файла</p>
-                                <p class="text-[10px] text-white/20 mt-1">IMG, VIDEO, GIF</p>
-                            </button>
-
-                            <div id="media-preview"
-                                class="hidden relative rounded-lg overflow-hidden border border-white/10 bg-black/40">
-                                <img id="media-preview-img" src="" class="w-full h-48 object-cover hidden" />
-                                <video id="media-preview-video" controls class="w-full h-48 bg-black hidden"></video>
-                                <button type="button" id="btn-remove-media"
-                                    class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white hover:bg-red-500/80 hover:text-white flex items-center justify-center transition-all backdrop-blur-sm border border-white/10">
-                                    <span class="material-symbols-outlined text-sm">close</span>
+            <div class="p-6 relative z-10">
+                <form id="broadcast-form">
+                    <div class="mb-8 group/textarea">
+                        <div class="flex items-center justify-between mb-2 px-1">
+                            <label class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Текст
+                                сообщения</label>
+                            <div class="flex items-center gap-2">
+                                <div id="broadcast-themes-container" class="flex items-center gap-1.5 mr-1">
+                                    <!-- Templates will be loaded here -->
+                                </div>
+                                <button type="button" onclick="openModal('newMessageModal')"
+                                    class="text-primary hover:text-white px-2 py-1 rounded-lg border border-primary/30 font-bold transition-all flex items-center justify-center"
+                                    title="Сохранить как шаблон">
+                                    <span class="material-symbols-outlined text-sm">add</span>
+                                </button>
+                                <button type="button" id="btn-preview"
+                                    class="text-[10px] text-primary hover:text-white px-3 py-1 rounded-lg border border-primary/30 font-bold uppercase tracking-widest transition-all flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-sm">visibility</span>
+                                    Предпросмотр
                                 </button>
                             </div>
                         </div>
+
+                        <div class="relative">
+                            <textarea id="broadcast-text" rows="6"
+                                class="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all shadow-inner resize-y min-h-[160px]"
+                                placeholder="Введите ваше сообщение здесь..."></textarea>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 mt-3 px-2">
+                            <span
+                                class="text-[9px] text-white/30 font-bold uppercase tracking-widest mr-2">Форматирование:</span>
+                            <button type="button" onclick="insertTag('b')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs font-bold transition-all"
+                                title="Жирный">B</button>
+                            <button type="button" onclick="insertTag('i')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs italic font-bold transition-all"
+                                title="Курсив">I</button>
+                            <button type="button" onclick="insertTag('u')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs underline font-bold transition-all"
+                                title="Подчеркнутый">U</button>
+                            <button type="button" onclick="insertTag('s')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs line-through font-bold transition-all"
+                                title="Зачеркнутый">S</button>
+                            <button type="button" onclick="insertTag('tg-spoiler')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs font-bold transition-all"
+                                title="Спойлер">Spoiler</button>
+                            <button type="button" onclick="insertTag('a')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs font-bold transition-all flex items-center gap-1"
+                                title="Ссылка"><span class="material-symbols-outlined text-[14px]">link</span></button>
+                            <button type="button" onclick="insertTag('code')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs font-mono font-bold transition-all"
+                                title="Моноширинный">Code</button>
+                            <button type="button" onclick="insertTag('pre')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs font-mono font-bold transition-all"
+                                title="Блок кода">Pre</button>
+                        </div>
                     </div>
 
-                    <div class="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col">
-                        <label
-                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-3">Кнопки</label>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Media Upload -->
+                        <div class="bg-black/20 rounded-2xl p-5 border border-white/5 flex flex-col">
+                            <label
+                                class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold mb-4 ml-1">Медиа
+                                контент</label>
+                            <div class="flex flex-col gap-4 h-full">
+                                <input type="file" id="media-input" accept="image/*,video/*,.gif" class="hidden" />
+                                <button type="button" id="btn-upload-media"
+                                    class="w-full h-full min-h-[120px] border-2 border-dashed border-white/10 rounded-2xl p-6 hover:border-primary/40 transition-all group/upload text-center flex flex-col items-center justify-center">
+                                    <div
+                                        class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 transition-all">
+                                        <span
+                                            class="material-symbols-outlined text-2xl text-white/30 transition-colors">cloud_upload</span>
+                                    </div>
+                                    <p class="text-xs font-semibold text-white/50 transition-colors">Перетащите или
+                                        выберите файл</p>
+                                    <p class="text-[9px] text-white/20 mt-1 uppercase tracking-widest">IMG, VIDEO, GIF
+                                    </p>
+                                </button>
+                                <div id="media-preview"
+                                    class="hidden relative rounded-2xl overflow-hidden border border-white/10 bg-black/40">
+                                    <img id="media-preview-img" src="" class="w-full h-48 object-cover hidden" />
+                                    <video id="media-preview-video" controls
+                                        class="w-full h-48 bg-black hidden"></video>
+                                    <button type="button" id="btn-remove-media"
+                                        class="absolute top-3 right-3 w-8 h-8 rounded-xl bg-black/60 text-white hover:text-red-500 flex items-center justify-center transition-all backdrop-blur-md border border-white/10">
+                                        <span class="material-symbols-outlined text-base">close</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div id="buttons-list"
-                            class="space-y-2 mb-3 flex-1 overflow-y-auto max-h-[200px] pr-1 custom-scrollbar"></div>
+                        <!-- Keyboard -->
+                        <div class="bg-black/20 rounded-2xl p-5 border border-white/5 flex flex-col">
+                            <label
+                                class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold mb-4 ml-1">Клавиатура</label>
+                            <div id="buttons-list"
+                                class="space-y-2 mb-3 flex-1 overflow-y-auto max-h-[200px] pr-1 custom-scrollbar"></div>
+                            <button type="button" id="btn-add-button"
+                                class="w-full py-3.5 rounded-xl bg-white/5 hover:border-white/30 border border-white/10 text-white text-[11px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 mt-auto">
+                                <span class="material-symbols-outlined text-lg">add_circle</span>
+                                Добавить кнопку
+                            </button>
+                        </div>
+                    </div>
 
-                        <button type="button" id="btn-add-button"
-                            class="w-full py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-white/70 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2 mt-auto">
-                            <span class="material-symbols-outlined text-base">add_circle</span>
-                            Добавить кнопку
+                    <!-- Additional Options -->
+                    <div
+                        class="mb-8 bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <label class="flex items-center gap-4 cursor-pointer group select-none">
+                            <div class="relative">
+                                <input type="checkbox" id="skip-banned-toggle" class="peer sr-only">
+                                <div
+                                    class="w-12 h-7 bg-white/10 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/20 peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[4px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary transition-all">
+                                </div>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-white transition-colors">Пропускать
+                                    черный список</span>
+                                <span class="text-[10px] text-white/40 uppercase tracking-tighter">Не отправлять
+                                    заблокированным пользователям</span>
+                            </div>
+                        </label>
+                        <button type="button" id="btn-clear-banned"
+                            class="px-4 py-2 rounded-xl bg-red-500/10 hover:border-red-500 text-red-400 text-[10px] font-bold uppercase tracking-widest border border-red-500/20 transition-all flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                            Очистить список ЧС
                         </button>
                     </div>
-                </div>
 
-                <div class="mb-8">
-                    <label
-                        class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-3 ml-1">Аудитория</label>
-                    <div class="grid grid-cols-1 md:grid-cols-2 md:grid-rows-3 md:grid-flow-col gap-3">
-
-                        <label class="relative cursor-pointer group">
-                            <input type="radio" name="mode" value="all" checked class="peer sr-only" />
-                            <div
-                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
-                                    <span class="material-symbols-outlined text-xl">groups</span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Все пользователи
-                                    </div>
-                                    <div class="text-[10px] text-white/40">Массовая рассылка</div>
-                                </div>
-                                <div
-                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
-                                    <div
-                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
-                                    </div>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="relative cursor-pointer group">
-                            <input type="radio" name="mode" value="with_keys" class="peer sr-only" />
-                            <div
-                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
-                                    <span class="material-symbols-outlined text-xl">vpn_key</span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Активные ключи</div>
-                                    <div class="text-[10px] text-white/40">Пользователи с подпиской</div>
-                                </div>
-                                <div
-                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
-                                    <div
-                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
-                                    </div>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="relative cursor-pointer group">
-                            <input type="radio" name="mode" value="expired_keys" class="peer sr-only" />
-                            <div
-                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
-                                    <span class="material-symbols-outlined text-xl">timer_off</span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Истекшие ключи</div>
-                                    <div class="text-[10px] text-white/40">Напоминание о продлении</div>
-                                </div>
-                                <div
-                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
-                                    <div
-                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
-                                    </div>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="relative cursor-pointer group">
-                            <input type="radio" name="mode" value="without_trial" class="peer sr-only" />
-                            <div
-                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
-                                    <span class="material-symbols-outlined text-xl">new_releases</span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Исп. пробный</div>
-                                    <div class="text-[10px] text-white/40">Потенциальные клиенты</div>
-                                </div>
-                                <div
-                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
-                                    <div
-                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
-                                    </div>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="relative cursor-pointer group">
-                            <input type="radio" name="mode" value="not_used_trial" class="peer sr-only" />
-                            <div
-                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
-                                    <span class="material-symbols-outlined text-xl">history_toggle_off</span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Не исп. пробный</div>
-                                    <div class="text-[10px] text-white/40">Зарегистрировались, но не активировали</div>
-                                </div>
-                                <div
-                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
-                                    <div
-                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
-                                    </div>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="relative cursor-pointer group">
-                            <input type="radio" name="mode" value="test" class="peer sr-only" />
-                            <div
-                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
-                                    <span class="material-symbols-outlined text-xl">build</span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Тестовый режим</div>
-                                    <div class="text-[10px] text-white/40">Только администраторам</div>
-                                </div>
-                                <div
-                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
-                                    <div
-                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
-                                    </div>
-                                </div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- Кнопка "Срок истекает" отдельно внизу на всю ширину -->
-                    <div class="mt-3">
-                        <label class="relative cursor-pointer group">
-                            <input type="radio" name="mode" value="expiring_keys" class="peer sr-only" />
-                            <div
-                                class="h-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center peer-checked:bg-primary/20 peer-checked:text-primary transition-colors">
-                                    <span class="material-symbols-outlined text-xl">schedule</span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-sm font-bold text-white leading-tight mb-0.5">Срок истекает</div>
-                                    <div class="text-[10px] text-white/40">Скоро истекут ключи</div>
-                                </div>
-                                <div
-                                    class="w-4 h-4 rounded-full border border-white/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center">
-                                    <div
-                                        class="w-1.5 h-1.5 rounded-full bg-background-dark opacity-0 peer-checked:opacity-100 transition-opacity">
-                                    </div>
-                                </div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- Выбор дней для истекающих ключей -->
-                    <div id="expiring-days-selector" class="mt-4 hidden">
+                    <!-- Audience Selection -->
+                    <div class="mb-10">
                         <label
-                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-3 ml-1">Выберите
-                            количество дней</label>
-                        <div class="grid grid-cols-4 gap-3">
+                            class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold mb-5 ml-1">Аудитория
+                            рассылки</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {% for mode in [
+                            {'v': 'all', 'l': 'Все пользователи', 's': 'Массовая рассылка', 'i': 'groups', 'checked':
+                            true},
+                            {'v': 'with_keys', 'l': 'Активные ключи', 's': 'С действующей подпиской', 'i': 'vpn_key'},
+                            {'v': 'expired_keys', 'l': 'Истекшие ключи', 's': 'Напоминание о продлении', 'i':
+                            'timer_off'},
+                            {'v': 'without_trial', 'l': 'Использовали триал', 's': 'Уже знакомы с сервисом', 'i':
+                            'new_releases'},
+                            {'v': 'not_used_trial', 'l': 'Не использовали триал', 's': 'Новые потенциальные клиенты',
+                            'i': 'history_toggle_off'},
+                            {'v': 'test', 'l': 'Тестовый режим', 's': 'Только себе (админам)', 'i': 'bug_report'}
+                            ] %}
                             <label class="relative cursor-pointer group">
-                                <input type="radio" name="expiring_days" value="1" class="peer sr-only" />
+                                <input type="radio" name="mode" value="{{ mode.v }}" {{ 'checked' if mode.checked
+                                    else '' }} class="peer sr-only" />
                                 <div
-                                    class="h-full flex items-center justify-center p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                    <div class="text-sm font-bold text-white leading-tight">1 день</div>
+                                    class="h-full flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-black/20 transition-all duration-300 peer-checked:bg-primary/10 peer-checked:border-primary/50 hover:border-primary/30">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/30 peer-checked:group-[]:bg-primary/20 peer-checked:group-[]:text-primary transition-all">
+                                        <span class="material-symbols-outlined text-xl">{{ mode.i }}</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-sm font-bold text-white tracking-tight">{{ mode.l }}</div>
+                                        <div class="text-[10px] text-white/40 uppercase tracking-widest mt-0.5">{{
+                                            mode.s
+                                            }}</div>
+                                    </div>
+                                    <div
+                                        class="w-4 h-4 rounded-full border border-white/20 peer-checked:group-[]:border-primary flex items-center justify-center transition-all">
+                                        <div
+                                            class="w-1.5 h-1.5 rounded-full bg-primary opacity-0 peer-checked:group-[]:opacity-100 transition-opacity shadow-[0_0_8px_rgba(var(--primary-rgb),0.6)]">
+                                        </div>
+                                    </div>
                                 </div>
                             </label>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Special Mode: Expiring Keys -->
+                        <div class="mt-4">
                             <label class="relative cursor-pointer group">
-                                <input type="radio" name="expiring_days" value="3" checked class="peer sr-only" />
+                                <input type="radio" name="mode" value="expiring_keys" class="peer sr-only" />
                                 <div
-                                    class="h-full flex items-center justify-center p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                    <div class="text-sm font-bold text-white leading-tight">3 дня</div>
+                                    class="flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-black/20 transition-all duration-300 peer-checked:bg-primary/10 peer-checked:border-primary/50 hover:border-primary/30">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/30 peer-checked:group-[]:bg-primary/20 peer-checked:group-[]:text-primary transition-all">
+                                        <span class="material-symbols-outlined text-xl">schedule</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-sm font-bold text-white tracking-tight">Срок скоро истекает
+                                        </div>
+                                        <div class="text-[10px] text-white/40 uppercase tracking-widest mt-0.5">
+                                            Уведомление о скором завершении действия ключа</div>
+                                    </div>
+                                    <div
+                                        class="w-4 h-4 rounded-full border border-white/20 peer-checked:group-[]:border-primary flex items-center justify-center transition-all">
+                                        <div
+                                            class="w-1.5 h-1.5 rounded-full bg-primary opacity-0 peer-checked:group-[]:opacity-100 transition-opacity shadow-[0_0_8px_rgba(var(--primary-rgb),0.6)]">
+                                        </div>
+                                    </div>
                                 </div>
                             </label>
-                            <label class="relative cursor-pointer group">
-                                <input type="radio" name="expiring_days" value="5" class="peer sr-only" />
-                                <div
-                                    class="h-full flex items-center justify-center p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                    <div class="text-sm font-bold text-white leading-tight">5 дней</div>
-                                </div>
-                            </label>
-                            <label class="relative cursor-pointer group">
-                                <input type="radio" name="expiring_days" value="10" class="peer sr-only" />
-                                <div
-                                    class="h-full flex items-center justify-center p-3 rounded-xl border border-white/10 bg-black/20 hover:bg-white/5 transition-all duration-200 peer-checked:bg-primary/10 peer-checked:border-primary/50 peer-checked:shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
-                                    <div class="text-sm font-bold text-white leading-tight">10 дней</div>
-                                </div>
-                            </label>
+                        </div>
+
+                        <div id="expiring-days-selector"
+                            class="mt-6 hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                            <label
+                                class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold mb-4 ml-1">Выберите
+                                количество дней</label>
+                            <div class="grid grid-cols-4 gap-4">
+                                {% for day in [1, 3, 5, 10] %}
+                                <label class="relative cursor-pointer group">
+                                    <input type="radio" name="expiring_days" value="{{ day }}" {{ 'checked' if day==3
+                                        else '' }} class="peer sr-only" />
+                                    <div
+                                        class="h-14 flex items-center justify-center rounded-xl border border-white/10 bg-black/20 transition-all peer-checked:bg-primary/20 peer-checked:border-primary/40 hover:border-primary/40">
+                                        <span id="expiring-label-{{ day }}"
+                                            class="text-xs font-bold text-white group-hover:text-primary transition-colors">{{
+                                            day }} {{ 'день' if day == 1 else 'дня' if day < 5 else 'дней' }} <span
+                                                class="text-white/50">(0)</span></span>
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <button type="submit" id="btn-send"
-                    class="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary/90 to-primary text-background-dark font-bold text-sm uppercase tracking-wide shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 group">
-                    <span
-                        class="material-symbols-outlined text-lg group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform">send</span>
-                    Отправить рассылку
-                </button>
-            </form>
+                    <!-- Submit Button -->
+                    <button type="submit" id="btn-send"
+                        class="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-primary text-background-dark font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(19,236,128,0.2)] hover:shadow-[0_0_40px_rgba(19,236,128,0.4)] active:scale-95 transition-all duration-300 group">
+                        <span
+                            class="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform">send</span>
+                        <span>Запустить рассылку</span>
+                    </button>
+                </form>
 
-            <div id="broadcast-progress-container" class="mt-6 hidden animate-fade-in">
-                <div class="bg-black/40 border border-white/5 rounded-xl p-4 backdrop-blur-sm">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary animate-pulse">wifi_tethering</span>
-                            <h4 class="text-white font-bold text-sm">Отправка...</h4>
+                <!-- Progress Container -->
+                <div id="broadcast-progress-container" class="mt-8 hidden animate-in fade-in zoom-in duration-500">
+                    <div class="bg-black/40 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                                <h4 class="text-white font-bold text-sm tracking-tight">Выполняется рассылка...</h4>
+                            </div>
+                            <span id="broadcast-progress-percent"
+                                class="text-primary font-mono font-bold text-lg">0%</span>
                         </div>
-                        <span id="broadcast-progress-percent" class="text-primary font-mono font-bold">0%</span>
-                    </div>
 
-                    <div class="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mb-4">
-                        <div id="broadcast-progress-bar"
-                            class="h-full bg-gradient-to-r from-primary to-green-400 rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]"
-                            style="width: 0%">
+                        <div class="w-full bg-white/5 rounded-full h-2 overflow-hidden mb-6">
+                            <div id="broadcast-progress-bar"
+                                class="h-full bg-gradient-to-r from-primary via-emerald-400 to-primary background-animate rounded-full transition-all duration-500 ease-out shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)]"
+                                style="width: 0%"></div>
                         </div>
-                    </div>
 
-                    <div class="flex divide-x divide-white/10 bg-white/5 rounded-lg border border-white/5">
-                        <div class="flex-1 py-2 px-1 text-center">
-                            <p class="text-[10px] text-white/40 uppercase font-bold tracking-wider mb-0.5">Отправлено
-                            </p>
-                            <p class="text-green-400 font-mono font-bold text-sm" id="broadcast-progress-sent">0</p>
-                        </div>
-                        <div class="flex-1 py-2 px-1 text-center">
-                            <p class="text-[10px] text-white/40 uppercase font-bold tracking-wider mb-0.5">Ошибок</p>
-                            <p class="text-red-400 font-mono font-bold text-sm" id="broadcast-progress-failed">0</p>
-                        </div>
-                        <div class="flex-1 py-2 px-1 text-center">
-                            <p class="text-[10px] text-white/40 uppercase font-bold tracking-wider mb-0.5">Пропущено</p>
-                            <p class="text-yellow-400 font-mono font-bold text-sm" id="broadcast-progress-skipped">0</p>
+                        <div class="grid grid-cols-3 gap-3">
+                            {% for stat in [
+                            {'l': 'Отправлено', 'id': 'broadcast-progress-sent', 'color': 'emerald-400'},
+                            {'l': 'Ошибок', 'id': 'broadcast-progress-failed', 'color': 'red-400'},
+                            {'l': 'Пропущено', 'id': 'broadcast-progress-skipped', 'color': 'yellow-500'}
+                            ] %}
+                            <div class="bg-white/5 rounded-xl py-3 px-1 text-center border border-white/5">
+                                <p class="text-[8px] text-white/30 uppercase font-black tracking-widest mb-1">{{ stat.l
+                                    }}</p>
+                                <p class="text-{{ stat.color }} font-mono font-bold text-base" id="{{ stat.id }}">0</p>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -426,10 +390,9 @@
 <section id="tab-promo" class="tab-content hidden">
 
     <div
-        class="relative overflow-hidden rounded-2xl bg-[#102219]/60 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 hover:border-primary/20 hover:shadow-primary/5 mb-8 group">
-
+        class="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl mb-8 group hover:border-primary/30 transition-all duration-500">
         <div
-            class="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none group-hover:bg-primary/30 transition-all duration-500">
+            class="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 blur-[80px] rounded-full pointer-events-none transition-all duration-500">
         </div>
 
         <div class="p-5 sm:p-6 relative z-10">
@@ -563,124 +526,190 @@
                 </div>
 
                 <button type="submit"
-                    class="mt-6 w-full py-3.5 rounded-xl bg-gradient-to-r from-primary/90 to-primary text-background-dark font-bold text-sm uppercase tracking-wide shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 group">
+                    class="mt-6 w-full flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-primary text-background-dark font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(19,236,128,0.2)] hover:shadow-[0_0_40px_rgba(19,236,128,0.4)] active:scale-95 transition-all duration-300 group">
                     <span
-                        class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">add_circle</span>
-                    Создать промокод
+                        class="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform">add_circle</span>
+                    <span>Создать промокод</span>
                 </button>
             </form>
         </div>
     </div>
 
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 class="text-xl font-bold text-white mb-4">Существующие промокоды</h3>
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl">
+        <div class="p-6">
+            <h3 class="text-base font-bold text-white mb-6 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined text-lg">list_alt</span>
+                </div>
+                Существующие промокоды
+            </h3>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead class="bg-white/5">
-                    <tr>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Код</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Скидка</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Использовано
-                        </th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Лимиты</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Срок действия
-                        </th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Статус</th>
-                        <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-right">
-                            Действия</th>
-                    </tr>
-                </thead>
-                <tbody id="promo-table-body" class="divide-y divide-white/10">
-                    <tr>
-                        <td colspan="7" class="px-4 py-8 text-center text-white/50">Загрузка...</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-white/5">
+                        <tr>
+                            <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Код</th>
+                            <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Скидка</th>
+                            <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">
+                                Использовано
+                            </th>
+                            <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Лимиты</th>
+                            <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Срок
+                                действия
+                            </th>
+                            <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70">Статус</th>
+                            <th class="px-4 py-3 text-xs font-medium uppercase tracking-wider text-white/70 text-right">
+                                Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="promo-table-body" class="divide-y divide-white/10">
+                        <tr>
+                            <td colspan="7" class="px-4 py-8 text-center text-white/50">Загрузка...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 </section>
 
 <div id="editPromoModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <h5 class="text-white font-bold">Редактировать промокод</h5>
-            <button onclick="closeModal('editPromoModal')" class="text-white/50 hover:text-white">
+    <div class="modal-content !max-w-3xl">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                    <span class="material-symbols-outlined text-2xl">edit_document</span>
+                </div>
+                <div>
+                    <h5 class="text-white font-bold tracking-tight">Редактировать промокод</h5>
+                    <p class="text-[10px] text-white/40 uppercase tracking-widest font-medium">Обновление условий акции
+                    </p>
+                </div>
+            </div>
+            <button onclick="closeModal('editPromoModal')"
+                class="w-10 h-10 rounded-xl bg-white/5 text-white/50 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
         <div class="p-6">
-            <form id="promo-edit-form">
+            <form id="promo-edit-form" autocomplete="off">
                 <input type="hidden" id="edit-promo-code" name="code" />
 
-                <div class="mb-4">
-                    <label class="block text-white/70 text-sm font-medium mb-2">Код</label>
-                    <input type="text" id="edit-code-display" readonly
-                        class="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-2.5 text-white/50 cursor-not-allowed" />
+                <div class="mb-6 group/input">
+                    <label class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Код
+                        (только для чтения)</label>
+                    <div class="relative">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-lg">tag</span>
+                        <input type="text" id="edit-code-display" readonly
+                            class="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-3 text-sm text-white/40 font-mono uppercase cursor-not-allowed italic" />
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Тип скидки *</label>
-                        <div class="space-y-2">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="edit_discount_type" value="percent"
-                                    class="w-4 h-4 text-primary focus:ring-primary/50" />
-                                <span class="text-white/70 text-sm">% Процентная</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="group/input">
+                        <label class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Тип
+                            скидки</label>
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="edit_discount_type" value="percent" class="peer sr-only" />
+                                <div
+                                    class="py-2.5 text-center text-xs font-bold rounded-lg transition-all peer-checked:bg-primary peer-checked:text-background-dark text-white/40 hover:text-white">
+                                    % Процент</div>
                             </label>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="edit_discount_type" value="fixed"
-                                    class="w-4 h-4 text-primary focus:ring-primary/50" />
-                                <span class="text-white/70 text-sm">₽ Фиксированная</span>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="edit_discount_type" value="fixed" class="peer sr-only" />
+                                <div
+                                    class="py-2.5 text-center text-xs font-bold rounded-lg transition-all peer-checked:bg-primary peer-checked:text-background-dark text-white/40 hover:text-white">
+                                    RUB Фикс.</div>
                             </label>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Значение *</label>
-                        <input type="number" name="edit_discount_value" step="0.01" min="0" required
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    <div class="group/input">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Значение
+                            скидки</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-all">payments</span>
+                            <input type="number" name="edit_discount_value" step="0.01" min="0" required
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner" />
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Общий лимит</label>
-                        <input type="number" name="edit_usage_limit_total" min="1"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="group/input">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Всего
+                            активаций</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-all">groups</span>
+                            <input type="number" name="edit_usage_limit_total" min="1"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner" />
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Лимит на пользователя</label>
-                        <input type="number" name="edit_usage_limit_per_user" min="1"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Дата начала</label>
-                        <input type="datetime-local" name="edit_valid_from"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    </div>
-
-                    <div>
-                        <label class="block text-white/70 text-sm font-medium mb-2">Дата окончания</label>
-                        <input type="datetime-local" name="edit_valid_until"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    <div class="group/input">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Лимит
+                            на юзера</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-all">person</span>
+                            <input type="number" name="edit_usage_limit_per_user" min="1"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner" />
+                        </div>
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-white/70 text-sm font-medium mb-2">Описание</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="group/input">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Действует
+                            с</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-all">event_available</span>
+                            <input type="datetime-local" name="edit_valid_from"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-2 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner" />
+                        </div>
+                    </div>
+
+                    <div class="group/input">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Действует
+                            до</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-all">event_busy</span>
+                            <input type="datetime-local" name="edit_valid_until"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-2 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8 group/input">
+                    <label class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Описание
+                        (заметка)</label>
                     <textarea name="edit_description" rows="2"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50"></textarea>
+                        class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner resize-none"
+                        placeholder="Краткое описание для истории..."></textarea>
                 </div>
 
-                <button type="submit"
-                    class="w-full px-6 py-3 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors">
-                    Сохранить изменения
-                </button>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeModal('editPromoModal')"
+                        class="flex-1 px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-all">
+                        Отмена
+                    </button>
+                    <button type="submit"
+                        class="flex-[2] flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-primary text-background-dark font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(19,236,128,0.2)] hover:shadow-[0_0_40px_rgba(19,236,128,0.4)] active:scale-95 transition-all duration-300">
+                        <span class="material-symbols-outlined text-xl">save</span>
+                        <span>Сохранить изменения</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -700,7 +729,7 @@
                 </div>
             </div>
             <button onclick="closeModal('deployNodeModal')"
-                class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                class="w-8 h-8 rounded-lg bg-white/5 hover:border-white/20 flex items-center justify-center text-white/50 hover:text-white transition-all">
                 <span class="material-symbols-outlined text-lg">close</span>
             </button>
         </div>
@@ -740,7 +769,7 @@
                                 <span class="text-white font-medium text-xs">Ubuntu</span>
                             </div>
                             <button id="btn-install-docker-ubuntu" data-os="ubuntu" disabled
-                                class="install-docker-btn w-full px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="install-docker-btn w-full px-3 py-2 rounded-lg bg-white/5 hover:border-primary/40 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <svg class="animate-spin h-3.5 w-3.5 btn-icon" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                         stroke-width="4" fill="none"></circle>
@@ -757,7 +786,7 @@
                                 <span class="text-white font-medium text-xs">Debian</span>
                             </div>
                             <button id="btn-install-docker-debian" data-os="debian" disabled
-                                class="install-docker-btn w-full px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="install-docker-btn w-full px-3 py-2 rounded-lg bg-white/5 hover:border-primary/40 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <svg class="animate-spin h-3.5 w-3.5 btn-icon" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                         stroke-width="4" fill="none"></circle>
@@ -790,7 +819,7 @@
                             class="bg-black/30 px-2 py-0.5 rounded text-primary text-[11px]">/opt/remnanode</code>
                     </p>
                     <button id="btn-create-directory"
-                        class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors">
+                        class="px-4 py-2 rounded-lg bg-white/5 hover:border-primary/40 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all">
                         Создать директорию
                     </button>
                 </div>
@@ -807,11 +836,11 @@
                         placeholder="version: '3.8'&#10;services:&#10;  remnanode:&#10;    image: remnawave/node:latest&#10;    container_name: remnanode&#10;    restart: always&#10;    network_mode: host&#10;    environment:&#10;      - PANEL_URL=https://your-panel.com&#10;      - PANEL_KEY=your-key"></textarea>
                     <div class="flex gap-2 mt-3">
                         <button id="btn-cancel-compose"
-                            class="flex-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors">
+                            class="flex-1 px-4 py-2 rounded-lg bg-white/5 hover:border-white/20 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all">
                             Назад
                         </button>
                         <button id="btn-save-compose"
-                            class="flex-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors">
+                            class="flex-1 px-4 py-2 rounded-lg bg-white/5 hover:border-primary/40 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all">
                             Сохранить
                         </button>
                     </div>
@@ -829,7 +858,7 @@
                             class="bg-black/30 px-2 py-0.5 rounded text-primary text-[11px]">docker compose up -d</code>
                     </p>
                     <button id="btn-start-containers"
-                        class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors">
+                        class="px-4 py-2 rounded-lg bg-white/5 hover:border-primary/40 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all">
                         Запустить
                     </button>
                 </div>
@@ -846,23 +875,23 @@
                     </p>
                     <div class="grid grid-cols-3 gap-2 mb-4">
                         <button id="btn-view-compose"
-                            class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors">
+                            class="px-3 py-2 rounded-lg bg-white/5 hover:border-white/20 border border-white/10 text-white/70 hover:text-white text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all">
                             <span class="material-symbols-outlined text-sm">visibility</span>
                             Compose
                         </button>
                         <button id="btn-restart-node"
-                            class="px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors">
+                            class="px-3 py-2 rounded-lg bg-amber-500/10 hover:border-amber-500/40 border border-amber-500/20 text-amber-400 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all">
                             <span class="material-symbols-outlined text-sm">restart_alt</span>
                             Рестарт
                         </button>
                         <button id="btn-view-logs"
-                            class="px-3 py-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors">
+                            class="px-3 py-2 rounded-lg bg-blue-500/10 hover:border-blue-500/40 border border-blue-500/20 text-blue-400 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all">
                             <span class="material-symbols-outlined text-sm">description</span>
                             Логи
                         </button>
                     </div>
                     <button id="btn-remove-all"
-                        class="w-full px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors mb-2">
+                        class="w-full px-3 py-2 rounded-lg bg-red-500/10 hover:border-red-500/40 border border-red-500/20 text-red-400 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all mb-2">
                         <span class="material-symbols-outlined text-sm">delete_forever</span>
                         Полное удаление ноды и Docker
                     </button>
@@ -887,7 +916,7 @@
                         <span class="text-[10px] text-white/30 font-medium ml-2">Вывод</span>
                     </div>
                     <button id="btn-clear-deploy-logs"
-                        class="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-[10px] font-medium flex items-center gap-1 transition-colors">
+                        class="px-2.5 py-1 rounded-md bg-white/5 hover:border-white/20 text-white/50 hover:text-white text-[10px] font-medium flex items-center gap-1 transition-all">
                         <span class="material-symbols-outlined text-xs">delete</span>
                         Очистить
                     </button>
@@ -915,7 +944,7 @@
                 </div>
             </div>
             <button onclick="closeModal('swapModal')"
-                class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                class="w-8 h-8 rounded-lg bg-white/5 hover:border-white/20 flex items-center justify-center text-white/50 hover:text-white transition-all">
                 <span class="material-symbols-outlined text-lg">close</span>
             </button>
         </div>
@@ -939,7 +968,7 @@
                     <input type="number" name="size_mb" value="2048" min="512" step="512"
                         class="w-full bg-black/30 border border-white/[0.06] rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all mb-4" />
                     <button type="submit" id="btn-swap-install"
-                        class="w-full px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors flex items-center justify-center gap-2">
+                        class="w-full px-4 py-2.5 rounded-lg bg-white/5 hover:border-primary/40 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all flex items-center justify-center gap-2">
                         <span class="material-symbols-outlined text-sm">add_circle</span>
                         Установить SWAP
                     </button>
@@ -995,7 +1024,7 @@
                             <input type="number" name="size_mb" id="swap-resize-input" min="512" step="512"
                                 class="flex-1 bg-black/30 border border-white/[0.06] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-purple-500/50 transition-all" />
                             <button type="submit" id="btn-swap-resize"
-                                class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-[10px] font-medium transition-colors">
+                                class="px-3 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/70 hover:text-white text-[10px] font-medium transition-all">
                                 Изменить
                             </button>
                         </div>
@@ -1019,14 +1048,14 @@
                             <input type="number" name="swappiness" id="swap-swappiness-input" min="0" max="100"
                                 class="flex-1 bg-black/30 border border-white/[0.06] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-purple-500/50 transition-all" />
                             <button type="submit" id="btn-swap-swappiness"
-                                class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-[10px] font-medium transition-colors">
+                                class="px-3 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/70 hover:text-white text-[10px] font-medium transition-all">
                                 Применить
                             </button>
                         </div>
                     </form>
 
                     <button type="button" id="btn-swap-delete"
-                        class="w-full px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors">
+                        class="w-full px-3 py-2 rounded-lg bg-red-500/10 hover:border-red-500/40 border border-red-500/20 text-red-400 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all">
                         <span class="material-symbols-outlined text-sm">delete_forever</span>
                         Удалить SWAP
                     </button>
@@ -1132,87 +1161,153 @@
 </section>
 
 <section id="tab-servers" class="tab-content hidden">
-
-    <div class="mb-6">
-        <div class="bg-white/5 border border-white/10 rounded-xl p-5">
-            <div id="remna-hosts-header"
-                class="flex items-center justify-between mb-4 cursor-pointer select-none hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 -my-1 transition-colors">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-blue-400 text-xl">dns</span>
-                    </div>
-                    <div>
-                        <h3 class="text-white font-bold text-lg">Серверы Remnawave</h3>
-                        <p class="text-white/50 text-xs">Управление Remnawave</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 text-sm font-bold"
-                        id="remna-hosts-count">0</span>
-                    <button type="button" id="btn-toggle-remna-hosts"
-                        class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors"
-                        title="Развернуть/свернуть">
-                        <span class="material-symbols-outlined text-xl">expand_more</span>
-                    </button>
-                </div>
-            </div>
-            <div id="remna-hosts-list" class="hidden">
-                <div class="text-center py-6 text-white/40">
-                    <span class="material-symbols-outlined text-3xl mb-2">dns</span>
-                    <p class="text-sm">Загрузка...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="bg-white/5 border border-white/10 rounded-xl p-5">
-        <div class="flex items-center justify-between mb-5">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-yellow-400 text-xl">terminal</span>
+    <div class="space-y-6">
+        <!-- Header Card -->
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                    <span class="material-symbols-outlined text-3xl">dns</span>
                 </div>
                 <div>
-                    <h3 class="text-white font-bold text-lg">SSH-цели</h3>
-                    <p class="text-white/50 text-xs">Управление нодами</p>
+                    <h3 class="text-xl font-bold text-white tracking-tight">Управление серверами</h3>
+                    <p class="text-white/60 text-xs font-medium">Контроль ресурсов, развертывание нод и сетевые
+                        настройки</p>
                 </div>
             </div>
-            <span class="px-3 py-1.5 rounded-full bg-yellow-500/20 text-yellow-300 text-sm font-bold"
-                id="ssh-targets-count">0</span>
         </div>
-        <div id="ssh-targets-list">
-            <div class="text-center py-8 text-white/40">
-                <span class="material-symbols-outlined text-4xl mb-2">terminal</span>
-                <p class="text-sm">Загрузка...</p>
+
+        <!-- Remnawave Section -->
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-1 shadow-2xl backdrop-blur-xl">
+            <div class="p-4">
+                <div id="remna-hosts-header"
+                    class="flex items-center justify-between cursor-pointer select-none rounded-xl px-2.5 py-1.5 hover:bg-white/5 transition-all group">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
+                            <span class="material-symbols-outlined text-lg">hub</span>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white tracking-tight">Серверы Remnawave</h3>
+                            <p class="text-[9px] text-white/30 uppercase tracking-wider font-semibold">Хосты панели</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/20"
+                            id="remna-hosts-count">0</span>
+                        <div id="btn-toggle-remna-hosts"
+                            class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/40 group-hover:text-white transition-all">
+                            <span class="material-symbols-outlined text-lg">expand_more</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="remna-hosts-list" class="hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div class="text-center py-10 text-white/20">
+                        <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">dns</span>
+                        <p class="text-xs uppercase tracking-widest font-bold">Загрузка данных...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SSH Section -->
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl">
+            <div class="p-5">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                            <span class="material-symbols-outlined text-xl">terminal</span>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-white tracking-tight">SSH-цели</h3>
+                            <p class="text-[10px] text-white/40 uppercase tracking-widest font-medium mt-0.5">Удаленное
+                                управление нодами</p>
+                        </div>
+                    </div>
+                    <span
+                        class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20"
+                        id="ssh-targets-count">0</span>
+                </div>
+
+                <div id="ssh-targets-list" class="animate-in fade-in duration-500">
+                    <div class="text-center py-12 text-white/20">
+                        <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">terminal</span>
+                        <p class="text-xs uppercase tracking-widest font-bold">Синхронизация...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <section id="tab-logs" class="tab-content hidden">
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                <span class="material-symbols-outlined text-green-400">terminal</span>
-                Логи Бота
-            </h3>
-            <div class="flex gap-2">
-                <span class="flex items-center gap-2 text-white/50 text-xs px-2" id="logs-status">
-                    <span class="w-2 h-2 rounded-full bg-red-500"></span> Disconnected
-                </span>
-                <button type="button" id="btn-clear-logs"
-                    class="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm font-medium flex items-center gap-1">
-                    <span class="material-symbols-outlined text-base">delete</span>
-                    Очистить логи
-                </button>
+    <div class="space-y-6">
+
+
+        <div id="logs-wrapper"
+            class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl transition-all duration-500">
+            <div class="p-5">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                            id="logs-status-dot"></div>
+                        <span class="text-[10px] uppercase tracking-widest font-bold text-white/40"
+                            id="logs-status-text">Disconnected</span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/5">
+                            {% for level in [
+                            {'l': 'WARNING', 'id': 'WARNING', 'color': 'yellow-400', 'icon': 'warning'},
+                            {'l': 'ERROR', 'id': 'ERROR', 'color': 'red-400', 'icon': 'error'},
+                            {'l': 'ВСЁ', 'id': 'ALL', 'color': 'white/70', 'icon': 'content_copy'}
+                            ] %}
+                            <button type="button" onclick="copyLogsByLevel('{{ level.id }}')"
+                                class="px-3 py-1.5 rounded-lg hover:bg-white/5 text-{{ level.color }} border border-transparent hover:border-white/10 transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider"
+                                title="Копировать {{ level.l }}">
+                                <span class="material-symbols-outlined text-sm">{{ level.icon }}</span>
+                                {{ level.l }}
+                            </button>
+                            {% endfor %}
+                        </div>
+
+                        <button type="button" id="btn-clear-logs"
+                            class="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:border-red-500/40 border border-red-500/20 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all">
+                            <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                            Очистить
+                        </button>
+
+                        <button type="button" id="btn-fullscreen-logs" onclick="toggleLogsFullscreen()"
+                            class="px-3 py-2 rounded-xl bg-white/5 text-white/50 hover:text-white hover:bg-white/10 border border-white/5 transition-all text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"
+                            title="На весь экран (F11)">
+                            <span class="material-symbols-outlined text-sm">open_in_full</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative group/terminal">
+                    <div
+                        class="absolute inset-0 bg-primary/5 blur-3xl rounded-full opacity-0 group-hover/terminal:opacity-20 transition-opacity duration-1000 pointer-events-none">
+                    </div>
+                    <div class="relative bg-black/60 rounded-xl p-5 font-mono text-[13px] leading-relaxed text-white/80 h-[55vh] overflow-y-auto custom-scrollbar border border-white/5 shadow-inner"
+                        id="logs-container">
+                        <div class="h-full flex flex-col items-center justify-center text-white/20">
+                            <span class="material-symbols-outlined text-5xl mb-3 animate-pulse">sync</span>
+                            <p class="text-xs uppercase tracking-[0.2em] font-bold">Ожидание потока логов...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex items-center gap-3 px-1 text-white/30">
+                    <span class="material-symbols-outlined text-sm">info</span>
+                    <p class="text-[10px] uppercase tracking-widest font-medium">Трансляция в реальном времени (tail
+                        -f). Новые записи появляются автоматически.</p>
+                </div>
             </div>
         </div>
-
-        <div class="bg-black/80 rounded-lg p-4 font-mono text-sm text-white/80 h-[57vh] overflow-y-auto"
-            id="logs-container">
-            <div class="text-white/30 text-center mt-20">Ожидание подключения к потоку логов...</div>
-        </div>
-        <p class="text-white/30 text-xs mt-2">Логи транслируются в реальном времени (tail -f). Отображаются только новые
-            записи.</p>
     </div>
 </section>
 
@@ -1230,7 +1325,7 @@
                 </div>
             </div>
             <button onclick="closeModal('warpModal')"
-                class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                class="w-8 h-8 rounded-lg bg-white/5 hover:border-white/20 flex items-center justify-center text-white/50 hover:text-white transition-all">
                 <span class="material-symbols-outlined text-lg">close</span>
             </button>
         </div>
@@ -1248,7 +1343,7 @@
                     <h3 class="text-sm font-bold text-white mb-1">WARP не установлен</h3>
                     <p class="text-white/40 text-[11px] mb-4">SOCKS5 прокси на порту 40000</p>
                     <button id="btn-warp-install"
-                        class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors inline-flex items-center gap-2">
+                        class="px-4 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all inline-flex items-center gap-2">
                         <span class="material-symbols-outlined text-sm">download</span>
                         Установить WARP
                     </button>
@@ -1267,16 +1362,19 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button id="btn-warp-toggle" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                        <button id="btn-warp-toggle"
+                            class="p-2 rounded-lg bg-white/10 hover:border-white/30 border border-transparent text-white transition-all"
                             title="Загрузка...">
                             <span class="material-symbols-outlined">pending</span>
                         </button>
-                        <button id="btn-warp-restart" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                        <button id="btn-warp-restart"
+                            class="p-2 rounded-lg bg-white/10 hover:border-white/30 border border-transparent text-white transition-all"
                             title="Перезапуск сервиса">
                             <span class="material-symbols-outlined">restart_alt</span>
                         </button>
                         <button id="btn-warp-uninstall"
-                            class="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Удалить WARP">
+                            class="p-2 rounded-lg bg-red-500/20 hover:border-red-500/30 border border-transparent text-red-400 transition-all"
+                            title="Удалить WARP">
                             <span class="material-symbols-outlined">delete</span>
                         </button>
                     </div>
@@ -1387,7 +1485,7 @@
                         </div>
 
                         <button type="submit" id="btn-warp-save"
-                            class="w-full px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center justify-center gap-2">
+                            class="w-full px-4 py-2 rounded-lg bg-white/10 hover:border-primary/40 text-white font-medium transition-all flex items-center justify-center gap-2">
                             <span class="material-symbols-outlined text-sm">save</span>
                             Сохранить и перезапустить
                         </button>
@@ -1414,7 +1512,7 @@
                     </textarea>
                     <button type="button"
                         onclick="navigator.clipboard.writeText(document.getElementById('warp-json-output').value); window.showToast('success', 'Скопировано')"
-                        class="mt-2 w-full px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors flex items-center justify-center gap-2">
+                        class="mt-2 w-full px-4 py-2 rounded-lg bg-white/10 hover:border-white/30 border border-transparent text-white text-sm transition-all flex items-center justify-center gap-2">
                         <span class="material-symbols-outlined text-sm">content_copy</span>
                         Копировать в буфер
                     </button>
@@ -1427,7 +1525,7 @@
                         id="warp-systemd-textarea"
                         placeholder="[Service]&#10;Environment=&quot;WG_LOG_LEVEL=error&quot;&#10;StandardOutput=null&#10;StandardError=journal&#10;MemoryMax=800M&#10;MemoryHigh=1G"></textarea>
                     <button type="button" id="btn-warp-systemd-save"
-                        class="mt-2 w-full px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                        class="mt-2 w-full px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:border-white border border-transparent transition-all flex items-center justify-center gap-2">
                         <span class="material-symbols-outlined text-sm">save</span>
                         Сохранить
                     </button>
@@ -1474,7 +1572,7 @@
 
                         <div class="flex gap-2">
                             <button type="button" id="btn-warp-check-log-usage"
-                                class="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                                class="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:border-white/30 border border-transparent text-white text-sm font-medium transition-all flex items-center justify-center gap-2">
                                 <span class="material-symbols-outlined text-sm">hard_drive</span>
                                 Проверить размер логов
                             </button>
@@ -1512,7 +1610,7 @@
                 </div>
             </div>
             <button id="btn-close-exec-modal"
-                class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                class="w-8 h-8 rounded-lg bg-white/5 hover:border-white/20 flex items-center justify-center text-white/50 hover:text-white transition-all">
                 <span class="material-symbols-outlined text-lg">close</span>
             </button>
         </div>
@@ -1531,17 +1629,17 @@
                     </div>
                     <div class="flex items-center gap-1">
                         <button id="btn-stop-exec-command"
-                            class="hidden px-2.5 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-medium flex items-center gap-1 transition-colors">
+                            class="hidden px-2.5 py-1 rounded-md bg-red-500/10 hover:border-red-500/30 border border-transparent text-red-400 text-[10px] font-medium flex items-center gap-1 transition-all">
                             <span class="material-symbols-outlined text-xs">stop_circle</span>
                             Стоп
                         </button>
                         <button id="btn-copy-exec-output"
-                            class="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-[10px] font-medium flex items-center gap-1 transition-colors">
+                            class="px-2.5 py-1 rounded-md bg-white/5 hover:border-white/20 border border-transparent text-white/50 hover:text-white text-[10px] font-medium flex items-center gap-1 transition-all">
                             <span class="material-symbols-outlined text-xs">content_copy</span>
                             Копировать
                         </button>
                         <button id="btn-clear-exec-output"
-                            class="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-[10px] font-medium flex items-center gap-1 transition-colors">
+                            class="px-2.5 py-1 rounded-md bg-white/5 hover:border-white/20 border border-transparent text-white/50 hover:text-white text-[10px] font-medium flex items-center gap-1 transition-all">
                             <span class="material-symbols-outlined text-xs">delete</span>
                             Очистить
                         </button>
@@ -1562,15 +1660,14 @@
                             class="w-full bg-black/30 border border-white/[0.06] rounded-lg pl-7 pr-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 font-mono text-sm transition-all" />
                     </div>
                     <button type="button" id="btn-stop-command"
-                        class="w-[42px] h-[42px] rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 flex items-center justify-center transition-colors group"
+                        class="w-[42px] h-[42px] rounded-lg bg-red-500/10 hover:border-red-500/30 border border-red-500/30 flex items-center justify-center transition-all group"
                         title="Остановить (Ctrl+C)">
-                        <span
-                            class="material-symbols-outlined text-red-400 text-xl group-hover:scale-110 transition-transform">close</span>
+                        <span class="material-symbols-outlined text-red-400 text-xl transition-transform">close</span>
                     </button>
                     <button type="submit" id="btn-exec-command"
-                        class="w-[42px] h-[42px] rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center transition-colors group">
+                        class="w-[42px] h-[42px] rounded-lg bg-emerald-500/10 hover:border-emerald-500/30 border border-emerald-500/30 flex items-center justify-center transition-all group">
                         <span
-                            class="material-symbols-outlined text-emerald-400 text-xl group-hover:scale-110 transition-transform">send</span>
+                            class="material-symbols-outlined text-emerald-400 text-xl transition-transform">send</span>
                     </button>
                 </div>
             </form>
@@ -1600,6 +1697,13 @@
         scrollbar-width: thin;
         scrollbar-color: rgba(16, 185, 129, 0.3) rgba(0, 0, 0, 0.2);
     }
+
+    .term-line {
+        min-height: 1.5em;
+        /* Ensure empty lines have height */
+        word-break: break-all;
+        /* Prevent horizontal overflow */
+    }
 </style>
 <div id="schedulerModal" class="modal-overlay" style="z-index: 50;">
     <div class="modal-content max-w-md rounded-xl bg-[#0a1812] border border-white/10 shadow-2xl overflow-hidden">
@@ -1615,7 +1719,7 @@
                 </div>
             </div>
             <button onclick="closeModal('schedulerModal')"
-                class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                class="w-8 h-8 rounded-lg bg-white/5 hover:border-white/20 flex items-center justify-center text-white/50 hover:text-white transition-all">
                 <span class="material-symbols-outlined text-lg">close</span>
             </button>
         </div>
@@ -1657,11 +1761,11 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 p-3 bg-white/[0.03] rounded-lg border border-white/[0.06] cursor-pointer hover:bg-white/[0.05] transition-colors"
+                <div class="flex items-center gap-3 p-3 bg-white/[0.03] rounded-lg border border-white/[0.06] cursor-pointer hover:border-cyan-500/30 transition-all"
                     onclick="toggleSchedulerCheckbox()">
                     <div class="relative flex items-center">
                         <input type="checkbox" id="schedulerEnabled"
-                            class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-white/20 transition-all checked:border-cyan-400 checked:bg-cyan-500 hover:border-cyan-500/50" />
+                            class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-white/20 transition-all checked:border-cyan-400 checked:bg-cyan-500 hover:border-cyan-500/40" />
                         <span
                             class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-background-dark opacity-0 peer-checked:opacity-100">
                             <span class="material-symbols-outlined text-sm font-bold">check</span>
@@ -1674,7 +1778,7 @@
                 </div>
 
                 <button onclick="saveSchedulerConfig()"
-                    class="w-full px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-colors flex items-center justify-center gap-2">
+                    class="w-full px-4 py-2.5 rounded-lg bg-white/5 hover:border-cyan-500/40 border border-white/10 text-white/80 hover:text-white text-xs font-medium transition-all flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-sm">save</span>
                     Сохранить настройки
                 </button>
@@ -1696,7 +1800,7 @@
         <span class="material-symbols-outlined text-blue-400">schedule</span>
         Планировщик перезагрузки
     </h3>
-    <button onclick="closeModal('schedulerModal')" class="text-gray-400 hover:text-white transition-colors">
+    <button onclick="closeModal('schedulerModal')" class="text-gray-400 hover:text-white transition-all">
         <span class="material-symbols-outlined">close</span>
     </button>
 </div>
@@ -1719,7 +1823,7 @@
         </div>
     </div>
 
-    <div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 cursor-pointer hover:bg-white/10 transition-colors"
+    <div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 cursor-pointer hover:border-white/20 transition-all"
         onclick="document.getElementById('schedulerEnabled').click()">
         <input type="checkbox" id="schedulerEnabled"
             class="w-5 h-5 rounded border-gray-600 text-blue-500 focus:ring-blue-500 bg-gray-700">
@@ -1731,9 +1835,9 @@
 </div>
 <div class="p-6 pt-0 flex gap-3">
     <button onclick="closeModal('schedulerModal')"
-        class="flex-1 px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 font-medium transition-all">Отмена</button>
+        class="flex-1 px-4 py-2.5 rounded-lg bg-white/5 hover:border-white/20 border border-transparent text-gray-300 font-medium transition-all">Отмена</button>
     <button onclick="saveSchedulerConfig()"
-        class="flex-1 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
+        class="flex-1 px-4 py-2.5 rounded-lg bg-blue-500 hover:border-white border border-transparent text-white font-bold transition-all flex items-center justify-center gap-2">
         <span class="material-symbols-outlined" style="font-size: 18px">save</span> Сохранить
     </button>
 </div>
@@ -1772,14 +1876,45 @@
     // Globals for scheduler
     let sshTargetsData = [];
     let currentSchedulerTarget = null;
+    let serversAutoRefresh = null;
 
     document.addEventListener('DOMContentLoaded', function () {
 
         const tabs = document.querySelectorAll('.tab-btn');
         const contents = document.querySelectorAll('.tab-content');
         const logsContainer = document.getElementById('logs-container');
-        const logsStatus = document.getElementById('logs-status');
+        const logsStatusDot = document.getElementById('logs-status-dot');
+        const logsStatusText = document.getElementById('logs-status-text');
         const btnClearLogs = document.getElementById('btn-clear-logs');
+
+        async function copyLogsByLevel(level) {
+            if (!logsContainer) return;
+            const lines = Array.from(logsContainer.children);
+            let filteredText = "";
+
+            lines.forEach(line => {
+                const text = line.textContent;
+                if (level === 'ALL') {
+                    filteredText += text + "\n";
+                } else if (text.includes(level)) {
+                    filteredText += text + "\n";
+                }
+            });
+
+            if (!filteredText.trim()) {
+                window.showToast('warning', 'Нет логов с уровнем ' + level);
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(filteredText);
+                window.showToast('success', 'Логи (' + level + ') скопированы (' + filteredText.split('\n').length + ' стр.)');
+            } catch (err) {
+                console.error('Failed to copy logs:', err);
+                window.showToast('danger', 'Ошибка копирования');
+            }
+        }
+        window.copyLogsByLevel = copyLogsByLevel;
 
         let logEventSource = null;
         let logsOffset = 0;
@@ -1876,11 +2011,15 @@
         };
 
         function updateLogStatus(connected) {
-            if (!logsStatus) return;
+            if (!logsStatusDot || !logsStatusText) return;
             if (connected) {
-                logsStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live';
+                logsStatusDot.className = 'w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] animate-pulse';
+                logsStatusText.textContent = 'Live';
+                logsStatusText.className = 'text-[10px] uppercase tracking-widest font-bold text-green-400';
             } else {
-                logsStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span> Disconnected';
+                logsStatusDot.className = 'w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+                logsStatusText.textContent = 'Disconnected';
+                logsStatusText.className = 'text-[10px] uppercase tracking-widest font-bold text-white/40';
             }
         }
 
@@ -1906,8 +2045,8 @@
                 logsContainer.scrollTop = logsContainer.scrollHeight;
             }
 
-            if (logsContainer.children.length > 5000) {
-                if (isAutoScrolling) logsContainer.removeChild(logsContainer.firstChild);
+            if (logsContainer.children.length > 50) {
+                logsContainer.removeChild(logsContainer.firstChild);
             }
         }
 
@@ -1992,7 +2131,153 @@
             };
         }
 
+        // Fullscreen Logic
+        let isLogsFullscreen = false;
+
+        window.toggleLogsFullscreen = function () {
+            const container = document.getElementById('logs-wrapper');
+            if (!container) return;
+
+            if (!isLogsFullscreen) {
+                if (container.requestFullscreen) {
+                    container.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                } else {
+                    enterCssFullscreen(container);
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else {
+                    exitCssFullscreen(container);
+                }
+            }
+        };
+
+        function enterCssFullscreen(el) {
+            el.classList.add('fixed', 'inset-0', 'z-[100]', 'h-screen', 'w-screen', 'rounded-none', 'flex', 'flex-col', 'bg-[#0a1812]', 'overflow-hidden', 'p-6');
+            el.classList.remove('p-1.5', 'rounded-2xl', 'backdrop-blur-xl', 'bg-white/5');
+
+            // Style the direct child (div.p-5) to be a flex column
+            const mainContainer = el.firstElementChild;
+            if (mainContainer) {
+                mainContainer.classList.remove('p-5');
+                mainContainer.classList.add('flex', 'flex-col', 'h-full', 'w-full');
+            }
+
+            // Style the terminal wrapper
+            const terminalWrapper = el.querySelector('.group\\/terminal');
+            if (terminalWrapper) {
+                terminalWrapper.classList.add('flex-1', 'flex', 'flex-col', 'min-h-0');
+            }
+
+            const inner = el.querySelector('#logs-container');
+            if (inner) {
+                inner.classList.add('flex-1', 'min-h-0', 'rounded-xl', 'border', 'border-white/5', 'overflow-y-auto');
+                inner.classList.remove('h-[55vh]');
+            }
+
+            const header = el.querySelector('.flex.flex-col');
+            if (header) {
+                header.classList.add('mb-4', 'flex-none'); // Prevent header from shrinking
+            }
+
+            const footer = el.querySelector('.mt-4.flex');
+            if (footer) {
+                footer.classList.add('hidden');
+            }
+
+            document.body.style.overflow = 'hidden';
+            isLogsFullscreen = true;
+            updateFullscreenIcon(true);
+        }
+
+        function exitCssFullscreen(el) {
+            el.classList.remove('fixed', 'inset-0', 'z-[100]', 'h-screen', 'w-screen', 'rounded-none', 'flex', 'flex-col', 'bg-[#0a1812]', 'overflow-hidden', 'p-6');
+            el.classList.add('p-1.5', 'rounded-2xl', 'backdrop-blur-xl', 'bg-white/5');
+
+            // Restore direct child styles
+            const mainContainer = el.firstElementChild;
+            if (mainContainer) {
+                mainContainer.classList.add('p-5');
+                mainContainer.classList.remove('flex', 'flex-col', 'h-full', 'w-full');
+            }
+
+            // Restore terminal wrapper styles
+            const terminalWrapper = el.querySelector('.group\\/terminal');
+            if (terminalWrapper) {
+                terminalWrapper.classList.remove('flex-1', 'flex', 'flex-col', 'min-h-0');
+            }
+
+            const inner = el.querySelector('#logs-container');
+            if (inner) {
+                inner.classList.remove('flex-1', 'min-h-0');
+                // Restore original classes
+                inner.classList.add('h-[55vh]', 'rounded-xl', 'border', 'border-white/5', 'overflow-y-auto');
+            }
+
+            const header = el.querySelector('.flex.flex-col');
+            if (header) {
+                header.classList.remove('mb-4', 'flex-none');
+            }
+
+            const footer = el.querySelector('.mt-4.flex');
+            if (footer) {
+                footer.classList.remove('hidden');
+            }
+
+            document.body.style.overflow = '';
+            isLogsFullscreen = false;
+            updateFullscreenIcon(false);
+        }
+
+        // Handle native fullscreen change events to sync state
+        // Handle native fullscreen change events to sync state
+        document.addEventListener('fullscreenchange', () => {
+            const container = document.getElementById('logs-wrapper');
+            if (!container) return;
+
+            if (document.fullscreenElement) {
+                enterCssFullscreen(container);
+            } else {
+                exitCssFullscreen(container);
+            }
+        });
+
+        function updateFullscreenIcon(isFullscreen) {
+            const btn = document.getElementById('btn-fullscreen-logs');
+            if (!btn) return;
+            const icon = btn.querySelector('.material-symbols-outlined');
+            if (isFullscreen) {
+                icon.textContent = 'close_fullscreen';
+                btn.title = 'Выйти из полноэкранного режима (F11 / Esc)';
+            } else {
+                icon.textContent = 'open_in_full';
+                btn.title = 'На весь экран (F11)';
+            }
+        }
+
+        // F11 Handler
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'F11') {
+                // Check if we are on logs tab
+                const activeTab = document.querySelector('.tab-btn.bg-primary');
+                if (activeTab && activeTab.getAttribute('data-tab') === 'logs') {
+                    e.preventDefault();
+                    toggleLogsFullscreen();
+                }
+            }
+        });
+
         function handleTabSwitch(tabId) {
+            if (tabId === 'broadcast') {
+                if (typeof loadStats === 'function') loadStats();
+            } else if (tabId === 'promo') {
+                if (typeof loadPromos === 'function') loadPromos();
+            } else if (tabId === 'servers') {
+                if (typeof loadServers === 'function') loadServers();
+            }
 
             if (tabId !== 'logs' && logEventSource) {
                 logEventSource.close();
@@ -2003,7 +2288,10 @@
             }
         }
 
-        function switchTab(tabId) {
+        window.switchTab = function (tabId) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+
             tabs.forEach(btn => {
                 const isActive = btn.getAttribute('data-tab') === tabId;
                 btn.classList.toggle('bg-primary', isActive);
@@ -2016,14 +2304,18 @@
                 content.classList.toggle('hidden', !isActive);
             });
 
-            history.replaceState(null, '', '#' + tabId);
+            // Обновляем URL (и хеш для совместимости, и параметр tab)
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('tab', tabId);
+            window.history.replaceState(null, '', newUrl);
+
             localStorage.setItem('remnawave_other_active_tab', tabId);
 
             handleTabSwitch(tabId);
-        }
+        };
 
         tabs.forEach(btn => {
-            btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+            btn.addEventListener('click', () => window.switchTab(btn.getAttribute('data-tab')));
         });
 
         if (btnClearLogs) {
@@ -2084,6 +2376,15 @@
             });
         }
 
+        // Инициализация активной вкладки
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryTab = urlParams.get('tab');
+        const hashTab = window.location.hash.substring(1);
+        const savedTab = localStorage.getItem('remnawave_other_active_tab');
+
+        const activeTab = queryTab || hashTab || savedTab || 'broadcast';
+        window.switchTab(activeTab);
+
         if (remnaHostsHeader) {
             remnaHostsHeader.addEventListener('click', toggleRemnaHosts);
         }
@@ -2098,7 +2399,7 @@
             initialTab = 'broadcast';
         }
 
-        switchTab(initialTab);
+        window.switchTab(initialTab);
 
         let uploadedMediaFilename = null;
         let buttons = [];
@@ -2112,6 +2413,7 @@
                     if (document.getElementById('stat-with-keys')) document.getElementById('stat-with-keys').textContent = data.users_with_keys;
                     if (document.getElementById('stat-expired-keys')) document.getElementById('stat-expired-keys').textContent = data.users_with_expired_keys || 0;
                     if (document.getElementById('stat-no-trial')) document.getElementById('stat-no-trial').textContent = data.users_without_trial;
+                    if (document.getElementById('stat-banned-count')) document.getElementById('stat-banned-count').textContent = data.banned_count || 0;
 
                     if (data.last_results) {
                         if (document.getElementById('result-sent')) document.getElementById('result-sent').textContent = data.last_results.sent || 0;
@@ -2120,6 +2422,17 @@
                         if (data.last_results.timestamp) {
                             const date = new Date(data.last_results.timestamp);
                             if (document.getElementById('result-time')) document.getElementById('result-time').textContent = `Последняя рассылка: ${date.toLocaleString('ru-RU')} `;
+                        }
+                    }
+
+                    if (data.expiring_counts) {
+                        const daySuffix = { 1: 'день', 3: 'дня', 5: 'дней', 10: 'дней' };
+                        for (const [day, count] of Object.entries(data.expiring_counts)) {
+                            const el = document.getElementById(`expiring-label-${day}`);
+                            if (el) {
+                                const suffix = daySuffix[day] || 'дней';
+                                el.innerHTML = `${day} ${suffix} <span class="text-white/50">(${count})</span>`;
+                            }
                         }
                     }
                 }
@@ -2138,9 +2451,9 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            const maxSize = 50 * 1024 * 1024;
+            const maxSize = 500 * 1024 * 1024;
             if (file.size > maxSize) {
-                window.showToast('danger', `Файл слишком большой. Максимальный размер: 50 МБ. Размер вашего файла: ${(file.size / 1024 / 1024).toFixed(2)} МБ`);
+                window.showToast('danger', `Файл слишком большой. Максимальный размер: 500 МБ. Размер вашего файла: ${(file.size / 1024 / 1024).toFixed(2)} МБ`);
                 e.target.value = '';
                 return;
             }
@@ -2164,7 +2477,7 @@
 
                 if (!resp.ok) {
                     if (resp.status === 413) {
-                        window.showToast('danger', 'Файл слишком большой для загрузки. Максимальный размер: 50 МБ');
+                        window.showToast('danger', 'Файл слишком большой для загрузки. Максимальный размер: 500 МБ');
                     } else {
                         window.showToast('danger', `Ошибка сервера: ${resp.status} ${resp.statusText}`);
                     }
@@ -2294,6 +2607,29 @@
             }
         });
 
+        document.getElementById('btn-clear-banned').addEventListener('click', async function () {
+            if (!await window.showConfirm({
+                title: 'Очистка списка',
+                message: 'Вы уверены, что хотите очистить список забаненных пользователей?',
+                type: 'warning',
+                confirmText: 'Очистить'
+            })) return;
+
+            const btn = this;
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/other/broadcast/clear-banned', { method: 'POST', headers: { 'X-CSRFToken': window.getCsrfToken() } });
+                const data = await resp.json();
+                if (data.ok) {
+                    window.showToast('success', 'Список очищен');
+                    loadStats();
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка');
+                }
+            } catch (e) { window.showToast('danger', 'Ошибка сети'); }
+            finally { btn.disabled = false; }
+        });
+
         document.getElementById('broadcast-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -2318,6 +2654,8 @@
             formData.append('csrf_token', window.getCsrfToken());
             formData.append('text', text);
             formData.append('mode', mode);
+            const skipBanned = document.getElementById('skip-banned-toggle').checked;
+            formData.append('skip_banned', skipBanned);
             formData.append('buttons', JSON.stringify(buttons));
             if (uploadedMediaFilename) {
                 formData.append('media_filename', uploadedMediaFilename);
@@ -2522,7 +2860,7 @@
                 const toggleIcon = isActive ? 'toggle_on' : 'toggle_off';
 
                 return `
-                    <tr class="hover:bg-white/5">
+                    <tr class="hover:bg-white/5 transition-colors">
                         <td class="px-4 py-3 text-white font-mono font-bold">${promo.code}</td>
                         <td class="px-4 py-3 text-white">${discount}</td>
                         <td class="px-4 py-3 text-white">${used} / ${totalLimit}</td>
@@ -2531,13 +2869,13 @@
                         <td class="px-4 py-3 ${statusColor}">${statusText}</td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <button onclick="togglePromo('${promo.code}')" class="p-2 rounded hover:bg-white/10" title="Вкл/Выкл">
+                                <button onclick="togglePromo('${promo.code}')" class="p-2 rounded hover:border-white/20 border border-transparent transition-all" title="Вкл/Выкл">
                                     <span class="material-symbols-outlined ${statusColor}">${toggleIcon}</span>
                                 </button>
-                                <button onclick="editPromo('${promo.code}')" class="p-2 rounded hover:bg-white/10 text-primary" title="Изменить условия">
+                                <button onclick="editPromo('${promo.code}')" class="p-2 rounded hover:border-primary/20 border border-transparent text-primary transition-all" title="Изменить условия">
                                     <span class="material-symbols-outlined">edit</span>
                                 </button>
-                                <button onclick="deletePromo('${promo.code}')" class="p-2 rounded hover:bg-white/10 text-red-400" title="Удалить">
+                                <button onclick="deletePromo('${promo.code}')" class="p-2 rounded hover:border-red-500/20 border border-transparent text-red-400 transition-all" title="Удалить">
                                     <span class="material-symbols-outlined">delete</span>
                                 </button>
                             </div>
@@ -2711,7 +3049,7 @@
             });
         }
 
-        let serversAutoRefresh = null;
+
 
         async function loadServers() {
             try {
@@ -2767,17 +3105,17 @@
                                     </div>
                                     <div class="flex items-center gap-1">
                                         <button onclick="refreshHostUptime('${host.host_name}', ${idx})" 
-                                            class="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors" title="Обновить">
+                                            class="w-7 h-7 rounded-lg bg-white/5 hover:border-white/30 border border-transparent flex items-center justify-center text-white/50 hover:text-white transition-all" title="Обновить">
                                             <span class="material-symbols-outlined text-sm">refresh</span>
                                         </button>
                                         <div class="relative" id="host-menu-${idx}">
                                             <button onclick="toggleHostMenu(${idx})" 
-                                                class="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors">
+                                                class="w-7 h-7 rounded-lg bg-white/5 hover:border-white/30 border border-transparent flex items-center justify-center text-white/50 hover:text-white transition-all">
                                                 <span class="material-symbols-outlined text-sm">more_vert</span>
                                             </button>
                                             <div id="host-dropdown-${idx}" class="hidden absolute right-0 top-full mt-1 w-44 bg-[#0d1f17] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
                                                 <button onclick="rebootServer('host', '${host.host_name}'); toggleHostMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors">
+                                                    class="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-all">
                                                     <span class="material-symbols-outlined text-sm">restart_alt</span>
                                                     Перезагрузить
                                                 </button>
@@ -2795,7 +3133,7 @@
                                 
                                 <div class="flex gap-2">
                                     <button onclick="window.openExecuteCommandModal('host', '${host.host_name}')" 
-                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-colors">
+                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
                                         <span class="material-symbols-outlined text-sm">terminal</span>
                                         Терминал
                                     </button>
@@ -2934,33 +3272,33 @@
                                     </div>
                                     <div class="flex items-center gap-1">
                                         <button onclick="refreshTargetUptime('${target.target_name}', ${idx})" 
-                                            class="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all" title="Обновить">
+                                            class="w-7 h-7 rounded-lg bg-white/5 hover:border-white/30 border border-transparent flex items-center justify-center text-white/50 hover:text-white transition-all" title="Обновить">
                                             <span class="material-symbols-outlined text-sm">refresh</span>
                                         </button>
                                         <div class="relative" id="target-menu-${idx}">
                                             <button onclick="toggleTargetMenu(${idx})" 
-                                                class="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all">
+                                                class="w-7 h-7 rounded-lg bg-white/5 hover:border-white/30 border border-transparent flex items-center justify-center text-white/50 hover:text-white transition-all">
                                                 <span class="material-symbols-outlined text-sm">more_vert</span>
                                             </button>
                                             <div id="target-dropdown-${idx}" class="hidden absolute right-0 top-full mt-1 w-44 bg-[#0d1f17] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
                                                 <button onclick="rebootServer('ssh', '${target.target_name}'); toggleTargetMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors">
+                                                    class="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-all">
                                                     <span class="material-symbols-outlined text-sm">restart_alt</span>
                                                     Перезагрузить
                                                 </button>
                                                 <button onclick="openSchedulerModal('${target.target_name}'); toggleTargetMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-cyan-400 hover:bg-cyan-500/10 flex items-center gap-2 transition-colors">
+                                                    class="w-full px-3 py-2 text-left text-xs text-cyan-400 hover:bg-cyan-500/10 flex items-center gap-2 transition-all">
                                                     <span class="material-symbols-outlined text-sm">schedule</span>
                                                     Планировщик
                                                 </button>
                                                 <div class="border-t border-white/5"></div>
                                                 <button onclick="openWarpWizard('${target.target_name}'); toggleTargetMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-blue-400 hover:bg-blue-500/10 flex items-center gap-2 transition-colors">
+                                                    class="w-full px-3 py-2 text-left text-xs text-blue-400 hover:bg-blue-500/10 flex items-center gap-2 transition-all">
                                                     <span class="material-symbols-outlined text-sm">vpn_lock</span>
                                                     WARP
                                                 </button>
                                                 <button onclick="openSwapModal('${target.target_name}'); toggleTargetMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-purple-400 hover:bg-purple-500/10 flex items-center gap-2 transition-colors">
+                                                    class="w-full px-3 py-2 text-left text-xs text-purple-400 hover:bg-purple-500/10 flex items-center gap-2 transition-all">
                                                     <span class="material-symbols-outlined text-sm">memory</span>
                                                     SWAP
                                                 </button>
@@ -2978,12 +3316,12 @@
                                 
                                 <div class="flex gap-2">
                                     <button onclick="deployNodeWizard('${target.target_name}')" 
-                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
+                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
                                         <span class="material-symbols-outlined text-sm">rocket_launch</span>
                                         Развернуть
                                     </button>
                                     <button onclick="window.openExecuteCommandModal('ssh', '${target.target_name}')" 
-                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
+                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
                                         <span class="material-symbols-outlined text-sm">terminal</span>
                                         Терминал
                                     </button>
@@ -3101,6 +3439,17 @@
                                            </div>`
                                 : `<div class="h-1.5 bg-white/5 rounded-full overflow-hidden"></div>`
                             }
+                                </div>
+                                
+                                <div class="flex items-center justify-around pt-2 border-t border-white/[0.04]">
+                                    <div class="flex items-center gap-1.5" title="${data.net_rx_mbps} Mbps">
+                                        <span class="material-symbols-outlined text-blue-400" style="font-size: 14px">download</span>
+                                        <span class="text-[10px] text-white/90 font-mono">${data.net_rx_mbs} MB/s</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5" title="${data.net_tx_mbps} Mbps">
+                                        <span class="material-symbols-outlined text-orange-400" style="font-size: 14px">upload</span>
+                                        <span class="text-[10px] text-white/90 font-mono">${data.net_tx_mbs} MB/s</span>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -3779,7 +4128,7 @@
                             const btnToggle = document.getElementById('btn-warp-toggle');
                             if (btnToggle) {
                                 btnToggle.title = 'Остановить сервис';
-                                btnToggle.className = 'p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors';
+                                btnToggle.className = 'p-2 rounded-lg bg-red-500/20 hover:border-red-500/30 border border-transparent text-red-400 transition-all';
                                 btnToggle.innerHTML = '<span class="material-symbols-outlined">stop_circle</span>';
                                 btnToggle.dataset.action = 'stop';
                             }
@@ -3791,7 +4140,7 @@
                             const btnToggle = document.getElementById('btn-warp-toggle');
                             if (btnToggle) {
                                 btnToggle.title = 'Запустить сервис';
-                                btnToggle.className = 'p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors';
+                                btnToggle.className = 'p-2 rounded-lg bg-green-500/20 hover:border-green-500/30 border border-transparent text-green-400 transition-all';
                                 btnToggle.innerHTML = '<span class="material-symbols-outlined">play_circle</span>';
                                 btnToggle.dataset.action = 'start';
                             }
@@ -4198,7 +4547,7 @@
                 window.showToast('danger', 'Ошибка запроса');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<span class="material-symbols-outlined">add_circle</span> Установить SWAP';
+                btn.innerHTML = '<span class="material-symbols-outlined text-sm">add_circle</span> Установить SWAP';
             }
         });
 
@@ -4288,7 +4637,7 @@
                 window.showToast('danger', 'Ошибка запроса');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<span class="material-symbols-outlined">delete_forever</span> Удалить SWAP';
+                btn.innerHTML = '<span class="material-symbols-outlined text-sm">delete_forever</span> Удалить SWAP';
             }
         };
 
@@ -4298,12 +4647,74 @@
         let currentExecAbortController = null;
         let currentExecReader = null;
 
+        // --- Terminal Optimization Globals ---
+        let terminalBuffer = [];
+        let isTerminalFlushing = false;
+        const MAX_TERMINAL_LINES = 300;
+
+        function flushTerminalBuffer() {
+            if (terminalBuffer.length === 0) {
+                isTerminalFlushing = false;
+                return;
+            }
+
+            const outputEl = document.getElementById('exec-output');
+            if (!outputEl) {
+                terminalBuffer = [];
+                isTerminalFlushing = false;
+                return;
+            }
+
+            // Create a fragment for batch insertion
+            const fragment = document.createDocumentFragment();
+
+            // Process all currently buffered lines
+            // We take a snapshot of length to avoid infinite loops if something weird happens,
+            // though shift() naturally reduces length.
+            const count = terminalBuffer.length;
+            for (let i = 0; i < count; i++) {
+                const lineHTML = terminalBuffer.shift();
+                const div = document.createElement('div');
+                div.className = 'term-line';
+                div.innerHTML = lineHTML;
+                fragment.appendChild(div);
+            }
+
+            outputEl.appendChild(fragment);
+
+            // Prune old lines to keep DOM light
+            // Using childElementCount is much faster than splitting innerText
+            while (outputEl.childElementCount > MAX_TERMINAL_LINES) {
+                outputEl.removeChild(outputEl.firstChild);
+            }
+
+            outputEl.scrollTop = outputEl.scrollHeight;
+
+            // Continue flushing if more data arrived during execution
+            if (terminalBuffer.length > 0) {
+                requestAnimationFrame(flushTerminalBuffer);
+            } else {
+                isTerminalFlushing = false;
+            }
+        }
+
+        function appendTerminalLine(html) {
+            terminalBuffer.push(html);
+            if (!isTerminalFlushing) {
+                isTerminalFlushing = true;
+                requestAnimationFrame(flushTerminalBuffer);
+            }
+        }
+
         window.openExecuteCommandModal = function (serverType, serverName) {
             currentExecServer = serverName;
             currentExecServerType = serverType;
             document.getElementById('exec-server-name').textContent = serverName;
             document.getElementById('exec-command-input').value = '';
-            document.getElementById('exec-output').textContent = 'Ожидание команды...';
+
+            const outputEl = document.getElementById('exec-output');
+            outputEl.innerHTML = '<div class="term-line"><span class="text-white/30">Ожидание команды...</span></div>';
+
             document.getElementById('btn-stop-exec-command').classList.add('hidden');
 
             const modal = document.getElementById('executeCommandModal');
@@ -4332,6 +4743,10 @@
                 currentExecEventSource = null;
             }
 
+            // Clear buffer
+            terminalBuffer = [];
+            isTerminalFlushing = false;
+
             // Закрываем SSH сессию на сервере
             if (currentExecServer && currentExecServerType) {
                 const formData = new FormData();
@@ -4354,7 +4769,7 @@
                 return;
             }
 
-            const outputEl = document.getElementById('exec-output');
+            // const outputEl = document.getElementById('exec-output'); // Not needed for appendTerminalLine
             const formatMsg = (text) => {
                 text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 text = text.replace(/(\[INFO\][^\n]*)/g, '<span class="text-blue-400">$1</span>');
@@ -4373,8 +4788,7 @@
                     body: formData
                 }).catch(() => { }); // Игнорируем ошибки
 
-                outputEl.innerHTML += formatMsg('\n[INFO] Отправлен сигнал прерывания (Ctrl+C)\n');
-                outputEl.scrollTop = outputEl.scrollHeight;
+                appendTerminalLine(formatMsg('\n[INFO] Отправлен сигнал прерывания (Ctrl+C)\n'));
             } catch (e) {
                 console.error('Error sending Ctrl+C:', e);
             }
@@ -4393,20 +4807,20 @@
                 currentExecReader = null;
             }
 
-            const outputEl = document.getElementById('exec-output');
             const formatMsg = (text) => {
                 text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 text = text.replace(/(\[INFO\][^\n]*)/g, '<span class="text-blue-400">$1</span>');
                 return '<span class="text-white/90">' + text + '</span>';
             };
-            outputEl.innerHTML += formatMsg('\n[INFO] Команда остановлена пользователем\n');
+
+            appendTerminalLine(formatMsg('\n[INFO] Команда остановлена пользователем\n'));
 
             this.classList.add('hidden');
         });
 
         document.getElementById('btn-copy-exec-output').addEventListener('click', async function () {
             const outputEl = document.getElementById('exec-output');
-            const text = outputEl.textContent;
+            const text = outputEl.innerText; // innerText handles newlines better than textContent for divs
 
             try {
                 await navigator.clipboard.writeText(text);
@@ -4417,7 +4831,8 @@
         });
 
         document.getElementById('btn-clear-exec-output').addEventListener('click', function () {
-            document.getElementById('exec-output').innerHTML = '<span class="text-white/30">Ожидание команды...</span>';
+            terminalBuffer = []; // Clear pending
+            document.getElementById('exec-output').innerHTML = '<div class="term-line"><span class="text-white/30">Ожидание команды...</span></div>';
         });
 
         document.getElementById('exec-command-form').addEventListener('submit', async function (e) {
@@ -4428,13 +4843,14 @@
                 return;
             }
 
-            // Получаем команду как есть, чтобы можно было отправлять пробелы и Enter
+            // Получаем команду как есть
             const command = document.getElementById('exec-command-input').value;
-
-            // Если команда пустая - это Enter, разрешаем
-            // if (!command) { ... } - убрали проверку
+            // Omitted check for empty command to allow Enter key
 
             const outputEl = document.getElementById('exec-output');
+            if (outputEl.childElementCount === 1 && outputEl.firstElementChild.textContent.includes('Ожидание команды...')) {
+                outputEl.innerHTML = '';
+            }
 
             if (currentExecEventSource) {
                 currentExecEventSource.close();
@@ -4460,7 +4876,7 @@
             }
 
             // Показываем отправленную команду
-            outputEl.innerHTML += '<span class="text-emerald-400/60">$ </span><span class="text-white">' + command.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>\n';
+            appendTerminalLine('<span class="text-emerald-400/60">$ </span><span class="text-white">' + command.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>');
 
             // Очищаем поле ввода для следующей команды
             document.getElementById('exec-command-input').value = '';
@@ -4498,25 +4914,15 @@
                                 continue;
                             }
 
-                            // Используем innerHTML для цветного вывода
-                            outputEl.innerHTML += formatTerminalOutput(data) + '\n';
-
-                            const maxLines = 300;
-                            const currentText = outputEl.textContent;
-                            const currentLines = currentText.split('\n');
-                            if (currentLines.length > maxLines) {
-                                const linesToKeep = currentLines.slice(-maxLines);
-                                outputEl.innerHTML = formatTerminalOutput(linesToKeep.join('\n'));
-                            }
-
-                            outputEl.scrollTop = outputEl.scrollHeight;
+                            // Буферизированный вывод
+                            appendTerminalLine(formatTerminalOutput(data));
                         }
                     }
                 }
 
             } catch (error) {
                 console.error('Error executing command:', error);
-                outputEl.innerHTML += formatTerminalOutput(`\n[ERROR] ${error.message}\n`);
+                appendTerminalLine(formatTerminalOutput(`\n[ERROR] ${error.message}\n`));
                 window.showToast('danger', 'Ошибка выполнения команды: ' + error.message);
             }
         });
@@ -4539,8 +4945,7 @@
             window.initSoftSelect('schedulerUnit', 'Часов');
         }
 
-        let currentSchedulerTarget = null;
-        let sshTargetsData = [];
+
 
         window.openSchedulerModal = function (targetName) {
             currentSchedulerTarget = targetName;
@@ -4691,6 +5096,218 @@
             }
         }
     });
+
+    // Функция вставки HTML тегов
+    window.insertTag = function (tag) {
+        const textarea = document.getElementById('broadcast-text');
+        if (!textarea) return;
+
+        // Custom modal for links
+        if (tag === 'a') {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            window._broadcastSelection = { start, end };
+
+            const linkInput = document.getElementById('link-url-input');
+            if (linkInput) {
+                linkInput.value = 'https://';
+                openModal('linkModal');
+                setTimeout(() => linkInput.focus(), 100);
+            }
+            return;
+        }
+
+        let startTag = `<${tag}>`;
+        let endTag = `</${tag}>`;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        const selected = text.substring(start, end);
+
+        const replacement = startTag + selected + endTag;
+
+        textarea.setRangeText(replacement, start, end, 'select');
+        textarea.focus();
+    };
+
+    // Handler for the custom link modal
+    document.addEventListener('DOMContentLoaded', () => {
+        const insertLinkBtn = document.getElementById('btn-insert-link');
+        if (insertLinkBtn) {
+            insertLinkBtn.addEventListener('click', () => {
+                const urlInput = document.getElementById('link-url-input');
+                const url = urlInput.value;
+                if (url) {
+                    const textarea = document.getElementById('broadcast-text');
+                    if (textarea && window._broadcastSelection) {
+                        const start = window._broadcastSelection.start;
+                        const end = window._broadcastSelection.end;
+                        const text = textarea.value;
+                        const selected = text.substring(start, end);
+
+                        const replacement = `<a href="${url}">` + selected + `</a>`;
+                        textarea.setRangeText(replacement, start, end, 'select');
+                        textarea.focus();
+                    }
+                }
+                closeModal('linkModal');
+            });
+        }
+
+        const btnSaveTheme = document.getElementById('btn-save-theme');
+        if (btnSaveTheme) {
+            btnSaveTheme.onclick = async function () {
+                const title = document.getElementById('modal-msg-title').value;
+                const content = document.getElementById('modal-msg-content').value;
+                if (!title || !content) {
+                    window.showToast('warning', 'Заполните все поля');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('content', content);
+                formData.append('csrf_token', window.getCsrfToken());
+
+                try {
+                    const resp = await fetch('/other/themes/save', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await resp.json();
+                    if (data.ok) {
+                        window.showToast('success', 'Шаблон сохранен');
+                        closeModal('newMessageModal');
+                        document.getElementById('modal-msg-title').value = '';
+                        document.getElementById('modal-msg-content').value = '';
+                        loadBroadcastThemes();
+                    } else {
+                        window.showToast('danger', data.error || 'Ошибка сохранения');
+                    }
+                } catch (e) {
+                    window.showToast('danger', 'Ошибка сети');
+                }
+            };
+        }
+
+        window.loadBroadcastThemes = async function () {
+            const container = document.getElementById('broadcast-themes-container');
+            if (!container) return;
+
+            try {
+                const resp = await fetch('/other/themes/list');
+                const data = await resp.json();
+                if (data.ok && data.themes) {
+                    container.innerHTML = '';
+                    Object.entries(data.themes).forEach(([title, content]) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'flex items-center bg-white/5 border border-white/10 rounded-lg overflow-hidden transition-all hover:border-primary/30 group/theme';
+
+                        const mainBtn = document.createElement('button');
+                        mainBtn.type = 'button';
+                        mainBtn.className = 'text-[9px] text-white/60 hover:text-white px-2.5 py-1.5 font-bold uppercase tracking-widest border-r border-white/5 hover:bg-white/5 transition-all';
+                        mainBtn.textContent = title;
+                        mainBtn.onclick = () => {
+                            const textarea = document.getElementById('broadcast-text');
+                            if (textarea) {
+                                textarea.value = content;
+                                textarea.dispatchEvent(new Event('input'));
+                                window.showToast('success', `Шаблон "${title}" применен`);
+                            }
+                        };
+
+                        const editBtn = document.createElement('button');
+                        editBtn.type = 'button';
+                        editBtn.className = 'px-1.5 py-1.5 text-white/20 hover:text-primary hover:bg-primary/10 transition-all flex items-center justify-center border-r border-white/5';
+                        editBtn.innerHTML = '<span class="material-symbols-outlined text-xs">edit</span>';
+                        editBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            document.getElementById('modal-msg-title').value = title;
+                            document.getElementById('modal-msg-content').value = content;
+                            openModal('newMessageModal');
+                        };
+
+                        const delBtn = document.createElement('button');
+                        delBtn.type = 'button';
+                        delBtn.className = 'px-1.5 py-1.5 text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all flex items-center justify-center';
+                        delBtn.innerHTML = '<span class="material-symbols-outlined text-xs">delete</span>';
+                        delBtn.onclick = async (e) => {
+                            e.stopPropagation();
+                            const confirmed = await window.showCustomConfirm(`Удалить шаблон "${title}"?`, 'Удаление шаблона');
+                            if (!confirmed) return;
+
+                            const formData = new FormData();
+                            formData.append('title', title);
+                            formData.append('csrf_token', window.getCsrfToken());
+
+                            try {
+                                const dResp = await fetch('/other/themes/delete', { method: 'POST', body: formData });
+                                const dData = await dResp.json();
+                                if (dData.ok) {
+                                    window.showToast('success', 'Шаблон удален');
+                                    loadBroadcastThemes();
+                                }
+                            } catch (err) { window.showToast('danger', 'Ошибка удаления'); }
+                        };
+
+                        wrapper.appendChild(mainBtn);
+                        wrapper.appendChild(editBtn);
+                        wrapper.appendChild(delBtn);
+                        container.appendChild(wrapper);
+                    });
+                }
+            } catch (e) { console.error('Failed to load themes', e); }
+        };
+
+        loadBroadcastThemes();
+    });
 </script>
+
+<div id="linkModal" class="modal-overlay">
+    <div class="modal-content p-6 max-w-lg">
+        <h3 class="text-xl font-bold text-white mb-4">Вставить ссылку</h3>
+        <div class="mb-6">
+            <label class="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">URL адрес</label>
+            <input type="text" id="link-url-input" placeholder="https://example.com"
+                class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none" />
+        </div>
+        <div class="flex gap-3 justify-end">
+            <button type="button" onclick="closeModal('linkModal')"
+                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all">Отмена</button>
+            <button type="button" id="btn-insert-link"
+                class="px-5 py-2.5 rounded-xl bg-primary text-background-dark text-sm font-bold hover:bg-primary/90 transition-all">Вставить</button>
+        </div>
+    </div>
+</div>
+
+<div id="newMessageModal" class="modal-overlay">
+    <div class="modal-content p-6 max-w-lg">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold text-white">Новый шаблон</h3>
+            <button onclick="closeModal('newMessageModal')" class="text-white/50 hover:text-white transition-all">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Название</label>
+                <input type="text" id="modal-msg-title" placeholder="Введите название..." maxlength="20"
+                    class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none" />
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Сообщение</label>
+                <textarea id="modal-msg-content" rows="4" placeholder="Введите текст сообщения..."
+                    class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none resize-none"></textarea>
+            </div>
+        </div>
+        <div class="flex gap-3 justify-end mt-6">
+            <button type="button" onclick="closeModal('newMessageModal')"
+                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all">Отмена</button>
+            <button type="button" id="btn-save-theme"
+                class="px-5 py-2.5 rounded-xl bg-primary text-background-dark text-sm font-bold hover:bg-primary/90 transition-all">Сохранить</button>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

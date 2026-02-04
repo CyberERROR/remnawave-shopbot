@@ -1,6 +1,6 @@
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from shop_bot.data_manager import database
@@ -21,8 +21,12 @@ def _normalize_email(value: str | None) -> str:
     return (value or "").strip().lower()
 
 
+def get_msk_time() -> datetime:
+    return datetime.now(timezone(timedelta(hours=3)))
+
+
 def _default_expire_at_ms() -> int:
-    return int(datetime.utcnow().timestamp() * 1000)
+    return int(get_msk_time().timestamp() * 1000)
 
 
 def list_squads(active_only: bool = False) -> list[dict[str, Any]]:
@@ -64,6 +68,9 @@ def get_squad(identifier: str) -> dict[str, Any] | None:
 
 def get_key_by_id(key_id: int) -> dict | None:
     return database.get_key_by_id(key_id)
+
+def check_transaction_exists(payment_id: str) -> bool:
+    return database.check_transaction_exists(payment_id)
 
 
 def get_key_by_email(email: str) -> dict | None:
@@ -250,6 +257,7 @@ _LEGACY_FORWARDERS = (
     "get_all_settings",
     "get_all_tickets_count",
     "get_all_users",
+    "get_user_id_by_gift_token",
     "get_balance",
     "get_closed_tickets_count",
     "get_daily_stats_for_charts",
@@ -259,6 +267,7 @@ _LEGACY_FORWARDERS = (
     "get_latest_speedtest",
     "get_next_key_number",
     "get_open_tickets_count",
+    "get_waiting_tickets_count",
     "get_paginated_transactions",
     "get_plan_by_id",
     "get_plans_for_host",
@@ -400,7 +409,7 @@ def list_gift_tokens(active_only: bool = False) -> list[dict]:
     params: list[Any] = []
     if active_only:
         query += " WHERE (activation_limit IS NULL OR activation_limit > activations_used)"
-        query += " AND (expires_at IS NULL OR datetime(expires_at) >= datetime('now'))"
+        query += " AND (expires_at IS NULL OR datetime(expires_at) >= datetime('now', '+3 hours'))"
     query += " ORDER BY created_at DESC"
     with _connect() as conn:
         cursor = conn.cursor()
@@ -424,7 +433,7 @@ def claim_gift_token(token: str, user_id: int, key_id: int | None = None) -> dic
     if not token_s:
         return None
     user_id_i = int(user_id)
-    now_iso = datetime.utcnow().isoformat()
+    now_iso = get_msk_time().isoformat()
     with _connect() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -445,7 +454,7 @@ def claim_gift_token(token: str, user_id: int, key_id: int | None = None) -> dic
                 exp_dt = datetime.fromisoformat(str(expires_at))
             except Exception:
                 exp_dt = None
-            if exp_dt and exp_dt < datetime.utcnow():
+            if exp_dt and exp_dt < get_msk_time():
                 return None
         activation_limit = record.get("activation_limit") or 0
         activations_used = record.get("activations_used") or 0
@@ -574,7 +583,7 @@ def check_promo_code_available(code: str, user_id: int) -> tuple[dict | None, st
         promo = dict(promo_row)
         if not promo.get("is_active"):
             return None, "inactive"
-        now_dt = datetime.utcnow()
+        now_dt = get_msk_time().replace(tzinfo=None)
         valid_from = promo.get("valid_from")
         if valid_from:
             try:
@@ -645,7 +654,7 @@ def redeem_promo_code(code: str, user_id: int, *, applied_amount: float, order_i
         return None
     user_id_i = int(user_id)
     applied_amount_f = float(applied_amount)
-    now_iso = datetime.utcnow().isoformat()
+    now_iso = get_msk_time().isoformat()
     with _connect() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -666,7 +675,7 @@ def redeem_promo_code(code: str, user_id: int, *, applied_amount: float, order_i
             return None
         valid_from = promo.get("valid_from")
         valid_until = promo.get("valid_until")
-        now_dt = datetime.utcnow()
+        now_dt = get_msk_time().replace(tzinfo=None)
         if valid_from:
             try:
                 if datetime.fromisoformat(str(valid_from)) > now_dt:
@@ -761,4 +770,8 @@ def get_paginated_trials(page: int = 1, per_page: int = 10) -> tuple[list[dict[s
         items = [dict(row) for row in cursor.fetchall()]
         
         return items, total
+
+
+def get_total_spent_by_method(payment_method: str) -> float:
+    return database.get_total_spent_by_method(payment_method)
 

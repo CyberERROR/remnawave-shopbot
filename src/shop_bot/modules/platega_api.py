@@ -59,15 +59,15 @@ class PlategaAPI:
         """
         payload = {
             "paymentMethod": payment_method,
-            "id": str(uuid.uuid4()),  # Generate UUID for Platega transaction
+            "id": str(uuid.uuid4()),  
             "paymentDetails": {
-                "amount": int(amount),  # Platega expects integer (rubles)
+                "amount": int(amount),  
                 "currency": "RUB"
             },
             "description": description,
             "return": return_url,
             "failedUrl": failed_url,
-            "payload": payment_id  # Our internal payment ID
+            "payload": payment_id  
         }
         
         try:

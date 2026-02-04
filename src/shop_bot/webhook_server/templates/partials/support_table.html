@@ -1,358 +1,92 @@
-<style>
-    @keyframes blink-urgent {
-
-        0%,
-        100% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.2;
-        }
-    }
-
-    .ticket-row {
-        transition: all 0.2s ease;
-    }
-
-    .ticket-row:hover {
-        background: rgba(255, 255, 255, 0.03);
-    }
-
-    .ticket-row.priority {
-        background: rgba(234, 179, 8, 0.04);
-    }
-
-    .ticket-row.priority:hover {
-        background: rgba(234, 179, 8, 0.08);
-    }
-
-    .user-cell {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .user-avatar-small {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        font-weight: 700;
-        color: #fff;
-        flex-shrink: 0;
-    }
-
-    .user-avatar-small.closed {
-        background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
-    }
-
-    .user-info {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-    }
-
-    .user-name {
-        font-size: 14px;
-        font-weight: 600;
-        color: #fff;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .user-id {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.4);
-    }
-
-    .status-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    .status-pill.open {
-        background: rgba(19, 236, 128, 0.15);
-        color: #13ec80;
-    }
-
-    .status-pill.closed {
-        background: rgba(255, 255, 255, 0.04);
-        color: rgba(255, 255, 255, 0.3);
-    }
-
-    .ticket-row.closed-row {
-        opacity: 0.6;
-    }
-
-    .ticket-row.closed-row:hover {
-        opacity: 0.85;
-    }
-
-    .status-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-    }
-
-    .status-dot.green {
-        background: #13ec80;
-    }
-
-    .status-dot.yellow {
-        background: #eab308;
-        animation: blink-urgent 0.8s ease-in-out infinite;
-    }
-
-    .status-dot.red {
-        background: rgba(239, 68, 68, 0.6);
-    }
-
-    .subject-cell {
-        max-width: 300px;
-        min-width: 200px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        white-space: normal;
-        font-size: 14px;
-        color: #fff;
-        line-height: 1.4;
-    }
-
-    .time-cell {
-        font-size: 13px;
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    .actions-cell {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .btn-view {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 14px;
-        border-radius: 8px;
-        background: rgba(19, 236, 128, 0.12);
-        color: #13ec80;
-        font-size: 13px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-
-    .btn-view:hover {
-        background: rgba(19, 236, 128, 0.2);
-    }
-
-    .btn-view .material-symbols-outlined {
-        font-size: 16px;
-    }
-
-    .btn-profile {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 14px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.1);
-        color: #fff;
-        font-size: 13px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-
-    .btn-profile:hover {
-        background: rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-profile .material-symbols-outlined {
-        font-size: 16px;
-    }
-
-    /* Table Dropdown */
-    .table-dropdown {
-        position: relative;
-    }
-
-    .table-dropdown-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        background: rgba(255, 255, 255, 0.06);
-        color: rgba(255, 255, 255, 0.6);
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .table-dropdown-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: #fff;
-    }
-
-    .table-dropdown-btn .material-symbols-outlined {
-        font-size: 18px;
-    }
-
-    .table-dropdown-menu {
-        position: absolute;
-        top: calc(100% + 4px);
-        right: 0;
-        min-width: 180px;
-        background: #1a2f24;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-5px);
-        transition: all 0.15s ease;
-        z-index: 50;
-        overflow: hidden;
-    }
-
-    .table-dropdown.open .table-dropdown-menu {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-    }
-
-    .table-menu-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 14px;
-        font-size: 13px;
-        color: #e2e8f0;
-        text-decoration: none;
-        background: none;
-        border: none;
-        width: 100%;
-        text-align: left;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-
-    .table-menu-item:hover {
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .table-menu-item .material-symbols-outlined {
-        font-size: 18px;
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    .table-menu-item.success .material-symbols-outlined {
-        color: #13ec80;
-    }
-
-    .table-menu-item.danger {
-        color: #ef4444;
-        border-top: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .table-menu-item.danger .material-symbols-outlined {
-        color: #ef4444;
-    }
-</style>
-
 {% for ticket in tickets %}
 <tr
-    class="ticket-row {% if ticket.status == 'open' and ticket.last_sender == 'user' %}priority{% endif %}{% if ticket.status != 'open' %} closed-row{% endif %}">
-    <td class="px-5 py-4">
-        <span class="text-white font-medium">#{{ ticket.ticket_id }}</span>
+    class="group border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors {% if ticket.status == 'open' and ticket.last_sender == 'user' %}bg-yellow-500/[0.03]{% endif %}">
+    <td class="px-6 py-4">
+        <span class="text-xs font-black text-white/30 uppercase tracking-tighter">#{{ ticket.ticket_id }}</span>
     </td>
-    <td class="px-5 py-4">
-        <div class="user-cell">
-            <div class="user-avatar-small {% if ticket.status != 'open' %}closed{% endif %}">
+    <td class="px-6 py-4">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary text-sm font-black border border-primary/20 shadow-lg shadow-primary/5">
                 {{ ticket.username[0]|upper if ticket.username else 'U' }}
             </div>
-            <div class="user-info">
-                <span class="user-name">{% if ticket.username %}@{{ ticket.username }}{% else %}N/A{% endif %}</span>
-                <span class="user-id">ID: {{ ticket.user_id }}</span>
+            <div class="flex flex-col min-w-0">
+                <span class="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
+                    {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
+                </span>
+                <span class="text-[9px] text-white/20 font-black uppercase tracking-widest">ID: {{ ticket.user_id
+                    }}</span>
             </div>
         </div>
     </td>
-    <td class="px-5 py-4">
-        <span class="subject-cell">{{ ticket.subject or 'Без темы' }}</span>
+    <td class="px-6 py-4">
+        <span class="text-sm text-white/70 line-clamp-1 max-w-[200px] hover:text-white transition-colors">{{
+            ticket.subject or 'Без темы' }}</span>
     </td>
-    <td class="px-5 py-4">
+    <td class="px-6 py-4">
         {% if ticket.status == 'open' %}
-        <span class="status-pill open">
-            {% if ticket.last_sender == 'admin' %}
-            <span class="status-dot green"></span>
-            {% elif ticket.last_sender == 'user' %}
-            <span class="status-dot yellow"></span>
-            {% endif %}
-            Открыт
-        </span>
+        {% set is_waiting = ticket.last_sender == 'user' %}
+        <div
+            class="flex items-center gap-2 px-3 py-1 rounded-full {% if is_waiting %}bg-yellow-500/10 border border-yellow-500/20{% else %}bg-primary/10 border border-primary/20{% endif %} w-fit">
+            <span
+                class="w-1.5 h-1.5 rounded-full {% if ticket.last_sender == 'admin' %}bg-primary animate-pulse{% else %}bg-yellow-500 animate-bounce{% endif %}"></span>
+            <span
+                class="text-[9px] font-black {% if is_waiting %}text-yellow-500{% else %}text-primary{% endif %} uppercase tracking-[0.15em]">Открыт</span>
+        </div>
         {% else %}
-        <span class="status-pill closed">
-            <span class="status-dot red"></span>
-            Закрыт
-        </span>
+        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit opacity-40">
+            <span class="w-1.5 h-1.5 rounded-full bg-white/30"></span>
+            <span class="text-[9px] font-black text-white/40 uppercase tracking-[0.15em]">Закрыт</span>
+        </div>
         {% endif %}
     </td>
-    <td class="px-5 py-4">
-        <span class="time-cell relative-time" data-timestamp="{{ ticket.updated_at or ticket.created_at }}">{{
-            ticket.updated_at or ticket.created_at }}</span>
+    <td class="px-6 py-4">
+        <span class="text-xs font-bold text-white/40 desktop-rel-time"
+            data-timestamp="{{ ticket.updated_at or ticket.created_at }}">
+            {{ (ticket.updated_at or ticket.created_at or "").split(' ')[1][:5] }}
+        </span>
     </td>
-    <td class="px-5 py-4">
-        <div class="actions-cell">
-            <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}" class="btn-view">
-                <span class="material-symbols-outlined">open_in_new</span>
+    <td class="px-6 py-4 text-right">
+        <div class="flex items-center justify-end gap-2">
+            <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}"
+                class="px-4 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary hover:text-background-dark transition-all">
                 Открыть
             </a>
-            <a href="{{ url_for('users_page', q=ticket.user_id) }}" class="btn-profile">
-                <span class="material-symbols-outlined">person</span>
-                Профиль
+            <a href="{{ url_for('users_page', q=ticket.user_id) }}"
+                class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
+                <span class="material-symbols-outlined text-[18px]">person</span>
             </a>
-            <div class="table-dropdown" data-dropdown>
-                <button type="button" class="table-dropdown-btn" onclick="toggleTableDropdown(this)">
-                    <span class="material-symbols-outlined">more_vert</span>
+            <div class="relative">
+                <button type="button" onclick="toggleSupportMenu(event,'{{ ticket.ticket_id }}')"
+                    class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
+                    <span class="material-symbols-outlined text-[18px]">more_vert</span>
                 </button>
-                <div class="table-dropdown-menu">
-                    <form method="post" action="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}">
+                <div id="support-menu-{{ ticket.ticket_id }}"
+                    class="hidden absolute top-0 right-full mr-2 w-48 border border-white/10 rounded-xl shadow-2xl z-[9999] overflow-hidden"
+                    style="background-color: #1a1a1a !important;">
+                    <form method="post" action="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}"
+                        class="m-0" data-ajax="true" data-refresh="support-tbody">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         {% if ticket.status == 'open' %}
-                        <button type="submit" name="action" value="close" class="table-menu-item"
-                            onclick="return confirm('Закрыть тикет #{{ ticket.ticket_id }}?')">
-                            <span class="material-symbols-outlined">check_circle</span>
-                            Закрыть
+                        <button type="submit" name="t_action" value="close"
+                            class="w-full p-4 text-left text-xs font-bold text-white hover:bg-white/5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm text-primary">check_circle</span> ЗАКРЫТЬ
                         </button>
                         {% else %}
-                        <button type="submit" name="action" value="open" class="table-menu-item success"
-                            onclick="return confirm('Открыть тикет #{{ ticket.ticket_id }}?')">
-                            <span class="material-symbols-outlined">refresh</span>
-                            Открыть
+                        <button type="submit" name="t_action" value="open"
+                            class="w-full p-4 text-left text-xs font-bold text-white hover:bg-white/5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm text-primary">refresh</span> ОТКРЫТЬ
                         </button>
                         {% endif %}
                     </form>
                     <form method="post"
-                        action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}">
+                        action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
+                        class="m-0 border-t border-white/5" data-ajax="true" data-refresh="support-tbody">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <button type="submit" class="table-menu-item danger"
-                            onclick="return confirm('Удалить тикет #{{ ticket.ticket_id }} навсегда?')">
-                            <span class="material-symbols-outlined">delete_forever</span>
-                            Удалить
+                        <button type="submit"
+                            class="w-full p-4 text-left text-xs font-bold text-red-500 hover:bg-white/5 flex items-center gap-2"
+                            onclick="return confirm('Удалить?')">
+                            <span class="material-symbols-outlined text-sm text-red-500">delete_forever</span> УДАЛИТЬ
                         </button>
                     </form>
                 </div>
@@ -361,75 +95,3 @@
     </td>
 </tr>
 {% endfor %}
-
-<script>
-    function toggleTableDropdown(btn) {
-        event.stopPropagation();
-        const dropdown = btn.closest('.table-dropdown');
-
-        // Close all other dropdowns
-        document.querySelectorAll('.table-dropdown.open').forEach(d => {
-            if (d !== dropdown) d.classList.remove('open');
-        });
-
-        dropdown.classList.toggle('open');
-    }
-
-    document.addEventListener('click', function (e) {
-        if (!e.target.closest('.table-dropdown')) {
-            document.querySelectorAll('.table-dropdown.open').forEach(d => d.classList.remove('open'));
-        }
-    });
-
-    // Relative time conversion
-    function formatRelativeTime(dateStr) {
-        if (!dateStr) return '';
-
-        // Parse date string (format: YYYY-MM-DD HH:MM:SS or similar)
-        const parts = dateStr.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
-        if (!parts) return dateStr;
-
-        // Server returns UTC, parsing as UTC
-        const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5]));
-        const now = new Date();
-        const diffMs = now - date;
-        const diffSec = Math.floor(diffMs / 1000);
-        const diffMin = Math.floor(diffSec / 60);
-        const diffHour = Math.floor(diffMin / 60);
-        const diffDay = Math.floor(diffHour / 24);
-        const diffMonth = Math.floor(diffDay / 30);
-        const diffYear = Math.floor(diffDay / 365);
-
-        if (diffYear >= 1) {
-            return diffYear + ' ' + pluralize(diffYear, 'год', 'года', 'лет') + ' назад';
-        } else if (diffMonth >= 1) {
-            return diffMonth + ' ' + pluralize(diffMonth, 'месяц', 'месяца', 'месяцев') + ' назад';
-        } else if (diffDay >= 1) {
-            return diffDay + ' ' + pluralize(diffDay, 'день', 'дня', 'дней') + ' назад';
-        } else if (diffHour >= 1) {
-            return diffHour + ' ' + pluralize(diffHour, 'час', 'часа', 'часов') + ' назад';
-        } else if (diffMin >= 1) {
-            return diffMin + ' ' + pluralize(diffMin, 'минуту', 'минуты', 'минут') + ' назад';
-        } else {
-            return 'только что';
-        }
-    }
-
-    function pluralize(n, one, few, many) {
-        n = Math.abs(n) % 100;
-        if (n >= 11 && n <= 19) return many;
-        n = n % 10;
-        if (n === 1) return one;
-        if (n >= 2 && n <= 4) return few;
-        return many;
-    }
-
-    // Apply relative time on load
-    document.querySelectorAll('.relative-time').forEach(el => {
-        const timestamp = el.getAttribute('data-timestamp');
-        if (timestamp) {
-            el.textContent = formatRelativeTime(timestamp);
-            el.title = timestamp; // Show original on hover
-        }
-    });
-</script>

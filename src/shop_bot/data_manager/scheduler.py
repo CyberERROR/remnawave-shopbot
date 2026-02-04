@@ -2,7 +2,7 @@ import asyncio
 import logging
 import json
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram import Bot
@@ -21,6 +21,10 @@ NOTIFY_BEFORE_HOURS = {72, 48, 24, 1}
 notified_users = {}
 
 logger = logging.getLogger(__name__)
+
+
+def get_msk_time() -> datetime:
+    return datetime.now(timezone(timedelta(hours=3)))
 
 
 
@@ -99,7 +103,7 @@ def _cleanup_notified_users(all_db_keys: list[dict]):
 
 async def check_expiring_subscriptions(bot: Bot):
     logger.debug("Scheduler: Проверяю истекающие подписки...")
-    current_time = datetime.now()
+    current_time = get_msk_time().replace(tzinfo=None)
     all_keys = rw_repo.get_all_keys()
     
     _cleanup_notified_users(all_keys)
@@ -158,7 +162,7 @@ async def sync_keys_with_panels():
             remote_by_email[raw_email.lower()] = (raw_email, remote_user)
 
         keys_in_db = rw_repo.get_keys_for_host(host_name) or []
-        now = datetime.now()
+        now = get_msk_time().replace(tzinfo=None)
 
         for db_key in keys_in_db:
             raw_email = (db_key.get('key_email') or db_key.get('email') or '').strip()
@@ -171,6 +175,40 @@ async def sync_keys_with_panels():
             remote_user = None
             if remote_entry:
                 remote_email, remote_user = remote_entry
+            else:
+                local_uuid = (db_key.get('remnawave_user_uuid') or '').strip()
+                if local_uuid:
+                    for rem_email_norm, (rem_email, rem_user) in list(remote_by_email.items()):
+                        rem_uuid = (rem_user.get('uuid') or rem_user.get('id') or rem_user.get('client_uuid') or '').strip()
+                        if rem_uuid and rem_uuid == local_uuid:
+                            remote_entry = remote_by_email.pop(rem_email_norm)
+                            remote_email, remote_user = remote_entry
+                            logger.info(
+                                "Scheduler: Найден ключ по UUID '%s'. Email изменён: '%s' → '%s'. Полностью обновляю данные.",
+                                local_uuid,
+                                raw_email,
+                                rem_email,
+                            )
+                            expire_value = rem_user.get('expireAt') or rem_user.get('expiryDate')
+                            expire_ms = None
+                            if expire_value:
+                                try:
+                                    expire_ms = int(datetime.fromisoformat(str(expire_value).replace('Z', '+00:00')).timestamp() * 1000)
+                                except Exception:
+                                    pass
+                            subscription_url = remnawave_api.extract_subscription_url(rem_user)
+                            rw_repo.update_key_fields(
+                                db_key.get('key_id'),
+                                email=rem_email,
+                                remnawave_user_uuid=rem_uuid,
+                                expire_at_ms=expire_ms,
+                                subscription_url=subscription_url,
+                                short_uuid=rem_user.get('shortUuid') or rem_user.get('short_uuid'),
+                                traffic_limit_bytes=rem_user.get('trafficLimitBytes') or rem_user.get('traffic_limit_bytes'),
+                                traffic_limit_strategy=rem_user.get('trafficLimitStrategy') or rem_user.get('traffic_limit_strategy'),
+                            )
+                            total_affected_records += 1
+                            break
 
             expiry_raw = db_key.get('expiry_date') or db_key.get('expire_at')
             try:
@@ -258,22 +296,75 @@ async def sync_keys_with_panels():
                      # Здесь нужен метод репозитория для поиска по username, но его может не быть.
                      # Пока оставим как есть, но без user_id мы не можем привязать.
                      pass
-                if not user_id:
+                if user_id is None:
+                    # Если это подарочный ключ (gift-uuid@bot.local)
+                    if remote_email.startswith('gift-'):
+                        token_prefix = remote_email.split('@')[0]
+                        # Сначала ищем по полному префиксу (напр. gift-xxxx)
+                        user_id = rw_repo.get_user_id_by_gift_token(token_prefix)
+                        if user_id is None and '-' in token_prefix:
+                            # Пробуем без префикса "gift-"
+                            user_id = rw_repo.get_user_id_by_gift_token(token_prefix.split('-', 1)[1])
+                        
+                        # Если все еще нет владельца, это подарок без владельца ( user_id = 0 )
+                        if user_id is None:
+                            user_id = 0
+
+                if user_id is None:
                     logger.warning(
                         "Scheduler: Осиротевший пользователь '%s' в Remnawave не содержит user_id — пропускаю.",
                         remote_email,
                     )
                     continue
 
-                if not rw_repo.get_user(user_id):
-                    logger.warning(
-                        "Scheduler: Осиротевший пользователь '%s' ссылается на несуществующего user_id=%s.",
+                # Автоматическая регистрация пользователя, если его нет в БД (и это не подарок без владельца)
+                if user_id != 0 and not rw_repo.get_user(user_id):
+                    logger.info(
+                        "Scheduler: Автоматически регистрирую недостающего пользователя user_id=%s для '%s'.",
+                        user_id,
                         remote_email,
+                    )
+                    rw_repo.register_user_if_not_exists(user_id, f"User_{user_id}", None)
+
+                remote_uuid = (remote_user.get('uuid') or remote_user.get('id') or remote_user.get('client_uuid') or '').strip()
+                existing_by_email = rw_repo.get_key_by_email(remote_email)
+                existing_by_uuid = rw_repo.get_key_by_remnawave_uuid(remote_uuid) if remote_uuid else None
+                
+                if existing_by_email:
+                    continue
+                
+                if existing_by_uuid:
+                    old_email = existing_by_uuid.get('email') or existing_by_uuid.get('key_email')
+                    key_id = existing_by_uuid.get('key_id')
+                    old_user_id = existing_by_uuid.get('user_id')
+                    logger.info(
+                        "Scheduler: Найден существующий ключ key_id=%s по UUID. Полностью обновляю данные: email '%s' → '%s', user_id %s → %s.",
+                        key_id,
+                        old_email,
+                        remote_email,
+                        old_user_id,
                         user_id,
                     )
-                    continue
-
-                if rw_repo.get_key_by_email(remote_email):
+                    expire_value = remote_user.get('expireAt') or remote_user.get('expiryDate')
+                    expire_ms = None
+                    if expire_value:
+                        try:
+                            expire_ms = int(datetime.fromisoformat(str(expire_value).replace('Z', '+00:00')).timestamp() * 1000)
+                        except Exception:
+                            pass
+                    subscription_url = remnawave_api.extract_subscription_url(remote_user)
+                    rw_repo.update_key_fields(
+                        key_id,
+                        user_id=user_id,
+                        email=remote_email,
+                        remnawave_user_uuid=remote_uuid,
+                        expire_at_ms=expire_ms,
+                        subscription_url=subscription_url,
+                        short_uuid=remote_user.get('shortUuid') or remote_user.get('short_uuid'),
+                        traffic_limit_bytes=remote_user.get('trafficLimitBytes') or remote_user.get('traffic_limit_bytes'),
+                        traffic_limit_strategy=remote_user.get('trafficLimitStrategy') or remote_user.get('traffic_limit_strategy'),
+                    )
+                    total_affected_records += 1
                     continue
 
                 payload = dict(remote_user)
@@ -345,7 +436,7 @@ async def periodic_subscription_check(bot_controller: BotController):
 
 async def _maybe_run_periodic_speedtests():
     global _last_speedtests_run_at
-    now = datetime.now()
+    now = get_msk_time()
     if _last_speedtests_run_at and (now - _last_speedtests_run_at).total_seconds() < SPEEDTEST_INTERVAL_SECONDS:
         return
     try:
@@ -431,7 +522,7 @@ async def _maybe_collect_resource_metrics(bot: Bot | None):
             interval_sec = int((rw_repo.get_setting("monitoring_interval_sec") or "300").strip() or 300)
         except Exception:
             interval_sec = 300
-        now = datetime.now()
+        now = get_msk_time()
         if _last_resource_collect_at and (now - _last_resource_collect_at).total_seconds() < max(30, interval_sec):
             return
 
@@ -500,7 +591,7 @@ async def _maybe_collect_resource_metrics(bot: Bot | None):
 async def _maybe_run_daily_backup(bot: Bot):
     """Ежедневный автобэкап базы и отправка админам. Интервал задаётся в настройках backup_interval_days."""
     global _last_backup_run_at
-    now = datetime.now()
+    now = get_msk_time()
     try:
         s = rw_repo.get_setting("backup_interval_days") or "1"
         days = int(str(s).strip() or "1")
@@ -612,7 +703,7 @@ async def _maybe_alert(
 
     if breaches:
         key = (scope, name, "critical", ",".join(sorted([b['type'] for b in breaches])))
-        now = datetime.now()
+        now = get_msk_time()
         last = _last_resource_alert_at.get(key)
         if not last or (now - last).total_seconds() >= max(60, cooldown_sec):
             _last_resource_alert_at[key] = now
@@ -621,7 +712,7 @@ async def _maybe_alert(
 
     if alerts:
         key = (scope, name, "warning", ",".join(sorted([a['type'] for a in alerts])))
-        now = datetime.now()
+        now = get_msk_time()
         last = _last_resource_alert_at.get(key)
         if not last or (now - last).total_seconds() >= max(300, cooldown_sec * 2):
             _last_resource_alert_at[key] = now
@@ -660,7 +751,7 @@ async def _send_alert(bot: Bot, scope: str, name: str, issues: list[dict], level
         f"{header_emoji} <b>{header_text}</b>",
         "",
         f"🎯 <b>Объект:</b> {obj_name}",
-        f"⏰ <b>Время:</b> <code>{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}</code>",
+        f"⏰ <b>Время:</b> <code>{get_msk_time().strftime('%d.%m.%Y %H:%M:%S')}</code>",
         "",
         "📊 <b>Проблемы:</b>"
     ]

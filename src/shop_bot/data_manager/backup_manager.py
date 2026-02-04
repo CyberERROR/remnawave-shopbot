@@ -2,7 +2,7 @@ import logging
 import shutil
 import sqlite3
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from aiogram import Bot
@@ -20,8 +20,12 @@ BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
 DB_FILE: Path = rw_repo.DB_FILE
 
 
+def get_msk_time() -> datetime:
+    return datetime.now(timezone(timedelta(hours=3)))
+
+
 def _timestamp() -> str:
-    return datetime.now().strftime("%Y%m%d-%H%M%S")
+    return get_msk_time().strftime("%Y%m%d-%H%M%S")
 
 
 def create_backup_file() -> Path | None:
