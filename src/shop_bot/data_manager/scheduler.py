@@ -29,6 +29,7 @@ def get_msk_time() -> datetime:
 
 
 SPEEDTEST_INTERVAL_SECONDS = 8 * 3600
+_scheduler_start_time = get_msk_time()
 _last_speedtests_run_at: datetime | None = None
 _last_backup_run_at: datetime | None = None
 _last_resource_collect_at: datetime | None = None
@@ -296,6 +297,63 @@ async def sync_keys_with_panels():
                      # Здесь нужен метод репозитория для поиска по username, но его может не быть.
                      # Пока оставим как есть, но без user_id мы не можем привязать.
                      pass
+                remote_uuid = (remote_user.get('uuid') or remote_user.get('id') or remote_user.get('client_uuid') or '').strip()
+                
+                # Ищем существующий ключ в базе по Email или UUID
+                existing_key = None
+                existing_by_email = rw_repo.get_key_by_email(remote_email)
+                if existing_by_email:
+                    existing_key = existing_by_email
+                elif remote_uuid:
+                    existing_by_uuid = rw_repo.get_key_by_remnawave_uuid(remote_uuid)
+                    if existing_by_uuid:
+                        existing_key = existing_by_uuid
+
+                # Если user_id не пришел с панели, пробуем взять его из существующего ключа
+                if user_id is None and existing_key:
+                    user_id = existing_key.get('user_id')
+                    logger.info(
+                        "Scheduler: ID пользователя восстановлен из локальной БД (user_id=%s) для '%s'.",
+                        user_id,
+                        remote_email,
+                    )
+
+                # Ищем пользователя по username из email (до @)
+                if user_id is None:
+                    username_part = remote_email.split('@')[0]
+                    
+                    # 1. Сначала пробуем "как есть" (hamz_d-3)
+                    candidates = [username_part]
+                    
+                    # 2. Если есть суффиксы -2, -3 и т.д., пробуем отрезать их
+                    # Например: life1swr0thl1v1n-2 -> life1swr0thl1v1n
+                    import re
+                    # Ищем паттерн: любое_имя-цифра(ы)
+                    # Используем цикл, чтобы отрезать несколько раз, если вдруг что-то типа name-2-3 (редко, но бывает)
+                    temp = username_part
+                    while True:
+                        match_suffix = re.search(r"^(.*?)(?:-\d+)$", temp)
+                        if match_suffix:
+                             base = match_suffix.group(1)
+                             if base and base not in candidates:
+                                 candidates.append(base)
+                             temp = base
+                        else:
+                            break
+                    
+                    for candidate in candidates:
+                        # Попытка найти пользователя по username в базе данных
+                        user_by_username = rw_repo.get_user_by_username(candidate)
+                        if user_by_username:
+                            user_id = user_by_username.get('telegram_id')
+                            logger.info(
+                                "Scheduler: ID пользователя найден по username '%s' (из '%s') -> user_id=%s.",
+                                candidate,
+                                remote_email,
+                                user_id,
+                            )
+                            break
+
                 if user_id is None:
                     # Если это подарочный ключ (gift-uuid@bot.local)
                     if remote_email.startswith('gift-'):
@@ -305,20 +363,23 @@ async def sync_keys_with_panels():
                         if user_id is None and '-' in token_prefix:
                             # Пробуем без префикса "gift-"
                             user_id = rw_repo.get_user_id_by_gift_token(token_prefix.split('-', 1)[1])
-                        
-                        # Если все еще нет владельца, это подарок без владельца ( user_id = 0 )
-                        if user_id is None:
-                            user_id = 0
-
+                
+                # Если user_id всё ещё нет, но ключ есть в БД — это странно, но мы можем обновить его
+                # Если ключа нет и user_id нет — это реально новый "осиротевший" пользователь
                 if user_id is None:
-                    logger.warning(
-                        "Scheduler: Осиротевший пользователь '%s' в Remnawave не содержит user_id — пропускаю.",
-                        remote_email,
-                    )
-                    continue
+                    if existing_key:
+                         # Теоретически не должно сюда попасть, если мы взяли user_id из existing_key
+                         # Но если в existing_key user_id=None (что невозможно по схеме), то ок.
+                         pass
+                    else:
+                        logger.warning(
+                            "Scheduler: Осиротевший пользователь '%s' в Remnawave не содержит user_id — пропускаю (ключ останется в панели, но не привяжется).",
+                            remote_email,
+                        )
+                        continue
 
                 # Автоматическая регистрация пользователя, если его нет в БД (и это не подарок без владельца)
-                if user_id != 0 and not rw_repo.get_user(user_id):
+                if user_id and user_id != 0 and not rw_repo.get_user(user_id):
                     logger.info(
                         "Scheduler: Автоматически регистрирую недостающего пользователя user_id=%s для '%s'.",
                         user_id,
@@ -326,25 +387,19 @@ async def sync_keys_with_panels():
                     )
                     rw_repo.register_user_if_not_exists(user_id, f"User_{user_id}", None)
 
-                remote_uuid = (remote_user.get('uuid') or remote_user.get('id') or remote_user.get('client_uuid') or '').strip()
-                existing_by_email = rw_repo.get_key_by_email(remote_email)
-                existing_by_uuid = rw_repo.get_key_by_remnawave_uuid(remote_uuid) if remote_uuid else None
-                
-                if existing_by_email:
-                    continue
-                
-                if existing_by_uuid:
-                    old_email = existing_by_uuid.get('email') or existing_by_uuid.get('key_email')
-                    key_id = existing_by_uuid.get('key_id')
-                    old_user_id = existing_by_uuid.get('user_id')
-                    logger.info(
-                        "Scheduler: Найден существующий ключ key_id=%s по UUID. Полностью обновляю данные: email '%s' → '%s', user_id %s → %s.",
-                        key_id,
-                        old_email,
-                        remote_email,
-                        old_user_id,
-                        user_id,
-                    )
+                # Если ключ уже есть в базе (по Email или UUID) — ОБНОВЛЯЕМ его
+                if existing_key:
+                    old_email = existing_key.get('email') or existing_key.get('key_email')
+                    key_id = existing_key.get('key_id')
+                    old_user_id = existing_key.get('user_id')
+                    
+                    # Если user_id изменился (например, перепривязка), логгируем
+                    if old_user_id != user_id:
+                        logger.info(
+                             "Scheduler: Обновление владельца ключа key_id=%s: %s -> %s",
+                             key_id, old_user_id, user_id
+                        )
+
                     expire_value = remote_user.get('expireAt') or remote_user.get('expiryDate')
                     expire_ms = None
                     if expire_value:
@@ -353,6 +408,7 @@ async def sync_keys_with_panels():
                         except Exception:
                             pass
                     subscription_url = remnawave_api.extract_subscription_url(remote_user)
+                    
                     rw_repo.update_key_fields(
                         key_id,
                         user_id=user_id,
@@ -363,10 +419,13 @@ async def sync_keys_with_panels():
                         short_uuid=remote_user.get('shortUuid') or remote_user.get('short_uuid'),
                         traffic_limit_bytes=remote_user.get('trafficLimitBytes') or remote_user.get('traffic_limit_bytes'),
                         traffic_limit_strategy=remote_user.get('trafficLimitStrategy') or remote_user.get('traffic_limit_strategy'),
+                        host_name=host_name, # Принудительно обновляем хост, если ключ "переехал"
+                        squad_uuid=squad_uuid,
                     )
                     total_affected_records += 1
                     continue
 
+                # Если ключа нет — СОЗДАЕМ новый
                 payload = dict(remote_user)
                 payload.setdefault('host_name', host_name)
                 payload.setdefault('squad_uuid', squad_uuid)
@@ -382,7 +441,7 @@ async def sync_keys_with_panels():
                 if new_id:
                     total_affected_records += 1
                     logger.info(
-                        "Scheduler: Привязал осиротевшего пользователя '%s' (host '%s') к user_id=%s как key_id=%s.",
+                        "Scheduler: Привязал нового пользователя '%s' (host '%s') к user_id=%s как key_id=%s.",
                         remote_email,
                         host_name,
                         user_id,
@@ -390,7 +449,7 @@ async def sync_keys_with_panels():
                     )
                 else:
                     logger.warning(
-                        "Scheduler: Не удалось привязать осиротевшего пользователя '%s' (host '%s').",
+                        "Scheduler: Не удалось привязать нового пользователя '%s' (host '%s').",
                         remote_email,
                         host_name,
                     )
@@ -437,7 +496,11 @@ async def periodic_subscription_check(bot_controller: BotController):
 async def _maybe_run_periodic_speedtests():
     global _last_speedtests_run_at
     now = get_msk_time()
-    if _last_speedtests_run_at and (now - _last_speedtests_run_at).total_seconds() < SPEEDTEST_INTERVAL_SECONDS:
+    
+    if _last_speedtests_run_at is None:
+        if (now - _scheduler_start_time).total_seconds() < 120:
+            return
+    elif (now - _last_speedtests_run_at).total_seconds() < SPEEDTEST_INTERVAL_SECONDS:
         return
     try:
         await _run_speedtests_for_all_ssh_targets()

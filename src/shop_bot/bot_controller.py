@@ -97,8 +97,8 @@ class BotController:
             
             try:
                 asyncio.run_coroutine_threadsafe(self._bot.delete_webhook(drop_pending_updates=True), self._loop).result(timeout=5)
-            except Exception as e:
-                logger.warning(f"Не удалось удалить вебхук перед запуском опроса: {e}")
+            except Exception as e: 
+                logger.warning(f"Не удалось удалить вебхук (обычно не критично): {e or 'Timeout/Unknown'}")
 
             yookassa_shop_id = rw_repo.get_setting("yookassa_shop_id")
             yookassa_secret_key = rw_repo.get_setting("yookassa_secret_key")

@@ -12,7 +12,7 @@ try:
 except Exception:
     colorama_available = False
 
-from shop_bot.webhook_server.app import create_webhook_app
+from shop_bot.webhook_server.app import create_webhook_app, _support_bot_controller
 from shop_bot.data_manager.scheduler import periodic_subscription_check
 from shop_bot.data_manager import remnawave_repository as rw_repo
 from shop_bot.bot_controller import BotController
@@ -147,6 +147,44 @@ def main():
         logger.info("Приложение запущено. Бота можно стартовать из веб-панели.")
         
         asyncio.create_task(periodic_subscription_check(bot_controller))
+        async def delayed_auto_start():
+            logger.info("Ожидание 2 секунд перед автозапуском...")
+            await asyncio.sleep(2)
+            try:
+                # Сначала логгируем значение из БД для отладки
+                raw_val = rw_repo.get_other_value('auto_start_bot')
+                logger.info(f"Настройка автозапуска (DB): '{raw_val}'")
+                
+                auto_start = raw_val == '1'
+                if auto_start:
+                    logger.info("Автозапуск включен. Попытка запуска системы...")
+                    
+                    status_msg = []
+                    
+                    result = bot_controller.start()
+                    if result.get('status') == 'success':
+                        status_msg.append("Основной бот: OK")
+                    else:
+                        status_msg.append(f"Основной бот: Ошибка ({result.get('message')})")
+                        
+                    try:
+                        loop = asyncio.get_running_loop()
+                        _support_bot_controller.set_loop(loop)
+                        res_sup = _support_bot_controller.start()
+                        if res_sup.get('status') == 'success':
+                            status_msg.append("Support бот: OK")
+                        else:
+                            status_msg.append(f"Support бот: Ошибка ({res_sup.get('message')})")
+                    except Exception as e:
+                        status_msg.append(f"Support бот: Exception ({e})")
+
+                    logger.info(f"Результат автозапуска: {'; '.join(status_msg)}")
+                else:
+                    logger.info("Автозапуск выключен или не настроен.")
+            except Exception as e:
+                logger.error(f"Исключение при попытке автозапуска бота: {e}", exc_info=True)
+
+        asyncio.create_task(delayed_auto_start())
 
 
         try:

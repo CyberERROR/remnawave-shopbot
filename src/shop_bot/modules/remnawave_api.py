@@ -470,23 +470,45 @@ async def ensure_user(
 
 
 
-async def list_users(host_name: str, squad_uuid: str | None = None, size: int | None = 500) -> list[dict[str, Any]]:
-    params: dict[str, Any] = {}
-    if size is not None:
-        params["size"] = size
-    if squad_uuid:
-        params["squadUuid"] = squad_uuid
-    response = await _request_for_host(host_name, "GET", "/api/users", params=params, expected_status=(200,))
-    payload = response.json() or {}
-    raw_users = []
-    if isinstance(payload, dict):
-        body = payload.get("response") if isinstance(payload.get("response"), dict) else payload
-        raw_users = body.get("users") or body.get("data") or []
-    if not isinstance(raw_users, list):
+async def list_users(host_name: str, squad_uuid: str | None = None, size: int | None = 1000) -> list[dict[str, Any]]:
+    all_users = []
+    page = 0
+    actual_size = size or 100
+    
+    while True:
+        params: dict[str, Any] = {"page": page, "size": actual_size}
+        if squad_uuid:
+            params["squadUuid"] = squad_uuid
+            
+        try:
+            response = await _request_for_host(host_name, "GET", "/api/users", params=params, expected_status=(200,))
+        except Exception:
+            if page == 0:
+                return []
+            break
+            
+        payload = response.json() or {}
         raw_users = []
+        if isinstance(payload, dict):
+            body = payload.get("response") if isinstance(payload.get("response"), dict) else payload
+            raw_users = body.get("users") or body.get("data") or []
+            
+        if not isinstance(raw_users, list):
+            raw_users = []
+            
+        if not raw_users:
+            break
+            
+        all_users.extend(raw_users)
+        
+        if len(raw_users) < actual_size:
+            break
+            
+        page += 1
+
     if squad_uuid:
         filtered: list[dict[str, Any]] = []
-        for user in raw_users:
+        for user in all_users:
             squads = user.get("activeInternalSquads") or user.get("internalSquads") or []
             if isinstance(squads, list):
                 for item in squads:
@@ -500,7 +522,8 @@ async def list_users(host_name: str, squad_uuid: str | None = None, size: int | 
             elif isinstance(squads, str) and squads == squad_uuid:
                 filtered.append(user)
         return filtered
-    return raw_users
+        
+    return all_users
 async def delete_user(user_uuid: str) -> bool:
     """Глобальный вариант (устарел): удаление без привязки к хосту.
     Сохраняется для обратной совместимости, но предпочтительно использовать host-specific путь ниже.

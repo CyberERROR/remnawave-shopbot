@@ -21,37 +21,40 @@ VPN_INACTIVE_TEXT = "❌ <b>Статус VPN:</b> Неактивен (срок �
 VPN_NO_DATA_TEXT = "ℹ️ <b>Статус VPN:</b> У вас пока нет активных ключей."
 
 
-def get_profile_text(username, total_spent, total_months, vpn_status_text):
-    return (
-        f"👤 <b>Профиль:</b> {username}\n\n"
-        f"💰 <b>Потрачено всего:</b> {total_spent:.0f} RUB\n"
-        f"📅 <b>Приобретено месяцев:</b> {total_months}\n\n"
-        f"{vpn_status_text}"
+def get_profile_text(username, user_id, total_spent, total_months, vpn_status, vpn_remaining, main_balance, referral_count, total_ref_earned, seller_info=None):
+    # Base Layout
+    text = (
+        f"<b>👤 ПРОФИЛЬ:</b> {username} / <b>iD:</b> <code>{user_id}</code>\n\n"
+        f"<b>💎 ПОДПИСКА</b>\n"
+        f"<b>🛡 Статус VPN:</b> {vpn_status} ✅\n"
+        f"<b>⏳ Осталось:</b> {vpn_remaining}\n"
+        f"<b>💲 Потрачено всего:</b> {total_spent:.0f} RUB\n"
+        f"<b>📅 Приобретено месяцев:</b> {total_months}\n\n"
+        f"<b>💼 ФИНАНСЫ</b>\n"
+        f"<b>💳 Основной баланс:</b> {main_balance:.0f} RUB\n"
+        f"<b>🤝 Рефералов:</b> {referral_count}\n"
+        f"<b>💰 Заработано:</b> {total_ref_earned:.2f} RUB"
     )
 
-def get_seller_text(sale, ref, squad_uuid):
-    lines = ["\n\n👑 <b>Статус Seller</b> - Активно"]
-    
-    try:
-        if ref and float(ref) > 0:
-            lines.append(f"👥 <b>Индивидуальный Реф:</b> +{ref}%")
-    except: pass
+    # Partner Program Section (Only if seller_active)
+    if seller_info:
+         # seller_info dict keys expected: 'sale', 'ref', 'squad_uuid'
+         s_sale = seller_info.get('sale', 0)
+         s_ref = seller_info.get('ref', 0)
+         s_squad = seller_info.get('squad_uuid')
+         
+         text += "\n\n<b>👑 ПАРТНЕРСКАЯ ПРОГРАММА</b>\n"
+         if s_ref and float(s_ref) > 0:
+             text += f"<b>👥 Реферальный бонус:</b> +{s_ref}%\n"
+         if s_sale and float(s_sale) > 0:
+             text += f"<b>🛍 Персональная скидка:</b> -{s_sale}%\n"
+         if s_squad and str(s_squad) != '0' and str(s_squad).strip():
+             text += f"<b>🛰 Индивидуальный Сквад:</b> ✅"
 
-    try:
-        if sale and float(sale) > 0:
-            lines.append(f"🛍 <b>Индивидуальная Скидка:</b> -{sale}%")
-    except: pass
-        
-    if squad_uuid and str(squad_uuid) != '0' and str(squad_uuid).strip():
-        lines.append("🛰 <b>Индивидуальный Сквад:</b> ✅")
-        
-    return "\n".join(lines)
+    return text
 
 def get_vpn_active_text(days_left, hours_left):
-    return (
-        f"✅ <b>Статус VPN:</b> Активен\n"
-        f"⏳ <b>Осталось:</b> {days_left} д. {hours_left} ч."
-    )
+    return f"{days_left} д. {hours_left} ч."
 
 def _get_status_text(remaining):
     total_seconds = int(remaining.total_seconds())
@@ -119,12 +122,11 @@ def get_key_info_text(key_number, expiry_date, created_date, connection_string, 
 
     comment_block = ""
     if comment:
-        comment_block = f"💬 <b>Комментарий: {html.quote(comment)} ♻️</b>\n"
+        comment_block = f"💬 <b>Комментарий:</b> <blockquote>{html.quote(comment)}</blockquote>\n"
 
     return (
-        f"🔑 <b>Информация о ключе #{key_number}</b>\n"
-        f"{comment_block}"
-        f"\n📅 <b>Сроки действия:</b>\n"
+        f"🔑 <b>Информация о ключе #{key_number}</b>\n\n"
+        f"📅 <b>Сроки действия:</b>\n"
         f"{status_icon} <b>Статус:</b> {status_text}\n"
         f"➕ <b>Куплен:</b> {created_date.strftime('%d.%m.%Y')}\n"
         f"🕙 <b>Истекает:</b> {expiry_date.strftime('%d.%m.%Y %H:%M')}\n"
@@ -134,6 +136,7 @@ def get_key_info_text(key_number, expiry_date, created_date, connection_string, 
         f"🛰 <b>Лимит трафика:</b> {traffic_block}\n" 
         f"📱 <b>Лимит устройств:</b> {hwid_block}\n"
         f"🗽 <b>Ваш ключ:</b>\n<code>{connection_string}</code>"
+        f"\n\n{comment_block}"
     )
 
 

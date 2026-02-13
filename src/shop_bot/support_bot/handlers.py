@@ -352,20 +352,30 @@ def get_support_router() -> Router:
         message_content = message.text or message.caption or ("[Фото]" if message.photo else "[Видео]" if message.video else "")
         notification_text = _build_notification_text(ticket_id, message.from_user.id, username_display, subject, message_content, created_new)
         
+        
         for aid in get_admin_ids():
             try:
                 if message.text or (message.caption and not created_new):
                     send_method = bot.send_photo if created_new else bot.send_message
+                    
+                    photo_to_send = NEW_TICKET_PHOTO_URL
+                    if created_new and message.photo:
+                        photo_to_send = message.photo[-1].file_id
+
                     await send_method(
                         chat_id=int(aid),
-                        **(({"photo": NEW_TICKET_PHOTO_URL, "caption": notification_text} if created_new else {"text": notification_text})),
+                        **(({"photo": photo_to_send, "caption": notification_text} if created_new else {"text": notification_text})),
                         reply_markup=_admin_dm_reply_kb(ticket_id)
                     )
                 else:
                     if created_new:
+                        photo_to_send = NEW_TICKET_PHOTO_URL
+                        if message.photo:
+                            photo_to_send = message.photo[-1].file_id
+                            
                         await bot.send_photo(
                             chat_id=int(aid),
-                            photo=NEW_TICKET_PHOTO_URL,
+                            photo=photo_to_send,
                             caption=notification_text,
                             reply_markup=_admin_dm_reply_kb(ticket_id)
                         )
@@ -768,13 +778,6 @@ def get_support_router() -> Router:
     @router.callback_query(F.data.startswith("admin_delete_"))
     async def admin_delete_ticket(callback: types.CallbackQuery, bot: Bot):
         await callback.answer()
-        # Custom logic for delete: separate check because of specific error message?
-        # The prompt said "same logic". Original had a try-catch and specific messages.
-        # But _get_ticket_and_check_admin is cleaner. 
-        # Let's keep specific message if we can't use helper, OR assume helper generic message is fine.
-        # Original: "Тикет уже удалён или не найден." (show_alert=False) vs helper "❌ Тикет не найден." (edit_text)
-        # Helper uses edit_text.
-        # Let's use helper for consistency.
         ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket: return
         

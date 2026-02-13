@@ -83,7 +83,7 @@ class SupportBotController:
             try:
                 asyncio.run_coroutine_threadsafe(self._bot.delete_webhook(drop_pending_updates=True), self._loop).result(timeout=5)
             except Exception as e:
-                logger.warning(f"Не удалось удалить вебхук перед запуском опроса: {e}")
+                logger.warning(f"Не удалось удалить вебхук support-бота (обычно не критично): {e or 'Timeout/Unknown'}")
 
             self._is_running = True
             self._task = asyncio.run_coroutine_threadsafe(self._start_polling(), self._loop)

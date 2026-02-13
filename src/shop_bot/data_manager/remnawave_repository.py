@@ -336,6 +336,8 @@ _LEGACY_FORWARDERS = (
     "get_metrics_series",
     "get_other_value",
     "set_other_value",
+    "get_all_other_settings",
+    "update_other_setting",
 )
 
 for _name in _LEGACY_FORWARDERS:
@@ -774,4 +776,15 @@ def get_paginated_trials(page: int = 1, per_page: int = 10) -> tuple[list[dict[s
 
 def get_total_spent_by_method(payment_method: str) -> float:
     return database.get_total_spent_by_method(payment_method)
+
+
+def get_user_by_username(username: str) -> dict | None:
+    username_s = (username or "").strip().lower().lstrip('@')
+    if not username_s:
+        return None
+    with _connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE LOWER(username) = ?", (username_s,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 

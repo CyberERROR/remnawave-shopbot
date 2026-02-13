@@ -1,5 +1,6 @@
 import logging
 import hashlib
+import urllib.parse
 
 from datetime import datetime
 
@@ -355,7 +356,7 @@ def create_host_selection_keyboard(hosts: list, action: str) -> InlineKeyboardMa
     for host in hosts:
         callback_data = f"select_host_{action}_{host['host_name']}"
         builder.button(text=host['host_name'], callback_data=callback_data)
-    builder.button(text="⬅️ Назад", callback_data="manage_keys" if action == 'new' else "back_to_main_menu")
+    builder.button(text="⬅️ Назад", callback_data="back_to_main_menu")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -364,7 +365,14 @@ def create_plans_keyboard(plans: list[dict], action: str, host_name: str, key_id
     for plan in plans:
         callback_data = f"buy_{host_name}_{plan['plan_id']}_{action}_{key_id}"
         builder.button(text=f"{plan['plan_name']} - {plan['price']:.0f} RUB", callback_data=callback_data)
-    back_callback = "manage_keys" if action == "extend" else "buy_new_key"
+    
+    if action == "extend":
+        back_callback = "manage_keys"
+    else:
+        from shop_bot.data_manager.remnawave_repository import get_all_hosts
+        hosts = get_all_hosts(visible_only=True) or []
+        back_callback = "back_to_main_menu" if len(hosts) == 1 else "buy_new_key"
+        
     builder.button(text="⬅️ Назад", callback_data=back_callback)
     builder.adjust(1) 
     return builder.as_markup()
@@ -862,23 +870,7 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 if connection_string:
                    if url and "{connection_string}" in url:
                        url = url.replace("{connection_string}", connection_string)
-                       # Special handling for WebApp if URL IS exactly the connection string or contains it in a specific way
-                       # For now, let's assume if it contains key info it might be a WebApp or standard link. 
-                       # But for 'connect' button usually it is WebApp.
-                       # If config URL was exactly "{connection_string}", we make it a WebApp button if looks like one?
-                       # Or better: check if we should use WebApp.
-                       # In standard create_key_info_keyboard: builder.button(text="📲 Подключиться", web_app=WebAppInfo(url=connection_string))
-                       # Here we need a way to specify it is a WebApp.
-                       # Heuristic: if button_id is 'connect' and url is the connection string.
                        pass
-                
-                # Logic to determine if it is a WebApp button
-                # If the URL was replaced with connection_string and button_id is connect, or if the URL protocol suggests so?
-                # Actually, aiogram Button needs explicit web_app argument.
-                # Let's say if url contains 'vless://' or 'ss://' after replacement it could be a link (tg:// or https://)
-                # But WebApp is different.
-                # To support WebApp via generic config is tricky without extra field. 
-                # HACK: If the original URL was "{connection_string}" AND the text is "Подключиться" (or button_id='connect'), use WebAppInfo.
                 
                 is_web_app = False
                 if cfg.get('url') == "{connection_string}" and connection_string:
@@ -898,23 +890,10 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
 
             if not included_row:
                 continue
-
-            # If there's a wide button, it typically means we want a specific layout.
-            # But the current manual row construction (builder.row) assumes we just dump buttons there.
-            # If we want to respect "width", we should just add all objects to the row.
-            # The builder.row(*objs) adds them as a single row.
-            # If 'button_width' is meant to control grid span, InlineKeyboardBuilder handles that via .adjust(), 
-            # but here we are building row by row manually.
-            # So if we have multiple buttons in this row (based on row_pos), we should just add them all.
-            # The previous logic "if has_wide: add only [0]" was definitely wrong for non-exclusive wide buttons.
             
             if row_buttons_objs:
                 builder.row(*row_buttons_objs)
-                layout.append(len(row_buttons_objs))
-
-
-
-
+                layout.append(len(row_buttons_objs)) 
         return builder.as_markup()
         
     except Exception as e:
@@ -950,5 +929,26 @@ def create_dynamic_key_info_keyboard(key_id: int, connection_string: str | None 
 def create_back_to_profile_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="⬅️ Назад в профиль", callback_data="show_profile")
+    builder.adjust(1)
+    return builder.as_markup()
+
+def create_referral_keyboard(referral_link: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    
+    referral_discount = get_setting("referral_discount") or "0"
+    share_text = (
+        f"🔥 ТВОЯ ЛИЧНАЯ СКИДКА {referral_discount}%!\n\n"
+        f"Тебе открыт доступ к закрытому VPN. 🤫\n"
+        f"🚀 YouTube 4K | 🌐 Много стран | 🛡 Анонимность\n\n"
+        f"👇 ЗАБИРАЙ, ПОКА НЕ СГОРЕЛО! 👇\n" 
+    )
+    
+    encoded_text = urllib.parse.quote(share_text)
+    encoded_url = urllib.parse.quote(referral_link)
+    full_share_url = f"https://t.me/share/url?url={encoded_url}&text={encoded_text}"
+    
+    builder.button(text="📤 Поделиться", url=full_share_url)
+    builder.button(text="⬅️ Назад в профиль", callback_data="show_profile")
+    
     builder.adjust(1)
     return builder.as_markup()

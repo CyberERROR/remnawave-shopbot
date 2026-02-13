@@ -24,14 +24,19 @@ else:
     DB_FILE = Path("users.db")
 
 
+# ===== GET_MSK_TIME =====
 def get_msk_time() -> datetime:
     return datetime.now(timezone(timedelta(hours=3)))
+# ========================
 
 
+# ===== _NOW_STR =====
 def _now_str() -> str:
     return get_msk_time().strftime("%Y-%m-%d %H:%M:%S")
+# ======================
 
 
+# ===== _TO_DATETIME_STR =====
 def _to_datetime_str(ts_ms: int | None) -> str | None:
     if ts_ms is None:
         return None
@@ -40,27 +45,24 @@ def _to_datetime_str(ts_ms: int | None) -> str | None:
         return dt.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return None
+# ============================
 
 
+# ===== _NORMALIZE_EMAIL =====
 def _normalize_email(value: str | None) -> str | None:
-    if value is None:
-        return None
-    cleaned = value.strip().lower()
-    return cleaned or None
+    if value is None: return None
+    cleaned = value.strip().lower(); return cleaned or None
+# ============================
 
 
+# ===== _NORMALIZE_KEY_ROW =====
 def _normalize_key_row(row: sqlite3.Row | dict | None) -> dict | None:
-    if row is None:
-        return None
+    if row is None: return None
     data = dict(row)
     email = _normalize_email(data.get("email") or data.get("key_email"))
-    if email:
-        data["email"] = email
-        data["key_email"] = email
+    if email: data["email"] = email; data["key_email"] = email
     rem_uuid = data.get("remnawave_user_uuid") or data.get("xui_client_uuid")
-    if rem_uuid:
-        data["remnawave_user_uuid"] = rem_uuid
-        data["xui_client_uuid"] = rem_uuid
+    if rem_uuid: data["remnawave_user_uuid"] = rem_uuid; data["xui_client_uuid"] = rem_uuid
     expire_value = data.get("expire_at") or data.get("expiry_date")
     if expire_value:
         expire_str = expire_value.strftime("%Y-%m-%d %H:%M:%S") if isinstance(expire_value, datetime) else str(expire_value)
@@ -72,47 +74,47 @@ def _normalize_key_row(row: sqlite3.Row | dict | None) -> dict | None:
         data["created_at"] = created_str
         data["created_date"] = created_str
     subscription_url = data.get("subscription_url") or data.get("connection_string")
-    if subscription_url:
-        data["subscription_url"] = subscription_url
-        data.setdefault("connection_string", subscription_url)
+    if subscription_url: data["subscription_url"] = subscription_url; data.setdefault("connection_string", subscription_url)
     return data
+# ==============================
 
 
+# ===== _GET_TABLE_COLUMNS =====
 def _get_table_columns(cursor: sqlite3.Cursor, table: str) -> set[str]:
-    cursor.execute(f"PRAGMA table_info({table})")
-    return {row[1] for row in cursor.fetchall()}
+    cursor.execute(f"PRAGMA table_info({table})"); return {row[1] for row in cursor.fetchall()}
+# ==============================
 
 
+# ===== _ENSURE_TABLE_COLUMN =====
 def _ensure_table_column(cursor: sqlite3.Cursor, table: str, column: str, definition: str) -> None:
     columns = _get_table_columns(cursor, table)
-    if column not in columns:
-        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+    if column not in columns: cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+# ================================
 
 
+# ===== _ENSURE_UNIQUE_INDEX =====
 def _ensure_unique_index(cursor: sqlite3.Cursor, name: str, table: str, column: str) -> None:
     cursor.execute(f"CREATE UNIQUE INDEX IF NOT EXISTS {name} ON {table}({column})")
+# ================================
 
 
+# ===== _ENSURE_INDEX =====
 def _ensure_index(cursor: sqlite3.Cursor, name: str, table: str, column: str) -> None:
     cursor.execute(f"CREATE INDEX IF NOT EXISTS {name} ON {table}({column})")
+# ===========================
 
 
+# ===== NORMALIZE_HOST_NAME =====
 def normalize_host_name(name: str | None) -> str:
-    """Normalize host name by trimming and removing invisible/unicode spaces."""
     s = (name or "").strip()
-    for ch in ("\u00A0", "\u200B", "\u200C", "\u200D", "\uFEFF"):
-        s = s.replace(ch, "")
+    for ch in ("\u00A0", "\u200B", "\u200C", "\u200D", "\uFEFF"): s = s.replace(ch, "")
     return s
+# ===============================
 
 
+# ===== GET_DB_CONNECTION =====
 def get_db_connection():
-    """Создать подключение к БД."""
     conn = sqlite3.connect(DB_FILE, timeout=30.0)
-    
-    # Проверяем настройку WAL режима
-    # Пытаемся получить настройку из bot_settings
-    # Используем сырой запрос чтобы избежать циклических зависимостей, 
-    # так как get_setting может использовать get_db_connection
     wal_enabled = False
     try:
         cursor = conn.cursor()
@@ -122,16 +124,96 @@ def get_db_connection():
             wal_enabled = True
     except Exception:
         pass
-        
     if wal_enabled:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=30000")
     else:
         conn.execute("PRAGMA journal_mode=DELETE")
-        
     return conn
+# ==============================
 
 
+
+
+
+class DbExecResult:
+    def __init__(self, cursor: sqlite3.Cursor):
+        self.lastrowid = cursor.lastrowid; self.rowcount = cursor.rowcount
+
+# ===== _EXEC =====
+def _exec(sql: str, params: tuple | list = (), error_msg: str = "", commit: bool = True) -> DbExecResult | None:
+    try:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
+            if commit: conn.commit()
+            return DbExecResult(cursor)
+    except sqlite3.Error as e:
+        if error_msg: logging.error(f"{error_msg}: {e}")
+        return None
+# =================
+
+
+# ===== _FETCH_ROW =====
+def _fetch_row(sql: str, params: tuple | list = (), error_msg: str = "") -> dict | None:
+    try:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
+            row = cursor.fetchone()
+            return dict(row) if row else None
+    except sqlite3.Error as e:
+        if error_msg: logging.error(f"{error_msg}: {e}")
+        return None
+# ======================
+
+
+# ===== _FETCH_LIST =====
+def _fetch_list(sql: str, params: tuple | list = (), error_msg: str = "") -> list[dict]:
+    try:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
+            return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        if error_msg: logging.error(f"{error_msg}: {e}")
+        return []
+# =======================
+
+
+# ===== _FETCH_VAL =====
+def _fetch_val(sql: str, params: tuple | list = (), default: Any = None, error_msg: str = "") -> Any:
+    row = _fetch_row(sql, params, error_msg)
+    return list(row.values())[0] if row else default
+# ======================
+
+# ===== УНИВЕРСАЛЬНЫЕ ХЕЛПЕРЫ DRY =====
+
+def _check_rowcount(cursor, entity_name: str, context: str = "") -> bool:
+    if cursor and cursor.rowcount == 0:
+        msg = f"{context}: {entity_name} не найден" if context else f"{entity_name} не найден"
+        logging.warning(msg)
+        return False
+    return cursor is not None
+
+def _exec_with_check(sql: str, params: tuple | list, entity_name: str, error_msg: str = "", context: str = "") -> bool:
+    row = _fetch_row(f"SELECT 1 FROM {entity_name.split()[0] if ' ' in entity_name else entity_name}", params[:1] if params else (), "")
+    if not row:
+        if context: logging.warning(f"{context}: объект не найден")
+        return False
+    cursor = _exec(sql, params, error_msg)
+    return cursor is not None
+
+def _get_count_stat(query: str, default=0) -> int:
+    r = _fetch_row(query, (), "")
+    return int(r["c"]) if r and "c" in r else (int(r["s"]) if r and "s" in r else default)
+
+# ========================
+
+
+# ===== INITIALIZE_DB =====
 def initialize_db():
     try:
         with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
@@ -188,6 +270,7 @@ def initialize_db():
                     comment_key TEXT
                 )
             ''')
+
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS transactions (
                     username TEXT,
@@ -232,20 +315,12 @@ def initialize_db():
                 )
             ''')
             # Инициализация записи для рассылки
-            cursor.execute('''
-                INSERT OR IGNORE INTO other (key, value) 
-                VALUES (?, ?)
-            ''', ('newsletter', json.dumps({})))
-            
-            cursor.execute('''
-                INSERT OR IGNORE INTO other (key, value) 
-                VALUES (?, ?)
-            ''', ('sg_promt', ''))
-
-            cursor.execute('''
-                INSERT OR IGNORE INTO other (key, value) 
-                VALUES (?, ?)
-            ''', ('theme_newsletter', json.dumps({})))
+            _ensure_default_values(cursor, "other", {
+                "newsletter": json.dumps({}),
+                "sg_promt": "",
+                "theme_newsletter": json.dumps({}),
+                "auto_start_bot": "0"
+            })
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS button_configs (
@@ -331,8 +406,6 @@ def initialize_db():
                     FOREIGN KEY (ticket_id) REFERENCES support_tickets (ticket_id)
                 )
             ''')
-
-
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS seller_users (
@@ -504,25 +577,18 @@ def initialize_db():
                 "key_ready_image": None,
                 "key_gemini": None,
             }
-            for key, value in default_settings.items():
-                cursor.execute(
-                    "INSERT OR IGNORE INTO bot_settings (key, value) VALUES (?, ?)",
-                    (key, value),
-                )
+            _ensure_default_values(cursor, "bot_settings", default_settings)
             conn.commit()
             
 
-            initialize_default_button_configs()
             
 
-            update_existing_my_keys_button()
-            
+
 
             try:
                 cursor.execute("ALTER TABLE button_configs ADD COLUMN button_width INTEGER DEFAULT 1")
-                logging.info("Added button_width column to button_configs table")
+                logging.info("Добавлена колонка button_width в таблицу button_configs")
             except sqlite3.OperationalError:
-
                 pass
             
             logging.info("База данных инициализирована")
@@ -531,12 +597,25 @@ def initialize_db():
         
     except sqlite3.Error as e:
         logging.error("Не удалось инициализировать базу данных: %s", e)
+# =========================
 
 
+# ===== _ENSURE_DEFAULT_VALUES =====
+def _ensure_default_values(cursor: sqlite3.Cursor, table: str, defaults: dict) -> None:
+    for key, value in defaults.items():
+        try:
+            cursor.execute(
+                f"INSERT OR IGNORE INTO {table} (key, value) VALUES (?, ?)",
+                (key, value)
+            )
+        except Exception: pass
+# ==================================
+
+
+# ===== _ENSURE_USERS_COLUMNS =====
 def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-    if not cursor.fetchone():
-        return
+    if not cursor.fetchone(): return
     mapping = {
         "referred_by": "INTEGER",
         "balance": "REAL DEFAULT 0",
@@ -550,10 +629,13 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
         _ensure_table_column(cursor, "users", column, definition)
 
 
+# =================================
+
+
+# ===== _ENSURE_HOSTS_COLUMNS =====
 def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='xui_hosts'")
-    if not cursor.fetchone():
-        return
+    if not cursor.fetchone(): return
     extras = {
         "squad_uuid": "TEXT",
         "description": "TEXT",
@@ -578,10 +660,13 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
         _ensure_table_column(cursor, "xui_hosts", column, definition)
 
 
+# =================================
+
+
+# ===== _ENSURE_PLANS_COLUMNS =====
 def _ensure_plans_columns(cursor: sqlite3.Cursor) -> None:
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='plans'")
-    if not cursor.fetchone():
-        return
+    if not cursor.fetchone(): return
     extras = {
         "squad_uuid": "TEXT",
         "duration_days": "INTEGER",
@@ -597,10 +682,13 @@ def _ensure_plans_columns(cursor: sqlite3.Cursor) -> None:
         _ensure_table_column(cursor, "plans", column, definition)
 
 
+# =================================
+
+
+# ===== _ENSURE_SUPPORT_TICKETS_COLUMNS =====
 def _ensure_support_tickets_columns(cursor: sqlite3.Cursor) -> None:
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='support_tickets'")
-    if not cursor.fetchone():
-        return
+    if not cursor.fetchone(): return
     extras = {
         "forum_chat_id": "TEXT",
         "message_thread_id": "INTEGER",
@@ -609,6 +697,10 @@ def _ensure_support_tickets_columns(cursor: sqlite3.Cursor) -> None:
         _ensure_table_column(cursor, "support_tickets", column, definition)
 
 
+# ===========================================
+
+
+# ===== _FINALIZE_VPN_KEY_INDEXES =====
 def _finalize_vpn_key_indexes(cursor: sqlite3.Cursor) -> None:
     _ensure_unique_index(cursor, "uq_vpn_keys_email", "vpn_keys", "email")
     _ensure_unique_index(cursor, "uq_vpn_keys_key_email", "vpn_keys", "key_email")
@@ -617,13 +709,15 @@ def _finalize_vpn_key_indexes(cursor: sqlite3.Cursor) -> None:
     _ensure_index(cursor, "idx_vpn_keys_expire_at", "vpn_keys", "expire_at")
 
 
+# =====================================
+
+
+# ===== _REBUILD_VPN_KEYS_TABLE =====
 def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
     columns = _get_table_columns(cursor, "vpn_keys")
     legacy_markers = {"xui_client_uuid", "expiry_date", "created_date", "connection_string"}
     required = {"remnawave_user_uuid", "email", "expire_at", "created_at", "updated_at"}
-    if required.issubset(columns) and not (columns & legacy_markers):
-        _finalize_vpn_key_indexes(cursor)
-        return
+    if required.issubset(columns) and not (columns & legacy_markers): _finalize_vpn_key_indexes(cursor); return
 
     cursor.execute("ALTER TABLE vpn_keys RENAME TO vpn_keys_legacy")
     cursor.execute('''
@@ -649,11 +743,9 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
     ''')
     old_columns = _get_table_columns(cursor, "vpn_keys_legacy")
 
-    def has(column: str) -> bool:
-        return column in old_columns
+    def has(column: str) -> bool: return column in old_columns
 
-    def col(column: str, default: str = "NULL") -> str:
-        return column if has(column) else default
+    def col(column: str, default: str = "NULL") -> str: return column if has(column) else default
 
     rem_uuid_expr = "remnawave_user_uuid" if has("remnawave_user_uuid") else ("xui_client_uuid" if has("xui_client_uuid") else "NULL")
     email_expr = "LOWER(email)" if has("email") else ("LOWER(key_email)" if has("key_email") else "NULL")
@@ -718,6 +810,10 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
     _finalize_vpn_key_indexes(cursor)
 
 
+# ===================================
+
+
+# ===== _ENSURE_VPN_KEYS_SCHEMA =====
 def _ensure_vpn_keys_schema(cursor: sqlite3.Cursor) -> None:
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='vpn_keys'")
     if cursor.fetchone() is None:
@@ -747,10 +843,12 @@ def _ensure_vpn_keys_schema(cursor: sqlite3.Cursor) -> None:
     _rebuild_vpn_keys_table(cursor)
 
 
+# ===================================
+
+
+# ===== RUN_MIGRATION =====
 def run_migration():
-    if not DB_FILE.exists():
-        logging.error("Файл базы данных отсутствует, миграция пропущена.")
-        return
+    if not DB_FILE.exists(): logging.error("Файл базы данных отсутствует, миграция пропущена."); return
 
     logging.info("Запуск миграций базы данных: %s", DB_FILE)
 
@@ -765,12 +863,13 @@ def run_migration():
             _ensure_vpn_keys_schema(cursor)
             _ensure_table_column(cursor, "vpn_keys", "comment_key", "TEXT")
             _ensure_ssh_targets_table(cursor)
+            _ensure_host_speedtests_table(cursor)
+            _ensure_resource_metrics_table(cursor)
             _ensure_gift_tokens_table(cursor)
             _ensure_promo_tables(cursor)
             try:
-                # Rename sellr_ref to seller_ref if exists (migration fix)
                 cursor.execute("ALTER TABLE seller_users RENAME COLUMN sellr_ref TO seller_ref")
-                logging.info("Renamed column sellr_ref to seller_ref in seller_users")
+                logging.info("Переименована колонка sellr_ref в seller_ref в таблице seller_users")
             except Exception:
                 pass
 
@@ -796,669 +895,166 @@ def run_migration():
             except Exception:
                 pass
             
-            try:
-                cursor.execute('''
-                    INSERT OR IGNORE INTO bot_settings (key, value) 
-                    VALUES (?, ?)
-                ''', ('skip_email', '0'))
-            except Exception:
-                pass
+            _ensure_default_values(cursor, "bot_settings", {
+                "skip_email": "0",
+                "enable_wal_mode": "0"
+            })
             
+            _ensure_default_values(cursor, "other", {
+                "theme_newsletter": json.dumps({}),
+                "auto_start_bot": "0"
+            })
+            
+            _ensure_pending_transactions_table(cursor)
+            _ensure_default_button_configs(cursor)
+            
+
             try:
-                cursor.execute('''
-                    INSERT OR IGNORE INTO bot_settings (key, value) 
-                    VALUES (?, ?)
-                ''', ('enable_wal_mode', '0'))
+                cursor.execute("""
+                    UPDATE button_configs 
+                    SET text = '🔑 Мои ключи ({len(user_keys)})', updated_at = CURRENT_TIMESTAMP
+                    WHERE menu_type = 'main_menu' AND button_id = 'my_keys'
+                """)
+                wide_buttons = [("trial", 2), ("referral", 2), ("admin", 2)]
+                for button_id, width in wide_buttons:
+                    cursor.execute("""
+                        UPDATE button_configs 
+                        SET button_width = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE menu_type = 'main_menu' AND button_id = ?
+                    """, (width, button_id))
             except Exception:
                 pass
 
-            try:
-                cursor.execute('''
-                    INSERT OR IGNORE INTO other (key, value) 
-                    VALUES (?, ?)
-                ''', ('theme_newsletter', json.dumps({})))
-            except Exception:
-                pass
-            
+
             cursor.execute("PRAGMA foreign_keys = ON")
             conn.commit()
     except sqlite3.Error as e:
         logging.error("Сбой миграции базы данных: %s", e)
 
-
-def insert_resource_metric(
-    scope: str,
-    object_name: str,
-    *,
-    cpu_percent: float | None = None,
-    mem_percent: float | None = None,
-    disk_percent: float | None = None,
-    load1: float | None = None,
-    net_bytes_sent: int | None = None,
-    net_bytes_recv: int | None = None,
-    raw_json: str | None = None,
-) -> int | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                '''
-                INSERT INTO resource_metrics (
-                    scope, object_name, cpu_percent, mem_percent, disk_percent, load1,
-                    net_bytes_sent, net_bytes_recv, raw_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''',
-                (
-                    (scope or '').strip(),
-                    (object_name or '').strip(),
-                    cpu_percent, mem_percent, disk_percent, load1,
-                    net_bytes_sent, net_bytes_recv, raw_json,
-                )
-            )
-            conn.commit()
-            return cursor.lastrowid
-    except sqlite3.Error as e:
-        logging.error("Failed to insert resource metric for %s/%s: %s", scope, object_name, e)
-        return None
+# =========================
 
 
-def get_latest_resource_metric(scope: str, object_name: str) -> dict | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                '''
-                SELECT * FROM resource_metrics
-                WHERE scope = ? AND object_name = ?
-                ORDER BY created_at DESC
-                LIMIT 1
-                ''',
-                ((scope or '').strip(), (object_name or '').strip())
-            )
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    except sqlite3.Error as e:
-        logging.error("Failed to get latest resource metric for %s/%s: %s", scope, object_name, e)
-        return None
+# ===== _ENSURE_PENDING_TRANSACTIONS_TABLE =====
+def _ensure_pending_transactions_table(cursor: sqlite3.Cursor) -> None:
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pending_transactions (
+            payment_id TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            amount_rub REAL,
+            metadata TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+# ==============================================
 
 
-def get_metrics_series(scope: str, object_name: str, *, since_hours: int = 24, limit: int = 500) -> list[dict]:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
+# ===== _ENSURE_DEFAULT_BUTTON_CONFIGS =====
+def _ensure_default_button_configs(cursor: sqlite3.Cursor) -> None:
+    def menu_has_buttons(m_type):
+        cursor.execute("SELECT 1 FROM button_configs WHERE menu_type = ? LIMIT 1", (m_type,))
+        return cursor.fetchone() is not None
 
-
-            if since_hours == 1:
-                hours_filter = 2
-            else:
-                hours_filter = max(1, int(since_hours))
-            
-
-            cursor.execute(
-                f'''
-                SELECT created_at, cpu_percent, mem_percent, disk_percent, load1
-                FROM resource_metrics
-                WHERE scope = ? AND object_name = ?
-                  AND created_at >= datetime('now', '+3 hours', ?)
-                ORDER BY created_at ASC
-                LIMIT ?
-                ''',
-                (
-                    (scope or '').strip(),
-                    (object_name or '').strip(),
-                    f'-{hours_filter} hours',
-                    max(10, int(limit)),
-                )
-            )
-            rows = cursor.fetchall() or []
-            
-
-            logging.debug(f"get_metrics_series: {scope}/{object_name}, since_hours={since_hours}, found {len(rows)} records")
-            
-            return [dict(r) for r in rows]
-    except sqlite3.Error as e:
-        logging.error("Failed to get metrics series for %s/%s: %s", scope, object_name, e)
-        return []
-
-
-def create_host(name: str, url: str, user: str, passwd: str, inbound: int, subscription_url: str | None = None):
-    try:
-        name = normalize_host_name(name)
-        url = (url or "").strip()
-        user = (user or "").strip()
-        passwd = passwd or ""
-        try:
-            inbound = int(inbound)
-        except Exception:
-            pass
-        subscription_url = (subscription_url or None)
-
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            try:
-                cursor.execute(
-                    "INSERT INTO xui_hosts (host_name, host_url, host_username, host_pass, host_inbound_id, subscription_url) VALUES (?, ?, ?, ?, ?, ?)",
-                    (name, url, user, passwd, inbound, subscription_url)
-                )
-            except sqlite3.OperationalError:
-                cursor.execute(
-                    "INSERT INTO xui_hosts (host_name, host_url, host_username, host_pass, host_inbound_id) VALUES (?, ?, ?, ?, ?)",
-                    (name, url, user, passwd, inbound)
-                )
-            conn.commit()
-            logging.info(f"Успешно создан новый хост: {name}")
-    except sqlite3.Error as e:
-        logging.error(f"Ошибка при создании хоста '{name}': {e}")
-
-def update_host_subscription_url(host_name: str, subscription_url: str | None) -> bool:
-    try:
-        host_name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
-            exists = cursor.fetchone() is not None
-            if not exists:
-                logging.warning(f"update_host_subscription_url: хост с именем '{host_name}' не найден (после TRIM)")
-                return False
-
-            cursor.execute(
-                "UPDATE xui_hosts SET subscription_url = ? WHERE TRIM(host_name) = TRIM(?)",
-                (subscription_url, host_name)
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить subscription_url для хоста '{host_name}': {e}")
-        return False
-
-def update_host_description(host_name: str, description: str | None) -> bool:
-    """Обновить кастомное описание для хоста."""
-    try:
-        host_name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
-            exists = cursor.fetchone() is not None
-            if not exists:
-                logging.warning(f"update_host_description: хост с именем '{host_name}' не найден (после TRIM)")
-                return False
-
-            cursor.execute(
-                "UPDATE xui_hosts SET description = ? WHERE TRIM(host_name) = TRIM(?)",
-                (description, host_name)
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить description для хоста '{host_name}': {e}")
-        return False
-
-def update_host_traffic_settings(
-    host_name: str,
-    traffic_strategy: str | None = 'NO_RESET'
-) -> bool:
-    """Обновить настройки стратегии сброса трафика для хоста."""
-    try:
-        host_name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
-            if cursor.fetchone() is None:
-                logging.warning(f"update_host_traffic_settings: хост '{host_name}' не найден")
-                return False
-
-            cursor.execute(
-                """
-                UPDATE xui_hosts
-                SET default_traffic_strategy = ?
-                WHERE TRIM(host_name) = TRIM(?)
-                """,
-                (traffic_strategy or 'NO_RESET', host_name)
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить настройки трафика для хоста '{host_name}': {e}")
-        return False
-
-def set_referral_start_bonus_received(user_id: int) -> bool:
-    """Пометить, что пользователь получил стартовый бонус за реферальную регистрацию."""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET referral_start_bonus_received = 1 WHERE telegram_id = ?",
-                (user_id,)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось пометить получение стартового реферального бонуса для пользователя {user_id}: {e}")
-        return False
-
-def update_host_url(host_name: str, new_url: str) -> bool:
-    """Обновить URL панели XUI для указанного хоста."""
-    try:
-        host_name = normalize_host_name(host_name)
-        new_url = (new_url or "").strip()
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
-            if cursor.fetchone() is None:
-                logging.warning(f"update_host_url: хост с именем '{host_name}' не найден")
-                return False
-
-            cursor.execute(
-                "UPDATE xui_hosts SET host_url = ? WHERE TRIM(host_name) = TRIM(?)",
-                (new_url, host_name)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить host_url для хоста '{host_name}': {e}")
-        return False
-
-def add_seller_user(user_id: int, seller_sale: float = 0, seller_ref: float = 0, seller_uuid: str = "0") -> int | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            # Используем UPSERT (INSERT OR REPLACE)
-            cursor.execute(
-                """
-                INSERT OR REPLACE INTO seller_users (user_id, seller_sale, seller_ref, seller_uuid) 
-                VALUES (?, ?, ?, ?)
-                """,
-                (user_id, seller_sale, seller_ref, str(seller_uuid))
-            )
-            conn.commit()
-            return cursor.lastrowid
-    except sqlite3.Error as e:
-        logging.error(f"Failed to add seller user: {e}")
-        return None
-
-def get_seller_user(user_id: int) -> dict | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM seller_users WHERE user_id = ?", (user_id,))
-            row = cursor.fetchone()
-            if not row:
-                # Если записи нет, возвращаем дефолтную (UUID="0", sale=0, ref=0)
-                return {
-                    "user_id": user_id,
-                    "seller_sale": 0.0,
-                    "seller_ref": 0.0,
-                    "seller_uuid": "0",
-                }
-            return dict(row)
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get seller user {user_id}: {e}")
-        return None
-
-def delete_seller_user(user_id: int) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM seller_users WHERE user_id = ?", (user_id,))
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to delete seller user {user_id}: {e}")
-        return False
-
-def update_host_remnawave_settings(
-    host_name: str,
-    *,
-    remnawave_base_url: str | None = None,
-    remnawave_api_token: str | None = None,
-    squad_uuid: str | None = None,
-) -> bool:
-    """Обновить Remnawave-настройки на уровне конкретного хоста.
-    Пустые строки превращаются в NULL. Поля, равные None, не изменяются.
-    """
-    try:
-        host_name_n = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name_n,))
-            if cursor.fetchone() is None:
-                logging.warning(f"update_host_remnawave_settings: хост не найден '{host_name_n}'")
-                return False
-
-            sets: list[str] = []
-            params: list[Any] = []
-            if remnawave_base_url is not None:
-                value = (remnawave_base_url or '').strip() or None
-                sets.append("remnawave_base_url = ?")
-                params.append(value)
-            if remnawave_api_token is not None:
-                value = (remnawave_api_token or '').strip() or None
-                sets.append("remnawave_api_token = ?")
-                params.append(value)
-            if squad_uuid is not None:
-                value = (squad_uuid or '').strip() or None
-                sets.append("squad_uuid = ?")
-                params.append(value)
-            if not sets:
-                return True
-            params.append(host_name_n)
-            sql = f"UPDATE xui_hosts SET {', '.join(sets)} WHERE TRIM(host_name) = TRIM(?)"
-            cursor.execute(sql, params)
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить Remnawave-настройки для хоста '{host_name}': {e}")
-        return False
-
-def update_host_name(old_name: str, new_name: str) -> bool:
-    """Переименовать хост во всех связанных таблицах (xui_hosts, plans, vpn_keys)."""
-    try:
-        old_name_n = normalize_host_name(old_name)
-        new_name_n = normalize_host_name(new_name)
-        if not new_name_n:
-            logging.warning("update_host_name: new host name is empty after normalization")
-            return False
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (old_name_n,))
-            if cursor.fetchone() is None:
-                logging.warning(f"update_host_name: исходный хост не найден '{old_name_n}'")
-                return False
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (new_name_n,))
-            exists_target = cursor.fetchone() is not None
-            if exists_target and old_name_n.lower() != new_name_n.lower():
-                logging.warning(f"update_host_name: целевое имя '{new_name_n}' уже используется")
-                return False
-
-            cursor.execute(
-                "UPDATE xui_hosts SET host_name = TRIM(?) WHERE TRIM(host_name) = TRIM(?)",
-                (new_name_n, old_name_n)
-            )
-            cursor.execute(
-                "UPDATE plans SET host_name = TRIM(?) WHERE TRIM(host_name) = TRIM(?)",
-                (new_name_n, old_name_n)
-            )
-            cursor.execute(
-                "UPDATE vpn_keys SET host_name = TRIM(?) WHERE TRIM(host_name) = TRIM(?)",
-                (new_name_n, old_name_n)
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось переименовать хост с '{old_name}' на '{new_name}': {e}")
-        return False
-
-def delete_host(host_name: str):
-    try:
-        host_name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM plans WHERE TRIM(host_name) = TRIM(?)", (host_name,))
-            cursor.execute("DELETE FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
-            conn.commit()
-            logging.info(f"Хост '{host_name}' и его тарифы успешно удалены.")
-    except sqlite3.Error as e:
-        logging.error(f"Ошибка удаления хоста '{host_name}': {e}")
-
-def get_host(host_name: str) -> dict | None:
-    try:
-        host_name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
-            result = cursor.fetchone()
-            return dict(result) if result else None
-    except sqlite3.Error as e:
-        logging.error(f"Ошибка получения хоста '{host_name}': {e}")
-        return None
-
-def update_host_ssh_settings(
-    host_name: str,
-    ssh_host: str | None = None,
-    ssh_port: int | None = None,
-    ssh_user: str | None = None,
-    ssh_password: str | None = None,
-    ssh_key_path: str | None = None,
-) -> bool:
-    """Обновить SSH-параметры для speedtest/maintenance по хосту.
-    Переданные None значения очищают соответствующие поля (ставят NULL).
-    """
-    try:
-        host_name_n = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name_n,))
-            if cursor.fetchone() is None:
-                logging.warning(f"update_host_ssh_settings: хост не найден '{host_name_n}'")
-                return False
-
-            cursor.execute(
-                """
-                UPDATE xui_hosts
-                SET ssh_host = ?, ssh_port = ?, ssh_user = ?, ssh_password = ?, ssh_key_path = ?
-                WHERE TRIM(host_name) = TRIM(?)
-                """,
-                (
-                    (ssh_host or None),
-                    (int(ssh_port) if ssh_port is not None else None),
-                    (ssh_user or None),
-                    (ssh_password if ssh_password is not None else None),
-                    (ssh_key_path or None),
-                    host_name_n,
-                ),
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить SSH-настройки для хоста '{host_name}': {e}")
-        return False
-
-def toggle_host_visibility(host_name: str, visible: int) -> bool:
-    """Переключить видимость хоста в боте.
-    
-    Args:
-        host_name: Название хоста
-        visible: 1 - показывать в боте, 0 - скрыть из меню бота
-    
-    Returns:
-        True если обновление успешно, False в противном случае
-    """
-    try:
-        host_name_n = normalize_host_name(host_name)
-        visible_int = 1 if visible else 0
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name_n,))
-            if cursor.fetchone() is None:
-                logging.warning(f"toggle_host_visibility: хост не найден '{host_name_n}'")
-                return False
-            
-            try:
-                cursor.execute(
-                    "UPDATE xui_hosts SET see = ? WHERE TRIM(host_name) = TRIM(?)",
-                    (visible_int, host_name_n)
-                )
-            except sqlite3.OperationalError as op_err:
-                if "no such column: see" in str(op_err):
-                    cursor.execute("ALTER TABLE xui_hosts ADD COLUMN see INTEGER DEFAULT 1")
-                    conn.commit()
-                    cursor.execute(
-                        "UPDATE xui_hosts SET see = ? WHERE TRIM(host_name) = TRIM(?)",
-                        (visible_int, host_name_n)
-                    )
-                else:
-                    raise
-            conn.commit()
-            logging.info(f"Видимость хоста '{host_name_n}' обновлена: see={visible_int}")
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить видимость для хоста '{host_name}': {e}")
-        return False
-
-def delete_key_by_id(key_id: int) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM vpn_keys WHERE key_id = ?", (key_id,))
-            affected = cursor.rowcount
-            conn.commit()
-            return affected > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось удалить ключ по id {key_id}: {e}")
-        return False
-
-def update_key_comment(key_id: int, comment: str) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE vpn_keys SET description = ? WHERE key_id = ?", (comment, key_id))
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить комментарий ключа для {key_id}: {e}")
-        return False
-
-def get_all_hosts(visible_only: bool = False) -> list[dict]:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            try:
-                if visible_only:
-                    cursor.execute("SELECT * FROM xui_hosts WHERE see = 1 ORDER BY sort_order ASC, host_name ASC")
-                else:
-                    cursor.execute("SELECT * FROM xui_hosts ORDER BY sort_order ASC, host_name ASC")
-            except sqlite3.OperationalError as op_err:
-                if "no such column: see" in str(op_err):
-                    cursor.execute("ALTER TABLE xui_hosts ADD COLUMN see INTEGER DEFAULT 1")
-                    conn.commit()
-                    if visible_only:
-                        cursor.execute("SELECT * FROM xui_hosts WHERE see = 1 ORDER BY sort_order ASC, host_name ASC")
-                    else:
-                        cursor.execute("SELECT * FROM xui_hosts ORDER BY sort_order ASC, host_name ASC")
-                else:
-                    raise
-            hosts = cursor.fetchall()
-
-            result = []
-            for row in hosts:
-                d = dict(row)
-                d['host_name'] = normalize_host_name(d.get('host_name'))
-                result.append(d)
-            return result
-    except sqlite3.Error as e:
-        logging.error(f"Ошибка получения списка всех хостов: {e}")
-        return []
-
-def get_speedtests(host_name: str, limit: int = 20) -> list[dict]:
-    """Получить последние результаты спидтестов по хосту (ssh/net), новые сверху."""
-    try:
-        host_name_n = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            try:
-                limit_int = int(limit)
-            except Exception:
-                limit_int = 20
-            cursor.execute(
-                """
-                SELECT id, host_name, method, ping_ms, jitter_ms, download_mbps, upload_mbps,
-                       server_name, server_id, ok, error, created_at
-                FROM host_speedtests
-                WHERE TRIM(host_name) = TRIM(?)
-                ORDER BY datetime(created_at) DESC
-                LIMIT ?
-                """,
-                (host_name_n, limit_int),
-            )
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось получить speedtest-данные для хоста '{host_name}': {e}")
-        return []
-
-def get_latest_speedtest(host_name: str) -> dict | None:
-    """Получить последний по времени спидтест для хоста."""
-    try:
-        host_name_n = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, host_name, method, ping_ms, jitter_ms, download_mbps, upload_mbps,
-                       server_name, server_id, ok, error, created_at
-                FROM host_speedtests
-                WHERE TRIM(host_name) = TRIM(?)
-                ORDER BY datetime(created_at) DESC
-                LIMIT 1
-                """,
-                (host_name_n,),
-            )
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось получить последний speedtest для хоста '{host_name}': {e}")
-        return None
-
-def insert_host_speedtest(
-    host_name: str,
-    method: str,
-    ping_ms: float | None = None,
-    jitter_ms: float | None = None,
-    download_mbps: float | None = None,
-    upload_mbps: float | None = None,
-    server_name: str | None = None,
-    server_id: str | None = None,
-    ok: bool = True,
-    error: str | None = None,
-) -> bool:
-    """Сохранить результат спидтеста в таблицу host_speedtests."""
-    try:
-        host_name_n = normalize_host_name(host_name)
-        method_s = (method or '').strip().lower()
-        if method_s not in ('ssh', 'net'):
-            method_s = 'ssh'
+    if not menu_has_buttons("main_menu"):
+        main_menu_buttons = [
+            ("trial", "🎁 Попробовать бесплатно", "get_trial", 0, 0, 0, 2),
+            ("profile", "👤 Мой профиль", "show_profile", 1, 0, 1, 1),
+            ("my_keys", "🔑 Мои ключи ({len(user_keys)})", "manage_keys", 1, 1, 2, 1),
+            ("buy_key", "🛒 Купить ключ", "buy_new_key", 2, 0, 3, 1),
+            ("topup", "💳 Пополнить баланс", "top_up_start", 2, 1, 4, 1),
+            ("referral", "🤝 Реферальная программа", "show_referral_program", 3, 0, 5, 2),
+            ("support", "🆘 Поддержка", "show_help", 4, 0, 6, 1),
+            ("about", "ℹ️ О проекте", "show_about", 4, 1, 7, 1),
+            ("speed", "⚡ Скорость", "user_speedtest_last", 5, 0, 8, 1),
+            ("howto", "❓ Как использовать", "howto_vless", 5, 1, 9, 1),
+            ("admin", "⚙️ Админка", "admin_menu", 6, 0, 10, 2),
+        ]
         
-        # Moscow time is UTC+3
-        created_at_val = get_msk_time().strftime("%Y-%m-%d %H:%M:%S")
+        for button_id, text, callback_data, row_pos, col_pos, sort_order, button_width in main_menu_buttons:
+            cursor.execute("""
+                INSERT INTO button_configs 
+                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """, ("main_menu", button_id, text, callback_data, row_pos, col_pos, sort_order, button_width))
+    
 
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                '''
-                INSERT INTO host_speedtests
-                (host_name, method, ping_ms, jitter_ms, download_mbps, upload_mbps, server_name, server_id, ok, error, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                '''
-                , (
-                    host_name_n,
-                    method_s,
-                    ping_ms,
-                    jitter_ms,
-                    download_mbps,
-                    upload_mbps,
-                    server_name,
-                    server_id,
-                    1 if ok else 0,
-                    (error or None),
-                    created_at_val
-                )
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось сохранить запись speedtest для '{host_name}': {e}")
-        return False
+    if not menu_has_buttons("admin_menu"):
+        admin_menu_buttons = [
+            ("users", "👥 Пользователи", "admin_users", 0, 0, 0),
+            ("host_keys", "🌍 Ключи на хосте", "admin_host_keys", 0, 1, 1),
+            ("gift_key", "🎁 Выдать ключ", "admin_gift_key", 1, 0, 2),
+            ("promo", "🎟 Промокоды", "admin_promo_menu", 1, 1, 3),
+            ("speedtest", "⚡ Тест скорости", "admin_speedtest", 2, 0, 4),
+            ("monitor", "📊 Мониторинг", "admin_monitor", 2, 1, 5),
+            ("backup", "🗄 Бэкап БД", "admin_backup_db", 3, 0, 6),
+            ("restore", "♻️ Восстановить БД", "admin_restore_db", 3, 1, 7),
+            ("admins", "👮 Администраторы", "admin_admins_menu", 4, 0, 8),
+            ("broadcast", "📢 Рассылка", "start_broadcast", 4, 1, 9),
+            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 5, 0, 10),
+        ]
+        
+        for button_id, text, callback_data, row_pos, col_pos, sort_order in admin_menu_buttons:
+            cursor.execute("""
+                INSERT INTO button_configs 
+                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """, ("admin_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+    
+
+    if not menu_has_buttons("profile_menu"):
+        profile_menu_buttons = [
+            ("topup", "💳 Пополнить баланс", "top_up_start", 0, 0, 0),
+            ("referral", "🤝 Реферальная программа", "show_referral_program", 1, 0, 1),
+            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 2, 0, 2),
+        ]
+        
+        for button_id, text, callback_data, row_pos, col_pos, sort_order in profile_menu_buttons:
+            cursor.execute("""
+                INSERT INTO button_configs 
+                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """, ("profile_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+    
+
+    if not menu_has_buttons("support_menu"):
+        support_menu_buttons = [
+            ("new_ticket", "✍️ Новое обращение", "support_new_ticket", 0, 0, 0),
+            ("my_tickets", "📨 Мои обращения", "support_my_tickets", 1, 0, 1),
+            ("external", "🆘 Внешняя поддержка", "support_external", 2, 0, 2),
+            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 3, 0, 3),
+        ]
+        
+        for button_id, text, callback_data, row_pos, col_pos, sort_order in support_menu_buttons:
+            cursor.execute("""
+                INSERT INTO button_configs 
+                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """, ("support_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+
+    if not menu_has_buttons("key_info_menu"):
+        key_info_menu_buttons = [
+            ("connect", "📲 Подключиться", None, "{connection_string}", 0, 0, 0, 1),
+            ("extend", "➕ Продлить этот ключ", "extend_key_{key_id}", None, 1, 0, 1, 1),
+            ("qr", "📱 Показать QR-код", "show_qr_{key_id}", None, 2, 0, 2, 2),
+            ("howto", "📖 Инструкция", "howto_vless_{key_id}", None, 2, 1, 3, 1),
+            ("comments", "📝 Комментарии", "key_comments_{key_id}", None, 3, 0, 4, 1),
+            ("back", "⬅️ Назад к списку ключей", "manage_keys", None, 4, 0, 5, 1),
+        ]
+
+        for button_id, text, callback_data, url, row_pos, col_pos, sort_order, width in key_info_menu_buttons:
+            cursor.execute("""
+                INSERT INTO button_configs 
+                (menu_type, button_id, text, callback_data, url, row_position, column_position, sort_order, button_width, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """, ("key_info_menu", button_id, text, callback_data, url, row_pos, col_pos, sort_order, width))
 
 
+# ==========================================
 
+
+# ===== _ENSURE_SSH_TARGETS_TABLE =====
 def _ensure_ssh_targets_table(cursor: sqlite3.Cursor) -> None:
     """Миграция: создать таблицу speedtest_ssh_targets при необходимости и добавить недостающие столбцы."""
     cursor.execute("""
@@ -1493,6 +1089,10 @@ def _ensure_ssh_targets_table(cursor: sqlite3.Cursor) -> None:
         _ensure_table_column(cursor, "speedtest_ssh_targets", column, definition)
 
 
+# =====================================
+
+
+# ===== _ENSURE_GIFT_TOKENS_TABLE =====
 def _ensure_gift_tokens_table(cursor: sqlite3.Cursor) -> None:
     """Миграция для таблиц подарочных токенов."""
     cursor.execute(
@@ -1529,6 +1129,17 @@ def _ensure_gift_tokens_table(cursor: sqlite3.Cursor) -> None:
     _ensure_index(cursor, "idx_gift_token_claims_user", "gift_token_claims", "user_id")
 
 
+# =====================================
+
+
+# ===== GET_USER_ID_BY_GIFT_TOKEN =====
+def get_user_id_by_gift_token(token: str) -> int | None:
+    row = _fetch_row("SELECT user_id FROM gift_token_claims WHERE token = ? ORDER BY claimed_at DESC LIMIT 1", (token,), f"Ошибка поиска user_id по токену {token}")
+    return row["user_id"] if row else None
+# =====================================
+
+
+# ===== _ENSURE_SELLER_USERS_TABLE =====
 def _ensure_seller_users_table(cursor: sqlite3.Cursor) -> None:
     """Миграция для таблицы seller_users."""
     cursor.execute('''
@@ -1541,7 +1152,6 @@ def _ensure_seller_users_table(cursor: sqlite3.Cursor) -> None:
         )
     ''')
     
-    # Ensure columns exist (for migration)
     mapping = {
         "seller_sale": "REAL DEFAULT 0",
         "seller_ref": "REAL DEFAULT 0",
@@ -1552,23 +1162,11 @@ def _ensure_seller_users_table(cursor: sqlite3.Cursor) -> None:
         _ensure_table_column(cursor, "seller_users", column, definition)
 
     _ensure_unique_index(cursor, "idx_seller_users_user_id", "seller_users", "user_id")
+# ====================================
 
 
-def get_user_id_by_gift_token(token: str) -> int | None:
-    """Найти user_id пользователя, который активировал данный токен."""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT user_id FROM gift_token_claims WHERE token = ? ORDER BY claimed_at DESC LIMIT 1", (token,))
-            row = cursor.fetchone()
-            return row[0] if row else None
-    except sqlite3.Error as e:
-        logging.error(f"Ошибка поиска user_id по токену {token}: {e}")
-        return None
-
-
+# ===== _ENSURE_PROMO_TABLES =====
 def _ensure_promo_tables(cursor: sqlite3.Cursor) -> None:
-    """Создание таблиц промокодов и истории их использования."""
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS promo_codes (
@@ -1605,34 +1203,588 @@ def _ensure_promo_tables(cursor: sqlite3.Cursor) -> None:
     _ensure_index(cursor, "idx_promo_code_usages_user", "promo_code_usages", "user_id")
 
 
+# =================================
+
+
+# ===== _ENSURE_HOST_SPEEDTESTS_TABLE =====
+def _ensure_host_speedtests_table(cursor: sqlite3.Cursor) -> None:
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS host_speedtests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            host_name TEXT NOT NULL,
+            method TEXT NOT NULL,
+            ping_ms REAL,
+            jitter_ms REAL,
+            download_mbps REAL,
+            upload_mbps REAL,
+            server_name TEXT,
+            server_id TEXT,
+            ok INTEGER NOT NULL DEFAULT 1,
+            error TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_host_speedtests_host_time ON host_speedtests(host_name, created_at DESC)")
+
+
+# =========================================
+
+
+# ===== _ENSURE_RESOURCE_METRICS_TABLE =====
+def _ensure_resource_metrics_table(cursor: sqlite3.Cursor) -> None:
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS resource_metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scope TEXT NOT NULL,                -- 'local' | 'host' | 'target'
+            object_name TEXT NOT NULL,          -- 'panel' | host_name | target_name
+            cpu_percent REAL,
+            mem_percent REAL,
+            disk_percent REAL,
+            load1 REAL,
+            net_bytes_sent INTEGER,
+            net_bytes_recv INTEGER,
+            raw_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_resource_metrics_scope_time ON resource_metrics(scope, object_name, created_at DESC)")
+
+
+
+
+# ==========================================
+
+
+# ===== INSERT_RESOURCE_METRIC =====
+def insert_resource_metric(
+    scope: str,
+    object_name: str,
+    cpu_percent: float | None = None,
+    mem_percent: float | None = None,
+    disk_percent: float | None = None,
+    load1: float | None = None,
+    net_bytes_sent: int | None = None,
+    net_bytes_recv: int | None = None,
+    raw_json: str | None = None
+) -> int | None:
+    cursor = _exec(
+        """
+        INSERT INTO resource_metrics (
+            scope, object_name, cpu_percent, mem_percent, disk_percent, load1, 
+            net_bytes_sent, net_bytes_recv, raw_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (scope or '').strip(), (object_name or '').strip(),
+            cpu_percent, mem_percent, disk_percent, load1, 
+            net_bytes_sent, net_bytes_recv, raw_json
+        ),
+        f"Не удалось сохранить метрики ресурсов scope={scope} object={object_name}"
+    )
+    return cursor.lastrowid if cursor else None
+
+
+# ==================================
+
+
+# ===== GET_LATEST_RESOURCE_METRIC =====
+def get_latest_resource_metric(scope: str, object_name: str) -> dict | None:
+    return _fetch_row(
+        """
+        SELECT * FROM resource_metrics
+        WHERE scope = ? AND object_name = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        ((scope or '').strip(), (object_name or '').strip()),
+        f"Не удалось получить последние метрики ресурсов scope={scope} object={object_name}"
+    )
+
+
+# ======================================
+
+
+# ===== GET_RESOURCE_METRICS =====
+def get_resource_metrics(
+    scope: str,
+    object_name: str,
+    limit: int = 20
+) -> list[dict]:
+    return _fetch_list(
+        """
+        SELECT *
+        FROM resource_metrics
+        WHERE scope = ? AND object_name = ?
+        ORDER BY datetime(created_at) DESC
+        LIMIT ?
+        """,
+        ((scope or '').strip(), (object_name or '').strip(), limit),
+        f"Не удалось получить метрики ресурсов scope={scope} object={object_name}"
+    )
+
+
+# ==============================
+
+
+# ===== GET_METRICS_SERIES =====
+def get_metrics_series(scope: str, object_name: str, *, since_hours: int = 24, limit: int = 500) -> list[dict]:
+    if since_hours == 1:
+        hours_filter = 2
+    else:
+        hours_filter = max(1, int(since_hours))
+    
+    rows = _fetch_list(
+        f'''
+        SELECT created_at, cpu_percent, mem_percent, disk_percent, load1
+        FROM resource_metrics
+        WHERE scope = ? AND object_name = ?
+            AND created_at >= datetime('now', '+3 hours', ?)
+        ORDER BY created_at ASC
+        LIMIT ?
+        ''',
+        (
+            (scope or '').strip(),
+            (object_name or '').strip(),
+            f'-{hours_filter} hours',
+            max(10, int(limit)),
+        ),
+        f"Не удалось получить серию метрик для {scope}/{object_name}"
+    )
+    logging.debug(f"get_metrics_series: {scope}/{object_name}, since_hours={since_hours}, found {len(rows)} records")
+    return rows
+
+
+
+
+# ==============================
+
+
+# ===== CREATE_HOST =====
+def create_host(name: str, url: str, user: str, passwd: str, inbound: int, subscription_url: str | None = None):
+    name = normalize_host_name(name)
+    url = (url or "").strip()
+    user = (user or "").strip()
+    passwd = passwd or ""
+    try:
+        inbound = int(inbound)
+    except Exception:
+        pass
+    subscription_url = (subscription_url or None)
+
+    cursor = _exec(
+         "INSERT INTO xui_hosts (host_name, host_url, host_username, host_pass, host_inbound_id, subscription_url) VALUES (?, ?, ?, ?, ?, ?)",
+         (name, url, user, passwd, inbound, subscription_url),
+         ""
+    )
+    if cursor:
+        logging.info(f"Успешно создан новый хост: {name}")
+        return
+
+    cursor = _exec(
+         "INSERT INTO xui_hosts (host_name, host_url, host_username, host_pass, host_inbound_id) VALUES (?, ?, ?, ?, ?)",
+         (name, url, user, passwd, inbound),
+         f"Ошибка при создании хоста '{name}'"
+    )
+    if cursor:
+         logging.info(f"Успешно создан новый хост (fallback): {name}")
+
+# =======================
+
+
+# ===== UPDATE_HOST_SUBSCRIPTION_URL =====
+def update_host_subscription_url(host_name: str, subscription_url: str | None) -> bool:
+    host_name = normalize_host_name(host_name)
+    cursor = _exec(
+        "UPDATE xui_hosts SET subscription_url = ? WHERE TRIM(host_name) = TRIM(?)",
+        (subscription_url, host_name),
+        f"Не удалось обновить subscription_url для хоста '{host_name}'"
+    )
+    return _check_rowcount(cursor, f"хост '{host_name}'", "update_host_subscription_url")
+# ========================================
+
+# ===== UPDATE_HOST_DESCRIPTION =====
+
+# ===== UPDATE_HOST_DESCRIPTION =====
+# Обновление описания хоста
+def update_host_description(host_name: str, description: str | None) -> bool:
+    host_name = normalize_host_name(host_name)
+    cursor = _exec(
+        "UPDATE xui_hosts SET description = ? WHERE TRIM(host_name) = TRIM(?)",
+        (description, host_name),
+        f"Не удалось обновить описание для хоста '{host_name}'"
+    )
+    return _check_rowcount(cursor, f"хост '{host_name}'", "update_host_description")
+# ===================================
+
+# ===== UPDATE_HOST_TRAFFIC_SETTINGS =====
+
+# ===== UPDATE_HOST_TRAFFIC_SETTINGS =====
+# Обновление стратегии лимита трафика для хоста
+# Default: 'NO_RESET'
+def update_host_traffic_settings(host_name: str, traffic_strategy: str | None = 'NO_RESET') -> bool:
+    host_name = normalize_host_name(host_name)
+    cursor = _exec(
+        "UPDATE xui_hosts SET traffic_limit_strategy = ? WHERE TRIM(host_name) = TRIM(?)",
+        (traffic_strategy or 'NO_RESET', host_name),
+        f"Не удалось обновить настройки трафика для хоста '{host_name}'"
+    )
+    return _check_rowcount(cursor, f"хост '{host_name}'", "update_host_traffic_settings")
+# ========================================
+
+
+# ===== SET_REFERRAL_START_BONUS_RECEIVED =====
+def set_referral_start_bonus_received(user_id: int) -> bool:
+    return _check_rowcount(_exec(
+        "UPDATE users SET referral_start_bonus_received = 1 WHERE telegram_id = ?",
+        (user_id,),
+        f"Не удалось установить бонус реферала для пользователя {user_id}"
+    ), f"пользователь {user_id}", "")
+# =============================================
+
+
+# ===== UPDATE_HOST_URL =====
+# Обновление URL хоста
+def update_host_url(host_name: str, new_url: str) -> bool:
+    host_name = normalize_host_name(host_name)
+    cursor = _exec(
+        "UPDATE xui_hosts SET host_url = ? WHERE TRIM(host_name) = TRIM(?)",
+        (new_url, host_name),
+        f"Не удалось обновить URL для хоста '{host_name}'"
+    )
+    return _check_rowcount(cursor, f"хост '{host_name}'", "update_host_url")
+# ===========================
+
+
+# ===== ADD_SELLER_USER =====
+def add_seller_user(user_id: int, seller_sale: float = 0, seller_ref: float = 0, seller_uuid: str = "0") -> int | None:
+    cursor = _exec(
+        """
+        INSERT OR REPLACE INTO seller_users (user_id, seller_sale, seller_ref, seller_uuid) 
+        VALUES (?, ?, ?, ?)
+        """,
+        (user_id, seller_sale, seller_ref, str(seller_uuid)),
+        "Не удалось добавить продавца"
+    )
+    return cursor.lastrowid if cursor else None
+
+# =======================
+
+
+# ===== GET_SELLER_USER =====
+def get_seller_user(user_id: int) -> dict | None:
+    row = _fetch_row("SELECT * FROM seller_users WHERE user_id = ?", (user_id,), f"Не удалось получить продавца {user_id}")
+    if not row:
+        return {
+            "user_id": user_id,
+            "seller_sale": 0.0,
+            "seller_ref": 0.0,
+            "seller_uuid": "0",
+        }
+    return row
+
+# =======================
+
+
+# ===== DELETE_SELLER_USER =====
+def delete_seller_user(user_id: int) -> bool:
+    cursor = _exec("DELETE FROM seller_users WHERE user_id = ?", (user_id,), f"Не удалось удалить продавца {user_id}")
+    return cursor is not None
+
+# ==========================
+
+
+# ===== UPDATE_HOST_REMNAWAVE_SETTINGS =====
+def update_host_remnawave_settings(
+    host_name: str,
+    *,
+    remnawave_base_url: str | None = None,
+    remnawave_api_token: str | None = None,
+    squad_uuid: str | None = None,
+) -> bool:
+    host_name_n = normalize_host_name(host_name)
+    row = _fetch_row("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name_n,), "")
+    if not row:
+        logging.warning(f"update_host_remnawave_settings: хост не найден '{host_name_n}'")
+        return False
+
+    sets: list[str] = []
+    params: list[Any] = []
+    if remnawave_base_url is not None:
+        value = (remnawave_base_url or '').strip() or None
+        sets.append("remnawave_base_url = ?")
+        params.append(value)
+    if remnawave_api_token is not None:
+        value = (remnawave_api_token or '').strip() or None
+        sets.append("remnawave_api_token = ?")
+        params.append(value)
+    if squad_uuid is not None:
+        value = (squad_uuid or '').strip() or None
+        sets.append("squad_uuid = ?")
+        params.append(value)
+    
+    if not sets:
+        return True
+    
+    params.append(host_name_n)
+    sql = f"UPDATE xui_hosts SET {', '.join(sets)} WHERE TRIM(host_name) = TRIM(?)"
+    cursor = _exec(sql, params, f"Не удалось обновить Remnawave-настройки для хоста '{host_name}'")
+    return cursor is not None
+
+# ========================================
+
+
+# ===== UPDATE_HOST_SSH_SETTINGS =====
+def update_host_ssh_settings(
+    host_name: str,
+    ssh_host: str | None = None,
+    ssh_port: int | None = None,
+    ssh_user: str | None = None,
+    ssh_password: str | None = None,
+    ssh_key_path: str | None = None,
+) -> bool:
+    host_name_n = normalize_host_name(host_name)
+    row = _fetch_row("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name_n,), "")
+    if not row:
+        logging.warning(f"update_host_ssh_settings: хост не найден '{host_name_n}'")
+        return False
+
+    cursor = _exec(
+        """
+        UPDATE xui_hosts
+        SET ssh_host = ?, ssh_port = ?, ssh_user = ?, ssh_password = ?, ssh_key_path = ?
+        WHERE TRIM(host_name) = TRIM(?)
+        """,
+        (
+            (ssh_host or None),
+            (int(ssh_port) if ssh_port is not None else None),
+            (ssh_user or None),
+            (ssh_password if ssh_password is not None else None),
+            (ssh_key_path or None),
+            host_name_n,
+        ),
+        f"Не удалось обновить SSH-параметры для хоста '{host_name}'"
+    )
+    return cursor is not None
+# ====================================
+
+
+# ===== UPDATE_HOST_NAME =====
+def update_host_name(old_name: str, new_name: str) -> bool:
+    old_n = normalize_host_name(old_name)
+    new_n = normalize_host_name(new_name)
+    if not old_n or not new_n:
+        return False
+    if old_n == new_n:
+        return True
+
+    row = _fetch_row("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (old_n,), "")
+    if not row:
+        logging.warning(f"update_host_name: исходный хост не найден '{old_n}'")
+        return False
+
+    row_new = _fetch_row("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (new_n,), "")
+    if row_new:
+        logging.warning(f"update_host_name: новое имя занято '{new_n}'")
+        return False
+
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=OFF")
+            cursor.execute(
+                "UPDATE xui_hosts SET host_name = ? WHERE TRIM(host_name) = TRIM(?)",
+                (new_n, old_n)
+            )
+            cursor.execute(
+                "UPDATE plans SET host_name = ? WHERE TRIM(host_name) = TRIM(?)",
+                (new_n, old_n)
+            )
+            cursor.execute(
+                "UPDATE vpn_keys SET host_name = ? WHERE TRIM(host_name) = TRIM(?)",
+                (new_n, old_n)
+            )
+            cursor.execute(
+                "UPDATE host_speedtests SET host_name = ? WHERE TRIM(host_name) = TRIM(?)",
+                (new_n, old_n)
+            )
+            conn.commit()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            return True
+    except sqlite3.Error as e: logging.error(f"Не удалось переименовать хост '{old_name}' -> '{new_name}': {e}"); return False
+
+# ===== DELETE_HOST =====
+# Удаление хоста и всех связанных тарифов
+def delete_host(host_name: str):
+    try:
+        host_name = normalize_host_name(host_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM plans WHERE TRIM(host_name) = TRIM(?)", (host_name,))
+            cursor.execute("DELETE FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
+            conn.commit()
+            logging.info(f"Хост '{host_name}' и его тарифы успешно удалены.")
+    except sqlite3.Error as e: logging.error(f"Ошибка удаления хоста '{host_name}': {e}")
+# =========================
+
+
+# ===== GET_HOST =====
+# Получение информации о хосте по имени
+# Fallback: None если хост не найден
+def get_host(host_name: str) -> dict | None:
+    try:
+        host_name = normalize_host_name(host_name)
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name,))
+            result = cursor.fetchone(); return dict(result) if result else None
+    except sqlite3.Error as e: logging.error(f"Ошибка получения хоста '{host_name}': {e}"); return None
+# ==================
+
+
+# ===== TOGGLE_HOST_VISIBILITY =====
+# Переключение видимости хоста (поле see)
+def toggle_host_visibility(host_name: str, visible: int) -> bool:
+    host_name_n = normalize_host_name(host_name)
+    visible_int = 1 if visible else 0
+    row = _fetch_row("SELECT 1 FROM xui_hosts WHERE TRIM(host_name) = TRIM(?)", (host_name_n,), "")
+    if not row: logging.warning(f"toggle_host_visibility: хост не найден '{host_name_n}'"); return False
+    cursor = _exec(
+        "UPDATE xui_hosts SET see = ? WHERE TRIM(host_name) = TRIM(?)",
+        (visible_int, host_name_n),
+        f"Не удалось обновить видимость для хоста '{host_name}'"
+    )
+    if cursor and cursor.rowcount > 0: logging.info(f"Видимость хоста '{host_name_n}' обновлена: see={visible_int}")
+    return _check_rowcount(cursor, f"хост '{host_name_n}'", "")
+# ==================================
+
+
+# ===== DELETE_KEY_BY_ID =====
+# Удаление ключа по key_id
+def delete_key_by_id(key_id: int) -> bool:
+    return _check_rowcount(_exec("DELETE FROM vpn_keys WHERE key_id = ?", (key_id,), f"Не удалось удалить ключ по id {key_id}"), f"ключ {key_id}", "")
+# ============================
+
+
+# ===== UPDATE_KEY_COMMENT =====
+# Обновление комментария (description) для ключа
+def update_key_comment(key_id: int, comment: str) -> bool:
+    return _check_rowcount(_exec("UPDATE vpn_keys SET description = ? WHERE key_id = ?", (comment, key_id), f"Не удалось обновить комментарий ключа для {key_id}"), f"ключ {key_id}", "")
+# ==============================
+
+
+# ===== GET_ALL_HOSTS =====
+def get_all_hosts(visible_only: bool = False) -> list[dict]:
+    # Сначала пытаемся выполнить запрос
+    sql = "SELECT * FROM xui_hosts ORDER BY sort_order ASC, host_name ASC"
+    if visible_only: sql = "SELECT * FROM xui_hosts WHERE see = 1 ORDER BY sort_order ASC, host_name ASC"
+    
+    rows = _fetch_list(sql, (), "")
+    if not rows:
+        # Если пусто или ошибка, возможно нет колонки see (хотя миграция должна была сработать)
+        # Пробуем через старый механизм fallback только если реально была ошибка
+        # Но у нас _fetch_list возвращает [], так что сложно отличить "пусто" от "ошибка".
+        # Однако, раз мы строго следим за миграциями, колонка see должна быть.
+        # Если ошибка была, она залогировалась в _fetch_list.
+        pass
+
+    result = []
+    for row in rows:
+        d = dict(row)
+        d['host_name'] = normalize_host_name(d.get('host_name'))
+        result.append(d)
+    return result
+
+# =========================
+
+
+# ===== GET_SPEEDTESTS =====
+def get_speedtests(host_name: str, limit: int = 20) -> list[dict]:
+    host_name_n = normalize_host_name(host_name)
+    try:
+        limit_int = int(limit)
+    except Exception: limit_int = 20
+        
+    return _fetch_list(
+        """
+        SELECT id, host_name, method, ping_ms, jitter_ms, download_mbps, upload_mbps,
+               server_name, server_id, ok, error, created_at
+        FROM host_speedtests
+        WHERE TRIM(host_name) = TRIM(?)
+        ORDER BY datetime(created_at) DESC
+        LIMIT ?
+        """,
+        (host_name_n, limit_int),
+        f"Не удалось получить speedtest-данные для хоста '{host_name}'"
+    )
+
+# ========================
+
+
+# ===== GET_LATEST_SPEEDTEST =====
+def get_latest_speedtest(host_name: str) -> dict | None:
+    host_name_n = normalize_host_name(host_name)
+    return _fetch_row(
+        """
+        SELECT id, host_name, method, ping_ms, jitter_ms, download_mbps, upload_mbps,
+               server_name, server_id, ok, error, created_at
+        FROM host_speedtests
+        WHERE TRIM(host_name) = TRIM(?)
+        ORDER BY datetime(created_at) DESC
+        LIMIT 1
+        """,
+        (host_name_n,),
+        f"Не удалось получить последний speedtest для хоста '{host_name}'"
+    )
+
+# ===== INSERT_HOST_SPEEDTEST =====
+def insert_host_speedtest(
+    host_name: str,
+    method: str,
+    ping_ms: float | None = None,
+    jitter_ms: float | None = None,
+    download_mbps: float | None = None,
+    upload_mbps: float | None = None,
+    server_name: str | None = None,
+    server_id: str | None = None,
+    ok: bool = True,
+    error: str | None = None
+) -> int | None:
+    host_name_n = normalize_host_name(host_name)
+    cursor = _exec(
+        """
+        INSERT INTO host_speedtests (host_name, method, ping_ms, jitter_ms, download_mbps, upload_mbps, server_name, server_id, ok, error)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (host_name_n, method, ping_ms, jitter_ms, download_mbps, upload_mbps, server_name, server_id, 1 if ok else 0, error),
+        f"Не удалось сохранить запись speedtest для '{host_name}'"
+    )
+    return cursor.lastrowid if cursor else None
+
+
+
+
+
+
+# ===== GET_ALL_SSH_TARGETS =====
 def get_all_ssh_targets() -> list[dict]:
-    """Вернуть все SSH-цели для спидтестов (включая неактивные), сортировка по sort_order, затем по имени."""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM speedtest_ssh_targets ORDER BY sort_order ASC, target_name ASC")
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось получить список SSH-целей: {e}")
-        return []
+    return _fetch_list("SELECT * FROM speedtest_ssh_targets ORDER BY sort_order ASC, target_name ASC", (), "Не удалось получить список SSH-целей")
 
 
+# ===========================
+
+
+# ===== GET_SSH_TARGET =====
 def get_ssh_target(target_name: str) -> dict | None:
-    try:
-        name = normalize_host_name(target_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (name,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось получить SSH-цель '{target_name}': {e}")
-        return None
+    name = normalize_host_name(target_name)
+    return _fetch_row("SELECT * FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (name,), f"Не удалось получить SSH-цель '{target_name}'")
 
 
+# ========================
+
+
+# ===== CREATE_SSH_TARGET =====
+# Создание новой SSH-цели для speedtest
 def create_ssh_target(
     target_name: str,
     ssh_host: str,
@@ -1645,35 +1797,33 @@ def create_ssh_target(
     sort_order: int | None = 0,
     is_active: int | None = 1,
 ) -> bool:
-    try:
-        name = normalize_host_name(target_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO speedtest_ssh_targets
-                    (target_name, ssh_host, ssh_port, ssh_user, ssh_password, ssh_key_path, description, is_active, sort_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    name,
-                    (ssh_host or '').strip(),
-                    int(ssh_port) if ssh_port is not None else None,
-                    (ssh_user or None),
-                    (ssh_password if ssh_password is not None else None),
-                    (ssh_key_path or None),
-                    (description or None),
-                    1 if (is_active is None or int(is_active) != 0) else 0,
-                    int(sort_order or 0),
-                )
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось создать SSH-цель '{target_name}': {e}")
-        return False
+    name = normalize_host_name(target_name)
+    cursor = _exec(
+        """
+        INSERT INTO speedtest_ssh_targets
+            (target_name, ssh_host, ssh_port, ssh_user, ssh_password, ssh_key_path, description, is_active, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            name,
+            (ssh_host or '').strip(),
+            int(ssh_port) if ssh_port is not None else None,
+            (ssh_user or None),
+            (ssh_password if ssh_password is not None else None),
+            (ssh_key_path or None),
+            (description or None),
+            1 if (is_active is None or int(is_active) != 0) else 0,
+            int(sort_order or 0),
+        ),
+        f"Не удалось создать SSH-цель '{target_name}'"
+    )
+    return cursor is not None
+# ===========================
 
 
+# ===== UPDATE_SSH_TARGET_FIELDS =====
+# Обновление полей SSH-цели (выборочное обновление)
+# Параметры с None не обновляются
 def update_ssh_target_fields(
     target_name: str,
     *,
@@ -1686,272 +1836,156 @@ def update_ssh_target_fields(
     sort_order: int | None = None,
     is_active: int | None = None,
 ) -> bool:
-    try:
-        name = normalize_host_name(target_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (name,))
-            if cursor.fetchone() is None:
-                logging.warning(f"update_ssh_target_fields: цель не найдена '{name}'")
-                return False
-            sets: list[str] = []
-            params: list[Any] = []
-            if ssh_host is not None:
-                sets.append("ssh_host = ?")
-                params.append((ssh_host or '').strip())
-            if ssh_port is not None:
-                try:
-                    val = int(ssh_port)
-                except Exception:
-                    val = None
-                sets.append("ssh_port = ?")
-                params.append(val)
-            if ssh_user is not None:
-                sets.append("ssh_user = ?")
-                params.append(ssh_user or None)
-            if ssh_password is not None:
-                sets.append("ssh_password = ?")
-                params.append(ssh_password)
-            if ssh_key_path is not None:
-                sets.append("ssh_key_path = ?")
-                params.append(ssh_key_path or None)
-            if description is not None:
-                sets.append("description = ?")
-                params.append(description or None)
-            if sort_order is not None:
-                try:
-                    so = int(sort_order)
-                except Exception:
-                    so = 0
-                sets.append("sort_order = ?")
-                params.append(so)
-            if is_active is not None:
-                sets.append("is_active = ?")
-                params.append(1 if int(is_active) != 0 else 0)
-            if not sets:
-                return True
-            params.append(name)
-            sql = f"UPDATE speedtest_ssh_targets SET {', '.join(sets)} WHERE TRIM(target_name) = TRIM(?)"
-            cursor.execute(sql, params)
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить SSH-цель '{target_name}': {e}")
-        return False
-
-
-def update_ssh_target_sort_order(target_name: str, sort_order: int) -> bool:
-    try:
-        name = normalize_host_name(target_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE speedtest_ssh_targets SET sort_order = ? WHERE TRIM(target_name) = TRIM(?)",
-                (int(sort_order), name)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить sort_order для SSH-цели '{target_name}': {e}")
-        return False
-
-
-def update_host_sort_order(host_name: str, sort_order: int) -> bool:
-    try:
-        name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE xui_hosts SET sort_order = ? WHERE TRIM(host_name) = TRIM(?)",
-                (int(sort_order), name)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить sort_order для хоста '{host_name}': {e}")
-        return False
-
-
-def delete_ssh_target(target_name: str) -> bool:
-    try:
-        name = normalize_host_name(target_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (name,))
-            affected = cursor.rowcount
-            conn.commit()
-            return affected > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось удалить SSH-цель '{target_name}': {e}")
-        return False
-
-def rename_ssh_target(old_target_name: str, new_target_name: str) -> bool:
-    """Переименовать SSH-цель. Также обновляет все связанные записи speedtest."""
-    try:
-        old_name = normalize_host_name(old_target_name)
-        new_name = normalize_host_name(new_target_name)
+    name = normalize_host_name(target_name)
+    row = _fetch_row("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (name,), "")
+    if not row: logging.warning(f"update_ssh_target_fields: цель не найдена '{name}'"); return False
         
-        if old_name == new_name:
-            # Имя не изменилось
-            return True
-            
+    sets: list[str] = []
+    params: list[Any] = []
+    if ssh_host is not None:
+        sets.append("ssh_host = ?")
+        params.append((ssh_host or '').strip())
+    if ssh_port is not None:
+        try:
+            val = int(ssh_port)
+        except Exception:
+            val = None
+        sets.append("ssh_port = ?")
+        params.append(val)
+    if ssh_user is not None:
+        sets.append("ssh_user = ?")
+        params.append(ssh_user or None)
+    if ssh_password is not None:
+        sets.append("ssh_password = ?")
+        params.append(ssh_password)
+    if ssh_key_path is not None:
+        sets.append("ssh_key_path = ?")
+        params.append(ssh_key_path or None)
+    if description is not None:
+        sets.append("description = ?")
+        params.append(description or None)
+    if sort_order is not None:
+        try:
+            so = int(sort_order)
+        except Exception:
+            so = 0
+        sets.append("sort_order = ?")
+        params.append(so)
+    if is_active is not None:
+        sets.append("is_active = ?")
+        params.append(1 if int(is_active) != 0 else 0)
+    
+    if not sets: return True
+    
+    params.append(name)
+    sql = f"UPDATE speedtest_ssh_targets SET {', '.join(sets)} WHERE TRIM(target_name) = TRIM(?)"
+    cursor = _exec(sql, params, f"Не удалось обновить SSH-цель '{target_name}'")
+    return cursor is not None
+
+
+
+
+
+
+
+
+# ===== DELETE_SSH_TARGET =====
+# Удаление SSH-цели по имени
+def delete_ssh_target(target_name: str) -> bool:
+    return _check_rowcount(_exec(
+        "DELETE FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)",
+        (normalize_host_name(target_name),),
+        f"Не удалось удалить SSH-цель '{target_name}'"
+    ), f"SSH-цель '{target_name}'", "")
+# =============================
+
+
+# ===== RENAME_SSH_TARGET =====
+# Переименование SSH-цели с обновлением связанных speedtest-записей
+def rename_ssh_target(old_target_name: str, new_target_name: str) -> bool:
+    old_name = normalize_host_name(old_target_name)
+    new_name = normalize_host_name(new_target_name)
+    
+    if old_name == new_name: return True
+    
+    row = _fetch_row("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (old_name,), "")
+    if not row: logging.warning(f"rename_ssh_target: старая цель не найдена '{old_name}'"); return False
+    
+    row_new = _fetch_row("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (new_name,), "")
+    if row_new: logging.warning(f"rename_ssh_target: новое имя уже занято '{new_name}'"); return False
+    
+    try:
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            
-            # Проверяем, существует ли старая цель
-            cursor.execute("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (old_name,))
-            if cursor.fetchone() is None:
-                logging.warning(f"rename_ssh_target: старая цель не найдена '{old_name}'")
-                return False
-            
-            # Проверяем, не занято ли новое имя
-            cursor.execute("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (new_name,))
-            if cursor.fetchone() is not None:
-                logging.warning(f"rename_ssh_target: новое имя уже занято '{new_name}'")
-                return False
-            
-            # Обновляем имя в speedtest_ssh_targets
             cursor.execute(
                 "UPDATE speedtest_ssh_targets SET target_name = ? WHERE TRIM(target_name) = TRIM(?)",
                 (new_name, old_name)
             )
-            
-            # Обновляем все связанные записи в host_speedtests
             cursor.execute(
                 "UPDATE host_speedtests SET host_name = ? WHERE TRIM(host_name) = TRIM(?)",
                 (new_name, old_name)
             )
-            
             conn.commit()
             logging.info(f"SSH-цель переименована: '{old_name}' → '{new_name}'")
             return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось переименовать SSH-цель '{old_target_name}' → '{new_target_name}': {e}")
-        return False
+    except sqlite3.Error as e: logging.error(f"Не удалось переименовать SSH-цель '{old_target_name}' → '{new_target_name}': {e}"); return False
 
-def update_ssh_target_scheduler(target_name: str, time_auto_json: str) -> bool:
-    try:
-        name = normalize_host_name(target_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM speedtest_ssh_targets WHERE TRIM(target_name) = TRIM(?)", (name,))
-            if cursor.fetchone() is None:
-                logging.warning(f"update_ssh_target_scheduler: цель не найдена '{name}'")
-                return False
-            
-            cursor.execute(
-                "UPDATE speedtest_ssh_targets SET time_auto = ? WHERE TRIM(target_name) = TRIM(?)",
-                (time_auto_json, name)
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить планировщик для '{target_name}': {e}")
-        return False
 
+
+# ===== GET_ADMIN_STATS =====
+# Получение статистики для админ-панели
+# Возвращает: total_users, total_keys, active_keys, total_income, today_new_users, today_income, today_issued_keys
 def get_admin_stats() -> dict:
-    """Return aggregated statistics for the admin dashboard.
-    Includes:
-    - total_users: count of users
-    - total_keys: count of all keys
-    - active_keys: keys with expire_at in the future
-    - total_income: sum of amount_rub for successful transactions
-    """
-    stats = {
-        "total_users": 0,
-        "total_keys": 0,
-        "active_keys": 0,
-        "total_income": 0.0,
-
-        "today_new_users": 0,
-        "today_income": 0.0,
-        "today_issued_keys": 0,
-    }
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-
-            cursor.execute("SELECT COUNT(*) FROM users")
-            row = cursor.fetchone()
-            stats["total_users"] = (row[0] or 0) if row else 0
-
-
-            cursor.execute("SELECT COUNT(*) FROM vpn_keys")
-            row = cursor.fetchone()
-            stats["total_keys"] = (row[0] or 0) if row else 0
-
-
-            cursor.execute("SELECT COUNT(*) FROM vpn_keys WHERE expire_at IS NOT NULL AND datetime(expire_at) > CURRENT_TIMESTAMP")
-            row = cursor.fetchone()
-            stats["active_keys"] = (row[0] or 0) if row else 0
-
-
-            cursor.execute(
-                """
-                SELECT COALESCE(SUM(amount_rub), 0)
-                FROM transactions
-                WHERE status IN ('paid','success','succeeded')
-                  AND LOWER(COALESCE(payment_method, '')) <> 'balance'
-                """
-            )
-            row = cursor.fetchone()
-            stats["total_income"] = float(row[0] or 0.0) if row else 0.0
-
-
-
-            cursor.execute(
-                "SELECT COUNT(*) FROM users WHERE date(registration_date) = date('now', '+3 hours')"
-            )
-            row = cursor.fetchone()
-            stats["today_new_users"] = (row[0] or 0) if row else 0
-
-
-            cursor.execute(
-                """
-                SELECT COALESCE(SUM(amount_rub), 0)
-                FROM transactions
-                WHERE status IN ('paid','success','succeeded')
-                  AND date(created_date) = date('now', '+3 hours')
-                  AND LOWER(COALESCE(payment_method, '')) <> 'balance'
-                """
-            )
-            row = cursor.fetchone()
-            stats["today_income"] = float(row[0] or 0.0) if row else 0.0
-
-
-            cursor.execute(
-                "SELECT COUNT(*) FROM vpn_keys WHERE date(COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)) = date('now', '+3 hours')"
-            )
-            row = cursor.fetchone()
-            stats["today_issued_keys"] = (row[0] or 0) if row else 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get admin stats: {e}")
+    stats = {}
+    stats["total_users"] = _get_count_stat("SELECT COUNT(*) as c FROM users")
+    stats["total_keys"] = _get_count_stat("SELECT COUNT(*) as c FROM vpn_keys")
+    stats["active_keys"] = _get_count_stat("SELECT COUNT(*) as c FROM vpn_keys WHERE expire_at IS NOT NULL AND datetime(expire_at) > CURRENT_TIMESTAMP")
+    stats["total_income"] = float(_get_count_stat("""
+        SELECT COALESCE(SUM(amount_rub), 0) as s FROM transactions
+        WHERE status IN ('paid','success','succeeded') AND LOWER(COALESCE(payment_method, '')) <> 'balance'
+    """))
+    stats["today_new_users"] = _get_count_stat("SELECT COUNT(*) as c FROM users WHERE date(registration_date) = date('now', '+3 hours')")
+    stats["today_income"] = float(_get_count_stat("""
+        SELECT COALESCE(SUM(amount_rub), 0) as s FROM transactions
+        WHERE status IN ('paid','success','succeeded') AND date(created_date) = date('now', '+3 hours') 
+          AND LOWER(COALESCE(payment_method, '')) <> 'balance'
+    """))
+    stats["today_issued_keys"] = _get_count_stat("SELECT COUNT(*) as c FROM vpn_keys WHERE date(COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)) = date('now', '+3 hours')")
     return stats
+# =======================
 
+# ===== GET_ALL_KEYS =====
+# Получение всех ключей из БД с нормализацией
 def get_all_keys() -> list[dict]:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM vpn_keys ORDER BY key_id DESC")
-            return [_normalize_key_row(row) for row in cursor.fetchall()]
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get all keys: {e}")
-        return []
+    rows = _fetch_list("SELECT * FROM vpn_keys ORDER BY key_id DESC", (), "Не удалось получить все ключи")
+    return [_normalize_key_row(row) for row in rows]
+# =========================
 
 
+# ===== GET_KEYS_FOR_USER =====
 def get_keys_for_user(user_id: int) -> list[dict]:
     return get_user_keys(user_id)
 
+# =============================
+
+
+# ===== UPDATE_KEY_EMAIL =====
 def update_key_email(key_id: int, new_email: str) -> bool:
     normalized = _normalize_email(new_email) or new_email.strip()
     return update_key_fields(key_id, email=normalized)
 
+# ============================
+
+
+# ===== UPDATE_KEY_HOST =====
 def update_key_host(key_id: int, new_host_name: str) -> bool:
     return update_key_fields(key_id, host_name=new_host_name)
 
+# ===========================
+
+
+# ===== CREATE_GIFT_KEY =====
 def create_gift_key(user_id: int, host_name: str, key_email: str, months: int, remnawave_user_uuid: str | None = None) -> int | None:
-    """Создать подарочный ключ: expiry = now + months."""
     try:
         from datetime import timedelta
 
@@ -1966,29 +2000,22 @@ def create_gift_key(user_id: int, host_name: str, key_email: str, months: int, r
             key_email=key_email,
             expiry_timestamp_ms=expiry_ms,
         )
-    except sqlite3.Error as e:
-        logging.error(f"Failed to create gift key for user {user_id}: {e}")
-        return None
     except Exception as e:
-        logging.error(f"Failed to create gift key for user {user_id}: {e}")
+        logging.error(f"Не удалось создать подарочный ключ для пользователя {user_id}: {e}")
         return None
+# ===========================
 
+
+# ===== GET_SETTING =====
 def get_setting(key: str) -> str | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT value FROM bot_settings WHERE key = ?", (key,))
-            result = cursor.fetchone()
-            return result[0] if result else None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get setting '{key}': {e}")
-        return None
+    row = _fetch_row("SELECT value FROM bot_settings WHERE key = ?", (key,), f"Не удалось получить настройку '{key}'")
+    return row["value"] if row else None
 
+# =======================
+
+
+# ===== GET_ADMIN_IDS =====
 def get_admin_ids() -> set[int]:
-    """Возвращает множество ID администраторов из настроек.
-    Поддерживает оба варианта: одиночный 'admin_telegram_id' и список 'admin_telegram_ids'
-    через запятую/пробелы или JSON-массив.
-    """
     ids: set[int] = set()
     try:
         single = get_setting("admin_telegram_id")
@@ -2020,149 +2047,82 @@ def get_admin_ids() -> set[int]:
                 except Exception:
                     pass
     except Exception as e:
-        logging.warning(f"get_admin_ids failed: {e}")
+        logging.warning(f"Ошибка get_admin_ids: {e}")
     return ids
+# =========================
 
+
+# ===== IS_ADMIN =====
 def is_admin(user_id: int) -> bool:
-    """Проверка прав администратора по списку ID из настроек."""
     try:
         return int(user_id) in get_admin_ids()
-    except Exception:
-        return False
+    except Exception: return False
 
 
+# ====================
+
+
+# ===== CREATE_PAYLOAD_PENDING =====
 def create_payload_pending(payment_id: str, user_id: int, amount_rub: float | None, metadata: dict | None) -> bool:
-    try:
-        print(f"[DEBUG] create_payload_pending called: payment_id={payment_id}, user_id={user_id}, amount_rub={amount_rub}, metadata={metadata}")
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
+    print(f"[DEBUG] create_payload_pending called: payment_id={payment_id}, user_id={user_id}, amount_rub={amount_rub}, metadata={metadata}")
+    cursor = _exec(
+        """
+        INSERT OR REPLACE INTO pending_transactions (payment_id, user_id, amount_rub, metadata, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, COALESCE((SELECT status FROM pending_transactions WHERE payment_id = ?), 'pending'),
+                COALESCE((SELECT created_at FROM pending_transactions WHERE payment_id = ?), CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)
+        """,
+        (payment_id, int(user_id), float(amount_rub) if amount_rub is not None else None, json.dumps(metadata or {}), payment_id, payment_id),
+        f"Не удалось создать ожидающую транзакцию {payment_id}"
+    )
+    return cursor is not None
+# ==============================
 
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS pending_transactions (
-                    payment_id TEXT PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    amount_rub REAL,
-                    metadata TEXT,
-                    status TEXT DEFAULT 'pending',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cursor.execute(
-                '''
-                INSERT OR REPLACE INTO pending_transactions (payment_id, user_id, amount_rub, metadata, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, COALESCE((SELECT status FROM pending_transactions WHERE payment_id = ?), 'pending'),
-                        COALESCE((SELECT created_at FROM pending_transactions WHERE payment_id = ?), CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)
-                '''
-                , (payment_id, int(user_id), float(amount_rub) if amount_rub is not None else None, json.dumps(metadata or {}), payment_id, payment_id)
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to create payload pending {payment_id}: {e}")
-        return False
 
+# ===== _GET_PENDING_METADATA =====
 def _get_pending_metadata(payment_id: str) -> dict | None:
+    row = _fetch_row("SELECT * FROM pending_transactions WHERE payment_id = ?", (payment_id,), f"Не удалось прочитать ожидающую транзакцию {payment_id}")
+    if not row: return None
     try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
+        meta = json.loads(row["metadata"] or "{}")
+    except Exception: meta = {}
 
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS pending_transactions (
-                    payment_id TEXT PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    amount_rub REAL,
-                    metadata TEXT,
-                    status TEXT DEFAULT 'pending',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cursor.execute("SELECT * FROM pending_transactions WHERE payment_id = ?", (payment_id,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            try:
-                meta = json.loads(row["metadata"] or "{}")
-            except Exception:
-                meta = {}
-
-            meta.setdefault('payment_id', payment_id)
-            return meta
-    except sqlite3.Error as e:
-        logging.error(f"Failed to read pending transaction {payment_id}: {e}")
-        return None
+    meta.setdefault('payment_id', payment_id)
+    return meta
+# =================================
 
 
+# ===== GET_PENDING_METADATA =====
 def get_pending_metadata(payment_id: str) -> dict | None:
-    """Public wrapper to fetch pending metadata by payment_id WITHOUT marking it paid.
-    Returns metadata dict or None if not found.
-    """
     return _get_pending_metadata(payment_id)
 
 
+# ================================
+
+
+# ===== GET_PENDING_STATUS =====
 def get_pending_status(payment_id: str) -> str | None:
-    """Return status of pending transaction: 'pending', 'paid', or None if not found."""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
+    row = _fetch_row("SELECT status FROM pending_transactions WHERE payment_id = ?", (payment_id,), f"Не удалось получить статус для ожидающей {payment_id}")
+    return (row["status"] or '').strip() or None if row else None
 
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS pending_transactions (
-                    payment_id TEXT PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    amount_rub REAL,
-                    metadata TEXT,
-                    status TEXT DEFAULT 'pending',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cursor.execute("SELECT status FROM pending_transactions WHERE payment_id = ?", (payment_id,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            return (row[0] or '').strip() or None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get status for pending {payment_id}: {e}")
-        return None
+# ==============================
 
+
+# ===== _COMPLETE_PENDING =====
 def _complete_pending(payment_id: str) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE pending_transactions SET status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE payment_id = ? AND status != 'paid'",
-                (payment_id,)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to complete pending transaction {payment_id}: {e}")
-        return False
+    cursor = _exec(
+        "UPDATE pending_transactions SET status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE payment_id = ? AND status != 'paid'",
+        (payment_id,),
+        f"Не удалось завершить ожидающую транзакцию {payment_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
+# ===========================
 
-def find_and_complete_ton_transaction(payment_id: str, amount_ton: float | None = None) -> dict | None:
-    """Locate pending transaction by payment_id and mark it paid. Return metadata for processing.
-    The amount check is not enforced here; validation should be done on the webhook provider side.
-    """
-    meta = _get_pending_metadata(payment_id)
-    if not meta:
-        return None
-    
-    if not _complete_pending(payment_id):
-        # Already paid or failed to update
-        return None
-        
-    return meta
 
+# ===== FIND_AND_COMPLETE_PENDING_TRANSACTION =====
 def find_and_complete_pending_transaction(payment_id: str) -> dict | None:
     logging.info(f"🔍 Ищем ожидающую транзакцию: {payment_id}")
     meta = _get_pending_metadata(payment_id)
-    if not meta:
-        logging.warning(f"❌ Ожидающая транзакция не найдена: {payment_id}")
-        return None
+    if not meta: logging.warning(f"❌ Ожидающая транзакция не найдена: {payment_id}"); return None
     
     user_id = meta.get('user_id', 'неизвестно')
     amount = meta.get('price', 0)
@@ -2175,272 +2135,172 @@ def find_and_complete_pending_transaction(payment_id: str) -> dict | None:
     else:
         logging.warning(f"⚠️ Транзакция {payment_id} уже была оплачена или заблокирована (дубликат вебхука)")
         return None
+# =================================================
 
+
+# ===== GET_LATEST_PENDING_FOR_USER =====
 def get_latest_pending_for_user(user_id: int) -> dict | None:
-    """Return metadata of the most recent pending transaction for the user (without completing it)."""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS pending_transactions (
-                    payment_id TEXT PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    amount_rub REAL,
-                    metadata TEXT,
-                    status TEXT DEFAULT 'pending',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cursor.execute(
-                """
-                SELECT payment_id, metadata FROM pending_transactions
-                WHERE user_id = ? AND status = 'pending'
-                ORDER BY datetime(created_at) DESC, datetime(updated_at) DESC
-                LIMIT 1
-                """,
-                (int(user_id),)
-            )
-            row = cursor.fetchone()
-            if not row:
-                return None
-            try:
-                meta = json.loads(row["metadata"] or "{}")
-            except Exception:
-                meta = {}
-            meta.setdefault('payment_id', row["payment_id"]) 
-            return meta
-    except sqlite3.Error as e:
-        logging.error(f"Failed to read latest pending for user {user_id}: {e}")
+    row = _fetch_row(
+        """
+        SELECT payment_id, metadata FROM pending_transactions
+        WHERE user_id = ? AND status = 'pending'
+        ORDER BY datetime(created_at) DESC, datetime(updated_at) DESC
+        LIMIT 1
+        """,
+        (int(user_id),),
+        f"Не удалось получить последнюю ожидающую для пользователя {user_id}"
+    )
+    if not row:
         return None
-        
+    try:
+        meta = json.loads(row["metadata"] or "{}")
+    except Exception:
+        meta = {}
+    meta.setdefault('payment_id', row["payment_id"]) 
+    return meta
+# =======================================
+
+
+# ===== GET_REFERRALS_FOR_USER =====
 def get_referrals_for_user(user_id: int) -> list[dict]:
-    """Возвращает список пользователей, которых пригласил данный user_id.
-    Поля: telegram_id, username, registration_date, total_spent.
-    """
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT telegram_id, username, registration_date, total_spent
-                FROM users
-                WHERE referred_by = ?
-                ORDER BY registration_date DESC
-                """,
-                (user_id,)
-            )
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get referrals for user {user_id}: {e}")
-        return []
-        
+    rows = _fetch_list(
+        """
+        SELECT telegram_id, username, registration_date, total_spent
+        FROM users
+        WHERE referred_by = ?
+        ORDER BY registration_date DESC
+        """,
+        (user_id,),
+        f"Не удалось получить рефералов для пользователя {user_id}"
+    )
+    return [dict(r) for r in rows]
+# ====================================
+
+
+# ===== GET_ALL_SETTINGS =====
 def get_all_settings() -> dict:
-    settings = {}
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT key, value FROM bot_settings")
-            rows = cursor.fetchall()
-            for row in rows:
-                settings[row['key']] = row['value']
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get all settings: {e}")
-    return settings
+    rows = _fetch_list("SELECT key, value FROM bot_settings", (), "Не удалось получить все настройки")
+    return {row['key']: row['value'] for row in rows}
 
+# ============================
+
+
+# ===== UPDATE_SETTING =====
 def update_setting(key: str, value: str):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT OR REPLACE INTO bot_settings (key, value) VALUES (?, ?)", (key, value))
-            conn.commit()
-            logging.info(f"Setting '{key}' updated.")
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update setting '{key}': {e}")
+    cursor = _exec(
+        "INSERT OR REPLACE INTO bot_settings (key, value) VALUES (?, ?)",
+        (key, value),
+        f"Не удалось обновить настройку '{key}'"
+    )
+    if cursor: logging.info(f"Настройка '{key}' обновлена.")
+# ==========================
 
 
+# ===== GET_BUTTON_CONFIGS =====
 def get_button_configs(menu_type: str, include_inactive: bool = False) -> list[dict]:
-    """Get all button configurations for a specific menu type"""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            if include_inactive:
-                query = """
-                    SELECT * FROM button_configs 
-                    WHERE menu_type = ? 
-                    ORDER BY sort_order, row_position, column_position
-                """
-            else:
-                query = """
-                    SELECT * FROM button_configs 
-                    WHERE menu_type = ? AND is_active = 1 
-                    ORDER BY sort_order, row_position, column_position
-                """
-                
-            cursor.execute(query, (menu_type,))
-            results = [dict(row) for row in cursor.fetchall()]
+    query = """
+        SELECT * FROM button_configs 
+        WHERE menu_type = ? 
+        ORDER BY sort_order, row_position, column_position
+    """
+    if not include_inactive:
+        query = """
+            SELECT * FROM button_configs 
+            WHERE menu_type = ? AND is_active = 1 
+            ORDER BY sort_order, row_position, column_position
+        """
+        
+    rows = _fetch_list(query, (menu_type,), f"Не удалось получить конфиг кнопок для {menu_type}")
+    return [dict(r) for r in rows]
+# ============================
 
-            return results
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get button configs for {menu_type}: {e}")
-        return []
 
+# ===== GET_BUTTON_CONFIG =====
 def get_button_config(menu_type: str, button_id: str) -> dict | None:
-    """Get a specific button configuration by menu_type and button_id"""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM button_configs 
-                WHERE menu_type = ? AND button_id = ?
-            """, (menu_type, button_id))
-            row = cursor.fetchone()
-            if row:
-                return dict(row)
-            return None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get button config for {menu_type}/{button_id}: {e}")
-        return None
+    row = _fetch_row(
+        """
+        SELECT * FROM button_configs 
+        WHERE menu_type = ? AND button_id = ?
+        """,
+        (menu_type, button_id),
+        f"Не удалось получить конфиг кнопки {menu_type}/{button_id}"
+    )
+    return dict(row) if row else None
 
+# =============================
+
+
+# ===== CREATE_BUTTON_CONFIG =====
 def create_button_config(menu_type: str, button_id: str, text: str, callback_data: str = None, 
                         url: str = None, row_position: int = 0, column_position: int = 0, 
                         button_width: int = 1, metadata: str = None) -> bool:
-    """Create a new button configuration"""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO button_configs 
-                (menu_type, button_id, text, callback_data, url, row_position, column_position, button_width, metadata, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (menu_type, button_id, text, callback_data, url, row_position, column_position, button_width, metadata))
-            conn.commit()
-            logging.info(f"Button config created: {menu_type}/{button_id}")
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to create button config: {e}")
-        return False
+    cursor = _exec(
+        """
+        INSERT OR REPLACE INTO button_configs 
+        (menu_type, button_id, text, callback_data, url, row_position, column_position, button_width, metadata, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """,
+        (menu_type, button_id, text, callback_data, url, row_position, column_position, button_width, metadata),
+        "Не удалось создать конфиг кнопки"
+    )
+    if cursor: logging.info(f"Конфиг кнопки создан: {menu_type}/{button_id}"); return True
+    return False
+# ================================
 
+
+# ===== UPDATE_BUTTON_CONFIG =====
 def update_button_config(button_id: int, text: str = None, callback_data: str = None, 
                         url: str = None, row_position: int = None, column_position: int = None, 
                         button_width: int = None, is_active: bool = None, sort_order: int = None, metadata: str = None) -> bool:
-    """Update an existing button configuration"""
-    try:
-        logging.info(f"update_button_config called for {button_id}: text={text}, callback_data={callback_data}, url={url}, row={row_position}, col={column_position}, active={is_active}, sort={sort_order}")
+    logging.info(f"update_button_config called for {button_id}: text={text}, callback_data={callback_data}, url={url}, row={row_position}, col={column_position}, active={is_active}, sort={sort_order}")
+    
+    updates = []
+    params = []
+    
+    if text is not None:
+        updates.append("text = ?")
+        params.append(text)
+    if callback_data is not None:
+        updates.append("callback_data = ?")
+        params.append(callback_data)
+    if url is not None:
+        updates.append("url = ?")
+        params.append(url)
+    if row_position is not None:
+        updates.append("row_position = ?")
+        params.append(row_position)
+    if column_position is not None:
+        updates.append("column_position = ?")
+        params.append(column_position)
+    if button_width is not None:
+        updates.append("button_width = ?")
+        params.append(button_width)
+    if is_active is not None:
+        updates.append("is_active = ?")
+        params.append(1 if is_active else 0)
+    if sort_order is not None:
+        updates.append("sort_order = ?")
+        params.append(sort_order)
+    if metadata is not None:
+        updates.append("metadata = ?")
+        params.append(metadata)
+    
+    if not updates: return True
         
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(button_id)
+    
+    query = f"UPDATE button_configs SET {', '.join(updates)} WHERE id = ?"
+    cursor = _exec(query, params, f"Не удалось обновить конфиг кнопки {button_id}")
+    
+    if cursor and cursor.rowcount > 0: logging.info(f"Конфиг кнопки {button_id} успешно обновлён"); return True
+    if cursor and cursor.rowcount == 0: logging.warning(f"Кнопка с id {button_id} не найдена")
+    return False
+# ================================
 
-            updates = []
-            params = []
-            
-            if text is not None:
-                updates.append("text = ?")
-                params.append(text)
-            if callback_data is not None:
-                updates.append("callback_data = ?")
-                params.append(callback_data)
-            if url is not None:
-                updates.append("url = ?")
-                params.append(url)
-            if row_position is not None:
-                updates.append("row_position = ?")
-                params.append(row_position)
-            if column_position is not None:
-                updates.append("column_position = ?")
-                params.append(column_position)
-            if button_width is not None:
-                updates.append("button_width = ?")
-                params.append(button_width)
-            if is_active is not None:
-                updates.append("is_active = ?")
-                params.append(1 if is_active else 0)
-            if sort_order is not None:
-                updates.append("sort_order = ?")
-                params.append(sort_order)
-            if metadata is not None:
-                updates.append("metadata = ?")
-                params.append(metadata)
-            
-            if not updates:
-                return True
-                
-            updates.append("updated_at = CURRENT_TIMESTAMP")
-            params.append(button_id)
-            
-            query = f"UPDATE button_configs SET {', '.join(updates)} WHERE id = ?"
-            logging.info(f"Executing query: {query} with params: {params}")
-            cursor.execute(query, params)
-            
-            if cursor.rowcount == 0:
-                logging.warning(f"No button found with id {button_id}")
-                return False
-                
-            conn.commit()
-            logging.info(f"Button config {button_id} updated successfully")
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update button config {button_id}: {e}")
-        return False
 
-def delete_button_config(button_id: int) -> bool:
-    """Delete a button configuration"""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM button_configs WHERE id = ?", (button_id,))
-            conn.commit()
-            logging.info(f"Button config {button_id} deleted")
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to delete button config {button_id}: {e}")
-        return False
-
-def update_existing_my_keys_button():
-    """Update existing my_keys button to include key count template and set proper button widths"""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                UPDATE button_configs 
-                SET text = '🔑 Мои ключи ({len(user_keys)})', updated_at = CURRENT_TIMESTAMP
-                WHERE menu_type = 'main_menu' AND button_id = 'my_keys'
-            """)
-            if cursor.rowcount > 0:
-                logging.info("Updated my_keys button text to include key count template")
-            
-
-            wide_buttons = [
-                ("trial", 2),
-                ("referral", 2),
-                ("admin", 2),
-            ]
-            
-            for button_id, width in wide_buttons:
-                cursor.execute("""
-                    UPDATE button_configs 
-                    SET button_width = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE menu_type = 'main_menu' AND button_id = ?
-                """, (width, button_id))
-                if cursor.rowcount > 0:
-                    logging.info(f"Updated {button_id} button width to {width}")
-            
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update button configurations: {e}")
-
+# ===== REORDER_BUTTON_CONFIGS =====
 def reorder_button_configs(menu_type: str, button_orders: list[dict]) -> bool:
-    """Reorder button configurations for a menu type"""
     try:
         logging.info(f"Reordering {len(button_orders)} buttons for {menu_type}")
         with sqlite3.connect(DB_FILE) as conn:
@@ -2453,32 +2313,6 @@ def reorder_button_configs(menu_type: str, button_orders: list[dict]) -> bool:
                 button_width = order_data.get('button_width', None)
                 is_active = order_data.get('is_active')
                 
-                logging.info(f"Updating {button_id}: sort={sort_order}, row={row_position}, col={column_position}, width={button_width}, active={is_active}")
-                
-                updates = [
-                    "sort_order = ?",
-                    "row_position = ?",
-                    "column_position = ?",
-                    "updated_at = CURRENT_TIMESTAMP"
-                ]
-                params = [sort_order, row_position, column_position]
-
-                if button_width is not None:
-                    # Insert before updated_at
-                    updates.insert(3, "button_width = ?")
-                    params.insert(3, int(button_width))
-                
-                if is_active is not None:
-                    # Insert before updated_at
-                    updates.insert(len(updates)-1, "is_active = ?")
-                    # Insert into params before updated_at (which is not in params, it's hardcoded in updates list)
-                    # Wait, updated_at is in updates list, but no param for it.
-                    # params corresponds to placeholders '?'
-                    # updated_at = CURRENT_TIMESTAMP has no placeholder.
-                    # So I should be careful.
-                    pass
-
-                # Let's rewrite the query construction to be safer
                 set_clauses = [
                     "sort_order = ?",
                     "row_position = ?",
@@ -2506,616 +2340,380 @@ def reorder_button_configs(menu_type: str, button_orders: list[dict]) -> bool:
                     """,
                     query_params,
                 )
-                
-                if cursor.rowcount == 0:
-                    logging.warning(f"No button found with menu_type={menu_type}, button_id={button_id}")
-                else:
-                    logging.info(f"Updated button {button_id}")
-                    
             conn.commit()
-            logging.info(f"Button configs reordered for {menu_type}")
             return True
     except sqlite3.Error as e:
         logging.error(f"Failed to reorder button configs for {menu_type}: {e}")
         return False
+# ==================================
 
-def initialize_default_button_configs():
-    """Initialize default button configurations for all menu types"""
+
+# ===== UPDATE_EXISTING_MY_KEYS_BUTTON =====
+def update_existing_my_keys_button():
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
-            
-
-
-            # Check individual menu types to prevent overwriting user changes (e.g. deletions)
-            # Only insert defaults if the menu has NO buttons configured.
-
-            # Helper to check if menu has buttons
-            def menu_has_buttons(m_type):
-                cursor.execute("SELECT 1 FROM button_configs WHERE menu_type = ? LIMIT 1", (m_type,))
-                return cursor.fetchone() is not None
-
-            if not menu_has_buttons("main_menu"):
-                main_menu_buttons = [
-                    ("trial", "🎁 Попробовать бесплатно", "get_trial", 0, 0, 0, 2),
-                    ("profile", "👤 Мой профиль", "show_profile", 1, 0, 1, 1),
-                    ("my_keys", "🔑 Мои ключи ({len(user_keys)})", "manage_keys", 1, 1, 2, 1),
-                    ("buy_key", "🛒 Купить ключ", "buy_new_key", 2, 0, 3, 1),
-                    ("topup", "💳 Пополнить баланс", "top_up_start", 2, 1, 4, 1),
-                    ("referral", "🤝 Реферальная программа", "show_referral_program", 3, 0, 5, 2),
-                    ("support", "🆘 Поддержка", "show_help", 4, 0, 6, 1),
-                    ("about", "ℹ️ О проекте", "show_about", 4, 1, 7, 1),
-                    ("speed", "⚡ Скорость", "user_speedtest_last", 5, 0, 8, 1),
-                    ("howto", "❓ Как использовать", "howto_vless", 5, 1, 9, 1),
-                    ("admin", "⚙️ Админка", "admin_menu", 6, 0, 10, 2),
-                ]
-                
-                for button_id, text, callback_data, row_pos, col_pos, sort_order, button_width in main_menu_buttons:
-                    cursor.execute("""
-                        INSERT INTO button_configs 
-                        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-                    """, ("main_menu", button_id, text, callback_data, row_pos, col_pos, sort_order, button_width))
-            
-
-            if not menu_has_buttons("admin_menu"):
-                admin_menu_buttons = [
-                    ("users", "👥 Пользователи", "admin_users", 0, 0, 0),
-                    ("host_keys", "🌍 Ключи на хосте", "admin_host_keys", 0, 1, 1),
-                    ("gift_key", "🎁 Выдать ключ", "admin_gift_key", 1, 0, 2),
-                    ("promo", "🎟 Промокоды", "admin_promo_menu", 1, 1, 3),
-                    ("speedtest", "⚡ Тест скорости", "admin_speedtest", 2, 0, 4),
-                    ("monitor", "📊 Мониторинг", "admin_monitor", 2, 1, 5),
-                    ("backup", "🗄 Бэкап БД", "admin_backup_db", 3, 0, 6),
-                    ("restore", "♻️ Восстановить БД", "admin_restore_db", 3, 1, 7),
-                    ("admins", "👮 Администраторы", "admin_admins_menu", 4, 0, 8),
-                    ("broadcast", "📢 Рассылка", "start_broadcast", 4, 1, 9),
-                    ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 5, 0, 10),
-                ]
-                
-                for button_id, text, callback_data, row_pos, col_pos, sort_order in admin_menu_buttons:
-                    cursor.execute("""
-                        INSERT INTO button_configs 
-                        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                    """, ("admin_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
-            
-
-            if not menu_has_buttons("profile_menu"):
-                profile_menu_buttons = [
-                    ("topup", "💳 Пополнить баланс", "top_up_start", 0, 0, 0),
-                    ("referral", "🤝 Реферальная программа", "show_referral_program", 1, 0, 1),
-                    ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 2, 0, 2),
-                ]
-                
-                for button_id, text, callback_data, row_pos, col_pos, sort_order in profile_menu_buttons:
-                    cursor.execute("""
-                        INSERT INTO button_configs 
-                        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                    """, ("profile_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
-            
-
-            if not menu_has_buttons("support_menu"):
-                support_menu_buttons = [
-                    ("new_ticket", "✍️ Новое обращение", "support_new_ticket", 0, 0, 0),
-                    ("my_tickets", "📨 Мои обращения", "support_my_tickets", 1, 0, 1),
-                    ("external", "🆘 Внешняя поддержка", "support_external", 2, 0, 2),
-                    ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 3, 0, 3),
-                ]
-                
-                for button_id, text, callback_data, row_pos, col_pos, sort_order in support_menu_buttons:
-                    cursor.execute("""
-                        INSERT INTO button_configs 
-                        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                    """, ("support_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
-
-            if not menu_has_buttons("key_info_menu"):
-                key_info_menu_buttons = [
-                    ("connect", "📲 Подключиться", None, "{connection_string}", 0, 0, 0, 1),
-                    ("extend", "➕ Продлить этот ключ", "extend_key_{key_id}", None, 1, 0, 1, 1),
-                    ("qr", "📱 Показать QR-код", "show_qr_{key_id}", None, 2, 0, 2, 2),
-                    ("howto", "📖 Инструкция", "howto_vless_{key_id}", None, 2, 1, 3, 1),
-                    ("comments", "📝 Комментарии", "key_comments_{key_id}", None, 3, 0, 4, 1),
-                    ("back", "⬅️ Назад к списку ключей", "manage_keys", None, 4, 0, 5, 1),
-                ]
-
-                for button_id, text, callback_data, url, row_pos, col_pos, sort_order, width in key_info_menu_buttons:
-                    cursor.execute("""
-                        INSERT INTO button_configs 
-                        (menu_type, button_id, text, callback_data, url, row_position, column_position, sort_order, button_width, is_active)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                    """, ("key_info_menu", button_id, text, callback_data, url, row_pos, col_pos, sort_order, width))
-            
-
-
-
-            
+            cursor.execute("UPDATE button_configs SET button_id = 'my_keys' WHERE button_id = 'keys'")
             conn.commit()
-            logging.info("Default button configurations initialized")
             return True
-            
-    except sqlite3.Error as e:
-        logging.error(f"Failed to initialize default button configs: {e}")
+    except sqlite3.Error:
         return False
+# ==========================================
 
+
+# ===== DELETE_BUTTON_CONFIG =====
+def delete_button_config(button_id: int) -> bool:
+    cursor = _exec("DELETE FROM button_configs WHERE id = ?", (button_id,), f"Не удалось удалить конфиг кнопки {button_id}")
+    if cursor: logging.info(f"Конфиг кнопки {button_id} удалён"); return True
+    return False
+# ================================
+
+
+
+# ===== CREATE_PLAN =====
 def create_plan(host_name: str, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0):
-    try:
-        host_name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO plans (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb) VALUES (?, ?, ?, ?, ?, ?)",
-                (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb)
-            )
-            conn.commit()
-            new_id = cursor.lastrowid
-            logging.info(f"Created new plan '{plan_name}' for host '{host_name}' with HWID={hwid_limit}, Traffic={traffic_limit_gb}GB.")
-            return new_id
-    except sqlite3.Error as e:
-        logging.error(f"Failed to create plan for host '{host_name}': {e}")
-        return None
+    host_name = normalize_host_name(host_name)
+    cursor = _exec(
+        "INSERT INTO plans (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb) VALUES (?, ?, ?, ?, ?, ?)",
+        (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb),
+        f"Не удалось создать тариф для хоста '{host_name}'"
+    )
+    if cursor: new_id = cursor.lastrowid; logging.info(f"Created new plan '{plan_name}' for host '{host_name}' with HWID={hwid_limit}, Traffic={traffic_limit_gb}GB."); return new_id
+    return None
+# =======================
 
+
+# ===== GET_PLANS_FOR_HOST =====
 def get_plans_for_host(host_name: str) -> list[dict]:
-    try:
-        host_name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM plans WHERE TRIM(host_name) = TRIM(?) ORDER BY months", (host_name,))
-            plans = cursor.fetchall()
-            return [dict(plan) for plan in plans]
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get plans for host '{host_name}': {e}")
-        return []
+    host_name = normalize_host_name(host_name)
+    rows = _fetch_list("SELECT * FROM plans WHERE TRIM(host_name) = TRIM(?) ORDER BY months", (host_name,), f"Не удалось получить тарифы для хоста '{host_name}'")
+    return [dict(plan) for plan in rows]
 
+# ==============================
+
+
+# ===== GET_PLAN_BY_ID =====
 def get_plan_by_id(plan_id: int) -> dict | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM plans WHERE plan_id = ?", (plan_id,))
-            plan = cursor.fetchone()
-            return dict(plan) if plan else None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get plan by id '{plan_id}': {e}")
-        return None
+    row = _fetch_row("SELECT * FROM plans WHERE plan_id = ?", (plan_id,), f"Не удалось получить тариф по id '{plan_id}'")
+    return dict(row) if row else None
 
+# ==========================
+
+
+# ===== DELETE_PLAN =====
 def delete_plan(plan_id: int):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM plans WHERE plan_id = ?", (plan_id,))
-            conn.commit()
-            logging.info(f"Deleted plan with id {plan_id}.")
-    except sqlite3.Error as e:
-        logging.error(f"Failed to delete plan with id {plan_id}: {e}")
+    cursor = _exec("DELETE FROM plans WHERE plan_id = ?", (plan_id,), f"Не удалось удалить тариф с id {plan_id}")
+    if cursor: logging.info(f"Удалён тариф с id {plan_id}.")
+# =======================
 
+
+# ===== UPDATE_PLAN =====
 def update_plan(plan_id: int, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE plans SET plan_name = ?, months = ?, price = ?, hwid_limit = ?, traffic_limit_gb = ? WHERE plan_id = ?",
-                (plan_name, months, price, hwid_limit, traffic_limit_gb, plan_id)
-            )
-            conn.commit()
-            if cursor.rowcount == 0:
-                logging.warning(f"No plan updated for id {plan_id} (not found).")
-                return False
-            logging.info(f"Updated plan {plan_id}: name='{plan_name}', months={months}, price={price}, hwid={hwid_limit}, traffic={traffic_limit_gb}.")
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update plan {plan_id}: {e}")
-        return False
+    cursor = _exec(
+        "UPDATE plans SET plan_name = ?, months = ?, price = ?, hwid_limit = ?, traffic_limit_gb = ? WHERE plan_id = ?",
+        (plan_name, months, price, hwid_limit, traffic_limit_gb, plan_id),
+        f"Не удалось обновить тариф {plan_id}"
+    )
+    if cursor and cursor.rowcount > 0: logging.info(f"Updated plan {plan_id}: name='{plan_name}', months={months}, price={price}, hwid={hwid_limit}, traffic={traffic_limit_gb}."); return True
+    if cursor and cursor.rowcount == 0: logging.warning(f"No plan updated for id {plan_id} (not found).")
+    return False
+# =======================
+
 
 def register_user_if_not_exists(telegram_id: int, username: str, referrer_id):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT referred_by FROM users WHERE telegram_id = ?", (telegram_id,))
-            row = cursor.fetchone()
-            if not row:
-
-                cursor.execute(
-                    "INSERT INTO users (telegram_id, username, registration_date, referred_by) VALUES (?, ?, ?, ?)",
-                    (telegram_id, username, get_msk_time().replace(tzinfo=None).replace(microsecond=0), referrer_id)
-                )
-            else:
-
-                cursor.execute("UPDATE users SET username = ? WHERE telegram_id = ?", (username, telegram_id))
-                current_ref = row[0]
-                if referrer_id and (current_ref is None or str(current_ref).strip() == "") and int(referrer_id) != int(telegram_id):
-                    try:
-                        cursor.execute("UPDATE users SET referred_by = ? WHERE telegram_id = ?", (int(referrer_id), telegram_id))
-                    except Exception:
-
-                        pass
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to register user {telegram_id}: {e}")
+    row = _fetch_row("SELECT referred_by FROM users WHERE telegram_id = ?", (telegram_id,), "")
+    
+    if not row:
+        _exec(
+            "INSERT INTO users (telegram_id, username, registration_date, referred_by) VALUES (?, ?, ?, ?)",
+            (telegram_id, username, get_msk_time().replace(tzinfo=None).replace(microsecond=0), referrer_id),
+            f"Не удалось зарегистрировать пользователя {telegram_id}"
+        )
+    else:
+        _exec("UPDATE users SET username = ? WHERE telegram_id = ?", (username, telegram_id), "")
+        
+        current_ref = row['referred_by']
+        if referrer_id and (current_ref is None or str(current_ref).strip() == "") and int(referrer_id) != int(telegram_id):
+            _exec("UPDATE users SET referred_by = ? WHERE telegram_id = ?", (int(referrer_id), telegram_id), "")
 
 def add_to_referral_balance(user_id: int, amount: float):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET referral_balance = referral_balance + ? WHERE telegram_id = ?", (amount, user_id))
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to add to referral balance for user {user_id}: {e}")
+    _exec("UPDATE users SET referral_balance = referral_balance + ? WHERE telegram_id = ?", (amount, user_id), f"Не удалось добавить реферальный баланс для пользователя {user_id}")
 
 def set_referral_balance(user_id: int, value: float):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET referral_balance = ? WHERE telegram_id = ?", (value, user_id))
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to set referral balance for user {user_id}: {e}")
+    _exec("UPDATE users SET referral_balance = ? WHERE telegram_id = ?", (value, user_id), f"Не удалось установить реферальный баланс для пользователя {user_id}")
 
 def set_referral_balance_all(user_id: int, value: float):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET referral_balance_all = ? WHERE telegram_id = ?", (value, user_id))
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to set total referral balance for user {user_id}: {e}")
+    _exec("UPDATE users SET referral_balance_all = ? WHERE telegram_id = ?", (value, user_id), f"Не удалось установить общий реф-баланс для пользователя {user_id}")
 
 def add_to_referral_balance_all(user_id: int, amount: float):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET referral_balance_all = referral_balance_all + ? WHERE telegram_id = ?",
-                (amount, user_id)
-            )
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to add to total referral balance for user {user_id}: {e}")
+    _exec(
+        "UPDATE users SET referral_balance_all = referral_balance_all + ? WHERE telegram_id = ?",
+        (amount, user_id),
+        f"Не удалось добавить к общему реф-балансу для пользователя {user_id}"
+    )
 
 def get_referral_balance_all(user_id: int) -> float:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT referral_balance_all FROM users WHERE telegram_id = ?", (user_id,))
-            row = cursor.fetchone()
-            return row[0] if row else 0.0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get total referral balance for user {user_id}: {e}")
-        return 0.0
+    row = _fetch_row("SELECT referral_balance_all FROM users WHERE telegram_id = ?", (user_id,), f"Не удалось получить общий реф-баланс для пользователя {user_id}")
+    return row["referral_balance_all"] if row else 0.0
 
 def get_referral_balance(user_id: int) -> float:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT referral_balance FROM users WHERE telegram_id = ?", (user_id,))
-            result = cursor.fetchone()
-            return result[0] if result else 0.0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get referral balance for user {user_id}: {e}")
-        return 0.0
+    row = _fetch_row("SELECT referral_balance FROM users WHERE telegram_id = ?", (user_id,), f"Не удалось получить реф-баланс для пользователя {user_id}")
+    return row["referral_balance"] if row else 0.0
 
 def get_balance(user_id: int) -> float:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT balance FROM users WHERE telegram_id = ?", (user_id,))
-            result = cursor.fetchone()
-            return result[0] if result else 0.0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get balance for user {user_id}: {e}")
-        return 0.0
+    row = _fetch_row("SELECT balance FROM users WHERE telegram_id = ?", (user_id,), f"Не удалось получить баланс для пользователя {user_id}")
+    return row["balance"] if row else 0.0
 
 def adjust_user_balance(user_id: int, delta: float) -> bool:
-    """Скорректировать баланс пользователя на указанную дельту (может быть отрицательной)."""
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE telegram_id = ?", (float(delta), user_id))
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to adjust balance for user {user_id}: {e}")
-        return False
+    cursor = _exec(
+        "UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE telegram_id = ?",
+        (float(delta), user_id),
+        f"Не удалось изменить баланс для пользователя {user_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
 
 def set_balance(user_id: int, value: float) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET balance = ? WHERE telegram_id = ?", (value, user_id))
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to set balance for user {user_id}: {e}")
-        return False
+    cursor = _exec(
+        "UPDATE users SET balance = ? WHERE telegram_id = ?",
+        (value, user_id),
+        f"Не удалось установить баланс для пользователя {user_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
 
 def add_to_balance(user_id: int, amount: float) -> bool:
-    try:
-        logging.info(f"💳 Добавляем {amount:.2f} RUB к балансу пользователя {user_id}")
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
+    logging.info(f"💳 Добавляем {amount:.2f} RUB к балансу пользователя {user_id}")
+    
+    # Check if user exists first to match original logic logging
+    row = _fetch_row("SELECT telegram_id, balance FROM users WHERE telegram_id = ?", (int(user_id),), "")
+    if not row: logging.error(f"❌ Пользователь {user_id} не найден в базе данных"); return False
 
-            cursor.execute("SELECT telegram_id, balance FROM users WHERE telegram_id = ?", (int(user_id),))
-            user_row = cursor.fetchone()
-            if not user_row:
-                logging.error(f"❌ Пользователь {user_id} не найден в базе данных")
-                return False
-            
-            old_balance = user_row[1] or 0.0
-            cursor.execute(
-                "UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE telegram_id = ?",
-                (float(amount), int(user_id))
-            )
-            conn.commit()
-            success = cursor.rowcount > 0
-            if success:
-                new_balance = old_balance + float(amount)
-                logging.info(f"✅ Баланс обновлен: пользователь {user_id} | {old_balance:.2f} → {new_balance:.2f} RUB (+{amount:.2f})")
-            else:
-                logging.error(f"❌ Не удалось обновить баланс для пользователя {user_id}: строки не затронуты")
-            return success
-    except sqlite3.Error as e:
-        logging.error(f"💥 Ошибка базы данных при пополнении баланса для пользователя {user_id}: {e}")
-        return False
+    old_balance = row["balance"] or 0.0
+    
+    cursor = _exec(
+        "UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE telegram_id = ?",
+        (float(amount), int(user_id)),
+        f"Ошибка базы данных при пополнении баланса для пользователя {user_id}"
+    )
+    
+    if cursor and cursor.rowcount > 0:
+        new_balance = old_balance + float(amount)
+        logging.info(f"✅ Баланс обновлен: пользователь {user_id} | {old_balance:.2f} → {new_balance:.2f} RUB (+{amount:.2f})")
+        return True
+    
+    logging.error(f"❌ Не удалось обновить баланс для пользователя {user_id}: строки не затронуты")
+    return False
 
 def deduct_from_balance(user_id: int, amount: float) -> bool:
-    """Атомарное списание с основного баланса при достаточности средств."""
-    if amount <= 0:
-        return True
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("BEGIN IMMEDIATE")
-            cursor.execute("SELECT balance FROM users WHERE telegram_id = ?", (user_id,))
-            row = cursor.fetchone()
-            current = row[0] if row and row[0] is not None else 0.0
-            if current < amount:
-                conn.rollback()
-                return False
-            cursor.execute(
-                "UPDATE users SET balance = COALESCE(balance, 0) - ? WHERE telegram_id = ?",
-                (float(amount), int(user_id))
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to deduct from balance for user {user_id}: {e}")
-        return False
+    if amount <= 0: return True
+        
+    cursor = _exec(
+        "UPDATE users SET balance = balance - ? WHERE telegram_id = ? AND balance >= ?",
+        (amount, user_id, amount),
+        f"Не удалось списать с баланса для пользователя {user_id}"
+    )
+    if cursor and cursor.rowcount > 0: return True
+        
+    return False
+# ============================
 
+
+# ===== DEDUCT_FROM_REFERRAL_BALANCE =====
 def deduct_from_referral_balance(user_id: int, amount: float) -> bool:
-    """Атомарное списание с реферального баланса при достаточности средств."""
-    if amount <= 0:
-        return True
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("BEGIN IMMEDIATE")
-            cursor.execute("SELECT referral_balance FROM users WHERE telegram_id = ?", (user_id,))
-            row = cursor.fetchone()
-            current = row[0] if row else 0.0
-            if current < amount:
-                conn.rollback()
-                return False
-            cursor.execute("UPDATE users SET referral_balance = referral_balance - ? WHERE telegram_id = ?", (amount, user_id))
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to deduct from referral balance for user {user_id}: {e}")
-        return False
+    if amount <= 0: return True
+    cursor = _exec(
+        "UPDATE users SET referral_balance = referral_balance - ? WHERE telegram_id = ? AND referral_balance >= ?",
+        (amount, user_id, amount),
+        f"Не удалось списать с реферального баланса для пользователя {user_id}"
+    )
+    if cursor and cursor.rowcount > 0: return True
+    return False
+# ======================================
 
+
+# ===== GET_REFERRAL_COUNT =====
 def get_referral_count(user_id: int) -> int:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM users WHERE referred_by = ?", (user_id,))
-            return cursor.fetchone()[0] or 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get referral count for user {user_id}: {e}")
-        return 0
+    row = _fetch_row("SELECT COUNT(*) as c FROM users WHERE referred_by = ?", (user_id,), f"Не удалось получить кол-во рефералов для пользователя {user_id}")
+    return row["c"] if row else 0
+# ==============================
 
+
+# ===== GET_USER =====
 def get_user(telegram_id: int):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users WHERE telegram_id = ?", (telegram_id,))
-            user_data = cursor.fetchone()
-            return dict(user_data) if user_data else None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get user {telegram_id}: {e}")
-        return None
+    row = _fetch_row("SELECT * FROM users WHERE telegram_id = ?", (telegram_id,), f"Не удалось получить пользователя {telegram_id}")
+    return dict(row) if row else None
+# ==================
 
+
+# ===== GET_TRANSACTION =====
+def get_transaction(payment_id: str) -> dict | None:
+    row = _fetch_row("SELECT * FROM transactions WHERE payment_id = ?", (payment_id,), f"Не удалось получить транзакцию {payment_id}")
+    return dict(row) if row else None
+# =========================
+
+
+# ===== SET_TERMS_AGREED =====
 def set_terms_agreed(telegram_id: int):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET agreed_to_terms = 1 WHERE telegram_id = ?", (telegram_id,))
-            conn.commit()
-            logging.info(f"Пользователь {telegram_id} согласился с условиями.")
-    except sqlite3.Error as e:
-        logging.error(f"Failed to set terms agreed for user {telegram_id}: {e}")
+    cursor = _exec("UPDATE users SET agreed_to_terms = 1 WHERE telegram_id = ?", (telegram_id,), f"Не удалось установить согласие с условиями для пользователя {telegram_id}")
+    if cursor: logging.info(f"Пользователь {telegram_id} согласился с условиями.")
+# ==========================
 
+
+# ===== UPDATE_USER_STATS =====
 def update_user_stats(telegram_id: int, amount_spent: float, months_purchased: int):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET total_spent = total_spent + ?, total_months = total_months + ? WHERE telegram_id = ?", (amount_spent, months_purchased, telegram_id))
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update user stats for {telegram_id}: {e}")
+    _exec("UPDATE users SET total_spent = total_spent + ?, total_months = total_months + ? WHERE telegram_id = ?", (amount_spent, months_purchased, telegram_id), f"Не удалось обновить статистику пользователя {telegram_id}")
+# ===========================
 
+
+# ===== GET_USER_COUNT =====
 def get_user_count() -> int:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM users")
-            return cursor.fetchone()[0] or 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get user count: {e}")
-        return 0
+    row = _fetch_row("SELECT COUNT(*) as c FROM users", (), "Не удалось получить кол-во пользователей")
+    return row["c"] if row else 0
+# ========================
 
+
+# ===== GET_TOTAL_KEYS_COUNT =====
 def get_total_keys_count() -> int:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM vpn_keys")
-            return cursor.fetchone()[0] or 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get total keys count: {e}")
-        return 0
+    row = _fetch_row("SELECT COUNT(*) as c FROM vpn_keys", (), "Не удалось получить кол-во ключей")
+    return row["c"] if row else 0
+# ==============================
 
+
+# ===== GET_TOTAL_SPENT_SUM =====
 def get_total_spent_sum() -> float:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
+    row = _fetch_row(
+        """
+        SELECT COALESCE(SUM(amount_rub), 0.0) as s
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+          AND LOWER(COALESCE(payment_method, '')) <> 'balance'
+        """,
+        (),
+        "Не удалось получить общую сумму расходов"
+    )
+    return row["s"] if row else 0.0
+# =============================
 
-            cursor.execute(
-                """
-                SELECT COALESCE(SUM(amount_rub), 0.0)
-                FROM transactions
-                WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
-                  AND LOWER(COALESCE(payment_method, '')) <> 'balance'
-                """
-            )
-            val = cursor.fetchone()
-            return (val[0] if val else 0.0) or 0.0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get total spent sum: {e}")
-        return 0.0
 
+# ===== GET_TOTAL_SPENT_BY_METHOD =====
 def get_total_spent_by_method(payment_method: str) -> float:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT COALESCE(SUM(amount_rub), 0.0)
-                FROM transactions
-                WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
-                  AND LOWER(payment_method) = LOWER(?)
-                """,
-                (payment_method,)
-            )
-            val = cursor.fetchone()
-            return (val[0] if val else 0.0) or 0.0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get income for {payment_method}: {e}")
-        return 0.0
+    row = _fetch_row(
+        """
+        SELECT COALESCE(SUM(amount_rub), 0.0)
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+          AND LOWER(payment_method) = LOWER(?)
+        """,
+        (payment_method,),
+        f"Не удалось получить доход по методу {payment_method}"
+    )
+    return row[0] if row else 0.0
+# ===================================
 
+
+# ===== CREATE_PENDING_TRANSACTION =====
 def create_pending_transaction(payment_id: str, user_id: int, amount_rub: float, metadata: dict) -> int:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO transactions (payment_id, user_id, status, amount_rub, metadata) VALUES (?, ?, ?, ?, ?)",
-                (payment_id, user_id, 'pending', amount_rub, json.dumps(metadata))
-            )
-            conn.commit()
-            return cursor.lastrowid
-    except sqlite3.Error as e:
-        logging.error(f"Failed to create pending transaction: {e}")
-        return 0
+    cursor = _exec(
+        "INSERT INTO transactions (payment_id, user_id, status, amount_rub, metadata) VALUES (?, ?, ?, ?, ?)",
+        (payment_id, user_id, 'pending', amount_rub, json.dumps(metadata)),
+        f"Не удалось создать ожидающую транзакцию для пользователя {user_id}"
+    )
+    return cursor.lastrowid if cursor else 0
+# ====================================
 
+
+# ===== LOG_TRANSACTION_SIMPLE =====
+def log_transaction_simple(user_id: int, amount: float, method: str, description: str) -> bool:
+    logging.info(f"📝 Логирование транзакции: user={user_id}, amount={amount}, method={method}")
+    cursor = _exec(
+        """
+        INSERT INTO transactions (user_id, amount_rub, payment_method, status, description, created_date)
+        VALUES (?, ?, ?, 'paid', ?, ?)
+        """,
+        (user_id, amount, method, description, get_msk_time().replace(tzinfo=None).replace(microsecond=0)),
+        f"Не удалось залогировать транзакцию для пользователя {user_id}"
+    )
+    if cursor: logging.info(f"✅ Транзакция успешно сохранена для пользователя {user_id}"); return True
+    return False
+# ==================================
+
+# ===== FIND_AND_COMPLETE_TON_TRANSACTION =====
 def find_and_complete_ton_transaction(payment_id: str, amount_ton: float) -> dict | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            cursor.execute("SELECT * FROM transactions WHERE payment_id = ? AND status = 'pending'", (payment_id,))
-            transaction = cursor.fetchone()
-            if not transaction:
-                logger.warning(f"TON Webhook: Получен платеж для неизвестного или уже обработанного payment_id: {payment_id}")
-                return None
-            
-            
-            cursor.execute(
-                "UPDATE transactions SET status = 'paid', amount_currency = ?, currency_name = 'TON', payment_method = 'TON' WHERE payment_id = ?",
-                (amount_ton, payment_id)
-            )
-            conn.commit()
-            
-            return json.loads(transaction['metadata'])
-    except sqlite3.Error as e:
-        logging.error(f"Failed to complete TON transaction {payment_id}: {e}")
-        return None
+    row = _fetch_row("SELECT * FROM transactions WHERE payment_id = ? AND status = 'pending'", (payment_id,), "")
+    if not row: logging.warning(f"TON Webhook: Получен платеж для неизвестного или уже обработанного payment_id: {payment_id}"); return None
+        
+    cursor = _exec(
+        "UPDATE transactions SET status = 'paid', amount_currency = ?, currency_name = 'TON', payment_method = 'TON' WHERE payment_id = ?",
+        (amount_ton, payment_id),
+        f"Не удалось завершить TON-транзакцию {payment_id}"
+    )
+    
+    if cursor and cursor.rowcount > 0:
+        try: return json.loads(row['metadata'])
+        except Exception: return {}
 
+    return None
+# ===============================================
+
+
+# ===== LOG_TRANSACTION =====
 def log_transaction(username: str, transaction_id: str | None, payment_id: str | None, user_id: int, status: str, amount_rub: float, amount_currency: float | None, currency_name: str | None, payment_method: str, metadata: str):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """INSERT INTO transactions
-                   (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, created_date)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, get_msk_time().replace(tzinfo=None).replace(microsecond=0))
-            )
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to log transaction for user {user_id}: {e}")
+    _exec(
+        """INSERT INTO transactions
+           (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, created_date)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (username, transaction_id, payment_id, user_id, status, amount_rub, amount_currency, currency_name, payment_method, metadata, get_msk_time().replace(tzinfo=None).replace(microsecond=0)),
+        f"Не удалось залогировать транзакцию для пользователя {user_id}"
+    )
+# ===========================
 
+# ===== CHECK_TRANSACTION_EXISTS =====
 def check_transaction_exists(payment_id: str) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM transactions WHERE payment_id = ? LIMIT 1", (payment_id,))
-            return cursor.fetchone() is not None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to check transaction existence for {payment_id}: {e}")
-        return False
+    row = _fetch_row("SELECT 1 as ex FROM transactions WHERE payment_id = ? LIMIT 1", (payment_id,), f"Не удалось проверить транзакцию {payment_id}")
+    return bool(row)
 
 def get_paginated_transactions(page: int = 1, per_page: int = 15) -> tuple[list[dict], int]:
     offset = (page - 1) * per_page
     transactions = []
     total = 0
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            cursor.execute("SELECT COUNT(*) FROM transactions")
-            total = cursor.fetchone()[0]
 
-            query = "SELECT * FROM transactions ORDER BY created_date DESC LIMIT ? OFFSET ?"
-            cursor.execute(query, (per_page, offset))
-            
-            for row in cursor.fetchall():
-                transaction_dict = dict(row)
-                
-                metadata_str = transaction_dict.get('metadata')
-                if metadata_str:
-                    try:
-                        metadata = json.loads(metadata_str)
-                        transaction_dict['action'] = metadata.get('action')
-                        transaction_dict['host_name'] = metadata.get('host_name', 'N/A')
-                        transaction_dict['plan_name'] = metadata.get('plan_name', 'N/A')
-                    except json.JSONDecodeError:
-                        transaction_dict['action'] = None
-                        transaction_dict['host_name'] = 'Error'
-                        transaction_dict['plan_name'] = 'Error'
-                else:
-                    transaction_dict['host_name'] = 'N/A'
-                    transaction_dict['plan_name'] = 'N/A'
-                
-                transactions.append(transaction_dict)
-            
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get paginated transactions: {e}")
+    r_count = _fetch_row("SELECT COUNT(*) as c FROM transactions", (), "Не удалось получить кол-во транзакций")
+    total = r_count["c"] if r_count else 0
+
+    query = "SELECT * FROM transactions ORDER BY created_date DESC LIMIT ? OFFSET ?"
+    rows = _fetch_list(query, (per_page, offset), "Не удалось получить страницу транзакций")
+
+    for row in rows:
+        transaction_dict = dict(row)
+        
+        metadata_str = transaction_dict.get('metadata')
+        if metadata_str:
+            try:
+                metadata = json.loads(metadata_str)
+                transaction_dict['action'] = metadata.get('action')
+                transaction_dict['host_name'] = metadata.get('host_name', 'N/A')
+                transaction_dict['plan_name'] = metadata.get('plan_name', 'N/A')
+            except json.JSONDecodeError:
+                transaction_dict['action'] = None
+                transaction_dict['host_name'] = 'Error'
+                transaction_dict['plan_name'] = 'Error'
+        else:
+            transaction_dict['host_name'] = 'N/A'
+            transaction_dict['plan_name'] = 'N/A'
+        
+        transactions.append(transaction_dict)
     
     return transactions, total
+# ==========================================
 
+
+# ===== SET_TRIAL_USED =====
 def set_trial_used(telegram_id: int):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET trial_used = 1 WHERE telegram_id = ?", (telegram_id,))
-            conn.commit()
-            logging.info(f"Trial period marked as used for user {telegram_id}.")
-    except sqlite3.Error as e:
-        logging.error(f"Failed to set trial used for user {telegram_id}: {e}")
+    cursor = _exec("UPDATE users SET trial_used = 1 WHERE telegram_id = ?", (telegram_id,), f"Не удалось установить trial_used для пользователя {telegram_id}")
+    if cursor: logging.info(f"Пробный период отмечен как использованный для пользователя {telegram_id}.")
+# ========================
 
+
+# ===== ADD_NEW_KEY =====
 def add_new_key(
     user_id: int,
     host_name: str | None,
@@ -3137,66 +2735,29 @@ def add_new_key(
     expire_str = _to_datetime_str(expiry_timestamp_ms) or _now_str()
     created_str = _now_str()
     strategy_value = traffic_limit_strategy or "NO_RESET"
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO vpn_keys (
-                    user_id,
-                    host_name,
-                    squad_uuid,
-                    remnawave_user_uuid,
-                    short_uuid,
-                    email,
-                    key_email,
-                    subscription_url,
-                    expire_at,
-                    created_at,
-                    updated_at,
-                    traffic_limit_bytes,
-                    traffic_limit_strategy,
-                    tag,
-                    description,
-                    comment_key
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    user_id,
-                    host_name_norm,
-                    squad_uuid,
-                    remnawave_user_uuid,
-                    short_uuid,
-                    email_normalized,
-                    email_normalized,
-                    subscription_url,
-                    expire_str,
-                    created_str,
-                    created_str,
-                    traffic_limit_bytes,
-                    strategy_value,
-                    tag,
-                    description,
-                    comment_key,
-                ),
-            )
-            conn.commit()
-            return cursor.lastrowid
-    except sqlite3.IntegrityError as e:
-        logging.error(
-            "Failed to add new key for user %s due to integrity error: %s",
-            user_id,
-            e,
-        )
-        return None
-    except sqlite3.Error as e:
-        logging.error("Failed to add new key for user %s: %s", user_id, e)
-        return None
+    
+    cursor = _exec(
+        """
+        INSERT INTO vpn_keys (
+            user_id, host_name, squad_uuid, remnawave_user_uuid, short_uuid, email, key_email,
+            subscription_url, expire_at, created_at, updated_at, traffic_limit_bytes,
+            traffic_limit_strategy, tag, description, comment_key
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user_id, host_name_norm, squad_uuid, remnawave_user_uuid, short_uuid, email_normalized,
+            email_normalized, subscription_url, expire_str, created_str, created_str,
+            traffic_limit_bytes, strategy_value, tag, description, comment_key
+        ),
+        f"Не удалось добавить новый ключ для пользователя {user_id}"
+    )
+    return cursor.lastrowid if cursor else None
+# =======================
 
 
+# ===== _APPLY_KEY_UPDATES =====
 def _apply_key_updates(key_id: int, updates: dict[str, Any]) -> bool:
-    if not updates:
-        return False
+    if not updates: return False
     updates = dict(updates)
     updates["updated_at"] = _now_str()
     columns = ", ".join(f"{column} = ?" for column in updates)
@@ -3211,11 +2772,11 @@ def _apply_key_updates(key_id: int, updates: dict[str, Any]) -> bool:
             )
             conn.commit()
             return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error("Failed to update key %s: %s", key_id, e)
-        return False
+    except sqlite3.Error as e: logging.error("Не удалось обновить ключ %s: %s", key_id, e); return False
+# ==============================
 
 
+# ===== UPDATE_KEY_FIELDS =====
 def update_key_fields(
     key_id: int,
     *,
@@ -3264,91 +2825,70 @@ def update_key_fields(
     if comment_key is not None:
         updates["comment_key"] = comment_key
     return _apply_key_updates(key_id, updates)
+# ===========================
 
 
+# ===== DELETE_KEY_BY_EMAIL =====
 def delete_key_by_email(email: str) -> bool:
     lookup = _normalize_email(email) or email.strip()
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "DELETE FROM vpn_keys WHERE email = ? OR key_email = ?",
-                (lookup, lookup),
-            )
-            affected = cursor.rowcount
-            conn.commit()
-            logger.debug("delete_key_by_email('%s') affected=%s", email, affected)
-            return affected > 0
-    except sqlite3.Error as e:
-        logging.error("Failed to delete key '%s': %s", email, e)
-        return False
+    cursor = _exec(
+        "DELETE FROM vpn_keys WHERE email = ? OR key_email = ?",
+        (lookup, lookup),
+        "Не удалось удалить ключ"
+    )
+    if cursor: logger.debug("delete_key_by_email('%s') affected=%s", email, cursor.rowcount); return cursor.rowcount > 0
+    return False
+# ===========================
 
 
+# ===== GET_USER_KEYS =====
 def get_user_keys(user_id: int) -> list[dict]:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM vpn_keys WHERE user_id = ? ORDER BY datetime(created_at) DESC, key_id DESC",
-                (user_id,),
-            )
-            rows = cursor.fetchall()
-            return [_normalize_key_row(row) for row in rows]
-    except sqlite3.Error as e:
-        logging.error("Failed to get keys for user %s: %s", user_id, e)
-        return []
+    rows = _fetch_list(
+        "SELECT * FROM vpn_keys WHERE user_id = ? ORDER BY datetime(created_at) DESC, key_id DESC",
+        (user_id,),
+        f"Не удалось получить ключи для пользователя {user_id}"
+    )
+    return [_normalize_key_row(row) for row in rows]
+# ===========================
 
 
+# ===== GET_KEY_BY_ID =====
 def get_key_by_id(key_id: int) -> dict | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM vpn_keys WHERE key_id = ?", (key_id,))
-            row = cursor.fetchone()
-            return _normalize_key_row(row)
-    except sqlite3.Error as e:
-        logging.error("Failed to get key by ID %s: %s", key_id, e)
-        return None
+    row = _fetch_row(
+        "SELECT * FROM vpn_keys WHERE key_id = ?",
+        (key_id,),
+        f"Не удалось получить ключ по ID {key_id}"
+    )
+    return _normalize_key_row(row)
+# =========================
 
 
+# ===== GET_KEY_BY_EMAIL =====
 def get_key_by_email(key_email: str) -> dict | None:
     lookup = _normalize_email(key_email) or key_email.strip()
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM vpn_keys WHERE email = ? OR key_email = ?",
-                (lookup, lookup),
-            )
-            row = cursor.fetchone()
-            return _normalize_key_row(row)
-    except sqlite3.Error as e:
-        logging.error("Failed to get key by email %s: %s", key_email, e)
-        return None
+    row = _fetch_row(
+        "SELECT * FROM vpn_keys WHERE email = ? OR key_email = ?",
+        (lookup, lookup),
+        f"Не удалось получить ключ по email {key_email}"
+    )
+    return _normalize_key_row(row)
+# =================================
 
 
+# ===== GET_KEY_BY_REMNAWAVE_UUID =====
 def get_key_by_remnawave_uuid(remnawave_uuid: str) -> dict | None:
-    if not remnawave_uuid:
-        return None
-    try:
-        normalized_uuid = remnawave_uuid.strip()
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM vpn_keys WHERE remnawave_user_uuid = ? LIMIT 1",
-                (normalized_uuid,),
-            )
-            row = cursor.fetchone()
-            return _normalize_key_row(row)
-    except sqlite3.Error as e:
-        logging.error("Failed to get key by remnawave uuid %s: %s", remnawave_uuid, e)
-        return None
+    if not remnawave_uuid: return None
+    normalized_uuid = remnawave_uuid.strip()
+    row = _fetch_row(
+        "SELECT * FROM vpn_keys WHERE remnawave_user_uuid = ? LIMIT 1",
+        (normalized_uuid,),
+        f"Не удалось получить ключ по remnawave uuid {remnawave_uuid}"
+    )
+    return _normalize_key_row(row)
+# ===========================
 
 
+# ===== UPDATE_KEY_INFO =====
 def update_key_info(key_id: int, new_remnawave_uuid: str, new_expiry_ms: int, **kwargs) -> bool:
     return update_key_fields(
         key_id,
@@ -3358,6 +2898,7 @@ def update_key_info(key_id: int, new_remnawave_uuid: str, new_expiry_ms: int, **
     )
 
 
+# ===== UPDATE_KEY_HOST_AND_INFO =====
 def update_key_host_and_info(
     key_id: int,
     new_host_name: str,
@@ -3374,40 +2915,32 @@ def update_key_host_and_info(
     )
 
 
+# ===== GET_NEXT_KEY_NUMBER =====
 def get_next_key_number(user_id: int) -> int:
-    return len(get_user_keys(user_id)) + 1
+    count = _fetch_val("SELECT COUNT(*) FROM vpn_keys WHERE user_id = ?", (user_id,), 0)
+    return int(count) + 1
+# ===========================
 
 
+# ===== GET_KEYS_FOR_HOST =====
 def get_keys_for_host(host_name: str) -> list[dict]:
-    try:
-        host_name_normalized = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM vpn_keys WHERE TRIM(host_name) = TRIM(?)",
-                (host_name_normalized,),
-            )
-            rows = cursor.fetchall()
-            return [_normalize_key_row(row) for row in rows]
-    except sqlite3.Error as e:
-        logging.error("Failed to get keys for host '%s': %s", host_name, e)
-        return []
+    host_name_normalized = normalize_host_name(host_name)
+    rows = _fetch_list(
+        "SELECT * FROM vpn_keys WHERE TRIM(host_name) = TRIM(?)",
+        (host_name_normalized,),
+        f"Не удалось получить ключи для хоста '{host_name}'"
+    )
+    return [_normalize_key_row(row) for row in rows]
+# =============================
 
 
+# ===== GET_ALL_VPN_USERS =====
 def get_all_vpn_users() -> list[dict]:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT user_id FROM vpn_keys")
-            rows = cursor.fetchall()
-            return [dict(row) for row in rows]
-    except sqlite3.Error as e:
-        logging.error("Failed to get all vpn users: %s", e)
-        return []
+    return _fetch_list("SELECT DISTINCT user_id FROM vpn_keys", (), "Не удалось получить всех VPN пользователей")
+# ===========================
 
 
+# ===== UPDATE_KEY_STATUS_FROM_SERVER =====
 def update_key_status_from_server(key_email: str, client_data) -> bool:
     try:
         normalized_email = _normalize_email(key_email) or key_email.strip()
@@ -3422,128 +2955,97 @@ def update_key_status_from_server(key_email: str, client_data) -> bool:
                     try:
                         remote_dt = datetime.fromisoformat(str(expire_value).replace('Z', '+00:00'))
                         expiry_ms = int(remote_dt.timestamp() * 1000)
-                    except Exception:
-                        expiry_ms = None
+                    except Exception: expiry_ms = None
             else:
                 remote_uuid = getattr(client_data, 'id', None) or getattr(client_data, 'uuid', None)
                 expiry_ms = getattr(client_data, 'expiry_time', None)
                 subscription_url = getattr(client_data, 'subscription_url', None)
-            if not existing:
-                return False
+            if not existing: return False
             return update_key_fields(
                 existing['key_id'],
                 remnawave_user_uuid=remote_uuid,
                 expire_at_ms=expiry_ms,
                 subscription_url=subscription_url,
             )
-        if existing:
-            return delete_key_by_email(normalized_email)
+        if existing: return delete_key_by_email(normalized_email)
         return True
-    except sqlite3.Error as e:
-        logging.error("Failed to update key status for %s: %s", key_email, e)
-        return False
+    except sqlite3.Error as e: logging.error("Не удалось обновить статус ключа для %s: %s", key_email, e); return False
+# ===========================
 
 
+# ===== GET_DAILY_STATS_FOR_CHARTS =====
 def get_daily_stats_for_charts(days: int = 30) -> dict:
     stats = {'users': {}, 'keys': {}, 'income': {}}
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            
-            # Helper to determine time grouping and filtering
-            time_filter = ""
-            params = []
-            group_fmt = "%Y-%m-%d" # Default: Daily
-            
-            if days > 0:
-                time_filter = " >= datetime('now', '+3 hours', ?)"
-                params.append(f'-{days} days')
-                if days == 1:
-                    group_fmt = "%Y-%m-%d %H:00" # Hourly for Today
-            
-            def get_data(table, date_col, is_count=True):
-                nonlocal group_fmt
-                where_clause = f"WHERE {date_col} {time_filter}" if time_filter else ""
-                
-                if is_count:
-                    query = f"SELECT STRFTIME('{group_fmt}', {date_col}) AS period, COUNT(*) FROM {table} {where_clause} GROUP BY period ORDER BY period"
-                else:
-                    income_filter = "LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success') AND LOWER(COALESCE(payment_method, '')) <> 'balance'"
-                    if where_clause:
-                        where_clause += f" AND {income_filter}"
-                    else:
-                        where_clause = f"WHERE {income_filter}"
-                    query = f"SELECT STRFTIME('{group_fmt}', {date_col}) AS period, payment_method, SUM(amount_rub) FROM {table} {where_clause} GROUP BY period, payment_method ORDER BY period"
-                
-                cursor.execute(query, tuple(params))
-                return cursor.fetchall()
+    time_filter = ""
+    params = []
+    group_fmt = "%Y-%m-%d"
+    
+    if days > 0:
+        time_filter = " >= datetime('now', '+3 hours', ?)"
+        params.append(f'-{days} days')
+        if days == 1: group_fmt = "%Y-%m-%d %H:00"
+    
+    def get_data(table, date_col, is_count=True):
+        nonlocal group_fmt
+        where_clause = f"WHERE {date_col} {time_filter}" if time_filter else ""
+        
+        if is_count:
+            query = f"SELECT STRFTIME('{group_fmt}', {date_col}) AS period, COUNT(*) as cnt FROM {table} {where_clause} GROUP BY period ORDER BY period"
+        else:
+            income_filter = "LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success') AND LOWER(COALESCE(payment_method, '')) <> 'balance'"
+            if where_clause:
+                where_clause += f" AND {income_filter}"
+            else:
+                where_clause = f"WHERE {income_filter}"
+            query = f"SELECT STRFTIME('{group_fmt}', {date_col}) AS period, payment_method, SUM(amount_rub) as total FROM {table} {where_clause} GROUP BY period, payment_method ORDER BY period"
+        
+        return _fetch_list(query, tuple(params), "Не удалось получить данные статистики по дням")
 
-            # Users
-            for period, count in get_data("users", "registration_date"):
-                stats['users'][period] = count
+    for row in get_data("users", "registration_date"):
+        stats['users'][row['period']] = row['cnt']
 
-            # Keys
-            for period, count in get_data("vpn_keys", "COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)"):
-                stats['keys'][period] = count
+    for row in get_data("vpn_keys", "COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)"):
+        stats['keys'][row['period']] = row['cnt']
 
-            # Income
-            for period, method, amount in get_data("transactions", "created_date", is_count=False):
-                if period not in stats['income']:
-                    stats['income'][period] = {}
-                stats['income'][period][method or 'Other'] = float(amount)
-
-    except sqlite3.Error as e:
-        logging.error("Failed to get daily stats for charts: %s", e)
+    for row in get_data("transactions", "created_date", is_count=False):
+        period = row['period']
+        method = row['payment_method']
+        amount = row['total']
+        if period not in stats['income']:
+            stats['income'][period] = {}
+        stats['income'][period][method or 'Other'] = float(amount) if amount else 0.0
     return stats
+# ==========================
 
 
+# ===== GET_RECENT_TRANSACTIONS =====
 def get_recent_transactions(limit: int = 15) -> list[dict]:
-    transactions: list[dict] = []
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT
-                    k.key_id,
-                    k.host_name,
-                    k.created_at,
-                    u.telegram_id,
-                    u.username
-                FROM vpn_keys k
-                JOIN users u ON k.user_id = u.telegram_id
-                ORDER BY datetime(k.created_at) DESC, k.key_id DESC
-                LIMIT ?
-                """,
-                (limit,),
-            )
-            for row in cursor.fetchall():
-                transactions.append(
-                    {
-                        "key_id": row["key_id"],
-                        "host_name": row["host_name"],
-                        "created_at": row["created_at"],
-                        "telegram_id": row["telegram_id"],
-                        "username": row["username"],
-                    }
-                )
-    except sqlite3.Error as e:
-        logging.error("Failed to get recent transactions: %s", e)
-    return transactions
+    query = """
+        SELECT
+            k.key_id,
+            k.host_name,
+            k.created_at,
+            u.telegram_id,
+            u.username
+        FROM vpn_keys k
+        JOIN users u ON k.user_id = u.telegram_id
+        ORDER BY datetime(k.created_at) DESC, k.key_id DESC
+        LIMIT ?
+    """
+    rows = _fetch_list(query, (limit,), "Не удалось получить последние транзакции")
+    return rows
 
 
+# ===== GET_ALL_USERS =====
+# Получение всех пользователей с сортировкой по дате регистрации
 def get_all_users() -> list[dict]:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users ORDER BY registration_date DESC")
-            return [dict(row) for row in cursor.fetchall()]
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get all users: {e}")
-        return []
+    return _fetch_list("SELECT * FROM users ORDER BY registration_date DESC", (), "Не удалось получить всех пользователей")
 
+    return rows
+# ===================================
+
+
+# ===== GET_USERS_PAGINATED =====
 def get_users_paginated(page: int = 1, per_page: int = 30, q: str | None = None) -> tuple[list[dict], int]:
     """Вернуть пользователей постранично и общее количество (с учётом фильтра).
 
@@ -3552,497 +3054,411 @@ def get_users_paginated(page: int = 1, per_page: int = 30, q: str | None = None)
     page = max(1, int(page or 1))
     per_page = max(1, int(per_page or 30))
     offset = (page - 1) * per_page
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            if q:
-                q_like = f"%{q.strip()}%"
+    
+    if q:
+        q_like = f"%{q.strip()}%"
+        
+        count_query = """
+            SELECT COUNT(*)
+            FROM users
+            WHERE (username LIKE ?)
+               OR (CAST(telegram_id AS TEXT) LIKE ?)
+        """
+        total = _fetch_val(count_query, (q_like, q_like), 0, "Не удалось подсчитать пользователей с фильтром") or 0
 
-                cursor.execute(
-                    """
-                    SELECT COUNT(*)
-                    FROM users
-                    WHERE (username LIKE ?)
-                       OR (CAST(telegram_id AS TEXT) LIKE ?)
-                    """,
-                    (q_like, q_like),
-                )
-                total = cursor.fetchone()[0] or 0
+        data_query = """
+            SELECT *
+            FROM users
+            WHERE (username LIKE ?)
+               OR (CAST(telegram_id AS TEXT) LIKE ?)
+            ORDER BY is_pinned DESC, registration_date DESC
+            LIMIT ? OFFSET ?
+        """
+        users = _fetch_list(data_query, (q_like, q_like, per_page, offset), "Не удалось получить страницу пользователей с фильтром")
+    else:
+        total = _fetch_val("SELECT COUNT(*) FROM users", (), 0, "Не удалось подсчитать пользователей") or 0
+        
+        data_query = "SELECT * FROM users ORDER BY is_pinned DESC, registration_date DESC LIMIT ? OFFSET ?"
+        users = _fetch_list(data_query, (per_page, offset), "Не удалось получить страницу пользователей")
 
-                cursor.execute(
-                    """
-                    SELECT *
-                    FROM users
-                    WHERE (username LIKE ?)
-                       OR (CAST(telegram_id AS TEXT) LIKE ?)
-                    ORDER BY is_pinned DESC, registration_date DESC
-                    LIMIT ? OFFSET ?
-                    """,
-                    (q_like, q_like, per_page, offset),
-                )
-            else:
-                cursor.execute("SELECT COUNT(*) FROM users")
-                total = cursor.fetchone()[0] or 0
-                cursor.execute(
-                    "SELECT * FROM users ORDER BY is_pinned DESC, registration_date DESC LIMIT ? OFFSET ?",
-                    (per_page, offset),
-                )
-            users = [dict(row) for row in cursor.fetchall()]
-            return users, total
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get users paginated: {e}")
-        return [], 0
+    return users, total
 
 
+    return users, total
+# ========================
+
+
+# ===== TOGGLE_USER_PIN =====
 def toggle_user_pin(user_id: int) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET is_pinned = NOT COALESCE(is_pinned, 0) WHERE telegram_id = ?", (user_id,))
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logger.error(f"Failed to toggle pin for user {user_id}: {e}")
-        return False
+    cursor = _exec(
+        "UPDATE users SET is_pinned = NOT COALESCE(is_pinned, 0) WHERE telegram_id = ?",
+        (user_id,),
+        f"Не удалось переключить закреп для пользователя {user_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
 
+    return cursor is not None and cursor.rowcount > 0
+# ===========================
+
+
+# ===== GET_KEYS_COUNTS_FOR_USERS =====
 def get_keys_counts_for_users(user_ids: list[int]) -> dict[int, int]:
-    """Вернуть словарь {user_id: keys_count} по списку пользователей."""
     result: dict[int, int] = {}
-    if not user_ids:
-        return result
+    if not user_ids: return result
 
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            placeholders = ",".join(["?"] * len(user_ids))
-            query = f"SELECT user_id, COUNT(*) AS cnt FROM vpn_keys WHERE user_id IN ({placeholders}) GROUP BY user_id"
-            cursor.execute(query, tuple(int(x) for x in user_ids))
-            for row in cursor.fetchall() or []:
-                uid = int(row[0])
-                cnt = int(row[1] or 0)
-                result[uid] = cnt
-    except sqlite3.Error as e:
-        logging.error("Failed to get keys counts for users: %s", e)
+    placeholders = ",".join(["?"] * len(user_ids))
+    query = f"SELECT user_id, COUNT(*) AS cnt FROM vpn_keys WHERE user_id IN ({placeholders}) GROUP BY user_id"
+    
+    rows = _fetch_list(query, tuple(int(x) for x in user_ids), "Не удалось получить кол-во ключей для пользователей")
+    
+    for row in rows: result[int(row['user_id'])] = int(row['cnt'] or 0)
+        
     return result
 
+# ===== BAN_USER =====
+# Установка флага is_banned=1 для пользователя
 def ban_user(telegram_id: int):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET is_banned = 1 WHERE telegram_id = ?", (telegram_id,))
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to ban user {telegram_id}: {e}")
+    _exec("UPDATE users SET is_banned = 1 WHERE telegram_id = ?", (telegram_id,), f"Не удалось забанить пользователя {telegram_id}")
 
+# ===== UNBAN_USER =====
+# Снятие бана (is_banned=0) для пользователя
 def unban_user(telegram_id: int):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET is_banned = 0 WHERE telegram_id = ?", (telegram_id,))
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to unban user {telegram_id}: {e}")
+    _exec("UPDATE users SET is_banned = 0 WHERE telegram_id = ?", (telegram_id,), f"Не удалось разбанить пользователя {telegram_id}")
 
+# ===== DELETE_USER_KEYS =====
+# Удаление всех ключей пользователя
 def delete_user_keys(user_id: int):
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM vpn_keys WHERE user_id = ?", (user_id,))
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"Failed to delete keys for user {user_id}: {e}")
+    _exec("DELETE FROM vpn_keys WHERE user_id = ?", (user_id,), f"Не удалось удалить ключи пользователя {user_id}")
 
+# ===== CREATE_SUPPORT_TICKET =====
 def create_support_ticket(user_id: int, subject: str | None = None) -> int | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
+    row = _fetch_row(
+        "SELECT ticket_id FROM support_tickets WHERE user_id = ? AND status = 'open' ORDER BY updated_at DESC LIMIT 1",
+        (user_id,),
+        ""
+    )
+    if row and row['ticket_id']: return int(row['ticket_id'])
 
-            try:
-                cursor.execute(
-                    "SELECT ticket_id FROM support_tickets WHERE user_id = ? AND status = 'open' ORDER BY updated_at DESC LIMIT 1",
-                    (user_id,)
-                )
-                row = cursor.fetchone()
-                if row and row[0]:
-                    return int(row[0])
-            except Exception:
-                pass
+    cursor = _exec(
+        "INSERT INTO support_tickets (user_id, subject) VALUES (?, ?)",
+        (user_id, subject),
+        f"Не удалось создать тикет поддержки для пользователя {user_id}"
+    )
+    return cursor.lastrowid if cursor else None
 
-            cursor.execute(
-                "INSERT INTO support_tickets (user_id, subject) VALUES (?, ?)",
-                (user_id, subject)
-            )
-            conn.commit()
-            return cursor.lastrowid
-    except sqlite3.Error as e:
-        logging.error(f"Failed to create support ticket for user {user_id}: {e}")
-        return None
+    return cursor.lastrowid if cursor else None
+# ===========================
 
+
+# ===== GET_OR_CREATE_OPEN_TICKET =====
 def get_or_create_open_ticket(user_id: int, subject: str | None = None) -> tuple[int | None, bool]:
-    """Возвращает ID открытого тикета пользователя и флаг, создан ли новый.
-    Если открытого тикета нет — создаёт новый и возвращает (id, True).
-    """
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
+    row = _fetch_row(
+        "SELECT ticket_id FROM support_tickets WHERE user_id = ? AND status = 'open' ORDER BY updated_at DESC LIMIT 1",
+        (user_id,),
+        f"Не удалось получить тикет для пользователя {user_id}"
+    )
+    if row and row['ticket_id']: return int(row['ticket_id']), False
+    cursor = _exec(
+        "INSERT INTO support_tickets (user_id, subject) VALUES (?, ?)",
+        (user_id, subject),
+        f"Не удалось создать/получить тикет для пользователя {user_id}"
+    )
+    if cursor and cursor.lastrowid: return int(cursor.lastrowid), True
+    return None, False
 
-            cursor.execute(
-                "SELECT ticket_id FROM support_tickets WHERE user_id = ? AND status = 'open' ORDER BY updated_at DESC LIMIT 1",
-                (user_id,)
-            )
-            row = cursor.fetchone()
-            if row and row[0]:
-                return int(row[0]), False
+    return None, False
+# ===================================
 
-            cursor.execute(
-                "INSERT INTO support_tickets (user_id, subject) VALUES (?, ?)",
-                (user_id, subject)
-            )
-            conn.commit()
-            return int(cursor.lastrowid), True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get_or_create_open_ticket for user {user_id}: {e}")
-        return None, False
 
+# ===== ADD_SUPPORT_MESSAGE =====
 def add_support_message(ticket_id: int, sender: str, content: str) -> int | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO support_messages (ticket_id, sender, content) VALUES (?, ?, ?)",
-                (ticket_id, sender, content)
-            )
-            cursor.execute(
-                "UPDATE support_tickets SET updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
-                (ticket_id,)
-            )
-            conn.commit()
-            return cursor.lastrowid
-    except sqlite3.Error as e:
-        logging.error(f"Failed to add support message to ticket {ticket_id}: {e}")
-        return None
+    cursor = _exec(
+        "INSERT INTO support_messages (ticket_id, sender, content) VALUES (?, ?, ?)",
+        (ticket_id, sender, content),
+        f"Не удалось добавить сообщение в тикет {ticket_id}"
+    )
+    if cursor and cursor.lastrowid: mid = cursor.lastrowid; _exec("UPDATE support_tickets SET updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?", (ticket_id,), "Не удалось обновить время тикета"); return mid
+    return None
+# =============================
 
+
+# ===== UPDATE_TICKET_THREAD_INFO =====
 def update_ticket_thread_info(ticket_id: int, forum_chat_id: str | None, message_thread_id: int | None) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE support_tickets SET forum_chat_id = ?, message_thread_id = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
-                (forum_chat_id, message_thread_id, ticket_id)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update thread info for ticket {ticket_id}: {e}")
-        return False
+    cursor = _exec(
+        "UPDATE support_tickets SET forum_chat_id = ?, message_thread_id = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
+        (forum_chat_id, message_thread_id, ticket_id),
+        f"Не удалось обновить инфо о треде для тикета {ticket_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
 
+    return cursor is not None and cursor.rowcount > 0
+# =================================
+
+
+# ===== GET_TICKET =====
 def get_ticket(ticket_id: int) -> dict | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM support_tickets WHERE ticket_id = ?", (ticket_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get ticket {ticket_id}: {e}")
-        return None
+    return _fetch_row("SELECT * FROM support_tickets WHERE ticket_id = ?", (ticket_id,), f"Не удалось получить тикет {ticket_id}")
 
+    return _fetch_row("SELECT * FROM support_tickets WHERE ticket_id = ?", (ticket_id,), f"Не удалось получить тикет {ticket_id}")
+# ==================
+
+
+# ===== GET_TICKET_BY_THREAD =====
 def get_ticket_by_thread(forum_chat_id: str, message_thread_id: int) -> dict | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM support_tickets WHERE forum_chat_id = ? AND message_thread_id = ?",
-                (str(forum_chat_id), int(message_thread_id))
-            )
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get ticket by thread {forum_chat_id}/{message_thread_id}: {e}")
-        return None
+    return _fetch_row(
+        "SELECT * FROM support_tickets WHERE forum_chat_id = ? AND message_thread_id = ?",
+        (str(forum_chat_id), int(message_thread_id)),
+        f"Не удалось получить тикет по треду {forum_chat_id}/{message_thread_id}"
+    )
 
+    return _fetch_row(
+        "SELECT * FROM support_tickets WHERE forum_chat_id = ? AND message_thread_id = ?",
+        (str(forum_chat_id), int(message_thread_id)),
+        f"Не удалось получить тикет по треду {forum_chat_id}/{message_thread_id}"
+    )
+# ============================
+
+
+# ===== GET_USER_TICKETS =====
 def get_user_tickets(user_id: int, status: str | None = None) -> list[dict]:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            if status:
-                cursor.execute(
-                    "SELECT * FROM support_tickets WHERE user_id = ? AND status = ? ORDER BY updated_at DESC",
-                    (user_id, status)
-                )
-            else:
-                cursor.execute(
-                    "SELECT * FROM support_tickets WHERE user_id = ? ORDER BY updated_at DESC",
-                    (user_id,)
-                )
-            return [dict(r) for r in cursor.fetchall()]
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get tickets for user {user_id}: {e}")
-        return []
+    if status:
+        return _fetch_list(
+            "SELECT * FROM support_tickets WHERE user_id = ? AND status = ? ORDER BY updated_at DESC",
+            (user_id, status),
+            f"Не удалось получить тикеты для пользователя {user_id}"
+        )
+    return _fetch_list(
+        "SELECT * FROM support_tickets WHERE user_id = ? ORDER BY updated_at DESC",
+        (user_id,),
+        f"Не удалось получить тикеты для пользователя {user_id}"
+    )
 
+    return _fetch_list(
+        "SELECT * FROM support_tickets WHERE user_id = ? ORDER BY updated_at DESC",
+        (user_id,),
+        f"Не удалось получить тикеты для пользователя {user_id}"
+    )
+# ============================
+
+
+# ===== GET_TICKET_MESSAGES =====
 def get_ticket_messages(ticket_id: int) -> list[dict]:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM support_messages WHERE ticket_id = ? ORDER BY created_at ASC",
-                (ticket_id,)
-            )
-            return [dict(r) for r in cursor.fetchall()]
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get messages for ticket {ticket_id}: {e}")
-        return []
+    return _fetch_list(
+        "SELECT * FROM support_messages WHERE ticket_id = ? ORDER BY created_at ASC",
+        (ticket_id,),
+        f"Не удалось получить сообщения для тикета {ticket_id}"
+    )
 
+    return _fetch_list(
+        "SELECT * FROM support_messages WHERE ticket_id = ? ORDER BY created_at ASC",
+        (ticket_id,),
+        f"Не удалось получить сообщения для тикета {ticket_id}"
+    )
+# ===============================
+
+
+# ===== SET_TICKET_STATUS =====
 def set_ticket_status(ticket_id: int, status: str) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE support_tickets SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
-                (status, ticket_id)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to set status '{status}' for ticket {ticket_id}: {e}")
-        return False
+    cursor = _exec(
+        "UPDATE support_tickets SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
+        (status, ticket_id),
+        f"Не удалось установить статус '{status}' для тикета {ticket_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
 
+    return cursor is not None and cursor.rowcount > 0
+# ===========================
+
+
+# ===== UPDATE_TICKET_SUBJECT =====
 def update_ticket_subject(ticket_id: int, subject: str) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE support_tickets SET subject = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
-                (subject, ticket_id)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update subject for ticket {ticket_id}: {e}")
-        return False
+    cursor = _exec(
+        "UPDATE support_tickets SET subject = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
+        (subject, ticket_id),
+        f"Не удалось обновить тему для тикета {ticket_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
 
+    return cursor is not None and cursor.rowcount > 0
+# ===============================
+
+
+# ===== DELETE_TICKET =====
 def delete_ticket(ticket_id: int) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "DELETE FROM support_messages WHERE ticket_id = ?",
-                (ticket_id,)
-            )
-            cursor.execute(
-                "DELETE FROM support_tickets WHERE ticket_id = ?",
-                (ticket_id,)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Failed to delete ticket {ticket_id}: {e}")
-        return False
+    _exec("DELETE FROM support_messages WHERE ticket_id = ?", (ticket_id,), "Не удалось удалить сообщения тикета")
+    cursor = _exec("DELETE FROM support_tickets WHERE ticket_id = ?", (ticket_id,), f"Не удалось удалить тикет {ticket_id}")
+    return cursor is not None and cursor.rowcount > 0
 
+    return cursor is not None and cursor.rowcount > 0
+# ===========================
+
+
+# ===== GET_TICKETS_PAGINATED =====
 def get_tickets_paginated(page: int = 1, per_page: int = 20, status: str | None = None) -> tuple[list[dict], int]:
     offset = (page - 1) * per_page
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            # Query with JOIN to users table and subquery for last_sender
-            # We add a sorting_priority field:
-            # 1 = Open + User last msg (Needs answer)
-            # 2 = Open + Admin last msg (Waiting answer)
-            # 3 = Closed
-            base_query = """
-                SELECT t.*, 
-                       u.username,
-                       (SELECT sender FROM support_messages 
-                        WHERE ticket_id = t.ticket_id 
-                        ORDER BY created_at DESC LIMIT 1) as last_sender
-                FROM support_tickets t
-                LEFT JOIN users u ON t.user_id = u.telegram_id
-            """
-            
-            where_clause = ""
-            params = []
-            
-            if status:
-                cursor.execute("SELECT COUNT(*) FROM support_tickets WHERE status = ?", (status,))
-                total = cursor.fetchone()[0] or 0
-                where_clause = " WHERE t.status = ?"
-                params.append(status)
-            else:
-                cursor.execute("SELECT COUNT(*) FROM support_tickets")
-                total = cursor.fetchone()[0] or 0
-            
-            # Custom sorting logic
-            order_clause = """
-                ORDER BY 
-                CASE 
-                    WHEN t.status = 'open' AND (
-                        SELECT sender FROM support_messages 
-                        WHERE ticket_id = t.ticket_id 
-                        ORDER BY created_at DESC LIMIT 1
-                    ) != 'admin' THEN 1
-                    WHEN t.status = 'open' THEN 2
-                    ELSE 3
-                END ASC,
-                t.updated_at DESC
-            """
-            
-            full_query = base_query + where_clause + order_clause + " LIMIT ? OFFSET ?"
-            params.extend([per_page, offset])
-            
-            cursor.execute(full_query, params)
-            return [dict(r) for r in cursor.fetchall()], total
-    except sqlite3.Error as e:
-        logging.error("Failed to get paginated support tickets: %s", e)
-        return [], 0
+    
+    if status:
+        total = _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = ?", (status,), 0) or 0
+        where_clause = " WHERE t.status = ?"
+        params = [status]
+    else:
+        total = _fetch_val("SELECT COUNT(*) FROM support_tickets", (), 0) or 0
+        where_clause = ""
+        params = []
+    
+    base_query = """
+        SELECT t.*, 
+               u.username,
+               (SELECT sender FROM support_messages 
+                WHERE ticket_id = t.ticket_id 
+                ORDER BY created_at DESC LIMIT 1) as last_sender
+        FROM support_tickets t
+        LEFT JOIN users u ON t.user_id = u.telegram_id
+    """
+    
+    order_clause = """
+        ORDER BY 
+        CASE 
+            WHEN t.status = 'open' AND (
+                SELECT sender FROM support_messages 
+                WHERE ticket_id = t.ticket_id 
+                ORDER BY created_at DESC LIMIT 1
+            ) != 'admin' THEN 1
+            WHEN t.status = 'open' THEN 2
+            ELSE 3
+        END ASC,
+        t.updated_at DESC
+    """
+    
+    full_query = base_query + where_clause + order_clause + " LIMIT ? OFFSET ?"
+    params.extend([per_page, offset])
+    
+    rows = _fetch_list(full_query, tuple(params), "Не удалось получить страницу тикетов поддержки")
+    return rows, total
 
+    return rows, total
+# ===========================
+
+
+# ===== GET_OPEN_TICKETS_COUNT =====
 def get_open_tickets_count() -> int:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM support_tickets WHERE status = 'open'")
-            return cursor.fetchone()[0] or 0
-    except sqlite3.Error as e:
-        logging.error("Failed to get open tickets count: %s", e)
-        return 0
+    return _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'open'", (), 0) or 0
 
+    return _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'open'", (), 0) or 0
+# ==============================
+
+
+# ===== GET_WAITING_TICKETS_COUNT =====
 def get_waiting_tickets_count() -> int:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            query = """
-                SELECT COUNT(*) FROM support_tickets t
-                WHERE t.status = 'open' AND (
-                    SELECT sender FROM support_messages 
-                    WHERE ticket_id = t.ticket_id 
-                    ORDER BY created_at DESC LIMIT 1
-                ) != 'admin'
-            """
-            cursor.execute(query)
-            return cursor.fetchone()[0] or 0
-    except sqlite3.Error as e:
-        logging.error("Failed to get waiting tickets count: %s", e)
-        return 0
+    query = """
+        SELECT COUNT(*) FROM support_tickets t
+        WHERE t.status = 'open' AND (
+            SELECT sender FROM support_messages 
+            WHERE ticket_id = t.ticket_id 
+            ORDER BY created_at DESC LIMIT 1
+        ) != 'admin'
+    """
+    return _fetch_val(query, (), 0, "Не удалось получить кол-во ожидающих тикетов")
 
+    return _fetch_val(query, (), 0, "Не удалось получить кол-во ожидающих тикетов")
+# ===================================
+
+
+# ===== GET_CLOSED_TICKETS_COUNT =====
 def get_closed_tickets_count() -> int:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM support_tickets WHERE status = 'closed'")
-            return cursor.fetchone()[0] or 0
-    except sqlite3.Error as e:
-        logging.error("Failed to get closed tickets count: %s", e)
-        return 0
+    return _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'closed'", (), 0) or 0
 
+    return _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'closed'", (), 0) or 0
+# ==================================
+
+
+# ===== GET_ALL_TICKETS_COUNT =====
 def get_all_tickets_count() -> int:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM support_tickets")
-            return cursor.fetchone()[0] or 0
-    except sqlite3.Error as e:
-        logging.error("Failed to get all tickets count: %s", e)
-        return 0
+    return _fetch_val("SELECT COUNT(*) FROM support_tickets", (), 0) or 0
 
 
+    return _fetch_val("SELECT COUNT(*) FROM support_tickets", (), 0) or 0
+# ===============================
+
+
+# ===== GET_OTHER_VALUE =====
 def get_other_value(key: str) -> str | None:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT value FROM other WHERE key = ?", (key,))
-            row = cursor.fetchone()
-            return row[0] if row else None
-    except sqlite3.Error as e:
-        logging.error(f"Failed to get other value for {key}: {e}")
-        return None
+    return _fetch_val("SELECT value FROM other WHERE key = ?", (key,), None, f"Не удалось получить other-значение для {key}")
 
 
+    return _fetch_val("SELECT value FROM other WHERE key = ?", (key,), None, f"Не удалось получить other-значение для {key}")
+# =========================
+
+
+# ===== SET_OTHER_VALUE =====
 def set_other_value(key: str, value: str) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT OR REPLACE INTO other (key, value) VALUES (?, ?)",
-                (key, value)
-            )
-            conn.commit()
-            return True
-    except sqlite3.Error as e:
-        logging.error(f"Failed to set other value for {key}: {e}")
-        return False
+    cursor = _exec(
+        "INSERT OR REPLACE INTO other (key, value) VALUES (?, ?)",
+        (key, value),
+        f"Не удалось установить other-значение для {key}"
+    )
+    return cursor is not None
 
 
 
 
+    return cursor is not None
+# =======================
+
+
+# ===== UPDATE_SSH_TARGET_SCHEDULER =====
 def update_ssh_target_scheduler(target_name: str, time_auto: str) -> bool:
-    try:
-        name = normalize_host_name(target_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE speedtest_ssh_targets SET time_auto = ? WHERE TRIM(target_name) = TRIM(?)", (time_auto, name))
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logging.error(f"Не удалось обновить планировщик для '{target_name}': {e}")
-        return False
+    name = normalize_host_name(target_name)
+    cursor = _exec(
+        "UPDATE speedtest_ssh_targets SET time_auto = ? WHERE TRIM(target_name) = TRIM(?)",
+        (time_auto, name),
+        f"Не удалось обновить планировщик для '{target_name}'"
+    )
+    return cursor is not None and cursor.rowcount > 0
+# ===================================
 
 
+# ===== UPDATE_HOST_SORT_ORDER =====
 def update_host_sort_order(host_name: str, sort_order: int) -> bool:
-    try:
-        name = normalize_host_name(host_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE xui_hosts SET sort_order = ? WHERE TRIM(host_name) = TRIM(?)", (sort_order, name))
-            conn.commit()
-            if cursor.rowcount > 0:
-                logging.info(f"Updated host '{name}' sort_order to {sort_order}")
-                return True
-            else:
-                logging.warning(f"No host found named '{name}' to update sort_order")
-                return False
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update host sort order: {e}")
-        return False
+    name = normalize_host_name(host_name)
+    cursor = _exec(
+        "UPDATE xui_hosts SET sort_order = ? WHERE TRIM(host_name) = TRIM(?)",
+        (sort_order, name),
+        "Не удалось обновить sort_order хоста"
+    )
+    if cursor and cursor.rowcount > 0: logging.info(f"Обновлён sort_order хоста '{name}': {sort_order}"); return True
+    logging.warning(f"Хост '{name}' не найден для обновления sort_order"); return False
+# ==============================
 
 
+# ===== UPDATE_SSH_TARGET_SORT_ORDER =====
 def update_ssh_target_sort_order(target_name: str, sort_order: int) -> bool:
-    try:
-        name = normalize_host_name(target_name)
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE speedtest_ssh_targets SET sort_order = ? WHERE TRIM(target_name) = TRIM(?)", (sort_order, name))
-            conn.commit()
-            if cursor.rowcount > 0:
-                logging.info(f"Updated SSH target '{name}' sort_order to {sort_order}")
-                return True
-            else:
-                logging.warning(f"No SSH target found named '{name}' to update sort_order")
-                return False
-    except sqlite3.Error as e:
-        logging.error(f"Failed to update SSH target sort order: {e}")
-        return False
-def get_other_setting(key: str, default: Any = None) -> Any:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT value FROM other WHERE key = ?", (key,))
-            row = cursor.fetchone()
-            return row[0] if row else default
-    except sqlite3.Error:
-        return default
+    name = normalize_host_name(target_name)
+    cursor = _exec(
+        "UPDATE speedtest_ssh_targets SET sort_order = ? WHERE TRIM(target_name) = TRIM(?)",
+        (sort_order, name),
+        "Не удалось обновить sort_order SSH-цели"
+    )
+    if cursor and cursor.rowcount > 0: logging.info(f"Обновлён sort_order SSH-цели '{name}': {sort_order}"); return True
+    logging.warning(f"SSH-цель '{name}' не найдена для обновления sort_order"); return False
+# ====================================
 
+
+# ===== GET_OTHER_SETTING =====
+def get_other_setting(key: str, default: Any = None) -> Any:
+    val = get_other_value(key)
+    return val if val is not None else default
+# =========================
+
+
+# ===== UPDATE_OTHER_SETTING =====
 def update_other_setting(key: str, value: Any) -> bool:
-    try:
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT OR REPLACE INTO other (key, value) VALUES (?, ?)", (key, str(value)))
-            conn.commit()
-            return True
-    except sqlite3.Error:
-        return False
+    return set_other_value(key, str(value))
+
+
+def get_all_other_settings() -> dict:
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT key, value FROM other")
+        return {row['key']: row['value'] for row in cursor.fetchall()}

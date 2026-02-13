@@ -71,7 +71,6 @@ from shop_bot.data_manager.database import get_seller_user
 
 from shop_bot.config import (
     get_profile_text,
-    get_seller_text,
     get_vpn_active_text,
     VPN_INACTIVE_TEXT,
     VPN_NO_DATA_TEXT,
@@ -540,6 +539,19 @@ def get_user_router() -> Router:
                 logger.warning(f"Получен некорректный реферальный код: {command.args}")
                 
         register_user_if_not_exists(user_id, username, referrer_id)
+
+        if referrer_id:
+            try:
+                display_name = f"@{message.from_user.username}" if message.from_user.username else message.from_user.full_name
+                await bot.send_message(
+                    chat_id=referrer_id,
+                    text=(
+                        "🎉 <b>У вас новый реферал!</b>\n"
+                        f"📃 user: {display_name} / id: <code>{user_id}</code>\n\n" 
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Ошибка отправки уведомления реферу {referrer_id} о новом реферале {user_id}: {e}")
         
         # Если пользователя не было, обновляем user_data после регистрации
         if not user_data:
@@ -714,32 +726,39 @@ def get_user_router() -> Router:
             latest_key = max(active_keys, key=lambda k: parse_to_naive_msk(k['expiry_date']))
             latest_expiry_date = parse_to_naive_msk(latest_key['expiry_date'])
             time_left = latest_expiry_date - now
-            vpn_status_text = get_vpn_active_text(time_left.days, time_left.seconds // 3600)
-        elif user_keys: vpn_status_text = VPN_INACTIVE_TEXT
-        else: vpn_status_text = VPN_NO_DATA_TEXT
-        
-        final_text = get_profile_text(username, total_spent, total_months, vpn_status_text)
-        
-        if user_db_data.get('seller_active'):
-            seller_info = get_seller_user(user_id)
-            if seller_info:
-                sale = seller_info.get('seller_sale', 0)
-                ref = seller_info.get('seller_ref', 0)
-                squad = seller_info.get('seller_uuid', '0')
-                final_text += get_seller_text(sale, ref, squad)
+            vpn_remaining = get_vpn_active_text(time_left.days, time_left.seconds // 3600)
+            vpn_status = "Активен"
+        elif user_keys: 
+            vpn_status = "Неактивен"
+            vpn_remaining = "0 д. 0 ч."
+        else: 
+            vpn_status = "Нет ключей"
+            vpn_remaining = "-"
         
         try: main_balance = get_balance(user_id)
         except Exception: main_balance = 0.0
-        final_text += f"\n\n💼 <b>Основной баланс:</b> {main_balance:.0f} RUB"
 
         try: referral_count = get_referral_count(user_id)
         except Exception: referral_count = 0
+        
         try: total_ref_earned = float(get_referral_balance_all(user_id))
         except Exception: total_ref_earned = 0.0
-        
-        final_text += (
-            f"\n🤝 <b>Рефералы:</b> {referral_count}"
-            f"\n💰 <b>Заработано всего:</b> {total_ref_earned:.2f} RUB"
+
+        seller_info_dict = None
+        if user_db_data.get('seller_active'):
+             s_info = get_seller_user(user_id)
+             if s_info:
+                 seller_info_dict = {
+                     'sale': s_info.get('seller_sale', 0),
+                     'ref': s_info.get('seller_ref', 0),
+                     'squad_uuid': s_info.get('seller_uuid', '0')
+                 }
+
+        final_text = get_profile_text(
+            username, user_id, total_spent, total_months, 
+            vpn_status, vpn_remaining, 
+            main_balance, referral_count, total_ref_earned, 
+            seller_info_dict
         )
         profile_image = get_setting("profile_image")
         await smart_edit_message(callback.message, final_text, keyboards.create_dynamic_profile_keyboard(), profile_image)
@@ -1439,25 +1458,35 @@ def get_user_router() -> Router:
             
         reward_type = (get_setting("referral_reward_type") or "percent_purchase").strip()
         if reward_type == "percent_purchase":
-            percent = get_setting("referral_percent") or "10"
-            reward_desc = f"Вы получаете {percent}% от каждой покупки ваших друзей."
+            percent = get_setting("referral_percentage") or "10"
+            reward_desc = f"Вы получаете <b>{percent}%</b> от каждой покупки ваших друзей."
+        elif reward_type == "fixed_purchase":
+            amount = get_setting("fixed_referral_bonus_amount") or "50"
+            reward_desc = f"Вы получаете <b>{amount}</b> RUB с каждой покупки ваших друзей."
         elif reward_type == "fixed_start_referrer":
             amount = get_setting("referral_on_start_referrer_amount") or "20"
-            reward_desc = f"Вы получаете {amount} RUB за каждого приглашенного друга."
+            reward_desc = f"Вы получаете <b>{amount}</b> RUB за каждого приглашенного друга."
         else: reward_desc = "Условия программы уточняйте у администрации."
             
         bot_username = (await callback.bot.get_me()).username
         referral_link = f"https://t.me/{bot_username}?start=ref_{user_id}"
         
+        referral_discount = get_setting("referral_discount") or "0"
+        
         final_text = (
-            "🤝 <b>Партнерская программа</b>\n\n"
-            f"{reward_desc}\n\n"
-            f"👤 <b>Приглашено:</b> {count}\n"
-            f"💰 <b>Всего заработано:</b> {balance_total:.2f} RUB\n\n"
-            f"🔗 <b>Ваша ссылка:</b>\n<code>{referral_link}</code>"
+            "🌟 <b>Реферальная программа</b>\n\n"
+            "Приглашайте друзей и получайте бонусы! 💸\n\n"
+            f"💎 <b>Ваша награда:</b>\n"
+            f"• {reward_desc}\n\n"
+            f"🎁 <b>Бонус другу:</b>\n"
+            f"• Скидка <b>{referral_discount}%</b> на первую покупку\n\n"
+            f"📊 <b>Статистика:</b>\n"
+            f"👤 Приглашено: <b>{count}</b>\n"
+            f"💰 Заработано: <b>{balance_total:.2f} RUB</b>\n\n"
+            f"🔗 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>"
         )
         referral_image = get_setting("referral_image")
-        await smart_edit_message(callback.message, final_text, keyboards.create_back_to_profile_keyboard(), referral_image)
+        await smart_edit_message(callback.message, final_text, keyboards.create_referral_keyboard(referral_link), referral_image)
     # ===== Конец функции referral_program_handler =====
 
 
@@ -1710,7 +1739,7 @@ def get_user_router() -> Router:
                  return
             
         if len(hosts) == 1:
-            await callback.answer("⏳ Активирую пробный период...")
+            await callback.answer("⏳ Подготовка пробного периода...")
             await process_trial_key_creation(callback.message, hosts[0]['host_name'])
         else:
             await callback.answer()
@@ -1990,6 +2019,11 @@ def get_user_router() -> Router:
         await callback.answer()
         hosts = rw_repo.get_all_hosts(visible_only=True) or []
         if not hosts: return await smart_edit_message(callback.message, "❌ <b>Нет доступных локаций</b>\nВ данный момент все серверы на техническом обслуживании. Попробуйте позже.", keyboards.create_back_to_menu_keyboard())
+        
+        if len(hosts) == 1:
+            await callback.answer("⏳ Загрузка тарифов...")
+            return await _show_plans_for_host(callback, hosts[0]['host_name'])
+
         await smart_edit_message(callback.message, "🌍 <b>Выбор сервера</b>\n\nВыберите страну и локацию для вашей новой подписки:", keyboards.create_host_selection_keyboard(hosts, action="new"), get_setting("buy_server_image"))
     # ===== Конец функции buy_new_key_handler =====
 
@@ -2001,33 +2035,31 @@ def get_user_router() -> Router:
     async def select_host_for_purchase_handler(callback: types.CallbackQuery):
         await callback.answer()
         host_name = callback.data[len("select_host_new_"):]
+        await _show_plans_for_host(callback, host_name)
+
+    async def _show_plans_for_host(callback: types.CallbackQuery, host_name: str, action: str = "new", key_id: int = 0):
         plans = get_plans_for_host(host_name)
         if not plans: return await smart_edit_message(callback.message, f"❌ Для сервера «{host_name}» еще не настроены тарифные планы.")
-        # Получаем кастомное описание хоста или используем текст по умолчанию
-        host_data = get_host(host_name)
-        plan_text = host_data.get('description') if host_data and host_data.get('description') else f"💳 <b>Выбор тарифа: {host_name}</b>\n\nВыберите подходящий период подписки:"
         
-        # Seller Discount Display
+        host_data = get_host(host_name)
+        if action == "extend":
+            plan_text = f"🔄 <b>Продление подписки</b>\n\n{host_data['description']}" if host_data and host_data.get('description') else f"💳 <b>Продление для сервера «{host_name}»</b>\nВыберите тарифный план:"
+            img_setting = "extend_plan_image"
+        else:
+            plan_text = host_data.get('description') if host_data and host_data.get('description') else f"💳 <b>Выбор тарифа: {host_name}</b>\n\nВыберите подходящий период подписки:"
+            img_setting = "buy_plan_image"
+        
         display_plans = [p.copy() for p in plans]
         try:
              sale_percent = get_seller_discount_percent(callback.from_user.id)
              if sale_percent > 0:
-                 logger.info(f"[SELLER_{callback.from_user.id}] - скидка {sale_percent}%")
                  for p in display_plans:
-                     original_price = p['price']
                      price = Decimal(str(p['price']))
-                     discounted = float((price - (price * sale_percent / 100)).quantize(Decimal("0.01")))
-                     p['price'] = discounted
-                     logger.info(f"[SELLER_{callback.from_user.id}] - Тариф '{p.get('plan_name')}': {original_price} -> {discounted}")
+                     p['price'] = float((price - (price * sale_percent / 100)).quantize(Decimal("0.01")))
         except Exception as e:
              logger.error(f"[SELLER_{callback.from_user.id}] - ошибка: {e}")
 
-        await smart_edit_message(
-            callback.message,
-            plan_text, 
-            keyboards.create_plans_keyboard(display_plans, action="new", host_name=host_name),
-            get_setting("buy_plan_image")
-        )
+        await smart_edit_message(callback.message, plan_text, keyboards.create_plans_keyboard(display_plans, action=action, host_name=host_name, key_id=key_id), get_setting(img_setting))
     # ===== Конец функции select_host_for_purchase_handler =====
 
     # ===== ПРОДЛЕНИЕ СУЩЕСТВУЮЩЕГО КЛЮЧА =====
@@ -2046,28 +2078,7 @@ def get_user_router() -> Router:
         host_name = key.get('host_name')
         if not host_name: return await smart_edit_message(callback.message, "⚠️ Ошибка сервера ключа. Обратитесь в поддержку.")
 
-        plans = get_plans_for_host(host_name)
-        if not plans: return await smart_edit_message(callback.message, f"❌ Продление для сервера «{host_name}» временно недоступно.")
-
-        host_data = get_host(host_name)
-        text = f"🔄 <b>Продление подписки</b>\n\n{host_data['description']}" if host_data and host_data.get('description') else f"💳 <b>Продление для сервера «{host_name}»</b>\nВыберите тарифный план:"
-        
-        # Seller Discount Display
-        display_plans = [p.copy() for p in plans]
-        try:
-             sale_percent = get_seller_discount_percent(callback.from_user.id)
-             if sale_percent > 0:
-                 logger.info(f"[SELLER_{callback.from_user.id}] - скидка {sale_percent}%")
-                 for p in display_plans:
-                     original_price = p['price']
-                     price = Decimal(str(p['price']))
-                     discounted = float((price - (price * sale_percent / 100)).quantize(Decimal("0.01")))
-                     p['price'] = discounted
-                     logger.info(f"[SELLER_{callback.from_user.id}] - Тариф '{p.get('plan_name')}': {original_price} -> {discounted}")
-        except Exception as e:
-             logger.error(f"[SELLER_{callback.from_user.id}] - ошибка: {e}")
-             
-        await smart_edit_message(callback.message, text, keyboards.create_plans_keyboard(display_plans, action="extend", host_name=host_name, key_id=kid), get_setting("extend_plan_image"))
+        await _show_plans_for_host(callback, host_name, action="extend", key_id=kid)
     # ===== Конец функции extend_key_handler =====
 
     # ===== ПЕРЕХОД К ОПЛАТЕ (ВВОД EMAIL) =====

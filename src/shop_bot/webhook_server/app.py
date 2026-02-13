@@ -64,7 +64,7 @@ from shop_bot.data_manager.remnawave_repository import (
     get_users_paginated, get_keys_counts_for_users,
 
     get_all_ssh_targets, get_ssh_target, create_ssh_target, update_ssh_target_fields, delete_ssh_target, rename_ssh_target,
-    get_user, toggle_host_visibility, get_total_spent_by_method
+    get_user, toggle_host_visibility, get_total_spent_by_method, get_all_other_settings, update_other_setting
 )
 from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
@@ -397,8 +397,8 @@ def create_webhook_app(bot_controller_instance):
                         "🟢 <b>Успешный вход Web Aadmin</b>", 
                         {
                             **info, 
-                            'msg': '<b>Ктото вошел в веб админку</b>', 
-                            'footer': '<blockquote>Если были не вы срочно отключите бота и поменяйте пароль желательно через бд.</blockquote>'
+                            'msg': '<b>Выполнен вход в панель управления</b>', 
+                            'footer': '<blockquote>⚠️ <b>ВНИМАНИЕ:</b> Если это были не вы, немедленно отключите бота и смените пароль через базу данных.</blockquote>'
                         }
                     )
                 return redirect(url_for('dashboard_page'))
@@ -473,6 +473,7 @@ def create_webhook_app(bot_controller_instance):
             "all_tickets_count": all_tickets_count,
             "brand_title": settings.get('panel_brand_title') or 'Remnawave Control',
             "project_info": project_info,
+            "other_settings": get_all_other_settings(),
         }
     @flask_app.route('/support/badge-counts.json')
     @login_required
@@ -1490,6 +1491,7 @@ def create_webhook_app(bot_controller_instance):
                     expiry_timestamp_ms=expiry_ms or None,
                     hwid_limit=hwid_limit,
                     traffic_limit_gb=traffic_limit_gb,
+                    telegram_id=user_id,
                 ))
             except Exception as e:
                 result = None
@@ -1591,6 +1593,7 @@ def create_webhook_app(bot_controller_instance):
                     tag='GIFT',
                     hwid_limit=hwid_limit,
                     traffic_limit_gb=traffic_limit_gb,
+                    telegram_id=user_id if user_id else None,
                 ))
             except Exception as e:
                 logger.error(f"Создание подарочного ключа: ошибка remnawave: {e}")
@@ -2354,6 +2357,11 @@ def create_webhook_app(bot_controller_instance):
                 values = request.form.getlist(checkbox_key)
                 value = values[-1] if values else 'false'
                 update_setting(checkbox_key, value)
+                
+            # Обработка настройки автозапуска (хранится в 'other')
+            as_values = request.form.getlist('auto_start_bot')
+            auto_start_val = as_values[-1] if as_values else '0'
+            update_other_setting('auto_start_bot', auto_start_val)
 
 
             for key in ALL_SETTINGS_KEYS:

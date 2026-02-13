@@ -225,6 +225,39 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Auto Start Bot -->
+                        <div class="pt-2">
+                            <div class="bg-black/20 border border-white/5 rounded-xl px-4 py-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-primary/70">
+                                            <span class="material-symbols-outlined text-sm">power_settings_new</span>
+                                        </div>
+                                        <div>
+                                            <span
+                                                class="text-xs font-bold text-white uppercase tracking-wider block">Автозапуск
+                                                бота</span>
+                                            <p
+                                                class="text-[9px] text-white/50 uppercase tracking-tighter leading-tight mt-0.5">
+                                                Автоматический запуск после перезагрузки сервера</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <input type="hidden" name="auto_start_bot" value="0" />
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="auto_start_bot" value="1" {% if
+                                                other_settings.auto_start_bot=='1' %}checked{% endif %}
+                                                class="sr-only peer" />
+                                            <div
+                                                class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
