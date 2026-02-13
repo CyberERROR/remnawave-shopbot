@@ -2596,7 +2596,7 @@ def get_total_spent_sum() -> float:
 
 # ===== GET_TOTAL_SPENT_BY_METHOD =====
 def get_total_spent_by_method(payment_method: str) -> float:
-    row = _fetch_row(
+    val = _fetch_val(
         """
         SELECT COALESCE(SUM(amount_rub), 0.0)
         FROM transactions
@@ -2604,9 +2604,10 @@ def get_total_spent_by_method(payment_method: str) -> float:
           AND LOWER(payment_method) = LOWER(?)
         """,
         (payment_method,),
+        0.0,
         f"Не удалось получить доход по методу {payment_method}"
     )
-    return row[0] if row else 0.0
+    return float(val) if val is not None else 0.0
 # ===================================
 
 
