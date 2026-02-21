@@ -22,18 +22,19 @@ def create_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: 
     builder = InlineKeyboardBuilder()
     
     if trial_available:
-        builder.button(text=(get_setting("btn_trial_text") or "🎁 Попробовать бесплатно"), callback_data="get_trial")
+        text = get_setting("btn_trial_text") or "🎁 Попробовать бесплатно"
+        builder.button(text=apply_html_to_button_text(text), callback_data="get_trial")
     
-    builder.button(text=(get_setting("btn_profile_text") or "👤 Мой профиль"), callback_data="show_profile")
+    builder.button(text=apply_html_to_button_text(get_setting("btn_profile_text") or "👤 Мой профиль"), callback_data="show_profile")
     base_my_keys = (get_setting("btn_my_keys_text") or "🔑 Мои ключи")
     keys_count = len(user_keys) if user_keys else 0
-    builder.button(text=f"{base_my_keys} ({keys_count})", callback_data="manage_keys")
+    builder.button(text=apply_html_to_button_text(f"{base_my_keys} ({keys_count})"), callback_data="manage_keys")
     
-    builder.button(text=(get_setting("btn_buy_key_text") or "🛒 Купить ключ"), callback_data="buy_new_key")
+    builder.button(text=apply_html_to_button_text(get_setting("btn_buy_key_text") or "🛒 Купить ключ"), callback_data="buy_new_key")
     btn_topup_text = get_setting("btn_topup_text") or "💳 Пополнить баланс"
     if balance > 0:
         btn_topup_text += f" ({int(balance)})"
-    builder.button(text=btn_topup_text, callback_data="top_up_start")
+    builder.button(text=apply_html_to_button_text(btn_topup_text), callback_data="top_up_start")
     
     builder.button(text=(get_setting("btn_referral_text") or "🤝 Реферальная программа"), callback_data="show_referral_program")
     
@@ -587,11 +588,55 @@ def create_key_info_keyboard(key_id: int, connection_string: str | None = None) 
         builder.button(text="📲 Подключиться", web_app=WebAppInfo(url=connection_string))
     builder.button(text="➕ Продлить этот ключ", callback_data=f"extend_key_{key_id}")
     builder.button(text="📱 Показать QR-код", callback_data=f"show_qr_{key_id}")
+    builder.button(text="📱 Устройства", callback_data=f"key_devices_{key_id}")
     builder.button(text="📖 Инструкция", callback_data=f"howto_vless_{key_id}")
     builder.button(text="📝 Комментарии к ключу", callback_data=f"key_comments_{key_id}")
     builder.button(text="⬅️ Назад к списку ключей", callback_data="manage_keys")
-    builder.adjust(1, 1, 2, 1, 1, 1)
+    builder.adjust(1, 1, 2, 1, 1, 1) 
     return builder.as_markup()
+
+def create_qr_keyboard(key_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="⬅️ Назад к ключу", callback_data=f"show_key_{key_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+def create_devices_list_keyboard(devices: list, key_id: int, page: int = 0, total_pages: int = 1) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder() 
+    
+    start_index = page * 5
+    end_index = start_index + 5
+    current_page_devices = devices[start_index:end_index]
+
+    if current_page_devices:
+        for i, dev in enumerate(current_page_devices):
+            abs_index = start_index + i + 1
+            
+            dev_id = dev.get('hwid') or dev.get('uuid') or dev.get('id')
+            if not dev_id:
+                continue 
+            builder.button(text=f"🗑 Удалить #{abs_index}", callback_data=f"del_dev_{dev_id}_{key_id}")
+    
+    row_btns = []
+    if total_pages > 1:
+        if page > 0:
+            row_btns.append(InlineKeyboardButton(text="⬅️", callback_data=f"key_devices_{key_id}_{page-1}"))
+        
+        row_btns.append(InlineKeyboardButton(text=f"{page+1}/{total_pages}", callback_data="ignore"))
+        
+        if page < total_pages - 1:
+            row_btns.append(InlineKeyboardButton(text="➡️", callback_data=f"key_devices_{key_id}_{page+1}"))
+    
+    builder.adjust(2)
+    
+    markup = builder.as_markup()
+    
+    if row_btns:
+        markup.inline_keyboard.append(row_btns)
+        
+    markup.inline_keyboard.append([InlineKeyboardButton(text="⬅️ Назад к ключу", callback_data=f"show_key_{key_id}")])
+    
+    return markup
 
 def create_howto_vless_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -786,6 +831,35 @@ def create_admin_keys_for_host_keyboard(
     builder.adjust(*(rows + tail if rows else tail))
     return builder.as_markup()
 
+def apply_html_to_button_text(text: str) -> str:
+    import re
+    if not text: return text
+    
+    def to_bold(m):
+        content = m.group(1)
+        res = ""
+        for char in content:
+            if 'A' <= char <= 'Z': res += chr(ord(char) + 0x1D400 - ord('A'))
+            elif 'a' <= char <= 'z': res += chr(ord(char) + 0x1D41A - ord('a'))
+            elif '0' <= char <= '9': res += chr(ord(char) + 0x1D7CE - ord('0'))
+            else: res += char
+        return res
+
+    def to_italic(m):
+        content = m.group(1)
+        res = ""
+        for char in content:
+            if 'A' <= char <= 'Z': res += chr(ord(char) + 0x1D434 - ord('A'))
+            elif 'a' <= char <= 'z': res += chr(ord(char) + 0x1D44E - ord('a'))
+            else: res += char
+        return res
+
+    text = re.sub(r'<b>(.*?)</b>', to_bold, text, flags=re.DOTALL)
+    text = re.sub(r'<i>(.*?)</i>', to_italic, text, flags=re.DOTALL)
+    
+    clean_text = re.sub(r'<[^>]+>', '', text)
+    return clean_text
+
 def create_admin_months_pick_keyboard(action: str = "gift") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for m in (1, 3, 6, 12):
@@ -877,14 +951,14 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                      is_web_app = True
 
                 if is_web_app:
-                     row_buttons_objs.append(InlineKeyboardButton(text=text, web_app=WebAppInfo(url=url)))
+                     row_buttons_objs.append(InlineKeyboardButton(text=apply_html_to_button_text(text), web_app=WebAppInfo(url=url)))
                      included_row.append(cfg)
 
                 elif url:
-                    row_buttons_objs.append(InlineKeyboardButton(text=text, url=url))
+                    row_buttons_objs.append(InlineKeyboardButton(text=apply_html_to_button_text(text), url=url))
                     included_row.append(cfg)
                 elif callback_data:
-                    row_buttons_objs.append(InlineKeyboardButton(text=text, callback_data=callback_data))
+                    row_buttons_objs.append(InlineKeyboardButton(text=apply_html_to_button_text(text), callback_data=callback_data))
                     included_row.append(cfg)
 
 

@@ -260,6 +260,7 @@ _LEGACY_FORWARDERS = (
     "get_user_id_by_gift_token",
     "get_balance",
     "get_closed_tickets_count",
+    "get_support_badge_counts",
     "get_daily_stats_for_charts",
     "get_host",
     "get_keys_for_host",
@@ -338,6 +339,8 @@ _LEGACY_FORWARDERS = (
     "set_other_value",
     "get_all_other_settings",
     "update_other_setting",
+    "get_webapp_settings",
+    "update_webapp_settings",
 )
 
 for _name in _LEGACY_FORWARDERS:

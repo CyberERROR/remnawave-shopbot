@@ -26,7 +26,7 @@ def get_msk_time() -> datetime:
     return datetime.now(timezone(timedelta(hours=3)))
 
 
-def _normalize_email_for_remnawave(email: str) -> str:
+def _normalize_email_for_remnawave(email: str, telegram_id: int | str | None = None) -> str:
     """Normalize and validate email for Remnawave API.
     
     - Lowercases the email
@@ -48,8 +48,10 @@ def _normalize_email_for_remnawave(email: str) -> str:
     local = local.strip("._-")
 
     if not local or not re.match(r"^[a-z0-9]", local):
-        local = f"u{local}" if local else f"user{int(get_msk_time().timestamp())}"
-    
+        if telegram_id:
+            local = f"user{telegram_id}"
+        else:
+            local = f"u{local}" if local else f"user{int(get_msk_time().timestamp())}"
     e_sanitized = f"{local}@{domain}"
     
     pattern = re.compile(r"^[a-z0-9](?:[a-z0-9._+\-]*[a-z0-9])?@[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)+$")
@@ -59,8 +61,12 @@ def _normalize_email_for_remnawave(email: str) -> str:
              e_sanitized = f"{local}@bot.local"
         
         if not pattern.match(e_sanitized):
-             safe_local = re.sub(r"[^a-z0-9]", "", local) or "user"
-             e_sanitized = f"{safe_local}@{domain if '.' in domain else 'bot.local'}"
+             if telegram_id:
+                 local = f"user{telegram_id}"
+             else:
+                 safe_local = re.sub(r"[^a-z0-9]", "", local)
+                 local = safe_local if safe_local else f"user{int(get_msk_time().timestamp())}"
+             e_sanitized = f"{local}@{domain if '.' in domain else 'bot.local'}"
 
     return e_sanitized
 
@@ -296,6 +302,52 @@ async def get_connected_devices_count(user_uuid: str, *, host_name: str | None =
     return None
 
 
+async def get_user_devices(user_uuid: str, *, host_name: str | None = None) -> list[dict[str, Any]]:
+    if not user_uuid:
+        return []
+    encoded_uuid = quote(user_uuid.strip())
+    path = f"/api/hwid/devices/{encoded_uuid}"
+
+    if host_name:
+        response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
+    else:
+        response = await _request("GET", path, expected_status=(200, 404))
+
+    if response.status_code == 404:
+        return []
+
+    payload = response.json()
+    if isinstance(payload, dict):
+        response_data = payload.get("response")
+        if isinstance(response_data, dict):
+            devices = response_data.get("devices")
+            if isinstance(devices, list):
+                return devices
+    return []
+
+
+async def delete_user_device(device_id: str, *, host_name: str | None = None) -> bool:
+    if not device_id:
+        return False
+    encoded_id = quote(device_id.strip())
+    path = f"/api/hwid/devices/{encoded_id}"
+
+    if host_name:
+        response = await _request_for_host(host_name, "DELETE", path, expected_status=(200, 204, 404))
+        log_prefix = f"Remnawave[{host_name}]"
+    else:
+        response = await _request("DELETE", path, expected_status=(200, 204, 404))
+        log_prefix = "Remnawave"
+
+    if response.status_code == 404:
+        logger.info("%s: устройство %s не найдено при удалении (возможно, уже удалено)", log_prefix, device_id)
+        return False
+    elif response.status_code in (200, 204):
+        logger.info("%s: устройство %s успешно удалено (HTTP %s)", log_prefix, device_id, response.status_code)
+        return True
+    return False
+
+
 async def get_subscription_info(user_uuid: str, *, host_name: str | None = None) -> dict[str, Any] | None:
     if not user_uuid:
         return None
@@ -345,7 +397,9 @@ async def ensure_user(
     # Determine effective HWID limit
     effective_hwid_limit = hwid_limit
 
-    email = _normalize_email_for_remnawave(email)
+    effective_hwid_limit = hwid_limit
+
+    email = _normalize_email_for_remnawave(email, telegram_id=telegram_id)
     current = await get_user_by_email(email, host_name=host_name)
     expire_iso = _to_iso(expire_at)
     traffic_limit_strategy = traffic_limit_strategy or "NO_RESET"
@@ -611,6 +665,18 @@ async def create_or_update_key_on_host(
     external_squad_uuid: str | None = None,  # Added for seller
 ) -> dict | None:
     """Legacy совместимость: создаёт/обновляет пользователя Remnawave и возвращает данные по ключу."""
+    
+    # -------------------------------------------------------------------------
+    # FIX: Принудительная нормализация email перед любыми действиями.
+    # Это предотвращает ошибки вида "Invalid email" (400) для email типа ".__.@bot.local".
+    if email:
+        try:
+            email = _normalize_email_for_remnawave(email, telegram_id=telegram_id)
+        except Exception as e:
+            logger.warning(f"Remnawave: ошибка нормализации email '{email}': {e}")
+            # Если не удалось нормализовать, оставляем как есть, но это риск 400 ошибки.
+    # -------------------------------------------------------------------------
+
     try:
         squad = rw_repo.get_squad(host_name)
         if not squad:
@@ -732,8 +798,28 @@ async def get_key_details_from_host(key_data: dict) -> dict | None:
 
 async def delete_client_on_host(host_name: str, client_email: str) -> bool:
     try:
-
+        # -------------------------------------------------------------------------
+        # FIX: Нормализация email перед удалением.
+        # Если в базе старый "кривой" email, его нужно привести к виду, который поймет API (или хотя бы попытаться).
+        if client_email:
+             # Пробуем нормализовать, если это возможно, чтобы найти user по правильному email
+             # Однако, если в базе записан "кривой" email, то get_user_by_email может не найти его по нормализованному.
+             # Но API точно не примет кривой email.
+             # В данном случае лучше попробовать найти "как есть", а если нет - по нормализованному.
+             pass
+             
+        # Сначала ищем как есть (вдруг в базе уже нормальный, или API научился принимать)
         user_payload = await get_user_by_email(client_email, host_name=host_name)
+        
+        # Если не нашли, пробуем нормализованную версию (актуально для кейса .__. -> u____)
+        if not user_payload:
+             try:
+                 norm_email = _normalize_email_for_remnawave(client_email)
+                 if norm_email != client_email:
+                     user_payload = await get_user_by_email(norm_email, host_name=host_name)
+             except Exception:
+                 pass
+
         if not user_payload:
             logger.info("Remnawave: пользователь %s уже отсутствует", client_email)
             return True
@@ -753,3 +839,52 @@ async def delete_client_on_host(host_name: str, client_email: str) -> bool:
     except Exception:
         logger.exception("Remnawave: непредвиденная ошибка удаления пользователя %s", client_email)
     return False
+
+
+async def get_user_devices(user_uuid: str, host_name: str | None = None) -> list[dict[str, Any]]:
+    """Получает список подключенных устройств для пользователя (ключа)."""
+    if not user_uuid:
+        return []
+        
+    try:
+        if host_name:
+            response = await _request_for_host(host_name, "GET", f"/api/hwid/devices/{user_uuid}", expected_status=(200,))
+        else:
+            response = await _request("GET", f"/api/hwid/devices/{user_uuid}", expected_status=(200,))
+
+        payload = response.json() or {}
+        data = payload.get("response") if isinstance(payload.get("response"), dict) else payload
+        devices = data.get("devices") if isinstance(data, dict) else []
+        
+        return devices if isinstance(devices, list) else []
+    except Exception as e:
+        logger.error(f"Remnawave: ошибка получения устройств для {user_uuid}: {e}")
+        return []
+
+
+async def delete_user_device(user_uuid: str, hwid: str, host_name: str | None = None) -> bool:
+    """Удаляет устройство по HWID и UUID пользователя."""
+    if not user_uuid or not hwid:
+        return False
+        
+    try:
+        # Эндпоинт: POST /api/hwid/devices/delete
+        # Body: { "userUuid": "...", "hwid": "..." }
+        payload = {
+            "userUuid": user_uuid,
+            "hwid": hwid
+        }
+        
+        path = "/api/hwid/devices/delete"
+        
+        if host_name:
+            response = await _request_for_host(host_name, "POST", path, json_payload=payload, expected_status=(200, 204))
+        else:
+            response = await _request("POST", path, json=payload, expected_status=(200, 204))
+            
+        if response.status_code in (200, 201, 204):
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Remnawave: ошибка удаления устройства {hwid} (user {user_uuid}): {e}")
+        return False

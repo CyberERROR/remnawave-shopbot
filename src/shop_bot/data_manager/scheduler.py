@@ -322,11 +322,11 @@ async def sync_keys_with_panels():
                 if user_id is None:
                     username_part = remote_email.split('@')[0]
                     
-                    # 1. Сначала пробуем "как есть" (hamz_d-3)
+                    # 1. Сначала пробуем "как есть"  
                     candidates = [username_part]
                     
                     # 2. Если есть суффиксы -2, -3 и т.д., пробуем отрезать их
-                    # Например: life1swr0thl1v1n-2 -> life1swr0thl1v1n
+                     
                     import re
                     # Ищем паттерн: любое_имя-цифра(ы)
                     # Используем цикл, чтобы отрезать несколько раз, если вдруг что-то типа name-2-3 (редко, но бывает)

@@ -566,6 +566,15 @@
                                         <span class="material-symbols-outlined text-[16px]">article</span>
                                         <span class="text-[12px] font-semibold">Логи Бота</span>
                                     </a>
+                                    {% if webapp_exists %}
+                                    <a href="{{ url_for('other_page') }}?tab=webapp"
+                                        data-base-url="{{ url_for('other_page') }}"
+                                        onclick="handleOtherPageNav(event, 'webapp')"
+                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                        <span class="material-symbols-outlined text-[16px]">language</span>
+                                        <span class="text-[12px] font-semibold">WebApp</span>
+                                    </a>
+                                    {% endif %}
                                     <a href="{{ url_for('other_page') }}?tab=remnawave"
                                         data-base-url="{{ url_for('other_page') }}"
                                         onclick="handleOtherPageNav(event, 'remnawave')"

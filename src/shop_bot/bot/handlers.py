@@ -98,6 +98,22 @@ user_spam_level = {}
 def safe_str(val):
     if val is None: return ""
     return str(val)
+
+def get_device_emoji(user_agent: str = "", platform: str = "", device_model: str = "") -> str:
+    combined = f"{user_agent} {platform} {device_model}".lower()
+    if any(k in combined for k in ("iphone", "ipad", "ios")):
+        return '<tg-emoji emoji-id="5307671355481662188">🍏</tg-emoji>'
+    if any(k in combined for k in ("mac", "darwin", "macos")):
+        return '<tg-emoji emoji-id="5316775951709774077">🍎</tg-emoji>'
+    if any(k in combined for k in ("windows", "win32", "win64", "win", "pc")):
+        return '<tg-emoji emoji-id="5307728023280166199">🖥</tg-emoji>'
+    if "linux" in combined:
+        return '<tg-emoji emoji-id="5307512248418182650">🐧</tg-emoji>'
+    if "android" in combined:
+        return '<tg-emoji emoji-id="5307577381597225631">📱</tg-emoji>'
+    if any(k in combined for k in ("tv", "smart", "tizen", "webos")):
+        return '<tg-emoji emoji-id="5314682709203757071">📺</tg-emoji>'
+    return '<tg-emoji emoji-id="5411634513509885099">⚙️</tg-emoji>'
 # ===== Конец функции safe_str =====
 
 # ===== ГЕНЕРАЦИЯ КОММЕНТАРИЯ ТРАНЗАКЦИИ =====
@@ -556,6 +572,18 @@ def get_user_router() -> Router:
         # Если пользователя не было, обновляем user_data после регистрации
         if not user_data:
             user_data = get_user(user_id)
+
+        if command.args and command.args.startswith('auth_'):
+            try:
+                from shop_bot.webapp.handlers import TEMP_AUTH_TOKENS
+            except ImportError:
+                TEMP_AUTH_TOKENS = {}
+                
+            auth_token = command.args.replace('auth_', '')
+            if auth_token in TEMP_AUTH_TOKENS:
+                TEMP_AUTH_TOKENS[auth_token] = user_id
+                await message.answer("✅ <b>Авторизация успешна!</b>\n\nМожете вернуться в браузер — страница обновится автоматически.")
+                return
 
         try: reward_type = (get_setting("referral_reward_type") or "percent_purchase").strip()
         except Exception: reward_type = "percent_purchase"
@@ -1974,12 +2002,126 @@ def get_user_router() -> Router:
             if details and details.get('connection_string'):
                 qr_img = qrcode.make(details['connection_string'])
                 bio = BytesIO(); qr_img.save(bio, "PNG"); bio.seek(0)
-                await callback.message.answer_photo(photo=BufferedInputFile(bio.read(), filename="vpn_qr.png"), caption=f"📸 <b>QR-код для конфигурации #{kid}</b>\n\nОтсканируйте его в вашем VPN-клиенте для быстрого импорта.")
+                
+                # Заменяем сообщение на фото с QR-кодом
+                await callback.message.edit_media(
+                    media=InputMediaPhoto(
+                        media=BufferedInputFile(bio.read(), filename="vpn_qr.png"),
+                        caption=f"📸 <b>QR-код для конфигурации #{kid}</b>\n\nОтсканируйте его в вашем VPN-клиенте для быстрого импорта."
+                    ),
+                    reply_markup=keyboards.create_qr_keyboard(kid)
+                )
             else: await callback.answer("❌ Не удалось получить данные подключения.", show_alert=True)
         except Exception as e:
             logger.error(f"Ошибка QR: {e}")
             await callback.answer("⚠️ Ошибка при создании QR-кода.", show_alert=True)
     # ===== Конец функции show_qr_handler =====
+ 
+    # ===== УПРАВЛЕНИЕ УСТРОЙСТВАМИ (HWID) =====
+    # Отображает список подключенных устройств и позволяет удалять их
+    async def _render_devices_list(message: types.Message, key_id: int, user_id: int, page: int = 0):
+        key = rw_repo.get_key_by_id(key_id)
+        if not key or key['user_id'] != user_id:
+            return
+
+        host_name = key.get('host_name')
+        user_uuid = key.get('remnawave_user_uuid')
+        
+        if not user_uuid:
+            await smart_edit_message(message, "⚠️ Для этого ключа нет данных о пользователе.", keyboards.create_key_info_keyboard(key_id))
+            return
+        
+        devices = await remnawave_api.get_user_devices(user_uuid, host_name=host_name)
+        
+        if not devices:
+            text = "📱 <b>Подключенные устройства:</b>\n\nСписок устройств пуст."
+            await smart_edit_message(message, text, keyboards.create_devices_list_keyboard([], key_id))
+            return
+
+        ITEMS_PER_PAGE = 5
+        total_pages = (len(devices) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
+        if page >= total_pages: page = total_pages - 1
+        if page < 0: page = 0
+        
+        start_index = page * ITEMS_PER_PAGE
+        end_index = start_index + ITEMS_PER_PAGE
+        current_devices = devices[start_index:end_index]
+
+        text = "📱 <b>Подключенные устройства:</b>\n\n"
+        for i, dev in enumerate(current_devices):
+            ua = dev.get('userAgent', 'Unknown') 
+            created_at = dev.get('createdAt', '')
+            try: 
+                dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                created_str = dt.strftime("%d.%m.%Y %H:%M")
+            except: created_str = created_at
+            
+            abs_index = start_index + i + 1
+            hwid = dev.get('hwid', 'N/A')
+
+            device_emoji = get_device_emoji(ua, dev.get('platform', ''), dev.get('deviceModel', ''))
+            text += f"<b>{abs_index}.</b> {device_emoji} <b>HWID:</b> <code>{hwid}</code>\n"
+            text += f'<tg-emoji emoji-id="6035117267849583293">👤</tg-emoji> <b>UserAgent:</b> <code>{ua}</code>\n'
+            text += f'<tg-emoji emoji-id="6034972755084976631">⏳</tg-emoji> <b>Создано:</b> <code>{created_str}</code>\n\n'
+
+        # Banner Image
+        photo_path = rw_repo.get_setting("devices_list_image")
+        await smart_edit_message(message, text, keyboards.create_devices_list_keyboard(devices, key_id, page, total_pages), photo_path=photo_path)
+
+    @user_router.callback_query(F.data.startswith("key_devices_"))
+    @anti_spam
+    @registration_required
+    async def key_devices_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        parts = callback.data.split("_")
+        try: 
+            kid = int(parts[2])
+            page = int(parts[3]) if len(parts) > 3 else 0
+        except: return
+
+        await _render_devices_list(callback.message, kid, callback.from_user.id, page)
+
+    @user_router.callback_query(F.data.startswith("del_dev_"))
+    @anti_spam
+    @registration_required
+    async def delete_device_handler(callback: types.CallbackQuery): 
+        parts = callback.data.split("_")
+        if len(parts) < 4: return
+        
+        device_id = parts[2]
+        try: kid = int(parts[3])
+        except: return
+
+        key = rw_repo.get_key_by_id(kid)
+        if not key or key['user_id'] != callback.from_user.id: return
+        
+        host_name = key.get('host_name')
+        user_uuid = key.get('remnawave_user_uuid')
+        
+        if not user_uuid:
+            await callback.answer("⚠️ Ошибка данных пользователя.", show_alert=True)
+            return
+            
+        await callback.answer("⏳ Удаление устройства...")
+         
+        hwid_target = device_id
+        
+        if hwid_target == "None" or not hwid_target:
+             await callback.answer("⚠️ Некорректный ID устройства.", show_alert=True)
+        else:
+            success = await remnawave_api.delete_user_device(user_uuid, hwid_target, host_name=host_name)
+            
+            if success:
+                await callback.answer("✅ Устройство удалено!", show_alert=True)
+            else:
+                await callback.answer("❌ Не удалось удалить. Возможно, оно уже удалено.", show_alert=True)
+        
+        await _render_devices_list(callback.message, kid, callback.from_user.id, 0)
+    # ===== Конец функций управления устройствами =====
+
+    @user_router.callback_query(F.data == "ignore")
+    async def ignore_callback_handler(callback: types.CallbackQuery):
+        await callback.answer()
 
     # ===== ОТОБРАЖЕНИЕ ИНСТРУКЦИЙ ПО ТИПАМ ОС =====
     # Набор обработчиков для вывода обучающих материалов по настройке VPN на различных устройствах
@@ -2450,7 +2592,7 @@ async def notify_admin_of_purchase(bot: Bot, metadata: dict):
             if metadata.get('promo_usage_per_user_limit'): stats.append(f"На юзера: {metadata.get('promo_usage_per_user_used') or 0}/{metadata.get('promo_usage_per_user_limit')}")
             if stats: txt += "\n📊 " + " | ".join(stats)
 
-        await bot.send_message(int(aid), txt)
+        await bot.send_message(int(aid), txt, parse_mode="HTML")
     except Exception as e: logger.warning(f"Ошибка уведомления админа: {e}")
 # ===== Конец функции notify_admin_of_purchase =====
 
@@ -2627,8 +2769,8 @@ async def process_successful_payment(bot: Bot, metadata: dict):
             ready_img = get_setting("key_ready_image")
             if ready_img and os.path.exists(ready_img):
                 from aiogram.types import FSInputFile
-                await bot.send_photo(chat_id=uid, photo=FSInputFile(ready_img), caption=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn))
-            else: await bot.send_message(chat_id=uid, text=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn))
+                await bot.send_photo(chat_id=uid, photo=FSInputFile(ready_img), caption=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
+            else: await bot.send_message(chat_id=uid, text=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
 
             try: await notify_admin_of_purchase(bot, metadata)
             except: pass

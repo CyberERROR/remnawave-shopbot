@@ -170,7 +170,7 @@
                 Технические детали
             </summary>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3 pl-6 border-l border-white/5 ml-1.5">
-                <div><label class="block text-[9px] font-bold uppercase text-white/20 mb-1">Inbound ID</label><input
+                <div><label class="block text-[9px] font-bold uppercase text-white/20 mb-1">User Login</label><input
                         id="inbound_id" type="text" placeholder="—" readonly
                         class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
                 </div>
@@ -194,6 +194,9 @@
                 <div><label class="block text-[9px] font-bold uppercase text-white/20 mb-1">Period</label><input
                         id="key_period_days" type="text" placeholder="0" readonly
                         class="w-full bg-transparent border-b border-white/10 py-1 text-xs text-white/50 font-mono" />
+                </div>
+                <div id="email_correction_warning"
+                    class="col-span-1 sm:col-span-2 lg:col-span-3 text-[10px] text-yellow-500 font-bold hidden animate-pulse mt-2">
                 </div>
             </div>
         </details>
@@ -379,265 +382,50 @@
         try { (USERS || []).forEach(u => { if (u && u.username) USER_MAP['@' + String(u.username).toLowerCase()] = u.telegram_id; }); } catch (_) { }
         // ===== окончание функции пользователей =====
 
+        // ===== УПРАВЛЕНИЕ СОСТОЯНИЕМ =====
         const STORAGE_KEY = 'admin_keys_form';
         const form = document.getElementById('create-key-form');
-        const submitBtn = document.getElementById('btn-submit-create');
-        const hostSel = document.getElementById('host_name');
-        const planSel = document.getElementById('plan_select');
-        const expiryInput = document.getElementById('expiry_date');
-        const daysInput = document.getElementById('custom_days');
-        const emailInput = document.getElementById('key_email');
-        const userInput = document.getElementById('user_id');
-        const modeInput = document.getElementById('create_mode');
-        const inboundEl = document.getElementById('inbound_id');
-        const priceEl = document.getElementById('plan_price');
 
-        // ===== ИНИЦИАЛИЗАЦИЯ СЕЛЕКТОВ =====
-        // Настройка кастомных выпадающих списков
-        if (hostSel && !hostSel.value && hostSel.options.length > 1) { hostSel.selectedIndex = 1; updateInbound(); loadPlansAndRestore(); updateHostSettings(); }
-        initSoftSelect('host_name', 'Выберите хост...');
-        initSoftSelect('plan_select', '— Не выбран —');
-        // ===== окончание инициализации =====
+        // Элементы формы
+        const els = {
+            mode: document.getElementById('create_mode'),
+            user: document.getElementById('user_id'),
+            host: document.getElementById('host_name'),
+            plan: document.getElementById('plan_select'),
+            days: document.getElementById('custom_days'),
+            expiry: document.getElementById('expiry_date'),
+            comment: document.getElementById('comment'),
+            email: document.getElementById('key_email')
+        };
 
-        // ===== ИНИЦИАЛИЗАЦИЯ ДАТЫ =====
-        // Настройка календаря Flatpickr
-        if (expiryInput && window.flatpickr) {
-            flatpickr(expiryInput, {
-                enableTime: true,
-                time_24hr: true,
-                dateFormat: 'Y-m-d H:i',
-                minuteIncrement: 5,
-                locale: flatpickr.l10ns.ru || 'ru',
-            });
-        }
-        // ===== окончание инициализации даты =====
-
-        // ===== УПРАВЛЕНИЕ СОСТОЯНИЕМ =====
-        // Сохранение и восстановление данных формы
-        const stateFields = ['mode', 'user_id', 'host_name', 'plan_select', 'custom_days', 'expiry_date', 'comment'];
         function saveState() {
             const state = {};
-            stateFields.forEach(name => {
-                const el = document.getElementById(name === 'mode' ? 'create_mode' : name);
-                if (el) state[name] = el.value;
-            });
+            if (els.mode) state.mode = els.mode.value;
+            if (els.user) state.user_id = els.user.value;
+            if (els.host) state.host_name = els.host.value;
+            if (els.plan) state.plan_select = els.plan.value;
+            if (els.days) state.custom_days = els.days.value;
+            if (els.expiry) state.expiry_date = els.expiry.value;
+            if (els.comment) state.comment = els.comment.value;
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) { }
         }
+
         function restoreState() {
-            let state = {};
-            try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch (_) { state = {}; }
-            stateFields.forEach(name => {
-                const el = document.getElementById(name === 'mode' ? 'create_mode' : name);
-                if (el && state[name] != null) el.value = state[name];
-            });
-            return state;
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch (_) { return {}; }
         }
-        const restoredState = restoreState();
-        form?.addEventListener('input', saveState);
-        form?.addEventListener('change', saveState);
-        // ===== окончание управления состоянием =====
 
-        // ===== ПАРАМЕТРЫ URL =====
-        // Заполнение ID пользователя из параметров запроса
-        try {
-            const params = new URLSearchParams(location.search);
-            const uid = params.get('user_id');
-            if (uid && userInput) userInput.value = uid;
-        } catch (_) { }
-        // ===== окончание параметров url =====
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        const restored = restoreState();
 
-        // ===== ОБНОВЛЕНИЕ INBOUND =====
-        // Обновление ID входящего подключения для хоста
-        function updateInbound() {
-            if (!hostSel || !inboundEl) return;
-            let opt = hostSel.options[hostSel.selectedIndex];
-            if ((!opt || !opt.getAttribute) && hostSel.value) opt = Array.from(hostSel.options || []).find(o => String(o.value) === String(hostSel.value));
-            inboundEl.value = (opt && opt.getAttribute('data-inbound')) ? opt.getAttribute('data-inbound') : '—';
-        }
-        // ===== окончание обновления inbound =====
-
-        // ===== НАСТРОЙКИ ХОСТА =====
-        // Обновление стратегии трафика и лимитов
-        function updateHostSettings() {
-            if (!hostSel) return;
-            let opt = hostSel.options[hostSel.selectedIndex];
-            if ((!opt || !opt.getAttribute) && hostSel.value) opt = Array.from(hostSel.options || []).find(o => String(o.value) === String(hostSel.value));
-            if (opt) {
-                const trafficStrategy = opt.getAttribute('data-traffic-strategy') || 'NO_RESET';
-                const strategyInput = document.getElementById('host_traffic_strategy');
-                if (strategyInput) {
-                    const labels = { 'NO_RESET': 'Никогда', 'DAY': 'Ежедневно', 'WEEK': 'Еженедельно', 'MONTH': 'Ежемесячно' };
-                    strategyInput.value = labels[trafficStrategy] || trafficStrategy;
-                }
-            }
-        }
-        // ===== окончание настроек хоста =====
-
-        // ===== МЕТКА ИСТЕЧЕНИЯ =====
-        // Отображение количества оставшихся дней
-        function updateExpiryLabel(dateStr) {
-            const lbl = document.getElementById('expiry_days_label');
-            if (!lbl || !dateStr) { if (lbl) lbl.textContent = ''; return; }
-            const diffDays = Math.ceil((new Date(dateStr).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-            lbl.textContent = diffDays > 0 ? `(на ${diffDays} дн.)` : '';
-        }
-        // ===== окончание метки истечения =====
-
-        // ===== УСТАНОВКА СРОКА =====
-        // Вычисление даты истечения по количеству дней
-        function setExpiryDays(days) {
-            if (!expiryInput) return;
-            const d = new Date(); d.setDate(d.getDate() + Number(days || 0));
-            const pad = n => String(n).padStart(2, '0');
-            const val = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-            expiryInput.value = val;
-            if (daysInput && daysInput.value != days) daysInput.value = days;
-            const periodInput = document.getElementById('key_period_days'); if (periodInput) periodInput.value = days;
-            if (window.flatpickr && expiryInput._flatpickr) expiryInput._flatpickr.setDate(val, true, 'Y-m-d H:i');
-            updateExpiryLabel(val);
-        }
-        if (expiryInput) expiryInput.addEventListener('change', () => updateExpiryLabel(expiryInput.value));
-        // ===== окончание установки срока =====
-
-        // ===== ЗАГРУЗКА ТАРИФОВ =====
-        // Получение списка планов для выбранного хоста
-        async function loadPlansAndRestore() {
-            if (!hostSel || !planSel) return;
-            updateInbound();
-            const host = hostSel.value;
-            if (!host) { planSel.innerHTML = '<option value="">— Не выбран —</option>'; if (priceEl) priceEl.textContent = '— ₽'; return; }
-            planSel.innerHTML = '<option value="">Загрузка...</option>';
-            try {
-                const res = await fetch(`{{ url_for('admin_get_plans_for_host_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(host)));
-                const d = await res.json();
-                const items = (d && d.ok && d.items) ? d.items : [];
-                const saved = (JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}).plan_select;
-                planSel.innerHTML = '<option value="">— Не выбран —</option>' + items.map(p =>
-                    `<option value="${p.plan_id}" data-months="${p.months}" data-price="${p.price || 0}" data-hwid="${p.hwid_limit || 0}" data-traffic-gb="${p.traffic_limit_gb || 0}">${p.plan_name} (${p.months} мес.) — ${Number(p.price || 0).toFixed(0)} ₽</option>`
-                ).join('');
-                if (saved) {
-                    planSel.value = saved;
-                    const opt = planSel.options[planSel.selectedIndex];
-                    const price = opt ? Number(opt.getAttribute('data-price') || 0) : 0;
-                    if (priceEl) priceEl.textContent = saved ? `${price.toFixed(0)} ₽` : '— ₽';
-                    const months = opt ? Number(opt.getAttribute('data-months') || 0) : 0;
-                    if (months > 0) setExpiryDays(months * 30);
-                    const hwid = opt ? opt.getAttribute('data-hwid') || '0' : '0';
-                    const trafficGb = opt ? opt.getAttribute('data-traffic-gb') || '0' : '0';
-                    const hwidInput = document.getElementById('host_hwid_limit');
-                    const gbInput = document.getElementById('host_traffic_gb');
-                    if (hwidInput) hwidInput.value = (hwid === '0') ? '—' : hwid;
-                    if (gbInput) gbInput.value = (trafficGb === '0') ? '—' : Number(trafficGb).toFixed(2);
-                } else {
-                    if (priceEl) priceEl.textContent = '— ₽';
-                    if (planSel.options.length > 1) {
-                        planSel.selectedIndex = 1;
-                        const opt = planSel.options[planSel.selectedIndex];
-                        if (opt) {
-                            if (priceEl) priceEl.textContent = `${Number(opt.getAttribute('data-price') || 0).toFixed(0)} ₽`;
-                            const dVal = Number(daysInput.value || 0); if (dVal > 0) setExpiryDays(dVal);
-                            const hwidInput = document.getElementById('host_hwid_limit');
-                            const gbInput = document.getElementById('host_traffic_gb');
-                            if (hwidInput) hwidInput.value = (opt.getAttribute('data-hwid') || '0' === '0') ? '—' : opt.getAttribute('data-hwid');
-                            if (gbInput) gbInput.value = (opt.getAttribute('data-traffic-gb') || '0' == 0) ? '—' : Number(opt.getAttribute('data-traffic-gb')).toFixed(2);
-                        }
-                    }
-                }
-                initSoftSelect('plan_select', '— Не выбран —');
-            } catch (_) { planSel.innerHTML = '<option value="">— Не выбран —</option>'; if (priceEl) priceEl.textContent = '— ₽'; }
-        }
-        if (hostSel && hostSel.value) { updateInbound(); loadPlansAndRestore(); updateHostSettings(); }
-        if (hostSel) hostSel.addEventListener('change', () => { updateInbound(); loadPlansAndRestore(); updateHostSettings(); });
-        // ===== окончание загрузки тарифов =====
-
-        // ===== ВЫБОР ТАРИФА =====
-        // Обновление параметров при смене плана
-        if (planSel) planSel.addEventListener('change', () => {
-            const opt = planSel.options[planSel.selectedIndex];
-            const months = opt ? Number(opt.getAttribute('data-months') || 0) : 0;
-            const price = opt ? Number(opt.getAttribute('data-price') || 0) : 0;
-            if (months > 0) setExpiryDays(months * 30); else { const dVal = Number(daysInput.value || 0); if (dVal > 0) setExpiryDays(dVal); }
-            if (priceEl) priceEl.textContent = planSel.value ? `${price.toFixed(0)} ₽` : '— ₽';
-            const hwidInput = document.getElementById('host_hwid_limit');
-            const gbInput = document.getElementById('host_traffic_gb');
-            if (hwidInput) hwidInput.value = (opt?.getAttribute('data-hwid') === '0' || !planSel.value) ? '—' : opt?.getAttribute('data-hwid') || '—';
-            if (gbInput) gbInput.value = (!planSel.value || opt?.getAttribute('data-traffic-gb') === '0') ? '—' : Number(opt?.getAttribute('data-traffic-gb')).toFixed(2);
-            saveState();
-        });
-        if (daysInput) daysInput.addEventListener('input', () => { const days = Number(daysInput.value || 0); if (days > 0) setExpiryDays(days); });
-        document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => setExpiryDays(Number(btn.getAttribute('data-preset') || 0))));
-        // ===== окончание выбора тарифа =====
-
-        // ===== ПРЕДЛОЖЕНИЯ ПОЛЬЗОВАТЕЛЕЙ =====
-        // Автодополнение при вводе ID или username
-        function initUserSuggest() {
-            if (!userInput) return;
-            let menu = document.createElement('div'); menu.className = 'soft-select-menu'; menu.style.position = 'fixed'; menu.style.display = 'none'; document.body.appendChild(menu);
-            const place = () => { const r = userInput.getBoundingClientRect(); menu.style.left = `${Math.round(r.left)}px`; menu.style.top = `${Math.round(r.bottom + 6)}px`; menu.style.width = `${Math.round(r.width)}px`; menu.style.zIndex = '1065'; };
-            const close = () => menu.style.display = 'none';
-            const open = () => { place(); menu.style.display = 'block'; };
-            const render = (list) => {
-                menu.innerHTML = '';
-                list.slice(0, 8).forEach(u => {
-                    const item = document.createElement('div'); item.className = 'soft-select-item';
-                    item.innerHTML = `<div style="font-weight:600">${u.telegram_id}</div><div style="opacity:.75">${u.username ? '@' + u.username : '—'}</div>`;
-                    item.onclick = async () => { userInput.value = String(u.telegram_id); close(); await normalizeUserId(); await maybeGenEmail(); };
-                    menu.appendChild(item);
-                });
-                if (list.length === 0) { const none = document.createElement('div'); none.className = 'soft-select-item'; none.style.opacity = '.7'; none.textContent = 'Ничего не найдено'; menu.appendChild(none); }
-            };
-            const applyFilter = () => {
-                const q = String(userInput.value || '').trim().toLowerCase();
-                if (!q) { close(); return; }
-                render((USERS || []).filter(u => String(u.telegram_id || '').includes(q) || (u.username ? ('@' + u.username.toLowerCase()) : '').includes(q)));
-                open();
-            };
-            userInput.addEventListener('focus', applyFilter); userInput.addEventListener('input', applyFilter);
-            window.addEventListener('scroll', place, true); window.addEventListener('resize', place, true);
-            document.addEventListener('click', e => { if (!menu.contains(e.target) && e.target !== userInput) close(); });
-            document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-        }
-        initUserSuggest();
-        // ===== окончание предложений =====
-
-        // ===== НОРМАЛИЗАЦИЯ ID =====
-        // Преобразование @username в цифровой ID
-        async function normalizeUserId() {
-            if (!userInput) return;
-            const raw = String(userInput.value || '').trim(); if (!raw || /^[0-9]+$/.test(raw)) return;
-            const key = raw.startsWith('@') ? raw.toLowerCase() : ('@' + raw.toLowerCase());
-            if (USER_MAP[key]) { userInput.value = String(USER_MAP[key]); try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'), user_id: userInput.value })); } catch (_) { } }
-        }
-        // ===== окончание нормализации id =====
-
-        // ===== ГЕНЕРАЦИЯ EMAIL =====
-        // Создание почтового адреса для ключа
-        async function maybeGenEmail() {
-            if (!emailInput) return;
-            const mode = modeInput?.value || 'personal', userId = String(userInput?.value || '').trim();
-            if (mode === 'personal' && (!userId || !/^\d+$/.test(userId))) return;
-            try {
-                let url = `{{ url_for('generate_key_email_route') }}?mode=${mode}`; if (userId && /^\d+$/.test(userId)) url += `&user_id=${encodeURIComponent(userId)}`;
-                const data = await (await fetch(url)).json(); if (data?.ok && data.email) emailInput.value = data.email;
-            } catch (_) { }
-        }
-        if (userInput) {
-            userInput.addEventListener('blur', async () => { await normalizeUserId(); await maybeGenEmail(); });
-            userInput.addEventListener('change', async () => { await normalizeUserId(); await maybeGenEmail(); });
-            (async () => { await normalizeUserId(); await maybeGenEmail(); })();
-        }
-        // ===== окончание генерации email =====
-
-        // ===== СМЕНА РЕЖИМА =====
-        // Переключение между персональным и подарочным ключом
+        // Переменные для режима (нужны для applyMode)
         const modeSwitch = document.getElementById('mode_switch'), modeSections = document.querySelectorAll('.mode-section');
+
         function applyMode(mode) {
-            if (modeInput) modeInput.value = mode;
+            if (els.mode) els.mode.value = mode;
             modeSections.forEach(s => s.classList.toggle('hidden', !s.classList.contains(`mode-${mode}`)));
             if (modeSwitch) {
                 const indicator = document.getElementById('mode_indicator'), commentContainer = document.getElementById('comment_container'), userIdContainer = document.getElementById('user_id_container');
 
-                // Update button styles
                 const btns = modeSwitch.querySelectorAll('button');
                 btns.forEach(b => {
                     if (b.dataset.mode === mode) {
@@ -649,7 +437,6 @@
                     }
                 });
 
-                // Update layout based on mode
                 if (mode === 'personal') {
                     if (indicator) indicator.style.transform = 'translateX(0)';
                     if (commentContainer) commentContainer.classList.add('md:col-span-2');
@@ -660,12 +447,337 @@
                     if (userIdContainer) userIdContainer.classList.add('md:col-span-4');
                 }
             }
-            if (userInput) userInput.required = (mode === 'personal');
-            saveState(); maybeGenEmail();
+            if (els.user) els.user.required = (mode === 'personal');
+            saveState();
+            if (typeof maybeGenEmail === 'function') maybeGenEmail();
         }
         if (modeSwitch) modeSwitch.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => applyMode(btn.getAttribute('data-mode') || 'personal')));
-        applyMode(restoredState.mode || modeInput?.value || 'personal');
-        // ===== окончание смены режима =====
+
+        // 1. Настройка Flatpickr
+        if (els.expiry && window.flatpickr) {
+            flatpickr(els.expiry, {
+                enableTime: true,
+                time_24hr: true,
+                dateFormat: 'Y-m-d H:i',
+                minuteIncrement: 5,
+                locale: flatpickr.l10ns.ru || 'ru',
+                onChange: function (selectedDates, dateStr) {
+                    updateExpiryLabel(dateStr);
+                    saveState();
+                }
+            });
+        }
+
+        // 2. Восстановление базовых полей
+        if (els.comment && restored.comment !== undefined) els.comment.value = restored.comment;
+
+        // Пользователь: приоритет URL -> сохраненное -> пусто
+        const urlParams = new URLSearchParams(location.search);
+        if (urlParams.get('user_id')) {
+            if (els.user) els.user.value = urlParams.get('user_id');
+        } else if (restored.user_id && els.user) {
+            els.user.value = restored.user_id;
+        }
+
+        // 3. Хост и планы
+        // Функция загрузки планов с учетом восстановленного состояния
+        async function loadPlansAndRestore() {
+            if (!els.host || !els.plan) return;
+
+            const host = els.host.value;
+            // Обновляем связанные поля хоста
+            updateInbound();
+            updateHostSettings();
+
+            if (!host) {
+                els.plan.innerHTML = '<option value="">— Не выбран —</option>';
+                updatePlanDetails();
+                return;
+            }
+
+            els.plan.innerHTML = '<option value="">Загрузка...</option>';
+            try {
+                const res = await fetch(`{{ url_for('admin_get_plans_for_host_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(host)));
+                const d = await res.json();
+                const items = (d && d.ok && d.items) ? d.items : [];
+
+                // Рендерим опции
+                els.plan.innerHTML = '<option value="">— Не выбран —</option>' + items.map(p =>
+                    `<option value="${p.plan_id}" data-months="${p.months}" data-price="${p.price || 0}" data-hwid="${p.hwid_limit || 0}" data-traffic-gb="${p.traffic_limit_gb || 0}">${p.plan_name} (${p.months} мес.) — ${Number(p.price || 0).toFixed(0)} ₽</option>`
+                ).join('');
+
+                // Восстанавливаем план
+                const savedPlan = restored.plan_select;
+                if (savedPlan && Array.from(els.plan.options).some(o => o.value == savedPlan)) {
+                    els.plan.value = savedPlan;
+                } else if (els.plan.options.length > 1 && !savedPlan) {
+                    // Если нет сохраненного, но есть опции - можно выбрать первый, но лучше оставить "Не выбран" или логику по умолчанию
+                    // Для удобства выберем первый, если это новая форма
+                    els.plan.selectedIndex = 1;
+                }
+
+                // Применяем детали плана (цену, лимиты)
+                updatePlanDetails();
+
+                // ВАЖНО: Восстановление даты/дней
+                // Логика: Если у нас есть сохраненные custom_days/expiry_date, они имеют приоритет над дефолтом плана
+                if (restored.custom_days && restored.expiry_date) {
+                    if (els.days) els.days.value = restored.custom_days;
+                    if (els.expiry) {
+                        els.expiry.value = restored.expiry_date;
+                        if (els.expiry._flatpickr) els.expiry._flatpickr.setDate(restored.expiry_date, false); // false = no event fire
+                        updateExpiryLabel(restored.expiry_date);
+                    }
+                    if (document.getElementById('key_period_days')) document.getElementById('key_period_days').value = restored.custom_days;
+                } else {
+                    // Если сохраненных нет, применяем дефолт плана (если выбран)
+                    applyPlanDefaults();
+                }
+
+            } catch (_) {
+                els.plan.innerHTML = '<option value="">Ошибка</option>';
+            }
+            initSoftSelect('plan_select', '— Не выбран —');
+        }
+
+        function updatePlanDetails() {
+            const opt = els.plan.options[els.plan.selectedIndex];
+            const priceEl = document.getElementById('plan_price');
+            const hwidInput = document.getElementById('host_hwid_limit');
+            const gbInput = document.getElementById('host_traffic_gb');
+
+            if (priceEl) priceEl.textContent = (opt && opt.value) ? `${Number(opt.getAttribute('data-price') || 0).toFixed(0)} ₽` : '— ₽';
+            if (hwidInput) hwidInput.value = (opt && opt.getAttribute('data-hwid') && opt.getAttribute('data-hwid') !== '0') ? opt.getAttribute('data-hwid') : '—';
+            if (gbInput) gbInput.value = (opt && opt.getAttribute('data-traffic-gb') && opt.getAttribute('data-traffic-gb') !== '0') ? Number(opt.getAttribute('data-traffic-gb')).toFixed(2) : '—';
+        }
+
+        function applyPlanDefaults() {
+            const opt = els.plan.options[els.plan.selectedIndex];
+            if (!opt || !opt.value) return;
+            const months = Number(opt.getAttribute('data-months') || 0);
+            if (months > 0) setExpiryDays(months * 30);
+        }
+
+        // Инициализация Хоста
+        if (els.host) {
+            if (restored.host_name) {
+                els.host.value = restored.host_name;
+            } else if (els.host.options.length > 1) {
+                els.host.selectedIndex = 1;
+            }
+            // Загружаем планы (и внутри восстановим план и дату)
+            loadPlansAndRestore();
+
+            // Слушатель
+            els.host.addEventListener('change', () => {
+                updateInbound();
+                updateHostSettings();
+                // При смене хоста сбрасываем план и загружаем новые
+                // Тут мы НЕ хотим восстанавливать старый план (так как хост другой), но можем сохранить дату?
+                // Проще перезагрузить список.
+                restored.plan_select = null; // Сбрасываем сохраненный план для нового хоста
+                loadPlansAndRestore();
+                saveState();
+            });
+        }
+
+        // Слушатель Плана
+        if (els.plan) {
+            els.plan.addEventListener('change', () => {
+                updatePlanDetails();
+                applyPlanDefaults(); // При явном выборе плана пользователем - применяем его дефолты
+                saveState();
+            });
+        }
+
+        initSoftSelect('host_name', 'Выберите хост...');
+        initSoftSelect('plan_select', '— Не выбран —');
+
+        // 4. Режим (Personal/Gift)
+        applyMode(restored.mode || (els.mode ? els.mode.value : 'personal') || 'personal');
+
+        // 5. Обработчики сохранения
+        form?.addEventListener('input', saveState);
+        form?.addEventListener('change', saveState);
+
+        // 6. Генерация email (если пользователь восстановлен)
+        if (els.user && els.user.value) {
+            (async () => {
+                // Если есть сохраненный email, можно восстановить его?
+                // Логика maybeGenEmail сама проверит и сгенерирует/исправит.
+                if (typeof normalizeUserId === 'function') await normalizeUserId();
+                if (typeof maybeGenEmail === 'function') await maybeGenEmail();
+            })();
+        }
+
+        // ===== Вспомогательные функции =====
+
+        // Обновление ID входящего подключения
+        function updateInbound() {
+            if (!els.host || !document.getElementById('inbound_id')) return;
+            const inboundEl = document.getElementById('inbound_id');
+            let opt = els.host.options[els.host.selectedIndex];
+            if ((!opt || !opt.getAttribute) && els.host.value) opt = Array.from(els.host.options || []).find(o => String(o.value) === String(els.host.value));
+            inboundEl.value = (opt && opt.getAttribute('data-inbound')) ? opt.getAttribute('data-inbound') : '—';
+        }
+
+        // Обновление настроек хоста
+        function updateHostSettings() {
+            if (!els.host) return;
+            let opt = els.host.options[els.host.selectedIndex];
+            if ((!opt || !opt.getAttribute) && els.host.value) opt = Array.from(els.host.options || []).find(o => String(o.value) === String(els.host.value));
+            if (opt) {
+                const trafficStrategy = opt.getAttribute('data-traffic-strategy') || 'NO_RESET';
+                const strategyInput = document.getElementById('host_traffic_strategy');
+                if (strategyInput) {
+                    const labels = { 'NO_RESET': 'Никогда', 'DAY': 'Ежедневно', 'WEEK': 'Еженедельно', 'MONTH': 'Ежемесячно' };
+                    strategyInput.value = labels[trafficStrategy] || trafficStrategy;
+                }
+            }
+        }
+
+        // Метка истечения
+        function updateExpiryLabel(dateStr) {
+            const lbl = document.getElementById('expiry_days_label');
+            if (!lbl || !dateStr) { if (lbl) lbl.textContent = ''; return; }
+            const diffDays = Math.ceil((new Date(dateStr).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+            lbl.textContent = diffDays > 0 ? `(на ${diffDays} дн.)` : '';
+        }
+
+        // Установка срока (базовая функция)
+        function setExpiryDays(days) {
+            if (!els.expiry) return;
+            const d = new Date(); d.setDate(d.getDate() + Number(days || 0));
+            const pad = n => String(n).padStart(2, '0');
+            const val = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            els.expiry.value = val;
+            if (els.days && els.days.value != days) els.days.value = days;
+            const periodInput = document.getElementById('key_period_days'); if (periodInput) periodInput.value = days;
+            if (window.flatpickr && els.expiry._flatpickr) els.expiry._flatpickr.setDate(val, true, 'Y-m-d H:i');
+            updateExpiryLabel(val);
+        }
+
+        // updateInbound, updateHostSettings, updateExpiryLabel, setExpiryDays - должны быть определены глобально или выше
+
+        // Переопределяем setExpiryDays чтобы сохранял состояние
+        const originalSetExpiry = setExpiryDays;
+        setExpiryDays = function (days) {
+            originalSetExpiry(days);
+            saveState(); // Сохраняем при изменении
+        };
+
+        // Слушатели дней и пресетов
+        if (els.days) els.days.addEventListener('input', () => {
+            const days = Number(els.days.value || 0);
+            if (days > 0) originalSetExpiry(days); // Используем original чтобы не зациклить, хотя saveState безопасно
+            saveState();
+        });
+        document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => {
+            setExpiryDays(Number(btn.getAttribute('data-preset') || 0));
+        }));
+
+        // ===== окончание управления состоянием =====
+        // ===== окончание выбора тарифа =====
+
+        // ===== ПРЕДЛОЖЕНИЯ ПОЛЬЗОВАТЕЛЕЙ =====
+        // Автодополнение при вводе ID или username
+        function initUserSuggest() {
+            if (!els.user) return;
+            let menu = document.createElement('div'); menu.className = 'soft-select-menu'; menu.style.position = 'fixed'; menu.style.display = 'none'; document.body.appendChild(menu);
+            const place = () => { const r = els.user.getBoundingClientRect(); menu.style.left = `${Math.round(r.left)}px`; menu.style.top = `${Math.round(r.bottom + 6)}px`; menu.style.width = `${Math.round(r.width)}px`; menu.style.zIndex = '1065'; };
+            const close = () => menu.style.display = 'none';
+            const open = () => { place(); menu.style.display = 'block'; };
+            const render = (list) => {
+                menu.innerHTML = '';
+                list.slice(0, 8).forEach(u => {
+                    const item = document.createElement('div'); item.className = 'soft-select-item';
+                    item.innerHTML = `<div style="font-weight:600">${u.telegram_id}</div><div style="opacity:.75">${u.username ? '@' + u.username : '—'}</div>`;
+                    item.onclick = async () => { els.user.value = String(u.telegram_id); close(); await normalizeUserId(); await maybeGenEmail(); };
+                    menu.appendChild(item);
+                });
+                if (list.length === 0) { const none = document.createElement('div'); none.className = 'soft-select-item'; none.style.opacity = '.7'; none.textContent = 'Ничего не найдено'; menu.appendChild(none); }
+            };
+            const applyFilter = () => {
+                const q = String(els.user.value || '').trim().toLowerCase();
+                if (!q) { close(); return; }
+                render((USERS || []).filter(u => String(u.telegram_id || '').includes(q) || (u.username ? ('@' + u.username.toLowerCase()) : '').includes(q)));
+                open();
+            };
+            els.user.addEventListener('focus', applyFilter); els.user.addEventListener('input', applyFilter);
+            window.addEventListener('scroll', place, true); window.addEventListener('resize', place, true);
+            document.addEventListener('click', e => { if (!menu.contains(e.target) && e.target !== els.user) close(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+        }
+        initUserSuggest();
+        // ===== окончание предложений =====
+
+        // ===== НОРМАЛИЗАЦИЯ ID =====
+        // Преобразование @username в цифровой ID
+        async function normalizeUserId() {
+            if (!els.user) return;
+            const raw = String(els.user.value || '').trim(); if (!raw || /^[0-9]+$/.test(raw)) return;
+            const key = raw.startsWith('@') ? raw.toLowerCase() : ('@' + raw.toLowerCase());
+            if (USER_MAP[key]) { els.user.value = String(USER_MAP[key]); try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'), user_id: els.user.value })); } catch (_) { } }
+        }
+        // ===== окончание нормализации id =====
+
+        // ===== ГЕНЕРАЦИЯ EMAIL =====
+        // Создание почтового адреса для ключа
+        async function maybeGenEmail() {
+            if (!els.email) return;
+            const mode = els.mode?.value || 'personal', userId = String(els.user?.value || '').trim();
+            const warningEl = document.getElementById('email_correction_warning');
+
+            // Сбрасываем предупреждение при каждом новом вводе
+            if (warningEl) {
+                warningEl.textContent = '';
+                warningEl.classList.add('hidden');
+                els.email.classList.remove('text-yellow-400');
+            }
+
+            // Логика:
+            // 1. Personal: ID обязателен (число).
+            // 2. Gift: ID опционален. Если есть ID (число) -> генерируем gift_{user}. Если нет ID -> генерируем рандом
+
+            if (mode === 'personal' && (!userId || !/^\d+$/.test(userId))) return;
+
+            try {
+                let url = `{{ url_for('generate_key_email_route') }}?mode=${mode}`;
+                if (userId && /^\d+$/.test(userId)) {
+                    url += `&user_id=${encodeURIComponent(userId)}`;
+                }
+                const data = await (await fetch(url)).json();
+                if (data?.ok && data.email) {
+                    els.email.value = data.email;
+
+                    // Обновляем поле "User Login" (бывший Inbound ID) именем пользователя из email
+                    const inboundEl = document.getElementById('inbound_id');
+                    if (inboundEl) {
+                        const login = data.email.split('@')[0];
+                        inboundEl.value = login;
+                    }
+
+                    if (data.was_corrected && warningEl) {
+                        const original = data.original_username ? `@${data.original_username}` : 'оригинального имени';
+                        warningEl.textContent = `Email скорректирован: ${original} содержит недопустимые символы. Используется безопасный формат.`;
+                        warningEl.classList.remove('hidden');
+                        els.email.classList.add('text-yellow-400');
+                    }
+                }
+            } catch (_) { }
+        }
+        if (els.user) {
+            els.user.addEventListener('blur', async () => { await normalizeUserId(); await maybeGenEmail(); });
+            els.user.addEventListener('change', async () => { await normalizeUserId(); await maybeGenEmail(); });
+            // Initial load
+            (async () => {
+                if (els.user.value) {
+                    await normalizeUserId();
+                    await maybeGenEmail();
+                }
+            })();
+        }
+        // ===== окончание генерации email =====
 
         // ===== УНИВЕРСАЛЬНЫЙ ЗАПРОС =====
         // Вспомогательная функция для API запросов

@@ -25,13 +25,16 @@
             {'id': 'promo', 'label': 'Промо коды', 'icon': 'confirmation_number'},
             {'id': 'servers', 'label': 'Сервера', 'icon': 'dns'},
             {'id': 'logs', 'label': 'Логи Бота', 'icon': 'article'},
+            {'id': 'webapp', 'label': 'WebApp', 'icon': 'language'} if webapp_exists else none,
             {'id': 'remnawave', 'label': 'Remnawave', 'icon': 'graphic_eq'}
             ] %}
+            {% if item %}
             <button type="button" data-tab="{{ item.id }}"
                 class="tab-btn px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 hover:border-white/20 border border-transparent">
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 {{ item.label }}
             </button>
+            {% endif %}
             {% endfor %}
         </nav>
     </div>
@@ -90,13 +93,18 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
                     {% for res in [
                     {'l': 'Отправлено', 'id': 'result-sent', 'icon': 'check_circle', 'color': 'primary'},
-                    {'l': 'Заблокировали', 'id': 'result-failed', 'icon': 'block', 'color': 'red-400'},
-                    {'l': 'В ЧС (забанены)', 'id': 'result-skipped', 'icon': 'person_off', 'color': 'yellow-500'},
-                    {'l': 'Всего в ЧС (У нас)', 'id': 'stat-banned-count', 'icon': 'playlist_remove', 'color':
-                    'white/20'}
+                    {'l': 'Заблокировали бота', 'id': 'result-blocked-bot', 'icon': 'block', 'color': 'red-400'},
+                    {'l': 'Заблокированные users (Телеграме)', 'id': 'result-deactivated', 'icon': 'person_off',
+                    'color':
+                    'orange-400'},
+                    {'l': 'Добавили в ЧС (У нас)', 'id': 'result-added-to-banned', 'icon': 'playlist_add', 'color':
+                    'yellow-500'},
+                    {'l': 'Сняли с ЧС (У нас)', 'id': 'result-removed-from-banned', 'icon': 'playlist_remove', 'color':
+                    'green-400'},
+                    {'l': 'Всего в ЧС (У нас)', 'id': 'stat-banned-count', 'icon': 'groups', 'color': 'white/40'}
                     ] %}
                     <div class="bg-black/20 border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
                         <div class="flex items-center gap-2">
@@ -235,8 +243,10 @@
                             </div>
                             <div class="flex flex-col">
                                 <span class="text-sm font-bold text-white transition-colors">Пропускать
-                                    черный список</span>
-                                <span class="text-[10px] text-white/40 uppercase tracking-tighter">Не отправлять
+                                    черный список <span id="skip-banned-count-badge"
+                                        class="hidden text-red-400 text-[10px] ml-1 opacity-0 transition-opacity duration-300">(-0)</span></span>
+                                <span class="text-[10px] text-white/40 uppercase tracking-tighter"
+                                    id="skip-banned-desc">Не отправлять
                                     заблокированным пользователям</span>
                             </div>
                         </label>
@@ -1149,14 +1159,239 @@
     </div>
 </div>
 
-<section id="tab-remnawave" class="tab-content hidden">
-    <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 class="text-xl font-bold text-white mb-4">Remnawave</h3>
-        <p class="text-white/70 text-sm mb-6">Настройки панели Remnawave</p>
-        <div class="bg-white/[0.02] border border-white/10 rounded-lg p-8 text-center">
-            <span class="material-symbols-outlined text-4xl text-white/30 mb-2">settings_applications</span>
-            <p class="text-white/50">Настройки Remnawave будут добавлены позже</p>
+{% if webapp_exists %}
+<section id="tab-webapp" class="tab-content hidden">
+    <div class="space-y-6">
+        <!-- Header Card -->
+        <div
+            class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-md group">
+            <div
+                class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
+            </div>
+            <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div class="flex items-center gap-5">
+                    <div
+                        class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary shadow-inner border border-primary/20">
+                        <span class="material-symbols-outlined text-4xl">language</span>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-white tracking-tight">Настройки Web App</h3>
+                        <p class="text-white/40 text-sm font-medium mt-1">Персонализация и управление вашим
+                            веб-приложением</p>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Settings -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl">
+                    <div class="p-6">
+                        <form id="webapp-settings-form" class="space-y-8">
+                            <!-- Status Toggle -->
+                            <div
+                                class="relative overflow-hidden bg-black/40 rounded-2xl p-6 border border-white/5 group/toggle">
+                                <div class="flex items-center justify-between relative z-10">
+                                    <div class="flex items-center gap-4">
+                                        <div
+                                            class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-white/40 group-hover/toggle:text-primary transition-colors">
+                                            <span class="material-symbols-outlined">power_settings_new</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-white font-bold text-base tracking-tight">Статус приложения
+                                            </h4>
+                                            <p class="text-white/30 text-xs mt-0.5">Включите или выключите доступ
+                                                пользователей к Web App</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="webapp_enable" id="webapp_enable"
+                                            class="peer sr-only" {{ 'checked' if webapp.webapp_enable else '' }}>
+                                        <div
+                                            class="w-14 h-7 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[19px] after:w-[19px] after:transition-all peer-checked:bg-primary shadow-inner">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Title Input -->
+                                <div class="space-y-2.5">
+                                    <label
+                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                        <span class="material-symbols-outlined text-sm">badge</span>
+                                        Название магазина
+                                    </label>
+                                    <div class="relative group/input">
+                                        <input type="text" name="webapp_title" id="webapp_title"
+                                            value="{{ webapp.webapp_title or '' }}"
+                                            class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-medium"
+                                            placeholder="Напр: My VPN Store">
+                                        <div
+                                            class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Domain Input -->
+                                <div class="space-y-2.5">
+                                    <label
+                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                        <span class="material-symbols-outlined text-sm">link</span>
+                                        Доменное имя
+                                    </label>
+                                    <div class="relative group/input">
+                                        <input type="text" name="webapp_domen" id="webapp_domen"
+                                            value="{{ webapp.webapp_domen or '' }}"
+                                            class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
+                                            placeholder="example.com">
+                                        <div
+                                            class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Logo URL -->
+                            <div class="space-y-2.5">
+                                <label
+                                    class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                    <span class="material-symbols-outlined text-sm">image</span>
+                                    Логотип (URL адрес)
+                                </label>
+                                <div class="flex flex-col md:flex-row gap-4">
+                                    <div class="relative flex-1 group/input">
+                                        <input type="text" name="webapp_logo" id="webapp_logo"
+                                            value="{{ webapp.webapp_logo or '' }}"
+                                            class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
+                                            placeholder="https://your-domain.com/logo.png">
+                                        <div
+                                            class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="relative w-full md:w-20 h-20 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 group/preview transition-all hover:border-primary/30">
+                                        <img id="webapp-logo-preview" src="{{ webapp.webapp_logo }}"
+                                            onerror="this.style.display='none'"
+                                            class="w-full h-full object-contain p-2 {{ 'hidden' if not webapp.webapp_logo else '' }}">
+                                        <span
+                                            class="material-symbols-outlined text-white/10 text-3xl {{ 'hidden' if webapp.webapp_logo else '' }}"
+                                            id="webapp-logo-placeholder">image</span>
+                                        <div
+                                            class="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 flex items-center justify-center transition-opacity">
+                                            <span
+                                                class="text-[8px] text-white font-bold uppercase tracking-tighter">Preview</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Favicon URL -->
+                            <div class="space-y-2.5">
+                                <label
+                                    class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                    <span class="material-symbols-outlined text-sm">fluid_meditation</span>
+                                    Favicon (URL адрес)
+                                </label>
+                                <div class="relative group/input">
+                                    <input type="text" name="webapp_icon" id="webapp_icon"
+                                        value="{{ webapp.webapp_icon or '' }}"
+                                        class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
+                                        placeholder="https://your-domain.com/favicon.ico">
+                                    <div
+                                        class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Save Button -->
+                            <div class="pt-4 border-t border-white/5">
+                                <button type="submit" id="btn-save-webapp"
+                                    class="w-full px-8 py-5 rounded-2xl bg-primary text-background-dark font-black uppercase tracking-[0.2em] text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_20px_40px_-15px_rgba(19,236,128,0.3)] flex items-center justify-center gap-3 group/save">
+                                    <span
+                                        class="material-symbols-outlined group-hover:rotate-12 transition-transform">save</span>
+                                    Сохранить конфигурацию
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Sidebar -->
+            <div class="space-y-6">
+                <div
+                    class="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+                    <div class="relative">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-primary text-background-dark flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined">lightbulb</span>
+                        </div>
+                        <h4 class="text-white font-bold mb-2">Советы по настройке</h4>
+                        <ul class="text-white/60 text-xs space-y-3 leading-relaxed">
+                            <li class="flex gap-2">
+                                <span class="text-primary">•</span>
+                                Используйте логотип на прозрачном фоне (PNG/SVG)
+                            </li>
+                            <li class="flex gap-2">
+                                <span class="text-primary">•</span>
+                                Домен должен быть привязан к вашему серверу через Cloudflare или напрямую
+                            </li>
+                            <li class="flex gap-2">
+                                <span class="text-primary">•</span>
+                                Краткий заголовок лучше отображается на мобильных устройствах
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl">
+                    <h4 class="text-white font-bold mb-4 flex items-center gap-2 text-sm">
+                        <span class="material-symbols-outlined text-primary text-lg">info</span>
+                        Информация о системе
+                    </h4>
+                    <div class="space-y-4">
+                        <div
+                            class="flex justify-between items-center text-[10px] uppercase font-bold tracking-widest p-3 bg-black/20 rounded-xl border border-white/5">
+                            <span class="text-white/40">API Status</span>
+                            <span class="text-primary flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                Online
+                            </span>
+                        </div>
+                        <div
+                            class="flex justify-between items-center text-[10px] uppercase font-bold tracking-widest p-3 bg-black/20 rounded-xl border border-white/5">
+                            <span class="text-white/40">SSL Certificate</span>
+                            <span class="text-primary">Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section id="tab-remnawave" class="tab-content hidden">
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-8 shadow-xl backdrop-blur-md text-center max-w-2xl mx-auto">
+        <div
+            class="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6 border border-primary/20">
+            <span class="material-symbols-outlined text-5xl">engineering</span>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-4">В разработке</h3>
+        <p class="text-white/60 leading-relaxed mb-8">
+            Функционал еще в разработке. Панель сможете установить через авто установщик с настройками для бота нашем тг
+            канале
+        </p>
+        <a href="https://t.me/+gwNP6nFYuYo4MDUy" target="_blank"
+            class="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-primary text-background-dark font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20">
+            <span class="material-symbols-outlined">campaign</span>
+            Наш Telegram канал
+        </a>
     </div>
 </section>
 
@@ -2394,7 +2629,7 @@
             initialTab = localStorage.getItem('remnawave_other_active_tab');
         }
 
-        const validTabs = ['broadcast', 'promo', 'servers', 'logs', 'remnawave'];
+        const validTabs = ['broadcast', 'promo', 'servers', 'logs', 'webapp', 'remnawave'];
         if (!validTabs.includes(initialTab)) {
             initialTab = 'broadcast';
         }
@@ -2414,13 +2649,19 @@
                     if (document.getElementById('stat-expired-keys')) document.getElementById('stat-expired-keys').textContent = data.users_with_expired_keys || 0;
                     if (document.getElementById('stat-no-trial')) document.getElementById('stat-no-trial').textContent = data.users_without_trial;
                     if (document.getElementById('stat-banned-count')) document.getElementById('stat-banned-count').textContent = data.banned_count || 0;
+                    window.currentBannedCount = data.banned_count || 0;
+                    updateSkipBannedUI();
 
                     if (data.last_results) {
-                        if (document.getElementById('result-sent')) document.getElementById('result-sent').textContent = data.last_results.sent || 0;
-                        if (document.getElementById('result-failed')) document.getElementById('result-failed').textContent = data.last_results.failed || 0;
-                        if (document.getElementById('result-skipped')) document.getElementById('result-skipped').textContent = data.last_results.skipped || 0;
-                        if (data.last_results.timestamp) {
-                            const date = new Date(data.last_results.timestamp);
+                        const results = data.last_results;
+                        if (document.getElementById('result-sent')) document.getElementById('result-sent').textContent = results.sent || 0;
+                        if (document.getElementById('result-blocked-bot')) document.getElementById('result-blocked-bot').textContent = results.blocked_bot || 0;
+                        if (document.getElementById('result-deactivated')) document.getElementById('result-deactivated').textContent = results.deactivated || 0;
+                        if (document.getElementById('result-added-to-banned')) document.getElementById('result-added-to-banned').textContent = results.added_to_banned || 0;
+                        if (document.getElementById('result-removed-from-banned')) document.getElementById('result-removed-from-banned').textContent = results.removed_from_banned || 0;
+
+                        if (results.timestamp) {
+                            const date = new Date(results.timestamp);
                             if (document.getElementById('result-time')) document.getElementById('result-time').textContent = `Последняя рассылка: ${date.toLocaleString('ru-RU')} `;
                         }
                     }
@@ -2607,6 +2848,26 @@
             }
         });
 
+        const skipBannedToggle = document.getElementById('skip-banned-toggle');
+        const skipBannedBadge = document.getElementById('skip-banned-count-badge');
+
+        function updateSkipBannedUI() {
+            if (!skipBannedToggle || !skipBannedBadge) return;
+            const count = window.currentBannedCount || 0;
+            if (skipBannedToggle.checked && count > 0) {
+                skipBannedBadge.textContent = `(-${count})`;
+                skipBannedBadge.classList.remove('hidden');
+                setTimeout(() => skipBannedBadge.classList.remove('opacity-0'), 10);
+            } else {
+                skipBannedBadge.classList.add('opacity-0');
+                setTimeout(() => skipBannedBadge.classList.add('hidden'), 300);
+            }
+        }
+
+        if (skipBannedToggle) {
+            skipBannedToggle.addEventListener('change', updateSkipBannedUI);
+        }
+
         document.getElementById('btn-clear-banned').addEventListener('click', async function () {
             if (!await window.showConfirm({
                 title: 'Очистка списка',
@@ -2719,7 +2980,7 @@
                                     btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
 
                                     window.showToast('success',
-                                        `Рассылка завершена! Отправлено: ${progress.sent}, Ошибок: ${progress.failed}, Пропущено: ${progress.skipped}`);
+                                        `Рассылка завершена! Отправлено: ${progress.sent}, Добавлено в ЧС: ${progress.added_to_banned || 0}, Снято с ЧС: ${progress.removed_from_banned || 0}`);
 
                                     loadStats();
                                     document.getElementById('broadcast-text').value = '';
@@ -2748,7 +3009,7 @@
 
                     btn.disabled = false;
                     btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
-                    window.showToast('success', `Рассылка завершена! Отправлено: ${data.results.sent}, Ошибок: ${data.results.failed}, Пропущено: ${data.results.skipped}`);
+                    window.showToast('success', `Рассылка завершена! Отправлено: ${data.results.sent}, Добавлено в ЧС: ${data.results.added_to_banned || 0}`);
                     loadStats();
                     document.getElementById('broadcast-text').value = '';
                     buttons = [];
@@ -4665,32 +4926,33 @@
                 return;
             }
 
-            // Create a fragment for batch insertion
-            const fragment = document.createDocumentFragment();
-
-            // Process all currently buffered lines
-            // We take a snapshot of length to avoid infinite loops if something weird happens,
-            // though shift() naturally reduces length.
             const count = terminalBuffer.length;
             for (let i = 0; i < count; i++) {
-                const lineHTML = terminalBuffer.shift();
-                const div = document.createElement('div');
-                div.className = 'term-line';
-                div.innerHTML = lineHTML;
-                fragment.appendChild(div);
+                const item = terminalBuffer.shift();
+                if (item.cr) {
+                    const lastChild = outputEl.lastElementChild;
+                    if (lastChild && lastChild.classList.contains('term-line-cr')) {
+                        lastChild.innerHTML = item.html;
+                    } else {
+                        const div = document.createElement('div');
+                        div.className = 'term-line term-line-cr';
+                        div.innerHTML = item.html;
+                        outputEl.appendChild(div);
+                    }
+                } else {
+                    const div = document.createElement('div');
+                    div.className = 'term-line';
+                    div.innerHTML = item.html;
+                    outputEl.appendChild(div);
+                }
             }
 
-            outputEl.appendChild(fragment);
-
-            // Prune old lines to keep DOM light
-            // Using childElementCount is much faster than splitting innerText
             while (outputEl.childElementCount > MAX_TERMINAL_LINES) {
                 outputEl.removeChild(outputEl.firstChild);
             }
 
             outputEl.scrollTop = outputEl.scrollHeight;
 
-            // Continue flushing if more data arrived during execution
             if (terminalBuffer.length > 0) {
                 requestAnimationFrame(flushTerminalBuffer);
             } else {
@@ -4698,8 +4960,8 @@
             }
         }
 
-        function appendTerminalLine(html) {
-            terminalBuffer.push(html);
+        function appendTerminalLine(html, cr = false) {
+            terminalBuffer.push({ html, cr });
             if (!isTerminalFlushing) {
                 isTerminalFlushing = true;
                 requestAnimationFrame(flushTerminalBuffer);
@@ -4909,13 +5171,14 @@
 
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
-                            const data = line.substring(6);
+                            let data = line.substring(6);
                             if (data === '[DONE]') {
                                 continue;
                             }
 
-                            // Буферизированный вывод
-                            appendTerminalLine(formatTerminalOutput(data));
+                            const isCR = data.startsWith('\x01CR\x01');
+                            if (isCR) data = data.substring(4);
+                            appendTerminalLine(formatTerminalOutput(data), isCR);
                         }
                     }
                 }
@@ -5261,6 +5524,67 @@
         };
 
         loadBroadcastThemes();
+
+        // Webapp Settings Logic
+        const webappLogoInput = document.getElementById('webapp_logo');
+        const webappLogoPreview = document.getElementById('webapp-logo-preview');
+        const webappLogoPlaceholder = document.getElementById('webapp-logo-placeholder');
+
+        if (webappLogoInput) {
+            webappLogoInput.addEventListener('input', (e) => {
+                const url = e.target.value.trim();
+                if (url) {
+                    webappLogoPreview.src = url;
+                    webappLogoPreview.style.display = 'block';
+                    webappLogoPreview.classList.remove('hidden');
+                    webappLogoPlaceholder.classList.add('hidden');
+                } else {
+                    webappLogoPreview.style.display = 'none';
+                    webappLogoPreview.classList.add('hidden');
+                    webappLogoPlaceholder.classList.remove('hidden');
+                }
+            });
+        }
+
+        const webappForm = document.getElementById('webapp-settings-form');
+        if (webappForm) {
+            webappForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const btn = document.getElementById('btn-save-webapp');
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">progress_activity</span> Сохранение...';
+
+                const formData = new FormData();
+                formData.append('csrf_token', window.getCsrfToken());
+                formData.append('enable', document.getElementById('webapp_enable').checked);
+                formData.append('title', document.getElementById('webapp_title').value);
+                formData.append('domen', document.getElementById('webapp_domen').value);
+                formData.append('logo', document.getElementById('webapp_logo').value);
+                formData.append('icon', document.getElementById('webapp_icon').value);
+
+                try {
+                    const resp = await fetch('/other/webapp/save', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await resp.json();
+
+                    if (data.ok) {
+                        window.showToast('success', 'Настройки Web App сохранены');
+                    } else {
+                        window.showToast('danger', data.error || 'Ошибка сохранения');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    window.showToast('danger', 'Ошибка подключения');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
+        };
     });
 </script>
 

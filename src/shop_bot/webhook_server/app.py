@@ -54,7 +54,7 @@ from shop_bot.data_manager.remnawave_repository import (
     ban_user, unban_user, delete_user_keys, get_setting, find_and_complete_ton_transaction,
     find_and_complete_pending_transaction,
     get_tickets_paginated, get_open_tickets_count, get_waiting_tickets_count, get_ticket, get_ticket_messages,
-    add_support_message, set_ticket_status, delete_ticket,
+    add_support_message, set_ticket_status, delete_ticket, get_support_badge_counts,
     get_closed_tickets_count, get_all_tickets_count, update_host_subscription_url,
     update_host_url, update_host_name, update_host_ssh_settings, get_latest_speedtest, get_speedtests,
     update_host_description, update_host_traffic_settings,
@@ -120,6 +120,7 @@ ALL_SETTINGS_KEYS = [
     "main_menu_image",
     "skip_email", "enable_wal_mode",
     "key_ready_image",
+    "devices_list_image",
 ]
 
 def create_webhook_app(bot_controller_instance):
@@ -139,6 +140,12 @@ def create_webhook_app(bot_controller_instance):
     logger.debug(f"Ожидаемый путь к login.html: {template_file}")
     logger.debug(f"Директория шаблонов существует? -> {os.path.isdir(template_dir)}")
     logger.debug(f"Файл login.html существует? -> {os.path.isfile(template_file)}")
+    
+    webapp_dir = os.path.join(os.path.dirname(app_dir), 'webapp')
+    webapp_exists = os.path.isdir(webapp_dir)
+    
+    logger.debug(f"Директория WebApp: {webapp_dir} (существует: {webapp_exists})")
+    
     logger.debug("--- КОНЕЦ ДИАГНОСТИКИ ---")
     
     flask_app = Flask(
@@ -285,7 +292,8 @@ def create_webhook_app(bot_controller_instance):
 
         return {
             'current_year': get_msk_time().year,
-            'csrf_token': generate_csrf
+            'csrf_token': generate_csrf,
+            'webapp_exists': webapp_exists
         }
 
     @flask_app.template_filter('relative_time')
@@ -478,14 +486,7 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/support/badge-counts.json')
     @login_required
     def support_badge_counts_json():
-        try:
-            return jsonify({
-                "ok": True,
-                "open_count": get_open_tickets_count(),
-                "waiting_tickets_count": get_waiting_tickets_count() 
-            })
-        except Exception as e:
-            return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify(get_support_badge_counts())
 
 
     @flask_app.route('/brand-title', methods=['POST'])
@@ -1668,22 +1669,58 @@ def create_webhook_app(bot_controller_instance):
             base_local = ""
             user = get_user(user_id) if user_id else None
             
+            was_corrected = False
+            original_candidate = ""
+
+            # Check logic
+            raw_username = ""
+            if user:
+                raw_username = (user.get('username') or f'user{user_id}').lower()
+
             if mode == 'gift':
                 if user:
-                    # Gift with user assigned
-                    raw_username = (user.get('username') or f'user{user_id}').lower()
-                    username_slug = re.sub(r"[^a-z0-9._-]", "_", raw_username).strip("_")[:20]
-                    base_local = f"gift_{username_slug}"
+                    # Gift WITH user
+                    # Naive attempt
+                    naive_local = f"gift_{raw_username}"
+                    naive_email = f"{naive_local}@bot.local"
+                    
+                    # Normalize
+                    # We pass telegram_id=None here because we want to preserve 'gift_' prefix structure if possible,
+                    # rather than swapping to just 'user{id}'. 
+                    # But if it becomes bad, we handle it manually.
+                    safe_email = remnawave_api._normalize_email_for_remnawave(naive_email)
+                    
+                    safe_local = safe_email.split('@')[0]
+                    
+                    # If normalization degraded it to just "gift" or empty (bad chars), append user_id
+                    # Also check if it changed significantly
+                    if safe_email != naive_email:
+                        was_corrected = True
+                    
+                    if safe_local == 'gift' or len(safe_local) <= 5: 
+                         # 'gift_' is 5 chars. If we only have 'gift' or less, it means username was stripped.
+                         # Fallback to gift_user{id}
+                         safe_local = f"gift_user{user_id}"
+                         was_corrected = True
+
+                    base_local = safe_local
                 else:
-                    # Gift without user (random)
-                    # Use a temporary placeholder that looks real, but keeps changing if we re-request? 
-                    # Or just one. Let's use uuid.
+                    # Gift WITHOUT user (random uuid)
                     base_local = f"gift-{uuid.uuid4().hex[:8]}"
+                    # No correction needed for UUID
             else:
                 # Personal (requires user)
-                raw_username = (user.get('username') or f'user{user_id}').lower()
-                username_slug = re.sub(r"[^a-z0-9._-]", "_", raw_username).strip("_")[:16] or f"user{user_id}"
-                base_local = f"{username_slug}"
+                # Naive generation
+                naive_local = f"{raw_username}"
+                naive_email = f"{naive_local}@bot.local"
+                
+                # Check with full normalization fallback to user{id}
+                safe_email = remnawave_api._normalize_email_for_remnawave(naive_email, telegram_id=user_id)
+                
+                if safe_email != naive_email:
+                    was_corrected = True
+                
+                base_local = safe_email.split('@')[0]
 
             candidate_local = base_local
             attempt = 0
@@ -1694,7 +1731,12 @@ def create_webhook_app(bot_controller_instance):
                     break
                 attempt += 1
             
-            return jsonify({"ok": True, "email": candidate_email})
+            return jsonify({
+                "ok": True, 
+                "email": candidate_email,
+                "was_corrected": was_corrected,
+                "original_username": user.get('username') if user else None
+            })
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -3856,6 +3898,7 @@ def create_webhook_app(bot_controller_instance):
         'key_ready': 'key_ready_image',
         'waiting_payment': 'waiting_payment_image',
         'payment_success': 'payment_success_image',
+        'devices_list': 'devices_list_image',
     }
 
     @flask_app.route('/upload-menu-image/<section>', methods=['POST'])

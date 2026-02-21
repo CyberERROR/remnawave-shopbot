@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from flask import render_template, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 from aiogram.types import FSInputFile
+from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, TelegramAPIError
 from shop_bot.data_manager import remnawave_repository as rw_repo
 from . import server_plan
 
@@ -152,7 +153,7 @@ def validate_promo_params(form_data):
 
 # ===== СОХРАНЕНИЕ РЕЗУЛЬТАТОВ РАССЫЛКИ =====
 # Записывает статистику последней рассылки в базу данных (МСК)
-def save_broadcast_results(sent, failed, skipped):
+def save_broadcast_results(sent, failed, skipped, blocked_bot=0, deactivated=0, added_to_banned=0, removed_from_banned=0):
     try:
         moscow_time = get_msk_time()
         
@@ -160,6 +161,10 @@ def save_broadcast_results(sent, failed, skipped):
             'sent': sent,
             'failed': failed,
             'skipped': skipped,
+            'blocked_bot': blocked_bot,
+            'deactivated': deactivated,
+            'added_to_banned': added_to_banned,
+            'removed_from_banned': removed_from_banned,
             'timestamp': moscow_time.isoformat()
         }
         rw_repo.set_other_value('newsletter', json.dumps(results, ensure_ascii=False))
@@ -171,9 +176,23 @@ def save_broadcast_results(sent, failed, skipped):
 def load_broadcast_results():
     try:
         data = rw_repo.get_other_value('newsletter')
-        if data: return json.loads(data)
+        if data:
+            results = json.loads(data)
+            # Обеспечиваем наличие новых полей в старых записях
+            default_fields = {
+                'sent': 0, 'failed': 0, 'skipped': 0, 
+                'blocked_bot': 0, 'deactivated': 0, 
+                'added_to_banned': 0, 'removed_from_banned': 0,
+                'timestamp': None
+            }
+            return {**default_fields, **results}
     except Exception as e: logger.error(f"Не удалось загрузить результаты рассылки: {e}")
-    return {'sent': 0, 'failed': 0, 'skipped': 0, 'timestamp': None}
+    return {
+        'sent': 0, 'failed': 0, 'skipped': 0, 
+        'blocked_bot': 0, 'deactivated': 0, 
+        'added_to_banned': 0, 'removed_from_banned': 0,
+        'timestamp': None
+    }
 # ===== Конец функции load_broadcast_results =====
     
 # ===== ПОЛУЧЕНИЕ СПИСКА ЗАБАНЕННЫХ =====
@@ -217,16 +236,20 @@ def execute_ssh_command(host, port, username, password, command, timeout=10):
 # Выполняет рассылку сообщений пользователям с поддержкой медиа и кнопок
 async def send_broadcast_async(bot, users, text, media_path=None, media_type=None, buttons=None, mode='all', task_id=None, skip_banned=False):
     sent, failed, skipped, total = 0, 0, 0, len(users)
+    blocked_bot, deactivated = 0, 0
+    added_to_banned, removed_from_banned = 0, 0
     
     # Загружаем список забаненных
     banned_data = get_banned_users_data()
-    banned_set = set(banned_data.get('id', []))
+    initial_banned_set = set(banned_data.get('id', []))
+    banned_set = initial_banned_set.copy()
     
     if task_id:
         with broadcast_lock:
             broadcast_progress[task_id] = {
-                'status': 'running', 'total': total, 'sent': 0, 'failed': 0, 'skipped': 0, 'progress': 0,
-                'start_time': get_msk_time().isoformat()
+                'status': 'running', 'total': total, 'sent': 0, 'failed': 0, 'skipped': 0, 
+                'blocked_bot': 0, 'deactivated': 0, 'added_to_banned': 0, 'removed_from_banned': 0,
+                'progress': 0, 'start_time': get_msk_time().isoformat()
             }
     
     for index, user in enumerate(users):
@@ -244,11 +267,13 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
 
         if user.get('is_banned', False):
             skipped += 1
-            banned_set.add(user_id)
+            if user_id not in initial_banned_set:
+                banned_set.add(user_id)
+                added_to_banned += 1
             if task_id:
                 with broadcast_lock:
                     if task_id in broadcast_progress:
-                        broadcast_progress[task_id].update({'skipped': skipped, 'progress': int((index + 1) / total * 100)})
+                        broadcast_progress[task_id].update({'skipped': skipped, 'added_to_banned': added_to_banned, 'progress': int((index + 1) / total * 100)})
             continue
         
         try:
@@ -274,32 +299,58 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
             else: await bot.send_message(chat_id=user_id, text=text, parse_mode='HTML', reply_markup=keyboard)
             
             sent += 1
-            # Если успешно отправили, убираем из списка забаненных (если был там)
-            if user_id in banned_set:
-                banned_set.remove(user_id)
+            # Если успешно отправили, убираем из списка забаненных (если был там изначально)
+            if user_id in initial_banned_set:
+                banned_set.discard(user_id)
+                removed_from_banned += 1
             
             await asyncio.sleep(0.05)
             
-        except Exception as e:
-            # logger.warning(f"Не удалось отправить рассылку пользователю {user_id}: {e}")
+        except TelegramForbiddenError as e:
             failed += 1
-            # Добавляем в список забаненных
-            banned_set.add(user_id)
+            error_msg = str(e).lower()
+            if "bot was blocked by the user" in error_msg:
+                blocked_bot += 1
+            elif "user is deactivated" in error_msg:
+                deactivated += 1
+            
+            # Добавляем в список забаненных, если еще не там
+            if user_id not in initial_banned_set:
+                banned_set.add(user_id)
+                added_to_banned += 1
+                
+        except TelegramRetryAfter as e:
+            await asyncio.sleep(e.retry_after)
+            # Можно попробовать отправить еще раз или просто зафейлить, здесь просто зафейлим для простоты
+            failed += 1
+        except Exception as e:
+            failed += 1
+            # Добавляем в список забаненных при ошибках
+            if user_id not in initial_banned_set:
+                banned_set.add(user_id)
+                added_to_banned += 1
         
         if task_id and ((index + 1) % 10 == 0 or (index + 1) == total):
             with broadcast_lock:
                 if task_id in broadcast_progress:
-                    broadcast_progress[task_id].update({'sent': sent, 'failed': failed, 'skipped': skipped, 'progress': int((index + 1) / total * 100)})
+                    broadcast_progress[task_id].update({
+                        'sent': sent, 'failed': failed, 'skipped': skipped, 
+                        'blocked_bot': blocked_bot, 'deactivated': deactivated,
+                        'added_to_banned': added_to_banned, 'removed_from_banned': removed_from_banned,
+                        'progress': int((index + 1) / total * 100)
+                    })
     
     if task_id:
         with broadcast_lock:
             if task_id in broadcast_progress:
                 broadcast_progress[task_id].update({
-                    'status': 'completed', 'sent': sent, 'failed': failed, 'skipped': skipped, 'progress': 100,
-                    'end_time': get_msk_time().isoformat()
+                    'status': 'completed', 'sent': sent, 'failed': failed, 'skipped': skipped, 
+                    'blocked_bot': blocked_bot, 'deactivated': deactivated,
+                    'added_to_banned': added_to_banned, 'removed_from_banned': removed_from_banned,
+                    'progress': 100, 'end_time': get_msk_time().isoformat()
                 })
     
-    save_broadcast_results(sent, failed, skipped)
+    save_broadcast_results(sent, failed, skipped, blocked_bot, deactivated, added_to_banned, removed_from_banned)
     # Сохраняем обновленный список забаненных
     save_banned_users_data(list(banned_set))
     
@@ -309,7 +360,11 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
             logger.info(f"Медиафайл удален: {media_path}")
         except Exception as e: logger.error(f"Не удалось удалить медиафайл {media_path}: {e}")
     
-    return {'sent': sent, 'failed': failed, 'skipped': skipped}
+    return {
+        'sent': sent, 'failed': failed, 'skipped': skipped, 
+        'blocked_bot': blocked_bot, 'deactivated': deactivated,
+        'added_to_banned': added_to_banned, 'removed_from_banned': removed_from_banned
+    }
 # ===== Конец функции send_broadcast_async =====
 
 # ===== РЕГИСТРАЦИЯ РОУТОВ МОДУЛЯ =====
@@ -326,8 +381,33 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     @login_required
     def other_page():
         common_data = get_common_template_data()
-        return render_template('other.html', **common_data)
+        webapp = rw_repo.get_webapp_settings()
+        return render_template('other.html', webapp=webapp, **common_data)
     # ===== Конец роута other_page =====
+
+    # ===== СОХРАНЕНИЕ НАСТРОЕК WEBAPP =====
+    @flask_app.route('/other/webapp/save', methods=['POST'])
+    @login_required
+    def webapp_save():
+        try:
+            enable = request.form.get('enable') == 'true'
+            title = request.form.get('title', '').strip()
+            domen = request.form.get('domen', '').strip()
+            logo = request.form.get('logo', '').strip()
+            icon = request.form.get('icon', '').strip()
+            
+            rw_repo.update_webapp_settings(
+                webapp_title=title,
+                webapp_domen=domen,
+                webapp_enable=1 if enable else 0,
+                webapp_logo=logo,
+                webapp_icon=icon
+            )
+            return jsonify({'ok': True, 'message': 'Настройки Webapp сохранены'})
+        except Exception as e:
+            logger.error(f"Ошибка сохранения настроек Webapp: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    # ===== Конец роута webapp_save =====
     
     # ===== СТАТИСТИКА РАССЫЛКИ =====
     # Собирает данные о пользователях и ключах для формирования отчета рассылки
@@ -545,6 +625,11 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 all_users = filtered_users
             elif mode == 'without_trial' or mode == 'not_used_trial':
                 all_users = [u for u in all_users if not u.get('trial_used', 0)]
+            
+            if skip_banned:
+                banned_data = get_banned_users_data()
+                banned_ids = set(banned_data.get('id', []))
+                all_users = [u for u in all_users if u.get('telegram_id') not in banned_ids]
             
             media_path, media_type = None, None
             if media_filename:
@@ -963,10 +1048,33 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             docker_install_cmd = 'curl -fsSL https://get.docker.com | sh' if os_type == 'debian' else 'sudo curl -fsSL https://get.docker.com | sh'
             logger.info(f"Установка Docker на {name} ({host}:{port}) - режим {os_type}")
             
-            result = execute_ssh_command(host, port, username, password, docker_install_cmd, timeout=300)
-            if result['ok']:
-                return jsonify({'ok': True, 'message': 'Docker успешно установлен', 'output': result['output']})
-            return jsonify({'ok': False, 'error': result['error'] or 'Не удалось установить Docker', 'output': result['output']}), 500
+            result_container = {'res': None, 'done': False}
+            def run_install():
+                try:
+                    res = execute_ssh_command(host, port, username, password, docker_install_cmd, timeout=300)
+                    result_container['res'] = res
+                except Exception as e:
+                    result_container['res'] = {'ok': False, 'error': str(e), 'output': ''}
+                finally:
+                    result_container['done'] = True
+
+            thread = threading.Thread(target=run_install)
+            thread.daemon = True
+            thread.start()
+            
+            thread.join(timeout=40)
+            
+            if result_container['done']:
+                result = result_container['res']
+                if result.get('ok'):
+                    return jsonify({'ok': True, 'message': 'Docker успешно установлен', 'output': result.get('output', '')})
+                return jsonify({'ok': False, 'error': result.get('error') or 'Не удалось установить Docker', 'output': result.get('output', '')}), 500
+            
+            return jsonify({
+                'ok': True, 
+                'message': 'Установка Docker запущена и продолжается в фоновом режиме. Это может занять 2-5 минут. Пожалуйста, подождите немного перед следующим шагом.', 
+                'output': 'Процесс переведен в фоновый режим для предотвращения таймаута соединения.'
+            })
         except Exception as e:
             logger.error(f"Ошибка установки Docker на {name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
@@ -1762,9 +1870,18 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                                 if data:
                                     idle_count = 0
                                     try:
-                                        text = ansi_escape.sub('', data.decode('utf-8', errors='replace'))
-                                        for line in text.splitlines():
-                                            if line.rstrip(): yield f"data: {line.rstrip()}\n\n"
+                                        decoded = data.decode('utf-8', errors='replace')
+                                        cleaned = ansi_escape.sub('', decoded)
+                                        cleaned = cleaned.replace('\r\n', '\n')
+                                        segments = cleaned.split('\n')
+                                        for seg in segments:
+                                            if '\r' in seg:
+                                                parts = seg.split('\r')
+                                                last_part = parts[-1]
+                                                if last_part.rstrip():
+                                                    yield f"data: \x01CR\x01{last_part.rstrip()}\n\n"
+                                            elif seg.rstrip():
+                                                yield f"data: {seg.rstrip()}\n\n"
                                     except Exception as ex: logger.error(f"Ошибка декодирования вывода: {ex}")
                             else: idle_count += 1
                             

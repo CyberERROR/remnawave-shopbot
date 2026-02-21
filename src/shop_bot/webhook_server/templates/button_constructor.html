@@ -600,6 +600,7 @@
         { m: 'key_info_menu', id: 'connect', t: '📲 Подключиться', c: '', u: '{connection_string}' },
         { m: 'key_info_menu', id: 'extend', t: '➕ Продлить этот ключ', c: 'extend_key_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'howto', t: '📖 Инструкция', c: 'howto_vless_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'devices', t: '💻 Устройства', c: 'key_devices_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'qr', t: '📱 QR-код', c: 'show_qr_{key_id}', u: '' },
         { m: 'main_menu', id: 'about', t: 'ℹ️ О проекте', c: 'show_about', u: '' },
         { m: 'main_menu', id: 'admin', t: '⚙️ Админка', c: 'admin_menu', u: '' },
@@ -1139,9 +1140,13 @@
                     'main_menu': { title: '🏠 Главное меню', subtitle: 'Выберите действие:' },
                     'admin_menu': { title: '⚙️ Админ панель', subtitle: 'Административные функции:' },
                     'profile_menu': { title: '👤 Мой профиль', subtitle: 'Управление профилем:' },
-                    'support_menu': { title: '🆘 Поддержка', subtitle: 'Система поддержки:' }
+                    'support_menu': { title: '🆘 Поддержка', subtitle: 'Система поддержки:' },
+                    'key_info_menu': { title: '🔑 Информация о ключе', subtitle: 'Управление ключом:' }
                 };
-                const menuInfo = menuTitles[this.currentMenuType] || menuTitles['main_menu'];
+                const menuInfo = menuTitles[this.currentMenuType] || {
+                    title: MENU_NAME_MAP[this.currentMenuType] || 'Меню',
+                    subtitle: 'Выберите действие:'
+                };
 
                 // Группируем кнопки по строкам
                 const rows = {};

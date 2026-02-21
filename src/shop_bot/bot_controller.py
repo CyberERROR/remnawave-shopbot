@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import threading
+import uvicorn
 
 from yookassa import Configuration
 from aiogram import Bot, Dispatcher, Router
@@ -12,6 +14,10 @@ from shop_bot.bot.admin_handlers import get_admin_router
 from shop_bot.bot.middlewares import BanMiddleware
 from shop_bot.bot import handlers
 from shop_bot.webhook_server.modules.security import get_security_router
+try:
+    from shop_bot.webapp.handlers import app as webapp_app
+except ImportError:
+    webapp_app = None
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +29,8 @@ class BotController:
         self._task = None
         self._is_running = False
         self._loop = None
+        self._webapp_server = None
+        self._webapp_thread = None
 
     def set_loop(self, loop: asyncio.AbstractEventLoop):
         self._loop = loop
@@ -140,6 +148,17 @@ class BotController:
             handlers.TELEGRAM_BOT_USERNAME = bot_username
             handlers.ADMIN_ID = admin_id
 
+            # Webapp Launch Logic
+            webapp_settings = rw_repo.get_webapp_settings()
+            if webapp_app and webapp_settings.get("webapp_enable"):
+                logger.info("Запуск Webapp сервера...")
+                config = uvicorn.Config(webapp_app, host="0.0.0.0", port=8000, log_level="info")
+                self._webapp_server = uvicorn.Server(config)
+                self._webapp_thread = threading.Thread(target=self._webapp_server.run)
+                self._webapp_thread.daemon = True
+                self._webapp_thread.start()
+                logger.info("Webapp сервер успешно запущен в фоновом режиме.")
+
             self._is_running = True
             self._task = asyncio.run_coroutine_threadsafe(self._start_polling(), self._loop)
             logger.info("Команда на запуск передана в цикл событий.")
@@ -161,6 +180,16 @@ class BotController:
             return {"status": "error", "message": "Критическая ошибка: компоненты бота недоступны."}
 
         logger.info("Отправляю сигнал на корректную остановку...")
+        
+        # Stop Webapp
+        if self._webapp_server:
+            logger.info("Остановка Webapp сервера...")
+            self._webapp_server.should_exit = True
+            # Не ждем join долго, чтобы не блокировать основной поток, 
+            # так как uvicorn работает в треде
+            self._webapp_server = None
+            self._webapp_thread = None
+
         try:
             asyncio.run_coroutine_threadsafe(self._dp.stop_polling(), self._loop).result(timeout=2)
         except Exception as e:

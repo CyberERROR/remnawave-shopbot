@@ -234,7 +234,8 @@ def initialize_db():
                     referral_balance_all REAL DEFAULT 0,
                     referral_start_bonus_received BOOLEAN DEFAULT 0,
                     is_pinned BOOLEAN DEFAULT 0,
-                    seller_active INTEGER DEFAULT 0
+                    seller_active INTEGER DEFAULT 0,
+                    auth_token TEXT
                 )
             ''')
 
@@ -407,6 +408,9 @@ def initialize_db():
                 )
             ''')
 
+            _ensure_index(cursor, "idx_support_tickets_status", "support_tickets", "status")
+            _ensure_index(cursor, "idx_support_tickets_thread", "support_tickets", "forum_chat_id, message_thread_id")
+            _ensure_index(cursor, "idx_support_messages_ticket_id", "support_messages", "ticket_id")
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS seller_users (
                     id_seller INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -575,6 +579,7 @@ def initialize_db():
                 "payment_method_image": None,
                 "key_comments_image": None,
                 "key_ready_image": None,
+                "devices_list_image": None,
                 "key_gemini": None,
             }
             _ensure_default_values(cursor, "bot_settings", default_settings)
@@ -624,6 +629,7 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
         "referral_start_bonus_received": "BOOLEAN DEFAULT 0",
         "is_pinned": "BOOLEAN DEFAULT 0",
         "seller_active": "INTEGER DEFAULT 0",
+        "auth_token": "TEXT",
     }
     for column, definition in mapping.items():
         _ensure_table_column(cursor, "users", column, definition)
@@ -655,6 +661,7 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
         "remnawave_base_url": "TEXT",
         "remnawave_api_token": "TEXT",
         "see": "INTEGER DEFAULT 1",
+        "traffic_limit_strategy": "TEXT DEFAULT 'NO_RESET'",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "xui_hosts", column, definition)
@@ -847,6 +854,44 @@ def _ensure_vpn_keys_schema(cursor: sqlite3.Cursor) -> None:
 
 
 # ===== RUN_MIGRATION =====
+# ===========================================
+# ===== _ENSURE_WEBAPP_SETTINGS_TABLE =====
+def _ensure_webapp_settings_table(cursor: sqlite3.Cursor):
+    try:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS webapp_settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                webapp_title TEXT DEFAULT 'VPN',
+                webapp_domen TEXT DEFAULT '',
+                webapp_enable INTEGER DEFAULT 0,
+                webapp_logo TEXT DEFAULT '',
+                webapp_icon TEXT DEFAULT ''
+            )
+        ''')
+        
+        cursor.execute("PRAGMA table_info(webapp_settings)")
+        columns = {row[1] for row in cursor.fetchall()}
+        
+        if "webapp_title" not in columns:
+            cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_title TEXT DEFAULT 'VPN'")
+        if "webapp_domen" not in columns:
+            cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_domen TEXT DEFAULT ''")
+        if "webapp_enable" not in columns:
+            cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_enable INTEGER DEFAULT 0")
+        if "webapp_logo" not in columns:
+            cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_logo TEXT DEFAULT ''")
+        if "webapp_icon" not in columns:
+            cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_icon TEXT DEFAULT ''")
+
+        cursor.execute("INSERT OR IGNORE INTO webapp_settings (id, webapp_title, webapp_domen, webapp_enable, webapp_logo, webapp_icon) VALUES (1, 'VPN', '', 0, '', '')")
+            
+    except Exception as e:
+        logging.error(f"Ошибка миграции webapp_settings: {e}")
+
+# ===========================================
+
+
+# ===== RUN_MIGRATION =====
 def run_migration():
     if not DB_FILE.exists(): logging.error("Файл базы данных отсутствует, миграция пропущена."); return
 
@@ -867,6 +912,7 @@ def run_migration():
             _ensure_resource_metrics_table(cursor)
             _ensure_gift_tokens_table(cursor)
             _ensure_promo_tables(cursor)
+            _ensure_webapp_settings_table(cursor)
             try:
                 cursor.execute("ALTER TABLE seller_users RENAME COLUMN sellr_ref TO seller_ref")
                 logging.info("Переименована колонка sellr_ref в seller_ref в таблице seller_users")
@@ -1424,7 +1470,7 @@ def update_host_description(host_name: str, description: str | None) -> bool:
 def update_host_traffic_settings(host_name: str, traffic_strategy: str | None = 'NO_RESET') -> bool:
     host_name = normalize_host_name(host_name)
     cursor = _exec(
-        "UPDATE xui_hosts SET traffic_limit_strategy = ? WHERE TRIM(host_name) = TRIM(?)",
+        "UPDATE xui_hosts SET default_traffic_strategy = ? WHERE TRIM(host_name) = TRIM(?)",
         (traffic_strategy or 'NO_RESET', host_name),
         f"Не удалось обновить настройки трафика для хоста '{host_name}'"
     )
@@ -3249,12 +3295,6 @@ def get_ticket_messages(ticket_id: int) -> list[dict]:
         (ticket_id,),
         f"Не удалось получить сообщения для тикета {ticket_id}"
     )
-
-    return _fetch_list(
-        "SELECT * FROM support_messages WHERE ticket_id = ? ORDER BY created_at ASC",
-        (ticket_id,),
-        f"Не удалось получить сообщения для тикета {ticket_id}"
-    )
 # ===============================
 
 
@@ -3336,15 +3376,11 @@ def get_tickets_paginated(page: int = 1, per_page: int = 20, status: str | None 
     
     rows = _fetch_list(full_query, tuple(params), "Не удалось получить страницу тикетов поддержки")
     return rows, total
-
-    return rows, total
 # ===========================
 
 
 # ===== GET_OPEN_TICKETS_COUNT =====
 def get_open_tickets_count() -> int:
-    return _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'open'", (), 0) or 0
-
     return _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'open'", (), 0) or 0
 # ==============================
 
@@ -3360,24 +3396,44 @@ def get_waiting_tickets_count() -> int:
         ) != 'admin'
     """
     return _fetch_val(query, (), 0, "Не удалось получить кол-во ожидающих тикетов")
-
-    return _fetch_val(query, (), 0, "Не удалось получить кол-во ожидающих тикетов")
 # ===================================
+
+
+# ===== GET_SUPPORT_BADGE_COUNTS =====
+def get_support_badge_counts() -> dict:
+    """Универсальная функция для получения всех счетчиков бейджей в один запрос."""
+    try:
+        # Получаем общее количество открытых тикетов
+        open_count = _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'open'", (), 0) or 0
+        
+        # Получаем количество тикетов, ожидающих ответа админа (последнее сообщение не от админа)
+        waiting_count = _fetch_val("""
+            SELECT COUNT(*) FROM support_tickets t
+            WHERE t.status = 'open' AND (
+                SELECT sender FROM support_messages 
+                WHERE ticket_id = t.ticket_id 
+                ORDER BY created_at DESC LIMIT 1
+            ) != 'admin'
+        """, (), 0) or 0
+        
+        return {
+            "ok": True,
+            "open_count": open_count,
+            "waiting_tickets_count": waiting_count
+        }
+    except Exception as e:
+        logger.error(f"Ошибка при получении счетчиков бейджей: {e}")
+        return {"ok": False, "error": str(e), "open_count": 0, "waiting_tickets_count": 0}
 
 
 # ===== GET_CLOSED_TICKETS_COUNT =====
 def get_closed_tickets_count() -> int:
-    return _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'closed'", (), 0) or 0
-
     return _fetch_val("SELECT COUNT(*) FROM support_tickets WHERE status = 'closed'", (), 0) or 0
 # ==================================
 
 
 # ===== GET_ALL_TICKETS_COUNT =====
 def get_all_tickets_count() -> int:
-    return _fetch_val("SELECT COUNT(*) FROM support_tickets", (), 0) or 0
-
-
     return _fetch_val("SELECT COUNT(*) FROM support_tickets", (), 0) or 0
 # ===============================
 
@@ -3463,3 +3519,55 @@ def get_all_other_settings() -> dict:
         cursor = conn.cursor()
         cursor.execute("SELECT key, value FROM other")
         return {row['key']: row['value'] for row in cursor.fetchall()}
+
+# ===========================================
+# ===== WEBAPP SETTINGS =====
+# Проверка и получение настроек веб-приложения
+def get_webapp_settings() -> dict:
+    row = _fetch_row("SELECT * FROM webapp_settings WHERE id = 1")
+    if not row:
+        _ensure_webapp_settings_table(sqlite3.connect(DB_FILE).cursor())
+        row = _fetch_row("SELECT * FROM webapp_settings WHERE id = 1")
+    # Преобразуем sqlite3.Row в обычный словарь
+    return dict(row) if row else {}
+
+# Обновление настроек веб-приложения
+def update_webapp_settings(webapp_title: str = None, webapp_domen: str = None, webapp_enable: int = None, webapp_logo: str = None, webapp_icon: str = None) -> bool:
+    try:
+        updates = []
+        params = []
+        if webapp_title is not None:
+            updates.append("webapp_title = ?")
+            params.append(webapp_title)
+        if webapp_domen is not None:
+            updates.append("webapp_domen = ?")
+            params.append(webapp_domen)
+        if webapp_enable is not None:
+            updates.append("webapp_enable = ?")
+            params.append(int(webapp_enable))
+        if webapp_logo is not None:
+            updates.append("webapp_logo = ?")
+            params.append(webapp_logo)
+        if webapp_icon is not None:
+            updates.append("webapp_icon = ?")
+            params.append(webapp_icon)
+        
+        if not updates:
+            return False
+        
+        # Строим SQL запрос
+        sql = f"UPDATE webapp_settings SET {', '.join(updates)} WHERE id = 1"
+        return _exec(sql, tuple(params))
+    except Exception as e:
+        logging.error(f"Ошибка при обновлении настроек webapp: {e}")
+        return False
+def update_user_auth_token(user_id: int, token: str | None) -> bool:
+    return _exec("UPDATE users SET auth_token = ? WHERE telegram_id = ?", (token, user_id), "Failed to update auth_token") is not None
+
+def get_user_by_auth_token(token: str) -> dict | None:
+    if not token: return None
+    return _fetch_row("SELECT * FROM users WHERE auth_token = ?", (token,), "Failed to get user by auth_token")
+
+def get_auth_token_by_user_id(user_id: int) -> str | None:
+    row = _fetch_row("SELECT auth_token FROM users WHERE telegram_id = ?", (user_id,), "Failed to get auth_token by user_id")
+    return row["auth_token"] if row else None
