@@ -412,12 +412,12 @@ def is_valid_email(email: str) -> bool:
 # Обновляет текст, клавиатуру и медиа-файл в сообщении, либо отправляет новое при необходимости
 async def smart_edit_message(message: types.Message, text: str, reply_markup=None, photo_path: str = None):
     from aiogram.types import FSInputFile, InputMediaPhoto
-    has_photo, want_photo = bool(message.photo), bool(photo_path and os.path.exists(photo_path))
+    has_photo, want_photo = bool(message.photo), bool(photo_path and os.path.exists(photo_path or ""))
     
     if has_photo and want_photo:
         media = InputMediaPhoto(media=FSInputFile(photo_path), caption=text)
         try: return await message.edit_media(media=media, reply_markup=reply_markup)
-        except TelegramBadRequest: return None
+        except TelegramBadRequest: return await message.answer_photo(photo=FSInputFile(photo_path), caption=text, reply_markup=reply_markup)
     elif has_photo and not want_photo:
         try: await message.delete()
         except TelegramBadRequest: pass
@@ -428,7 +428,7 @@ async def smart_edit_message(message: types.Message, text: str, reply_markup=Non
         return await message.answer_photo(photo=FSInputFile(photo_path), caption=text, reply_markup=reply_markup)
     else:
         try: return await message.edit_text(text, reply_markup=reply_markup)
-        except TelegramBadRequest: return None
+        except TelegramBadRequest: return await message.answer(text, reply_markup=reply_markup)
 # ===== Конец функции smart_edit_message =====
 
 # ===== ОТОБРАЖЕНИЕ ГЛАВНОГО МЕНЮ =====
