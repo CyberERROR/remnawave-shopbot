@@ -354,11 +354,15 @@
             gap: 0.5rem;
         }
     </style>
+    {% if stealth_reveal %}
+    <script>
+        history.replaceState(null, "", "/");
+    </script>
+    {% endif %}
 </head>
 
 <body class="dark">
     <div id="login-identifier-v2" class="hidden" data-login-page="true"></div>
-    <!-- Particles Layer -->
     <div id="particles-container" class="particles"></div>
 
     <div class="relative z-10 w-full flex items-center justify-center p-6">
@@ -404,7 +408,8 @@
                             style="animation-delay: -2s">
                             <span class="material-symbols-outlined text-purple-400 text-3xl mb-4">vpn_lock</span>
                             <div class="text-2xl font-black text-white">Encrypted</div>
-                            <div class="text-[10px] text-white/30 uppercase font-bold tracking-widest mt-1">End-to-End
+                            <div class="text-[10px] text-white/30 uppercase font-bold tracking-widest mt-1">
+                                End-to-End
                                 Tunnel
                             </div>
                         </div>
@@ -444,7 +449,8 @@
                             <span class="material-symbols-outlined text-primary text-3xl">verified_user</span>
                         </div>
                         <h3 class="text-2xl font-black text-white mb-2 tracking-tight">Вход в Админку</h3>
-                        <p class="text-white/30 text-[10px] uppercase font-bold tracking-[0.2em]">Personal VPN Dashboard
+                        <p class="text-white/30 text-[10px] uppercase font-bold tracking-[0.2em]">Personal VPN
+                            Dashboard
                         </p>
                     </div>
 
@@ -470,11 +476,12 @@
                             <span class="material-symbols-outlined text-4xl text-red-500">lock_person</span>
                         </div>
                         <h2 class="text-xl font-bold text-red-500 mb-2">Доступ заблокирован</h2>
-                        <p class="text-white/40 text-sm leading-relaxed">Система безопасности обнаружила подозрительную
+                        <p class="text-white/40 text-sm leading-relaxed">Система безопасности обнаружила
+                            подозрительную
                             активность.</p>
                     </div>
                     {% else %}
-                    <form method="post" class="space-y-6 animate-slide-up delay-100" autocomplete="off">
+                    <form method="post" action="/login" class="space-y-6 animate-slide-up delay-100" autocomplete="off">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
                         <div class="space-y-3 group">
@@ -533,7 +540,8 @@
                     {% endif %}
 
                     <div class="mt-12 text-center animate-slide-up delay-300">
-                        <div class="text-[9px] font-bold text-white/10 uppercase tracking-[0.4em]">Remnawave Shop Bot
+                        <div class="text-[9px] font-bold text-white/10 uppercase tracking-[0.4em]">Remnawave Shop
+                            Bot
                             v.{{ project_info.version }}</div>
                     </div>
                 </div>
@@ -542,7 +550,7 @@
     </div>
 
     <script>
-        // Create Particles (PC Only)
+
         const container = document.getElementById('particles-container');
         if (window.innerWidth >= 900) {
             const particleCount = 25;
@@ -578,7 +586,6 @@
             }
         }
 
-        // Remember login logic
         const uIn = document.getElementById('username');
         const rem = document.getElementById('remember_me');
         if (uIn && rem) {

@@ -49,9 +49,13 @@
         </div>
     </td>
     <td class="px-5 py-4 whitespace-nowrap">
-        <div class="text-sm text-white">{% if tx.created_date %}{{ tx.created_date.split(' ')[0] }}{% else %}N/A{% endif
-            %}</div>
-        <div class="text-xs text-white/50">{{ tx.created_date | relative_time }}</div>
+        {% if tx.created_date %}
+        {% set d_parts = tx.created_date.split(' ')[0].split('-') %}
+        <div class="text-sm text-white">{{ d_parts[1] }}.{{ d_parts[2] }}<br><span class="text-white/50 text-xs">{{
+                tx.created_date | relative_time }}</span></div>
+        {% else %}
+        <div class="text-sm text-white">N/A</div>
+        {% endif %}
     </td>
     <td class="px-5 py-4 whitespace-nowrap text-right">
         <a href="{{ url_for('users_page', q=tx.user_id) }}"

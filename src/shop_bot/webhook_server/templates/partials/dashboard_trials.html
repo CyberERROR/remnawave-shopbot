@@ -18,9 +18,13 @@
         </div>
     </td>
     <td class="px-5 py-4 whitespace-nowrap">
-        <div class="text-sm text-white">{% if trial.created_at %}{{ trial.created_at.split(' ')[0] }}{% else %}N/A{%
-            endif %}</div>
-        <div class="text-xs text-white/50">{{ trial.created_at | relative_time }}</div>
+        {% if trial.created_at %}
+        {% set d_parts = trial.created_at.split(' ')[0].split('-') %}
+        <div class="text-sm text-white">{{ d_parts[1] }}.{{ d_parts[2] }}<br><span class="text-white/50 text-xs">{{
+                trial.created_at | relative_time }}</span></div>
+        {% else %}
+        <div class="text-sm text-white">N/A</div>
+        {% endif %}
     </td>
     <td class="px-5 py-4 whitespace-nowrap text-right">
         <a href="{{ url_for('users_page', q=trial.telegram_id) }}"

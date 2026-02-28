@@ -538,7 +538,7 @@ async def list_users(host_name: str, squad_uuid: str | None = None, size: int | 
             response = await _request_for_host(host_name, "GET", "/api/users", params=params, expected_status=(200,))
         except Exception:
             if page == 0:
-                return []
+                raise
             break
             
         payload = response.json() or {}

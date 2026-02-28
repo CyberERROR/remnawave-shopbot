@@ -453,9 +453,46 @@
                     </div>
                 </div>
 
+                <div class="mb-3 bg-black/40 p-1 rounded-xl flex w-full sm:w-auto overflow-hidden relative shadow-inner border border-white/5"
+                    id="promo_type_switch" style="display: inline-flex;">
+                    <div class="absolute inset-y-1 w-[calc(33.33%-4px)] bg-primary rounded-lg shadow-lg shadow-primary/20 transition-all duration-300 ease-out"
+                        id="promo_type_indicator"></div>
+
+                    <label class="relative z-10 flex-1 sm:flex-none cursor-pointer">
+                        <input type="radio" name="promo_type" value="discount" checked class="peer sr-only"
+                            onchange="window.togglePromoType(0)">
+                        <div
+                            class="px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-[#102219] w-full sm:w-32 xl:w-36 text-center">
+                            Скидка
+                        </div>
+                    </label>
+                    <label class="relative z-10 flex-1 sm:flex-none cursor-pointer">
+                        <input type="radio" name="promo_type" value="universal" class="peer sr-only"
+                            onchange="window.togglePromoType(1)">
+                        <div
+                            class="px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-white/60 w-full sm:w-32 xl:w-36 text-center hover:text-white">
+                            Дни
+                        </div>
+                    </label>
+                    <label class="relative z-10 flex-1 sm:flex-none cursor-pointer">
+                        <input type="radio" name="promo_type" value="balance" class="peer sr-only"
+                            onchange="window.togglePromoType(2)">
+                        <div
+                            class="px-6 py-2 rounded-lg text-sm font-bold transition-colors duration-200 text-white/60 w-full sm:w-32 xl:w-36 text-center hover:text-white">
+                            Баланс
+                        </div>
+                    </label>
+                </div>
+
+                <div class="mb-6 ml-1 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-white/40 text-[14px]">info</span>
+                    <p class="text-[11px] text-white/50" id="promo-type-desc-text">Скидка - применяется только при
+                        оплате подписки</p>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-                    <div class="relative group/input lg:col-span-1">
+                    <div id="promo-discount-field" class="relative group/input lg:col-span-1">
                         <label
                             class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Скидка</label>
                         <div class="flex">
@@ -473,6 +510,32 @@
                                     <option value="fixed">RUB</option>
                                 </select>
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="promo-reward-field" class="hidden relative group/input lg:col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Бонус
+                            (дни)</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">calendar_add_on</span>
+                            <input type="number" name="reward_value" min="1"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                                placeholder="Например: 5" />
+                        </div>
+                    </div>
+
+                    <div id="promo-balance-field" class="hidden relative group/input lg:col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Сумма
+                            (RUB)</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">account_balance_wallet</span>
+                            <input type="number" name="balance_value" min="1"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                                placeholder="Например: 100" />
                         </div>
                     </div>
 
@@ -617,7 +680,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="group/input">
+                    <div class="group/input" id="edit-discount-type-container">
                         <label class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Тип
                             скидки</label>
                         <div class="grid grid-cols-2 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
@@ -636,14 +699,42 @@
                         </div>
                     </div>
 
-                    <div class="group/input">
+                    <div class="group/input" id="edit-discount-value-container">
                         <label
                             class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Значение
                             скидки</label>
                         <div class="relative">
                             <span
                                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-all">payments</span>
-                            <input type="number" name="edit_discount_value" step="0.01" min="0" required
+                            <input type="number" name="edit_discount_value" step="0.01" min="0"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 mb-6 hidden" id="edit-reward-value-container">
+                    <div class="group/input col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Бонус
+                            (дни)</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-all">calendar_add_on</span>
+                            <input type="number" name="edit_reward_value" min="1"
+                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 mb-6 hidden" id="edit-balance-value-container">
+                    <div class="group/input col-span-1">
+                        <label
+                            class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-2 ml-1">Сумма
+                            (RUB)</label>
+                        <div class="relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within/input:text-primary transition-all">account_balance_wallet</span>
+                            <input type="number" name="edit_balance_value" min="1"
                                 class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-inner" />
                         </div>
                     </div>
@@ -1253,55 +1344,74 @@
                                 </div>
                             </div>
 
-                            <!-- Logo URL -->
-                            <div class="space-y-2.5">
-                                <label
-                                    class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
-                                    <span class="material-symbols-outlined text-sm">image</span>
-                                    Логотип (URL адрес)
-                                </label>
-                                <div class="flex flex-col md:flex-row gap-4">
-                                    <div class="relative flex-1 group/input">
-                                        <input type="text" name="webapp_logo" id="webapp_logo"
-                                            value="{{ webapp.webapp_logo or '' }}"
-                                            class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
-                                            placeholder="https://your-domain.com/logo.png">
-                                        <div
-                                            class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Logo URL -->
+                                <div class="space-y-2.5">
+                                    <label
+                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                        <span class="material-symbols-outlined text-sm">image</span>
+                                        Логотип (URL адрес)
+                                    </label>
+                                    <div class="flex flex-col md:flex-row gap-4">
+                                        <div class="relative flex-1 group/input">
+                                            <input type="text" name="webapp_logo" id="webapp_logo"
+                                                value="{{ webapp.webapp_logo or '' }}"
+                                                class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
+                                                placeholder="https://your-domain.com/logo.png">
+                                            <div
+                                                class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div
-                                        class="relative w-full md:w-20 h-20 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 group/preview transition-all hover:border-primary/30">
-                                        <img id="webapp-logo-preview" src="{{ webapp.webapp_logo }}"
-                                            onerror="this.style.display='none'"
-                                            class="w-full h-full object-contain p-2 {{ 'hidden' if not webapp.webapp_logo else '' }}">
-                                        <span
-                                            class="material-symbols-outlined text-white/10 text-3xl {{ 'hidden' if webapp.webapp_logo else '' }}"
-                                            id="webapp-logo-placeholder">image</span>
                                         <div
-                                            class="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 flex items-center justify-center transition-opacity">
+                                            class="relative w-full md:w-20 h-20 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 group/preview transition-all hover:border-primary/30">
+                                            <img id="webapp-logo-preview" src="{{ webapp.webapp_logo }}"
+                                                onerror="this.style.display='none'"
+                                                class="w-full h-full object-contain p-2 {{ 'hidden' if not webapp.webapp_logo else '' }}">
                                             <span
-                                                class="text-[8px] text-white font-bold uppercase tracking-tighter">Preview</span>
+                                                class="material-symbols-outlined text-white/10 text-3xl {{ 'hidden' if webapp.webapp_logo else '' }}"
+                                                id="webapp-logo-placeholder">image</span>
+                                            <div
+                                                class="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 flex items-center justify-center transition-opacity">
+                                                <span
+                                                    class="text-[8px] text-white font-bold uppercase tracking-tighter">Preview</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Favicon URL -->
-                            <div class="space-y-2.5">
-                                <label
-                                    class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
-                                    <span class="material-symbols-outlined text-sm">fluid_meditation</span>
-                                    Favicon (URL адрес)
-                                </label>
-                                <div class="relative group/input">
-                                    <input type="text" name="webapp_icon" id="webapp_icon"
-                                        value="{{ webapp.webapp_icon or '' }}"
-                                        class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
-                                        placeholder="https://your-domain.com/favicon.ico">
-                                    <div
-                                        class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
+                                <!-- Favicon URL -->
+                                <div class="space-y-2.5">
+                                    <label
+                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                        <span class="material-symbols-outlined text-sm">language</span>
+                                        Favicon (URL адрес)
+                                    </label>
+                                    <div class="flex flex-col md:flex-row gap-4">
+                                        <div class="relative flex-1 group/input">
+                                            <input type="text" name="webapp_icon" id="webapp_icon"
+                                                value="{{ webapp.webapp_icon or '' }}"
+                                                class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
+                                                placeholder="https://your-domain.com/favicon.ico">
+                                            <div
+                                                class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            class="relative w-full md:w-20 h-20 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 group/preview transition-all hover:border-primary/30">
+                                            <img id="webapp-icon-preview" src="{{ webapp.webapp_icon }}"
+                                                onerror="this.style.display='none'"
+                                                class="w-full h-full object-contain p-2 {{ 'hidden' if not webapp.webapp_icon else '' }}">
+                                            <span
+                                                class="material-symbols-outlined text-white/10 text-3xl {{ 'hidden' if webapp.webapp_icon else '' }}"
+                                                id="webapp-icon-placeholder">language</span>
+                                            <div
+                                                class="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 flex items-center justify-center transition-opacity">
+                                                <span
+                                                    class="text-[8px] text-white font-bold uppercase tracking-tighter">Preview</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -3082,6 +3192,71 @@
             flatpickr("#promo_valid_until", commonConfig);
         }
 
+        window.togglePromoType = function (index) {
+            const type = document.querySelector('input[name="promo_type"]:checked').value;
+            const discountField = document.getElementById('promo-discount-field');
+            const rewardField = document.getElementById('promo-reward-field');
+            const balanceField = document.getElementById('promo-balance-field');
+            const indicator = document.getElementById('promo_type_indicator');
+            const wrapper = document.getElementById('promo_type_switch');
+
+            if (indicator) {
+                indicator.style.transform = `translateX(${index * 100}%)`;
+            }
+
+            if (wrapper) {
+                const modeDivs = wrapper.querySelectorAll('label > div');
+                modeDivs.forEach((div, i) => {
+                    if (i === index) {
+                        div.classList.remove('text-white/60', 'hover:text-white');
+                        div.classList.add('text-[#102219]');
+                    } else {
+                        div.classList.add('text-white/60', 'hover:text-white');
+                        div.classList.remove('text-[#102219]');
+                    }
+                });
+            }
+
+            const descText = document.getElementById('promo-type-desc-text');
+            if (type === 'universal') {
+                if (descText) descText.innerText = 'Дни - применяется в отдельном меню профиля (Ввести промокод)';
+                discountField.classList.add('hidden');
+                rewardField.classList.remove('hidden');
+                if (balanceField) balanceField.classList.add('hidden');
+                document.querySelector('input[name="reward_value"]').required = true;
+                if (document.querySelector('input[name="balance_value"]')) {
+                    document.querySelector('input[name="balance_value"]').required = false;
+                }
+                if (document.querySelector('input[name="discount_value"]')) {
+                    document.querySelector('input[name="discount_value"]').required = false;
+                }
+            } else if (type === 'balance') {
+                if (descText) descText.innerText = 'Баланс - применяется в отдельном меню профиля (Ввести промокод)';
+                discountField.classList.add('hidden');
+                rewardField.classList.add('hidden');
+                if (balanceField) balanceField.classList.remove('hidden');
+                document.querySelector('input[name="reward_value"]').required = false;
+                if (document.querySelector('input[name="balance_value"]')) {
+                    document.querySelector('input[name="balance_value"]').required = true;
+                }
+                if (document.querySelector('input[name="discount_value"]')) {
+                    document.querySelector('input[name="discount_value"]').required = false;
+                }
+            } else {
+                if (descText) descText.innerText = 'Скидка - применяется только при оплате подписки';
+                discountField.classList.remove('hidden');
+                rewardField.classList.add('hidden');
+                if (balanceField) balanceField.classList.add('hidden');
+                document.querySelector('input[name="reward_value"]').required = false;
+                if (document.querySelector('input[name="balance_value"]')) {
+                    document.querySelector('input[name="balance_value"]').required = false;
+                }
+                if (document.querySelector('input[name="discount_value"]')) {
+                    document.querySelector('input[name="discount_value"]').required = true;
+                }
+            }
+        };
+
         async function loadPromos() {
             try {
                 const resp = await fetch('/other/promo/list');
@@ -3104,9 +3279,11 @@
             }
 
             tbody.innerHTML = promos.map(promo => {
-                const discount = promo.discount_percent
-                    ? `${promo.discount_percent}%`
-                    : `${promo.discount_amount} ₽`;
+                const discount = (promo.promo_type === 'universal')
+                    ? `+${promo.reward_value} дней`
+                    : (promo.promo_type === 'balance')
+                        ? `+${promo.reward_value} ₽`
+                        : (promo.discount_percent ? `${promo.discount_percent}%` : `${promo.discount_amount} ₽`);
 
                 const used = promo.used_total || 0;
                 const totalLimit = promo.usage_limit_total || '∞';
@@ -3212,9 +3389,39 @@
                     document.getElementById('edit-promo-code').value = promo.code;
                     document.getElementById('edit-code-display').value = promo.code;
 
-                    const discountType = promo.discount_percent ? 'percent' : 'fixed';
-                    document.querySelector(`input[name="edit_discount_type"][value="${discountType}"]`).checked = true;
-                    document.querySelector('input[name="edit_discount_value"]').value = promo.discount_percent || promo.discount_amount;
+                    if (promo.promo_type === 'universal') {
+                        document.getElementById('edit-discount-type-container').classList.add('hidden');
+                        document.getElementById('edit-discount-value-container').classList.add('hidden');
+                        document.getElementById('edit-reward-value-container').classList.remove('hidden');
+                        if (document.getElementById('edit-balance-value-container')) document.getElementById('edit-balance-value-container').classList.add('hidden');
+
+                        document.querySelector('input[name="edit_reward_value"]').value = promo.reward_value || '';
+                        document.querySelector('input[name="edit_discount_value"]').value = '';
+                        if (document.querySelector('input[name="edit_balance_value"]')) document.querySelector('input[name="edit_balance_value"]').value = '';
+                        document.querySelector('input[name="edit_discount_type"][value="percent"]').checked = true;
+                    } else if (promo.promo_type === 'balance') {
+                        document.getElementById('edit-discount-type-container').classList.add('hidden');
+                        document.getElementById('edit-discount-value-container').classList.add('hidden');
+                        document.getElementById('edit-reward-value-container').classList.add('hidden');
+                        if (document.getElementById('edit-balance-value-container')) document.getElementById('edit-balance-value-container').classList.remove('hidden');
+
+                        document.querySelector('input[name="edit_reward_value"]').value = '';
+                        document.querySelector('input[name="edit_discount_value"]').value = '';
+                        if (document.querySelector('input[name="edit_balance_value"]')) document.querySelector('input[name="edit_balance_value"]').value = promo.reward_value || '';
+                        document.querySelector('input[name="edit_discount_type"][value="percent"]').checked = true;
+                    } else {
+                        document.getElementById('edit-discount-type-container').classList.remove('hidden');
+                        document.getElementById('edit-discount-value-container').classList.remove('hidden');
+                        document.getElementById('edit-reward-value-container').classList.add('hidden');
+                        if (document.getElementById('edit-balance-value-container')) document.getElementById('edit-balance-value-container').classList.add('hidden');
+
+                        const discountType = promo.discount_percent ? 'percent' : 'fixed';
+                        const discountRadio = document.querySelector(`input[name="edit_discount_type"][value="${discountType}"]`);
+                        if (discountRadio) discountRadio.checked = true;
+                        document.querySelector('input[name="edit_discount_value"]').value = promo.discount_percent || promo.discount_amount || '';
+                        document.querySelector('input[name="edit_reward_value"]').value = '';
+                        if (document.querySelector('input[name="edit_balance_value"]')) document.querySelector('input[name="edit_balance_value"]').value = '';
+                    }
 
                     document.querySelector('input[name="edit_usage_limit_total"]').value = promo.usage_limit_total || '';
                     document.querySelector('input[name="edit_usage_limit_per_user"]').value = promo.usage_limit_per_user || '';
@@ -3222,10 +3429,14 @@
                     if (promo.valid_from) {
                         const dt = new Date(promo.valid_from);
                         document.querySelector('input[name="edit_valid_from"]').value = dt.toISOString().slice(0, 16);
+                    } else {
+                        document.querySelector('input[name="edit_valid_from"]').value = '';
                     }
                     if (promo.valid_until) {
                         const dt = new Date(promo.valid_until);
                         document.querySelector('input[name="edit_valid_until"]').value = dt.toISOString().slice(0, 16);
+                    } else {
+                        document.querySelector('input[name="edit_valid_until"]').value = '';
                     }
 
                     document.querySelector('textarea[name="edit_description"]').value = promo.description || '';
@@ -3244,8 +3455,26 @@
             const code = document.getElementById('edit-promo-code').value;
             const formData = new FormData();
             formData.append('csrf_token', window.getCsrfToken());
-            formData.append('discount_type', document.querySelector('input[name="edit_discount_type"]:checked').value);
-            formData.append('discount_value', document.querySelector('input[name="edit_discount_value"]').value);
+
+            const isUniversal = !document.getElementById('edit-reward-value-container').classList.contains('hidden');
+            const isBalance = !document.getElementById('edit-balance-value-container').classList.contains('hidden');
+
+            let promoType = 'discount';
+            if (isUniversal) promoType = 'universal';
+            else if (isBalance) promoType = 'balance';
+
+            formData.append('promo_type', promoType);
+
+            if (isUniversal) {
+                formData.append('reward_value', document.querySelector('input[name="edit_reward_value"]').value);
+            } else if (isBalance) {
+                formData.append('balance_value', document.querySelector('input[name="edit_balance_value"]').value);
+            } else {
+                const checkedDiscountType = document.querySelector('input[name="edit_discount_type"]:checked');
+                formData.append('discount_type', checkedDiscountType ? checkedDiscountType.value : 'percent');
+                formData.append('discount_value', document.querySelector('input[name="edit_discount_value"]').value);
+            }
+
             formData.append('usage_limit_total', document.querySelector('input[name="edit_usage_limit_total"]').value);
             formData.append('usage_limit_per_user', document.querySelector('input[name="edit_usage_limit_per_user"]').value);
             formData.append('valid_from', document.querySelector('input[name="edit_valid_from"]').value);
@@ -5121,6 +5350,10 @@
 
             // Функция для форматирования вывода с цветами
             function formatTerminalOutput(text) {
+                if (!text) return "";
+                // Очистка от ANSI-последовательностей (на случай, если просочились)
+                text = text.replace(/\u001b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])|\u001b\(B|\u001b\][0-2];[^\x07]*\x07/g, '');
+
                 // Заменяем специальные символы HTML
                 text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -5542,6 +5775,26 @@
                     webappLogoPreview.style.display = 'none';
                     webappLogoPreview.classList.add('hidden');
                     webappLogoPlaceholder.classList.remove('hidden');
+                }
+            });
+        }
+
+        const webappIconInput = document.getElementById('webapp_icon');
+        const webappIconPreview = document.getElementById('webapp-icon-preview');
+        const webappIconPlaceholder = document.getElementById('webapp-icon-placeholder');
+
+        if (webappIconInput) {
+            webappIconInput.addEventListener('input', (e) => {
+                const url = e.target.value.trim();
+                if (url) {
+                    webappIconPreview.src = url;
+                    webappIconPreview.style.display = 'block';
+                    webappIconPreview.classList.remove('hidden');
+                    webappIconPlaceholder.classList.add('hidden');
+                } else {
+                    webappIconPreview.style.display = 'none';
+                    webappIconPreview.classList.add('hidden');
+                    webappIconPlaceholder.classList.remove('hidden');
                 }
             });
         }

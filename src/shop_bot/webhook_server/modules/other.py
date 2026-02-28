@@ -14,6 +14,14 @@ from . import server_plan
 
 logger = logging.getLogger(__name__)
 
+import re
+
+def clean_ansi(text):
+    if not text: return ""
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])|\x1B\(B|\x1B\][0-2];[^\x07]*\x07')
+    return ansi_escape.sub('', text)
+
+
 # ===== НАСТРОЙКИ И ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
 # Конфигурация путей, расширений файлов и глобальных объектов
 # ===== Конец настроек =====
@@ -91,8 +99,10 @@ def get_ssh_credentials(server):
     port = server.get('ssh_port', 22)
     username = server.get('ssh_user') or server.get('ssh_username', 'root')
     password = server.get('ssh_password')
-    if not host or not password: return None, (jsonify({'ok': False, 'error': 'Параметры SSH не настроены'}), 400)
-    return (host, port, username, password), None
+    key_path = server.get('ssh_key_path')
+    if not host or (not password and not key_path): 
+        return None, (jsonify({'ok': False, 'error': 'Параметры SSH не настроены'}), 400)
+    return (host, port, username, password, key_path), None
 # ===== Конец функции get_ssh_credentials =====
 
 # ===== ПОЛУЧЕНИЕ ЭКЗЕМПЛЯРА БОТА =====
@@ -116,23 +126,40 @@ def get_admin_id_safe():
 # Проверяет корректность введенных данных для создания промокода
 def validate_promo_params(form_data):
     try:
+        promo_type = form_data.get('promo_type', 'discount')
         discount_type = form_data.get('discount_type', 'percent')
         discount_value = form_data.get('discount_value')
+        reward_value = form_data.get('reward_value')
         usage_limit_total = form_data.get('usage_limit_total')
         usage_limit_per_user = form_data.get('usage_limit_per_user')
         valid_from = form_data.get('valid_from')
         valid_until = form_data.get('valid_until')
         description = form_data.get('description', '')
 
-        if not discount_value: return None, (jsonify({'ok': False, 'error': 'Значение скидки обязательно'}), 400)
+        discount_percent = None
+        discount_amount = None
+        reward_val_int = 0
 
-        try: discount_value = float(discount_value)
-        except ValueError: return None, (jsonify({'ok': False, 'error': 'Некорректное значение скидки'}), 400)
+        if promo_type == 'discount':
+            if not discount_value: return None, (jsonify({'ok': False, 'error': 'Значение скидки обязательно'}), 400)
+            try: discount_value = float(discount_value)
+            except ValueError: return None, (jsonify({'ok': False, 'error': 'Некорректное значение скидки'}), 400)
+            if discount_value <= 0: return None, (jsonify({'ok': False, 'error': 'Скидка должна быть положительной'}), 400)
+            
+            discount_percent = discount_value if discount_type == 'percent' else None
+            discount_amount = discount_value if discount_type == 'fixed' else None
+        elif promo_type == 'universal':
+            if not reward_value: return None, (jsonify({'ok': False, 'error': 'Значение бонуса (дни) обязательно'}), 400)
+            try: reward_val_int = int(reward_value)
+            except ValueError: return None, (jsonify({'ok': False, 'error': 'Некорректное значение бонуса'}), 400)
+            if reward_val_int <= 0: return None, (jsonify({'ok': False, 'error': 'Бонус должен быть положительным'}), 400)
+        elif promo_type == 'balance':
+            balance_value = form_data.get('balance_value')
+            if not balance_value: return None, (jsonify({'ok': False, 'error': 'Сумма пополнения обязательна'}), 400)
+            try: reward_val_int = int(balance_value)
+            except ValueError: return None, (jsonify({'ok': False, 'error': 'Некорректная сумма пополнения'}), 400)
+            if reward_val_int <= 0: return None, (jsonify({'ok': False, 'error': 'Сумма должна быть положительной'}), 400)
 
-        if discount_value <= 0: return None, (jsonify({'ok': False, 'error': 'Скидка должна быть положительной'}), 400)
-
-        discount_percent = discount_value if discount_type == 'percent' else None
-        discount_amount = discount_value if discount_type == 'fixed' else None
         usage_limit_total_int = int(usage_limit_total) if usage_limit_total else None
         usage_limit_per_user_int = int(usage_limit_per_user) if usage_limit_per_user else None
         
@@ -140,6 +167,8 @@ def validate_promo_params(form_data):
         valid_until_dt = datetime.fromisoformat(valid_until) if valid_until else None
 
         return {
+            'promo_type': promo_type,
+            'reward_value': reward_val_int,
             'discount_percent': discount_percent,
             'discount_amount': discount_amount,
             'usage_limit_total': usage_limit_total_int,
@@ -215,12 +244,41 @@ def save_banned_users_data(banned_ids):
 
 # ===== ВЫПОЛНЕНИЕ SSH КОМАНДЫ =====
 # Выполняет одну команду через Paramiko и возвращает результат
-def execute_ssh_command(host, port, username, password, command, timeout=10):
+def execute_ssh_command(host, port, username, password, command, timeout=10, key_path=None):
     try:
         import paramiko
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname=host, port=port, username=username, password=password, timeout=timeout, look_for_keys=False, allow_agent=False)
+        
+        connect_kwargs = {
+            'hostname': host,
+            'port': port,
+            'username': username,
+            'timeout': timeout,
+            'look_for_keys': False,
+            'allow_agent': False
+        }
+        
+        if key_path:
+            actual_key_path = key_path
+            if not os.path.exists(actual_key_path):
+                # Попытка найти файл в локальной папке, если абсолютный путь не верен (например, перенос с другой системы)
+                filename = os.path.basename(key_path)
+                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                alt_path = os.path.join(base_dir, 'modules', 'keys', filename)
+                if os.path.exists(alt_path):
+                    actual_key_path = alt_path
+                else:
+                    logger.error(f"SSH Ключ не найден ни по основному ({key_path}), ни по запасному ({alt_path}) пути")
+            
+            if os.path.exists(actual_key_path):
+                connect_kwargs['key_filename'] = actual_key_path
+            else:
+                connect_kwargs['password'] = password
+        else:
+            connect_kwargs['password'] = password
+            
+        client.connect(**connect_kwargs)
         stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
         output = stdout.read().decode('utf-8').strip()
         error = stderr.read().decode('utf-8').strip()
@@ -830,8 +888,8 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def servers_list():
         try:
             hosts, ssh_targets = rw_repo.list_squads(active_only=False), rw_repo.get_all_ssh_targets()
-            filtered_hosts = [h for h in hosts if h.get('ssh_host') and h.get('ssh_password')]
-            filtered_ssh_targets = [t for t in ssh_targets if t.get('ssh_host') and t.get('ssh_password')]
+            filtered_hosts = [h for h in hosts if h.get('ssh_host') and (h.get('ssh_password') or h.get('ssh_key_path'))]
+            filtered_ssh_targets = [t for t in ssh_targets if t.get('ssh_host') and (t.get('ssh_password') or t.get('ssh_key_path'))]
             return jsonify({'ok': True, 'hosts': filtered_hosts, 'ssh_targets': filtered_ssh_targets})
         except Exception as e:
             logger.error(f"Ошибка получения списка серверов: {e}")
@@ -882,7 +940,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             delimiter = "___"
             command = (
@@ -895,7 +953,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 f"awk 'NR>2 && $1 !~ /lo/ {{rx += $2; tx += $10}} END {{print rx \" \" tx}}' /proc/net/dev || echo '0 0'; echo '{delimiter}'; "
                 f"sleep 1; awk 'NR>2 && $1 !~ /lo/ {{rx += $2; tx += $10}} END {{print rx \" \" tx}}' /proc/net/dev || echo '0 0'"
             )
-            result = execute_ssh_command(host, port, username, password, command, timeout=20)
+            result = execute_ssh_command(host, port, username, password, command, timeout=20, key_path=key_path)
             
             if result['ok']:
                 try:
@@ -986,10 +1044,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             logger.info(f"Перезагрузка сервера {server_type}/{name} ({host}:{port})")
-            execute_ssh_command(host, port, username, password, 'sudo reboot', timeout=5)
+            execute_ssh_command(host, port, username, password, 'sudo reboot', timeout=5, key_path=key_path)
             return jsonify({'ok': True, 'message': f'Команда перезагрузки отправлена на {name}'})
         except Exception as e:
             logger.error(f"Ошибка перезагрузки {server_type}/{name}: {e}")
@@ -1006,19 +1064,19 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             status = {'docker_installed': False, 'directory_exists': False, 'compose_file_exists': False, 'suggested_step': 1}
             
             logger.info(f"Проверка Docker на {name} ({host}:{port})")
-            docker_check = execute_ssh_command(host, port, username, password, 'docker --version', timeout=10)
+            docker_check = execute_ssh_command(host, port, username, password, 'docker --version', timeout=10, key_path=key_path)
             status['docker_installed'] = docker_check['ok']
             
             if status['docker_installed']:
-                dir_check = execute_ssh_command(host, port, username, password, 'test -d /opt/remnanode && echo "exists"', timeout=10)
+                dir_check = execute_ssh_command(host, port, username, password, 'test -d /opt/remnanode && echo "exists"', timeout=10, key_path=key_path)
                 status['directory_exists'] = 'exists' in dir_check.get('output', '')
                 if status['directory_exists']:
-                    compose_check = execute_ssh_command(host, port, username, password, 'test -f /opt/remnanode/docker-compose.yml && echo "exists"', timeout=10)
+                    compose_check = execute_ssh_command(host, port, username, password, 'test -f /opt/remnanode/docker-compose.yml && echo "exists"', timeout=10, key_path=key_path)
                     status['compose_file_exists'] = 'exists' in compose_check.get('output', '')
             
             if not status['docker_installed']: status['suggested_step'] = 1
@@ -1043,7 +1101,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             docker_install_cmd = 'curl -fsSL https://get.docker.com | sh' if os_type == 'debian' else 'sudo curl -fsSL https://get.docker.com | sh'
             logger.info(f"Установка Docker на {name} ({host}:{port}) - режим {os_type}")
@@ -1051,7 +1109,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             result_container = {'res': None, 'done': False}
             def run_install():
                 try:
-                    res = execute_ssh_command(host, port, username, password, docker_install_cmd, timeout=300)
+                    res = execute_ssh_command(host, port, username, password, docker_install_cmd, timeout=300, key_path=key_path)
                     result_container['res'] = res
                 except Exception as e:
                     result_container['res'] = {'ok': False, 'error': str(e), 'output': ''}
@@ -1090,10 +1148,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             logger.info(f"Создание директории на {name} ({host}:{port})")
-            result = execute_ssh_command(host, port, username, password, 'mkdir -p /opt/remnanode && cd /opt/remnanode && pwd', timeout=30)
+            result = execute_ssh_command(host, port, username, password, 'mkdir -p /opt/remnanode && cd /opt/remnanode && pwd', timeout=30, key_path=key_path)
             
             if result['ok']:
                 return jsonify({'ok': True, 'message': 'Директория успешно создана', 'output': result['output']})
@@ -1116,10 +1174,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             logger.info(f"Сохранение docker-compose.yml на {name} ({host}:{port})")
-            result = execute_ssh_command(host, port, username, password, f"cd /opt/remnanode && cat > docker-compose.yml << 'EOF'\n{content}\nEOF", timeout=30)
+            result = execute_ssh_command(host, port, username, password, f"cd /opt/remnanode && cat > docker-compose.yml << 'EOF'\n{content}\nEOF", timeout=30, key_path=key_path)
             
             if result['ok'] or result['exit_status'] == 0:
                 return jsonify({'ok': True, 'message': 'docker-compose.yml успешно сохранен'})
@@ -1139,10 +1197,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             logger.info(f"Чтение docker-compose.yml с {name} ({host}:{port})")
-            result = execute_ssh_command(host, port, username, password, 'cd /opt/remnanode && cat docker-compose.yml', timeout=30)
+            result = execute_ssh_command(host, port, username, password, 'cd /opt/remnanode && cat docker-compose.yml', timeout=30, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'content': result['output']})
             return jsonify({'ok': False, 'error': result['error'] or 'Файл не найден или ошибка чтения', 'output': result['output']}), 500
@@ -1162,7 +1220,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             if action == 'start': command, timeout = 'cd /opt/remnanode && docker compose up -d', 120
             elif action == 'restart': command, timeout = 'cd /opt/remnanode && docker compose restart remnanode', 60
@@ -1170,7 +1228,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             else: return jsonify({'ok': False, 'error': 'Неверное действие'}), 400
             
             logger.info(f"Управление контейнерами на {name} ({host}:{port}) - действие: {action}")
-            result = execute_ssh_command(host, port, username, password, command, timeout=timeout)
+            result = execute_ssh_command(host, port, username, password, command, timeout=timeout, key_path=key_path)
             
             if result['ok'] or result['exit_status'] == 0:
                 return jsonify({'ok': True, 'message': f'Действие {action} успешно выполнено', 'output': result['output']})
@@ -1190,7 +1248,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             command = (
                 '(if [ -f /opt/remnanode/docker-compose.yml ]; then cd /opt/remnanode && sudo docker compose down 2>/dev/null || true; fi; '
@@ -1202,7 +1260,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             )
             
             logger.warning(f"УДАЛЕНИЕ ВСЕХ ДАННЫХ Docker и ноды на {name} ({host}:{port})")
-            result = execute_ssh_command(host, port, username, password, command, timeout=180)
+            result = execute_ssh_command(host, port, username, password, command, timeout=180, key_path=key_path)
             
             if result.get('output') and 'Cleanup completed' in result.get('output', ''):
                 return jsonify({'ok': True, 'message': 'Нода и Docker полностью удалены', 'output': result['output']})
@@ -1419,7 +1477,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             command = (
                 "systemctl is-active wireproxy; "
@@ -1427,7 +1485,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 "if [ -f /usr/local/bin/wireproxy ] || [ -f /usr/bin/wireproxy ]; then echo 'BINARY_FOUND'; else echo 'BINARY_MISSING'; fi; "
                 "systemctl cat wireproxy 2>/dev/null | grep -E 'MemoryMax|MemoryHigh' || true"
             )
-            result = execute_ssh_command(host, port, username, password, command, timeout=15)
+            result = execute_ssh_command(host, port, username, password, command, timeout=15, key_path=key_path)
             status = {'installed': False, 'active': False, 'service_exists': False, 'binary_exists': False, 'memory_max': 'N/A', 'memory_high': 'N/A'}
             
             if result['ok']:
@@ -1459,11 +1517,11 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             install_cmd = "printf '1\\n1\\n40000\\n' | bash <(curl -fsSL https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh) w"
             logger.info(f"Установка WARP на {name} ({host}:{port})")
-            result = execute_ssh_command(host, port, username, password, install_cmd, timeout=300)
+            result = execute_ssh_command(host, port, username, password, install_cmd, timeout=300, key_path=key_path)
             
             if result['ok'] or "Socks5 configured" in result['output']:
                 try:
@@ -1473,7 +1531,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                         "systemctl daemon-reload && systemctl restart wireproxy"
                     )
                     logger.info(f"Применение настроек по умолчанию для WARP на {name}")
-                    config_res = execute_ssh_command(host, port, username, password, config_cmd, timeout=30)
+                    config_res = execute_ssh_command(host, port, username, password, config_cmd, timeout=30, key_path=key_path)
                     if config_res['ok']: result['output'] += "\n[Config] Applied default settings (800M/1G)"
                     else: result['output'] += f"\n[Config] Failed to apply defaults: {config_res['error']}"
                 except Exception as e: logger.error(f"Не удалось применить конфигурацию на {name}: {e}")
@@ -1496,10 +1554,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             logger.info(f"Удаление WARP на {name}")
-            result = execute_ssh_command(host, port, username, password, "printf 'y\\n' | bash <(curl -fsSL https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh) u", timeout=120)
+            result = execute_ssh_command(host, port, username, password, "printf 'y\\n' | bash <(curl -fsSL https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh) u", timeout=120, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'message': 'WARP успешно удален', 'output': result['output']})
             return jsonify({'ok': False, 'error': result['error'] or 'Ошибка удаления', 'output': result['output']}), 500
@@ -1518,12 +1576,12 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             memory_max, memory_high = request.form.get('memory_max', '800M'), request.form.get('memory_high', '1G')
             override_dir, override_file = '/etc/systemd/system/wireproxy.service.d', '/etc/systemd/system/wireproxy.service.d/override.conf'
             
-            check_result = execute_ssh_command(host, port, username, password, f"test -f {override_file} && echo 'EXISTS' || echo 'NOT_EXISTS'", timeout=10)
+            check_result = execute_ssh_command(host, port, username, password, f"test -f {override_file} && echo 'EXISTS' || echo 'NOT_EXISTS'", timeout=10, key_path=key_path)
             
             if check_result['ok'] and 'EXISTS' in check_result['output']:
                 cmd = (f"mkdir -p {override_dir} && "
@@ -1537,7 +1595,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                        "systemctl daemon-reload && systemctl restart wireproxy")
             
             logger.info(f"Настройка WARP на {name}: {memory_max}/{memory_high}")
-            result = execute_ssh_command(host, port, username, password, cmd, timeout=60)
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=60, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'message': 'Конфигурация обновлена и сервис перезапущен', 'output': result['output']})
             return jsonify({'ok': False, 'error': result['error'] or 'Ошибка конфигурации', 'output': result['output']}), 500
@@ -1556,10 +1614,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
              server = next((t for t in ssh_targets if t.get('target_name') == name), None)
              if not server: return jsonify({'ok': False, 'error': 'SSH цель не найдена'}), 404
              
-             host, port, username, password = server.get('ssh_host'), server.get('ssh_port', 22), server.get('ssh_username', 'root'), server.get('ssh_password')
-             if not host or not password: return jsonify({'ok': False, 'error': 'SSH данные не настроены'}), 400
+             host, port, username, password, key_path = server.get('ssh_host'), server.get('ssh_port', 22), server.get('ssh_username', 'root'), server.get('ssh_password'), server.get('ssh_key_path')
+             if not host or (not password and not key_path): return jsonify({'ok': False, 'error': 'SSH данные не настроены'}), 400
              
-             result = execute_ssh_command(host, port, username, password, "systemctl restart wireproxy", timeout=30)
+             result = execute_ssh_command(host, port, username, password, "systemctl restart wireproxy", timeout=30, key_path=key_path)
              if result['ok']: return jsonify({'ok': True, 'message': 'Сервис wireproxy перезапущен'})
              return jsonify({'ok': False, 'error': result['error']}), 500
         except Exception as e:
@@ -1577,9 +1635,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
-            result = execute_ssh_command(host, port, username, password, "systemctl start wireproxy", timeout=30)
+            result = execute_ssh_command(host, port, username, password, "systemctl start wireproxy", timeout=30, key_path=key_path)
             if result['ok']: return jsonify({'ok': True, 'message': 'Сервис запущен'})
             return jsonify({'ok': False, 'error': result['error'] or 'Ошибка запуска'}), 500
         except Exception as e:
@@ -1597,9 +1655,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
-            result = execute_ssh_command(host, port, username, password, "systemctl stop wireproxy", timeout=30)
+            result = execute_ssh_command(host, port, username, password, "systemctl stop wireproxy", timeout=30, key_path=key_path)
             if result['ok']: return jsonify({'ok': True, 'message': 'Сервис остановлен'})
             return jsonify({'ok': False, 'error': result['error'] or 'Ошибка остановки'}), 500
         except Exception as e:
@@ -1620,14 +1678,14 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
-
+            host, port, username, password, key_path = creds
+            
             cmd = (f"fallocate -l {size_mb}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count={size_mb}; "
                    "chmod 600 /swapfile; mkswap /swapfile; swapon /swapfile; "
                    "grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab")
             
             logger.info(f"Установка SWAP ({size_mb}MB) на {name}")
-            result = execute_ssh_command(host, port, username, password, cmd, timeout=120)
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=120, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'message': 'SWAP установлен'})
             return jsonify({'ok': False, 'error': result['error'] or 'Не удалось установить SWAP'}), 500
@@ -1646,11 +1704,11 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
 
             cmd = "swapoff /swapfile; rm /swapfile; sed -i '/\\/swapfile/d' /etc/fstab"
             logger.info(f"Удаление SWAP на {name}")
-            result = execute_ssh_command(host, port, username, password, cmd, timeout=60)
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=60, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'message': 'SWAP удален'})
             return jsonify({'ok': False, 'error': result['error'] or 'Не удалось удалить SWAP'}), 500
@@ -1672,7 +1730,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
 
             cmd = (f"if grep -q '/swapfile' /proc/swaps; then swapoff /swapfile || exit 1; fi && rm -f /swapfile && "
                    f"fallocate -l {size_mb}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count={size_mb} && "
@@ -1680,7 +1738,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                    "grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab")
             
             logger.info(f"Изменение размера SWAP до {size_mb}MB на {name}")
-            result = execute_ssh_command(host, port, username, password, cmd, timeout=180)
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=180, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'message': 'Размер SWAP изменен'})
             return jsonify({'ok': False, 'error': result['error'] or 'Не удалось изменить размер SWAP'}), 500
@@ -1702,14 +1760,14 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
 
             cmd = (f"sysctl vm.swappiness={swappiness}; "
                    f"if grep -q 'vm.swappiness' /etc/sysctl.conf; then sed -i 's/^vm.swappiness.*/vm.swappiness={swappiness}/' /etc/sysctl.conf; "
                    f"else echo 'vm.swappiness={swappiness}' >> /etc/sysctl.conf; fi")
             
             logger.info(f"Изменение swappiness на {swappiness} на {name}")
-            result = execute_ssh_command(host, port, username, password, cmd, timeout=30)
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=30, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'message': 'Параметр swappiness обновлен'})
             return jsonify({'ok': False, 'error': result['error'] or 'Не удалось обновить swappiness'}), 500
@@ -1728,9 +1786,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
-            result = execute_ssh_command(host, port, username, password, "if [ -f /etc/systemd/system/wireproxy.service.d/override.conf ]; then cat /etc/systemd/system/wireproxy.service.d/override.conf; else echo ''; fi", timeout=15)
+            result = execute_ssh_command(host, port, username, password, "if [ -f /etc/systemd/system/wireproxy.service.d/override.conf ]; then cat /etc/systemd/system/wireproxy.service.d/override.conf; else echo ''; fi", timeout=15, key_path=key_path)
             if result['ok']: return jsonify({'ok': True, 'content': result['output']})
             return jsonify({'ok': False, 'error': result['error'] or 'Не удалось прочитать конфиг'}), 500
         except Exception as e:
@@ -1749,7 +1807,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             override_dir, override_file = '/etc/systemd/system/wireproxy.service.d', '/etc/systemd/system/wireproxy.service.d/override.conf'
             safe_content = content.replace("'", "'\"'\"'")
@@ -1757,7 +1815,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                    "systemctl daemon-reload && systemctl restart wireproxy")
             
             logger.info(f"Сохранение системного конфига на {name}")
-            result = execute_ssh_command(host, port, username, password, cmd, timeout=60)
+            result = execute_ssh_command(host, port, username, password, cmd, timeout=60, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'message': 'Конфигурация сохранена и сервис перезапущен'})
             return jsonify({'ok': False, 'error': result['error'] or 'Не удалось сохранить конфиг'}), 500
@@ -1776,9 +1834,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
-            result = execute_ssh_command(host, port, username, password, "journalctl --disk-usage", timeout=15)
+            result = execute_ssh_command(host, port, username, password, "journalctl --disk-usage", timeout=15, key_path=key_path)
             if result['ok']: return jsonify({'ok': True, 'usage': result['output']})
             return jsonify({'ok': False, 'error': result['error']}), 500
         except Exception as e:
@@ -1802,14 +1860,14 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
             cmd_parts = ['sudo journalctl -u wireproxy.service']
             if s_int > 0: cmd_parts.append(f'--vacuum-size={s_int}M')
             if a_int > 0: cmd_parts.append(f'--vacuum-time={a_int}d')
             
             logger.info(f"Очистка логов wireproxy на {name}: {' '.join(cmd_parts)}")
-            result = execute_ssh_command(host, port, username, password, ' '.join(cmd_parts), timeout=60)
+            result = execute_ssh_command(host, port, username, password, ' '.join(cmd_parts), timeout=60, key_path=key_path)
             
             if result['ok']: return jsonify({'ok': True, 'message': 'Логи wireproxy очищены', 'output': result['output']})
             return jsonify({'ok': False, 'error': result['error'] or 'Ошибка очистки логов', 'output': result['output']}), 500
@@ -1831,9 +1889,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if error: return error
             creds, error = get_ssh_credentials(server)
             if error: return error
-            host, port, username, password = creds
+            host, port, username, password, key_path = creds
             
-            session_key, ansi_escape = f"{server_type}:{name}", re.compile(r'\x1B\[[0-9;]*[a-zA-Z]|\x1B\(B|\x1B\[m|\x1B\]0;[^\x07]*\x07')
+            session_key = f"{server_type}:{name}"
             
             def generate():
                 global ssh_sessions
@@ -1852,7 +1910,30 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                         client = paramiko.SSHClient()
                         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                         yield f"data: [INFO] Подключение к {host}:{port}...\n\n"
-                        client.connect(hostname=host, port=port, username=username, password=password, timeout=30, look_for_keys=False, allow_agent=False)
+                        
+                        connect_kwargs = {
+                            'hostname': host,
+                            'port': port,
+                            'username': username,
+                            'timeout': 30,
+                            'look_for_keys': False,
+                            'allow_agent': False
+                        }
+                        
+                        if key_path:
+                            actual_key_path = key_path
+                            if not os.path.exists(actual_key_path):
+                                filename = os.path.basename(key_path)
+                                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                                alt_path = os.path.join(base_dir, 'modules', 'keys', filename)
+                                if os.path.exists(alt_path): actual_key_path = alt_path
+                            
+                            if os.path.exists(actual_key_path): connect_kwargs['key_filename'] = actual_key_path
+                            else: connect_kwargs['password'] = password
+                        else:
+                            connect_kwargs['password'] = password
+
+                        client.connect(**connect_kwargs)
                         yield f"data: [INFO] Соединение установлено. Запуск оболочки...\n\n"
                         channel = client.invoke_shell(term='xterm', width=200, height=50)
                         channel.settimeout(0.1)
@@ -1871,7 +1952,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                                     idle_count = 0
                                     try:
                                         decoded = data.decode('utf-8', errors='replace')
-                                        cleaned = ansi_escape.sub('', decoded)
+                                        cleaned = clean_ansi(decoded)
                                         cleaned = cleaned.replace('\r\n', '\n')
                                         segments = cleaned.split('\n')
                                         for seg in segments:

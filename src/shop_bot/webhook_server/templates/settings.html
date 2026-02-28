@@ -96,6 +96,7 @@
             {'id': 'bot', 'label': 'Боты', 'icon': 'smart_toy'},
             {'id': 'payments', 'label': 'Платежи', 'icon': 'payments'},
             {'id': 'hosts', 'label': 'Хосты', 'icon': 'dns'},
+            {'id': 'ssh', 'label': 'SSH', 'icon': 'terminal'},
             {'id': 'referrals', 'label': 'Рефералы', 'icon': 'group'},
             {'id': 'content', 'label': 'Контент', 'icon': 'article'}
             ] %}
@@ -193,29 +194,89 @@
                             </div>
                         </div>
 
-                        <!-- WAL Mode Full Width -->
+                        <!-- System Switches Row -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                            <!-- WAL Mode -->
+                            <div
+                                class="bg-black/20 border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-primary/70">
+                                        <span class="material-symbols-outlined text-sm">terminal</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-white uppercase tracking-wider block">WAL
+                                            режим БД</span>
+                                        <p
+                                            class="text-[9px] text-white/50 uppercase tracking-tighter leading-tight mt-0.5">
+                                            ВКЛ — HDD, ВЫКЛ — SSD/NVMe</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <input type="hidden" name="enable_wal_mode" value="0" />
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="enable_wal_mode" value="1" {% if
+                                            settings.enable_wal_mode=='1' %}checked{% endif %} class="sr-only peer" />
+                                        <div
+                                            class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Auto Start Bot -->
+                            <div
+                                class="bg-black/20 border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-primary/70">
+                                        <span class="material-symbols-outlined text-sm">power_settings_new</span>
+                                    </div>
+                                    <div>
+                                        <span
+                                            class="text-xs font-bold text-white uppercase tracking-wider block">Автозапуск
+                                            бота</span>
+                                        <p
+                                            class="text-[9px] text-white/50 uppercase tracking-tighter leading-tight mt-0.5">
+                                            Запуск после ребута сервера</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <input type="hidden" name="auto_start_bot" value="0" />
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="auto_start_bot" value="1" {% if
+                                            other_settings.auto_start_bot=='1' %}checked{% endif %}
+                                            class="sr-only peer" />
+                                        <div
+                                            class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="pt-2">
-                            <div class="bg-black/20 border border-white/5 rounded-xl px-4 py-3">
+                            <div class="bg-black/20 border border-white/5 rounded-xl px-4 py-3 space-y-3">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-3">
                                         <div
                                             class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-primary/70">
-                                            <span class="material-symbols-outlined text-sm">terminal</span>
+                                            <span class="material-symbols-outlined text-sm">visibility_off</span>
                                         </div>
                                         <div>
                                             <span
-                                                class="text-xs font-bold text-white uppercase tracking-wider block">WAL
-                                                режим БД</span>
+                                                class="text-xs font-bold text-white uppercase tracking-wider block">Скрытая
+                                                страница входа</span>
                                             <p
                                                 class="text-[9px] text-white/50 uppercase tracking-tighter leading-tight mt-0.5">
-                                                WAL вкл — для HDD, выкл — для SSD/NVMe (быстрее)</p>
+                                                Показывать 404 вместо формы входа</p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3">
-                                        <input type="hidden" name="enable_wal_mode" value="0" />
+                                        <input type="hidden" name="stealth_login_enabled" value="0" />
                                         <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" name="enable_wal_mode" value="1" {% if
-                                                settings.enable_wal_mode=='1' %}checked{% endif %}
+                                            <input type="checkbox" name="stealth_login_enabled" value="1" {% if
+                                                settings.stealth_login_enabled=='1' %}checked{% endif %}
                                                 class="sr-only peer" />
                                             <div
                                                 class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
@@ -223,37 +284,22 @@
                                         </label>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Auto Start Bot -->
-                        <div class="pt-2">
-                            <div class="bg-black/20 border border-white/5 rounded-xl px-4 py-3">
-                                <div class="flex items-center justify-between">
+                                <div>
+                                    <label
+                                        class="block text-[9px] text-white/30 uppercase font-bold tracking-widest mb-1.5">Комбинация
+                                        клавиш (Ctrl+Буква или Shift+Буква)</label>
                                     <div class="flex items-center gap-3">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-primary/70">
-                                            <span class="material-symbols-outlined text-sm">power_settings_new</span>
+                                        <div id="stealth-hotkey-badge"
+                                            class="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest min-w-[80px] text-center">
                                         </div>
-                                        <div>
-                                            <span
-                                                class="text-xs font-bold text-white uppercase tracking-wider block">Автозапуск
-                                                бота</span>
-                                            <p
-                                                class="text-[9px] text-white/50 uppercase tracking-tighter leading-tight mt-0.5">
-                                                Автоматический запуск после перезагрузки сервера</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <input type="hidden" name="auto_start_bot" value="0" />
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" name="auto_start_bot" value="1" {% if
-                                                other_settings.auto_start_bot=='1' %}checked{% endif %}
-                                                class="sr-only peer" />
-                                            <div
-                                                class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
-                                            </div>
-                                        </label>
+                                        <input type="text" name="stealth_login_hotkey" id="stealth-hotkey-input"
+                                            value="{{ settings.stealth_login_hotkey or 'ctrl+b' }}" class="hidden"
+                                            readonly />
+                                        <button type="button" id="stealth-hotkey-capture-btn"
+                                            class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all">Изменить</button>
+                                        <span id="stealth-hotkey-listening"
+                                            class="hidden text-[10px] text-primary/70 uppercase font-bold tracking-widest">Нажмите
+                                            комбинацию...</span>
                                     </div>
                                 </div>
                             </div>
@@ -832,16 +878,32 @@
                             </div>
                             <h4 class="text-white font-bold text-sm">Platega</h4>
                         </div>
-                        <div class="flex items-center gap-2 bg-black/20 rounded-xl px-3 py-1.5 border border-white/5">
-                            <input type="hidden" name="platega_enabled" value="false" />
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="platega_enabled" value="true" id="platega_enabled" {% if
-                                    settings.platega_enabled=='true' %}checked{% endif %} class="sr-only peer" />
-                                <div
-                                    class="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
-                                </div>
-                            </label>
-                            <span class="text-[10px] font-bold text-white/60 uppercase ml-1">ВКЛ</span>
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="flex items-center gap-2 bg-black/20 rounded-xl px-3 py-1.5 border border-white/5">
+                                <input type="hidden" name="platega_enabled" value="false" />
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="platega_enabled" value="true" id="platega_enabled" {%
+                                        if settings.platega_enabled=='true' %}checked{% endif %} class="sr-only peer" />
+                                    <div
+                                        class="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
+                                    </div>
+                                </label>
+                                <span class="text-[10px] font-bold text-white/60 uppercase ml-1">ВКЛ</span>
+                            </div>
+                            <div
+                                class="flex items-center gap-2 bg-black/20 rounded-xl px-3 py-1.5 border border-white/5">
+                                <input type="hidden" name="platega_crypto_enabled" value="false" />
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="platega_crypto_enabled" value="true"
+                                        id="platega_crypto_enabled" {% if settings.platega_crypto_enabled=='true'
+                                        %}checked{% endif %} class="sr-only peer" />
+                                    <div
+                                        class="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
+                                    </div>
+                                </label>
+                                <span class="text-[10px] font-bold text-white/60 uppercase ml-1">КРИПТА</span>
+                            </div>
                         </div>
                     </div>
                     <div class="space-y-4">
@@ -1415,114 +1477,206 @@
                         </form>
                     </div>
 
-
-                    <!-- SSH for Speedtest -->
-                    <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
-                        <div class="flex items-center gap-2 mb-4">
-                            <div
-                                class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                                <span class="material-symbols-outlined text-lg">terminal</span>
-                            </div>
-                            <h5 class="text-white font-bold text-sm tracking-tight">SSH Настройки (Speedtest)</h5>
-                        </div>
-
-                        <form action="{{ url_for('update_host_ssh_route') }}" method="post" class="space-y-4">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div class="space-y-1">
-                                    <label
-                                        class="block text-white/40 text-[10px] uppercase font-bold tracking-wider ml-1">Host</label>
-                                    <input type="text" name="ssh_host" value="{{ host.ssh_host or '' }}"
-                                        placeholder="example.com" autocomplete="off"
-                                        class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                </div>
-                                <div class="space-y-1">
-                                    <label
-                                        class="block text-white/40 text-[10px] uppercase font-bold tracking-wider ml-1">Port</label>
-                                    <input type="number" name="ssh_port" value="{{ host.ssh_port or '' }}"
-                                        placeholder="22"
-                                        class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                </div>
-                                <div class="space-y-1">
-                                    <label
-                                        class="block text-white/40 text-[10px] uppercase font-bold tracking-wider ml-1">User</label>
-                                    <input type="text" name="ssh_user" value="{{ host.ssh_user or '' }}"
-                                        placeholder="root" autocomplete="off"
-                                        class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                </div>
-                                <div class="space-y-1">
-                                    <label
-                                        class="block text-white/40 text-[10px] uppercase font-bold tracking-wider ml-1">Password</label>
-                                    <input type="password" name="ssh_password" value="{{ host.ssh_password or '' }}"
-                                        placeholder="••••••" autocomplete="new-password"
-                                        class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                </div>
-                            </div>
-                            <div class="flex flex-col md:flex-row gap-4 items-end">
-                                <div class="flex-1 w-full space-y-1">
-                                    <label
-                                        class="block text-white/40 text-[10px] uppercase font-bold tracking-wider ml-1">Путь
-                                        к ключу</label>
-                                    <input type="text" name="ssh_key_path" value="{{ host.ssh_key_path or '' }}"
-                                        placeholder="/app/keys/id_rsa"
-                                        class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                </div>
-                                <button type="submit"
-                                    class="w-full md:w-auto px-6 py-2.5 rounded-xl bg-primary/20 text-primary text-xs font-bold uppercase tracking-widest hover:bg-primary/30 transition-all border border-primary/20">Сохранить</button>
-                            </div>
-                        </form>
-                        <form action="{{ url_for('auto_install_speedtest_route', host_name=host.host_name) }}"
-                            method="post" class="mt-4 pt-4 border-t border-white/5">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <button type="submit"
-                                class="speedtest-loading-btn w-full md:w-auto px-5 py-2 rounded-lg bg-white/5 text-white/50 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/10"
-                                data-label="Автоустановка Speedtest">
-                                <span class="flex items-center justify-center gap-2">
-                                    <span class="material-symbols-outlined text-sm">rocket_launch</span>
-                                    Автоустановка Speedtest
-                                </span>
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Description -->
-                    <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
-                        <label class="flex items-center justify-between cursor-pointer group/toggle">
-                            <div class="flex items-center gap-2">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- SSH for Speedtest -->
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-3">
                                 <div
-                                    class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
-                                    <span class="material-symbols-outlined text-lg">description</span>
+                                    class="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                                    <span class="material-symbols-outlined text-base">terminal</span>
                                 </div>
-                                <div>
-                                    <h5 class="text-white font-bold text-sm tracking-tight">Свое описание (HTML)</h5>
-                                    <p class="text-white/40 text-[10px]">Отображается в меню выбора тарифа</p>
-                                </div>
+                                <h5 class="text-white font-bold text-xs tracking-tight">SSH Настройки (Speedtest)</h5>
                             </div>
-                            <div class="relative inline-flex items-center">
-                                <input type="checkbox" id="toggle-description-{{ host.host_name }}"
-                                    onchange="toggleDescriptionForm('{{ host.host_name }}')" class="sr-only peer" {% if
-                                    host.description %}checked{% endif %} />
-                                <div
-                                    class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-primary transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full">
-                                </div>
-                            </div>
-                        </label>
-                        <div id="description-form-{{ host.host_name }}"
-                            class="{% if not host.description %}hidden{% endif %} mt-4 pt-4 border-t border-white/5">
-                            <form action="{{ url_for('update_host_description_route') }}" method="post"
-                                class="space-y-3">
+
+                            <form action="{{ url_for('update_host_ssh_route') }}" method="post" class="space-y-3">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                 <input type="hidden" name="host_name" value="{{ host.host_name }}" />
-                                <textarea name="host_description" rows="3"
-                                    placeholder="Введите HTML-описание для этого хоста..."
-                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all font-mono">{{ host.description or '' }}</textarea>
-                                <div class="flex justify-end">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="space-y-0.5">
+                                        <label
+                                            class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">Host</label>
+                                        <input type="text" name="ssh_host" value="{{ host.ssh_host or '' }}"
+                                            placeholder="example.com" autocomplete="off"
+                                            class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <label
+                                            class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">Port</label>
+                                        <input type="number" name="ssh_port" value="{{ host.ssh_port or '' }}"
+                                            placeholder="22"
+                                            class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <label
+                                            class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">User</label>
+                                        <input type="text" name="ssh_user" value="{{ host.ssh_user or '' }}"
+                                            placeholder="root" autocomplete="off"
+                                            class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <label
+                                            class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">Password</label>
+                                        <input type="password" name="ssh_password" value="{{ host.ssh_password or '' }}"
+                                            placeholder="••••••" autocomplete="new-password"
+                                            class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 items-end">
+                                    <div class="flex-1 space-y-0.5">
+                                        <label
+                                            class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">Путь
+                                            к ключу</label>
+                                        <input type="text" name="ssh_key_path" value="{{ host.ssh_key_path or '' }}"
+                                            placeholder="/app/keys/id_rsa"
+                                            class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                                    </div>
                                     <button type="submit"
-                                        class="px-5 py-2 rounded-xl bg-white/5 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all border border-white/10">Сохранить
-                                        описание</button>
+                                        class="px-4 py-1.5 rounded-lg bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary/30 transition-all border border-primary/20">Сохранить</button>
                                 </div>
                             </form>
+                            <form action="{{ url_for('auto_install_speedtest_route', host_name=host.host_name) }}"
+                                method="post" class="mt-3 pt-3 border-t border-white/5">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                <button type="submit"
+                                    class="speedtest-loading-btn w-full px-4 py-1.5 rounded-lg bg-white/5 text-white/50 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/10"
+                                    data-label="Автоустановка Speedtest">
+                                    <span class="flex items-center justify-center gap-2">
+                                        <span class="material-symbols-outlined text-sm">rocket_launch</span>
+                                        Автоустановка Speedtest
+                                    </span>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
+                            <label class="flex items-center justify-between cursor-pointer group/toggle">
+                                <div class="flex items-center gap-2">
+                                    <div
+                                        class="w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
+                                        <span class="material-symbols-outlined text-base">description</span>
+                                    </div>
+                                    <div>
+                                        <h5 class="text-white font-bold text-xs tracking-tight">Свое описание (HTML)
+                                        </h5>
+                                        <p class="text-white/40 text-[9px]">Отображается в меню выбора тарифа</p>
+                                    </div>
+                                </div>
+                                <div class="relative inline-flex items-center">
+                                    <input type="checkbox" id="toggle-description-{{ host.host_name }}"
+                                        onchange="toggleDescriptionForm('{{ host.host_name }}')" class="sr-only peer" {%
+                                        if host.description %}checked{% endif %} />
+                                    <div
+                                        class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-primary transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full">
+                                    </div>
+                                </div>
+                            </label>
+                            <div id="description-form-{{ host.host_name }}"
+                                class="{% if not host.description %}hidden{% endif %} mt-3 pt-3 border-t border-white/5 flex-1 flex flex-col">
+                                <form action="{{ url_for('update_host_description_route') }}" method="post"
+                                    class="flex flex-col flex-1 gap-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                    <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                                    <textarea name="host_description" rows="4"
+                                        placeholder="Введите HTML-описание для этого хоста..."
+                                        class="w-full flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all font-mono resize-none">{{ host.description or '' }}</textarea>
+                                    <div class="flex justify-end">
+                                        <button type="submit"
+                                            class="px-4 py-1.5 rounded-lg bg-white/5 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all border border-white/10">Сохранить
+                                            описание</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                                    <span class="material-symbols-outlined text-lg">devices</span>
+                                </div>
+                                <div>
+                                    <h5 class="text-white font-bold text-sm tracking-tight">Режим устройств</h5>
+                                    <p class="text-white/40 text-[9px]">Как определяется лимит устройств</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-white/40 text-[10px] font-bold uppercase tracking-wider"
+                                    id="device-mode-label-{{ host.host_name }}">
+                                    {{ 'Выбор' if host.device_mode == 'tiers' else 'По тарифу' }}
+                                </span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" {% if host.device_mode=='tiers'
+                                        %}checked{% endif %}
+                                        onchange="toggleDeviceMode('{{ host.host_name }}', this.checked)" />
+                                    <div
+                                        class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-cyan-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="device-tiers-block-{{ host.host_name }}"
+                            class="{% if host.device_mode != 'tiers' %}hidden{% endif %} mt-3 pt-3 border-t border-white/5">
+                            <div id="device-tiers-list-{{ host.host_name }}" class="flex flex-wrap gap-2 mb-3">
+                                <div
+                                    class="flex items-center gap-2 bg-black/20 border border-cyan-500/30 rounded-lg px-3 py-2">
+                                    <span class="text-cyan-400 text-xs font-bold">1 устр.</span>
+                                    <span class="text-white/30 text-[10px]">—</span>
+                                    <span class="text-white/40 text-[10px]">базовое</span>
+                                </div>
+                                {% for tier in host.device_tiers %}
+                                <div class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2"
+                                    id="tier-row-{{ tier.tier_id }}">
+                                    <span class="text-cyan-400 text-xs font-bold">{{ tier.device_count }} устр.</span>
+                                    <span class="text-white/30 text-[10px]">—</span>
+                                    <span class="text-white text-xs font-bold">{{ '%.0f'|format(tier.price)
+                                        }}₽/шт</span>
+                                    <button type="button"
+                                        onclick="deleteDeviceTier('{{ tier.tier_id }}', '{{ host.host_name }}')"
+                                        class="w-5 h-5 rounded-md bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500/30 transition-all ml-1">
+                                        <span class="material-symbols-outlined text-sm">close</span>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="flex gap-2 items-end">
+                                <div class="flex-1 space-y-0.5">
+                                    <label
+                                        class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">Кол-во
+                                        устройств</label>
+                                    <input type="number" min="2" id="tier-count-{{ host.host_name }}" placeholder="3"
+                                        class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-cyan-500/40 focus:outline-none" />
+                                </div>
+                                <div class="flex-1 space-y-0.5">
+                                    <label
+                                        class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">Цена
+                                        за устр. (₽)</label>
+                                    <input type="number" min="0" step="1" id="tier-price-{{ host.host_name }}"
+                                        placeholder="40"
+                                        class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-cyan-500/40 focus:outline-none" />
+                                </div>
+                                <button type="button" onclick="addDeviceTier('{{ host.host_name }}')"
+                                    class="px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:bg-cyan-500/30 transition-all border border-cyan-500/20">
+                                    <span class="material-symbols-outlined text-sm">add</span>
+                                </button>
+                            </div>
+                            <div class="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                                <div>
+                                    <span class="text-white/60 text-[10px] font-bold">Без выбора при продлении</span>
+                                    <p class="text-white/30 text-[8px]">Цена продления авто-включает текущие устройства
+                                    </p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" {% if host.tier_lock_extend %}checked{%
+                                        endif %}
+                                        onchange="toggleTierLockExtend('{{ host.host_name }}', this.checked)" />
+                                    <div
+                                        class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-cyan-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full">
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -1706,9 +1860,25 @@
         </div>
 
 
-        <div class="border-t border-white/10 pt-6">
-            <h3 class="text-xl font-bold text-white mb-4">SSH цели для Speedtest & Ноды <span
-                    class="text-white/30 text-xs ml-2 font-normal">(не зависят от хостов)</span></h3>
+    </div>
+</section>
+
+<section id="tab-ssh" class="tab-content hidden">
+    <div class="space-y-6">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10">
+                    <span class="material-symbols-outlined text-3xl">terminal</span>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white tracking-tight">SSH цели для Speedtest & Ноды</h3>
+                    <p class="text-white/60 text-xs font-medium">Сервера, не зависящие от хостов</p>
+                </div>
+            </div>
+        </div>
+
+        <div>
 
 
             <!-- ===== ДОБАВЛЕНИЕ НОВОЙ SSH-ЦЕЛИ ===== -->
@@ -1794,8 +1964,17 @@
                                 <div class="relative group">
                                     <span
                                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors text-sm">vpn_key</span>
-                                    <input type="text" name="ssh_key_path" placeholder="/app/keys/id_rsa"
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
+                                    <input type="text" name="ssh_key_path" id="ssh_key_path_input"
+                                        placeholder="/app/keys/id_rsa"
+                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-12 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
+
+                                    <input type="file" id="ssh_key_file_picker" class="hidden" accept=".pem,.key,.pub"
+                                        onchange="uploadSSHKeyFile(this)" />
+                                    <button type="button"
+                                        onclick="document.getElementById('ssh_key_file_picker').click()"
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-primary transition-colors">
+                                        <span class="material-symbols-outlined text-sm">folder_open</span>
+                                    </button>
                                 </div>
                             </div>
                             <div class="space-y-1.5 lg:col-span-1">
@@ -1842,7 +2021,16 @@
                                 onclick="event.stopPropagation()">drag_indicator</span>
                             <div class="min-w-0">
                                 <h4 class="text-xs font-bold text-white truncate">{{ t.target_name }}</h4>
-                                <p class="text-[8px] text-white/30 uppercase font-bold tracking-widest">SSH Target</p>
+                                {% if t.description %}
+                                <p
+                                    class="text-[8px] text-primary/60 uppercase font-bold tracking-widest flex items-center gap-0.5 mt-0.5">
+                                    <span class="material-symbols-outlined text-[10px]">description</span>{{
+                                    t.description }}
+                                </p>
+                                {% else %}
+                                <p class="text-[8px] text-white/30 uppercase font-bold tracking-widest mt-0.5">SSH
+                                    Target</p>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -1868,17 +2056,21 @@
                                 <p class="text-white/90 text-[11px] font-mono ml-5 truncate">{{ t.ssh_host }}:{{
                                     t.ssh_port or 22 }}</p>
                             </div>
+                        </div>
 
-                            {% if t.description %}
-                            <div class="bg-black/20 border border-white/5 rounded-xl p-2.5">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <span class="material-symbols-outlined text-primary text-[12px]">description</span>
-                                    <label
-                                        class="text-white/30 text-[8px] font-bold uppercase tracking-wider">Описание</label>
-                                </div>
-                                <p class="text-white/60 text-[11px] ml-5 truncate">{{ t.description }}</p>
+                        <!-- Data display for Speedtest (Added) -->
+                        <div id="st-result-{{ t.target_name }}"
+                            class="bg-black/20 border border-white/5 rounded-xl p-2.5 mt-2 hidden">
+                            <div class="flex items-center gap-2 mb-1 border-b border-white/5 pb-1">
+                                <span class="material-symbols-outlined text-primary text-[12px]">speed</span>
+                                <label class="text-white/30 text-[8px] font-bold uppercase tracking-wider">Последний
+                                    тест</label>
+                                <span id="st-badge-{{ t.target_name }}" class="ml-auto"></span>
                             </div>
-                            {% endif %}
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] mt-1.5"
+                                id="st-data-{{ t.target_name }}">
+                                <!-- Data injected via JS -->
+                            </div>
                         </div>
 
                         <!-- Actions -->
@@ -1978,6 +2170,7 @@
             </div>
             {% endif %}
         </div>
+    </div>
 </section>
 
 
@@ -2707,6 +2900,58 @@
             }
         };
 
+        window.toggleDeviceMode = async (host, checked) => {
+            const mode = checked ? 'tiers' : 'plan';
+            const block = document.getElementById('device-tiers-block-' + host);
+            const label = document.getElementById('device-mode-label-' + host);
+            if (block) block.classList.toggle('hidden', !checked);
+            if (label) label.textContent = checked ? 'Выбор' : 'По тарифу';
+            const fd = new FormData();
+            fd.append('host_name', host);
+            fd.append('device_mode', mode);
+            await sendRequest('/update-host-device-mode', 'POST', fd);
+        };
+
+        window.toggleTierLockExtend = async (host, checked) => {
+            const fd = new FormData();
+            fd.append('host_name', host);
+            fd.append('value', checked ? '1' : '0');
+            await sendRequest('/update-tier-lock-extend', 'POST', fd);
+        };
+
+        window.addDeviceTier = async (host) => {
+            const countEl = document.getElementById('tier-count-' + host);
+            const priceEl = document.getElementById('tier-price-' + host);
+            const count = parseInt(countEl.value);
+            const price = parseFloat(priceEl.value || '0');
+            if (!count || count < 1) { showToast('Укажите количество устройств', 'error'); return; }
+            const fd = new FormData();
+            fd.append('host_name', host);
+            fd.append('device_count', count);
+            fd.append('price', price);
+            const res = await sendRequest('/add-device-tier', 'POST', fd);
+            if (res && res.ok) {
+                const list = document.getElementById('device-tiers-list-' + host);
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between bg-black/20 border border-white/10 rounded-lg px-3 py-2';
+                row.id = 'tier-row-' + res.tier_id;
+                row.innerHTML = `<div class="flex items-center gap-3"><span class="text-cyan-400 text-xs font-bold">${count} устр.</span><span class="text-white/30 text-[10px]">&mdash;</span><span class="text-white text-xs font-bold">+${Math.round(price)} ₽</span></div><button type="button" onclick="deleteDeviceTier(${res.tier_id}, '${host}')" class="w-6 h-6 rounded-md bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500/30 transition-all"><span class="material-symbols-outlined text-sm">close</span></button>`;
+                list.appendChild(row);
+                countEl.value = '';
+                priceEl.value = '';
+                showToast('Уровень устройств добавлен');
+            }
+        };
+
+        window.deleteDeviceTier = async (tierId, host) => {
+            const res = await sendRequest('/delete-device-tier/' + tierId, 'POST', new FormData());
+            if (res && res.ok) {
+                const row = document.getElementById('tier-row-' + tierId);
+                if (row) row.remove();
+                showToast('Уровень удалён');
+            }
+        };
+
         if (localStorage.getItem('addHostFormCollapsed') === 'false') window.toggleAddHostForm();
         restoreHostStates();
     }
@@ -2846,7 +3091,6 @@
 
     // ===== УМНОЕ ОБНОВЛЕНИЕ =====
     // Перезагрузка контента без обновления страницы
-    // Перезагрузка контента без обновления страницы
     async function reloadContent() {
         try {
             const res = await fetch(window.location.href, {
@@ -2855,7 +3099,7 @@
             });
             const html = await res.text();
 
-            if (html.includes('id="login-identifier-v2"')) {
+            if (html.includes('id' + '="login-identifier-v2"')) {
                 console.warn('[DEBUG] reloadContent detected Login Page! Refresh prevented.');
                 showToast('warning', 'Не удалось обновить список: требуется авторизация');
                 return;
@@ -2871,9 +3115,73 @@
             });
             initInteractiveElements();
             restoreHostStates();
+            loadAllSpeedtestData();
         } catch (e) { console.error('Smart Refresh failed:', e); }
     }
     // ===== Конец умного обновления =====
+
+    // ===== ЗАГРУЗКА ДАННЫХ SPEEDTEST =====
+    async function loadAllSpeedtestData() {
+        const cards = document.querySelectorAll('.ssh-target-card');
+        const results = [];
+        const promises = [];
+        for (const card of cards) {
+            const targetName = card.dataset.targetName;
+            if (targetName) {
+                promises.push(loadTopForTarget(targetName).then(dl => { if (dl !== null) results.push({ name: targetName, download: dl }); }));
+            }
+        }
+        await Promise.all(promises);
+        applySpeedBadges(results);
+    }
+
+    function applySpeedBadges(results) {
+        document.querySelectorAll('[id^="st-badge-"]').forEach(el => el.innerHTML = '');
+        if (results.length < 2) return;
+        results.sort((a, b) => b.download - a.download);
+        const badges = [
+            { emoji: '🥇', bg: 'rgba(234,179,8,0.2)', border: 'rgba(234,179,8,0.3)', color: '#fde047', label: '1 место' },
+            { emoji: '🥈', bg: 'rgba(156,163,175,0.2)', border: 'rgba(156,163,175,0.3)', color: '#d1d5db', label: '2 место' },
+            { emoji: '🥉', bg: 'rgba(180,83,9,0.2)', border: 'rgba(217,119,6,0.3)', color: '#fbbf24', label: '3 место' }
+        ];
+        const count = Math.min(3, results.length);
+        for (let i = 0; i < count; i++) {
+            const el = document.getElementById(`st-badge-${results[i].name}`);
+            if (el) {
+                const b = badges[i];
+                el.innerHTML = `<span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:6px;background:${b.bg};border:1px solid ${b.border};color:${b.color};font-size:8px;font-weight:700;">${b.emoji} ${b.label}</span>`;
+            }
+        }
+    }
+
+    async function loadTopForTarget(targetName) {
+        const resultContainer = document.getElementById(`st-result-${targetName}`);
+        const dataContainer = document.getElementById(`st-data-${targetName}`);
+        if (!resultContainer || !dataContainer) return null;
+
+        try {
+            const url = `{{ url_for('host_speedtests_json', host_name='__H__') }}`.replace('__H__', encodeURIComponent(targetName)) + '?limit=1';
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            const data = await res.json();
+
+            if (data && data.items && data.items.length > 0) {
+                const last = data.items[0];
+                const ping = `<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-white/50">timer</span>${last.ping_ms ?? '—'} <span class="text-[8px] text-white/30">ms</span></span>`;
+                const down = `<span class="flex items-center gap-1 text-[#13ec80]"><span class="material-symbols-outlined text-[12px]">download</span>${last.download_mbps ?? '—'} <span class="text-[8px] text-white/30">Mbps</span></span>`;
+                const up = `<span class="flex items-center gap-1 text-[#00bfff]"><span class="material-symbols-outlined text-[12px]">upload</span>${last.upload_mbps ?? '—'} <span class="text-[8px] text-white/30">Mbps</span></span>`;
+
+                dataContainer.innerHTML = `${down}${up}${ping}`;
+                resultContainer.classList.remove('hidden');
+                return parseFloat(last.download_mbps) || 0;
+            }
+        } catch (e) {
+            console.error('Failed to load speedtest for', targetName, e);
+        }
+        return null;
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAllSpeedtestData);
 
     // ===== ИНИЦИАЛИЗАЦИЯ ФОРМ =====
     // Настройка обработчиков отправки для всех форм
@@ -3181,7 +3489,12 @@
                             <span class="material-symbols-outlined text-white/20 cursor-grab active:cursor-grabbing hover:text-white/60 drag-handle transition-colors" onclick="event.stopPropagation()">drag_indicator</span>
                             <div class="min-w-0">
                                 <h4 class="text-xs font-bold text-white truncate">${t.target_name}</h4>
-                                <p class="text-[8px] text-white/30 uppercase font-bold tracking-widest">SSH Target</p>
+                                ${t.description ? `
+                                <p class="text-[8px] text-primary/60 uppercase font-bold tracking-widest flex items-center gap-0.5 mt-0.5">
+                                    <span class="material-symbols-outlined text-[10px]">description</span>${t.description}
+                                </p>` : `
+                                <p class="text-[8px] text-white/30 uppercase font-bold tracking-widest mt-0.5">SSH Target</p>
+                                `}
                             </div>
                         </div>
 
@@ -3203,15 +3516,18 @@
                                 </div>
                                 <p class="text-white/90 text-[11px] font-mono ml-5 truncate">${t.ssh_host}:${t.ssh_port || 22}</p>
                             </div>
+                        </div>
 
-                            ${t.description ? `
-                            <div class="bg-black/20 border border-white/5 rounded-xl p-2.5">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <span class="material-symbols-outlined text-primary text-[12px]">description</span>
-                                    <label class="text-white/30 text-[8px] font-bold uppercase tracking-wider">Описание</label>
-                                </div>
-                                <p class="text-white/60 text-[11px] ml-5 truncate">${t.description}</p>
-                            </div>` : ''}
+                        <!-- Data display for Speedtest (Added) -->
+                        <div id="st-result-${t.target_name}" class="bg-black/20 border border-white/5 rounded-xl p-2.5 mt-2 hidden">
+                            <div class="flex items-center gap-2 mb-1 border-b border-white/5 pb-1">
+                                <span class="material-symbols-outlined text-primary text-[12px]">speed</span>
+                                <label class="text-white/30 text-[8px] font-bold uppercase tracking-wider">Последний тест</label>
+                                <span id="st-badge-${t.target_name}" class="ml-auto"></span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] mt-1.5" id="st-data-${t.target_name}">
+                                <!-- Data injected via JS -->
+                            </div>
                         </div>
 
                         <!-- Actions -->
@@ -3318,6 +3634,99 @@
         async function saveOrder() { const order = [...container.querySelectorAll('.' + itemClass)].map(el => el.getAttribute(dataAttr)); await sendRequest(url, 'POST', { order }, true); }
     }
     // ===== Конец перемещения элементов =====
+    async function toggleDeviceMode(hostName, checked) {
+        const mode = checked ? 'tiers' : 'plan';
+        const label = document.getElementById('device-mode-label-' + hostName);
+        if (label) label.textContent = checked ? 'Выбор' : 'По тарифу';
+        const block = document.getElementById('device-tiers-block-' + hostName);
+        if (block) { if (checked) block.classList.remove('hidden'); else block.classList.add('hidden'); }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('device_mode', mode);
+        const r = await sendRequest('/update-host-device-mode', 'POST', fd);
+        if (r.ok) showToast('success', 'Режим устройств сохранён');
+        else showToast('danger', r.error || 'Ошибка сохранения');
+    }
+
+    async function addDeviceTier(hostName) {
+        const countEl = document.getElementById('tier-count-' + hostName);
+        const priceEl = document.getElementById('tier-price-' + hostName);
+        const count = parseInt(countEl?.value);
+        const price = parseFloat(priceEl?.value);
+        if (!count || count < 2 || isNaN(price) || price < 0) { showToast('danger', 'Укажите корректные значения'); return; }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('device_count', count);
+        fd.append('price', price);
+        const r = await sendRequest('/add-device-tier', 'POST', fd);
+        if (r.ok && r.tier_id) {
+            const list = document.getElementById('device-tiers-list-' + hostName);
+            if (list) {
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2';
+                div.id = 'tier-row-' + r.tier_id;
+                div.innerHTML = '<span class="text-cyan-400 text-xs font-bold">' + count + ' устр.</span><span class="text-white/30 text-[10px]">—</span><span class="text-white text-xs font-bold">' + Math.round(price) + '₽/шт</span><button type="button" onclick="deleteDeviceTier(' + r.tier_id + ',\'' + hostName + '\')" class="w-5 h-5 rounded-md bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500/30 transition-all ml-1"><span class="material-symbols-outlined text-sm">close</span></button>';
+                list.appendChild(div);
+            }
+            if (countEl) countEl.value = '';
+            if (priceEl) priceEl.value = '';
+            showToast('success', 'Тир добавлен');
+        } else showToast('danger', r.error || 'Ошибка');
+    }
+
+    async function deleteDeviceTier(tierId, hostName) {
+        const r = await sendRequest('/delete-device-tier/' + tierId, 'POST');
+        if (r.ok) {
+            const row = document.getElementById('tier-row-' + tierId);
+            if (row) row.remove();
+            showToast('success', 'Тир удалён');
+        } else showToast('danger', r.error || 'Ошибка');
+    }
+
+    async function toggleTierLockExtend(hostName, checked) {
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('value', checked ? '1' : '0');
+        const r = await sendRequest('/update-tier-lock-extend', 'POST', fd);
+        if (r.ok) showToast('success', 'Настройка сохранена');
+        else showToast('danger', r.error || 'Ошибка');
+    }
+
+    async function uploadSSHKeyFile(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        showToast('info', 'Загрузка ключа...');
+
+        try {
+            const response = await fetch('/upload-ssh-key', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                }
+            });
+            const result = await response.json();
+            if (result.ok) {
+                const pathInput = document.getElementById('ssh_key_path_input');
+                if (pathInput) {
+                    pathInput.value = result.path;
+                    showToast('success', 'Ключ загружен успешно');
+                }
+            } else {
+                showToast('danger', result.error || 'Ошибка при загрузке');
+            }
+        } catch (error) {
+            console.error('Error uploading key:', error);
+            showToast('danger', 'Произошла сетевая ошибка при загрузке');
+        } finally {
+            input.value = '';
+        }
+    }
+
 </script>
 
 <style>
@@ -3361,4 +3770,47 @@
         margin-bottom: 0.5rem !important;
     }
 </style>
+
+<script>
+    (function () {
+        var inp = document.getElementById('stealth-hotkey-input');
+        var badge = document.getElementById('stealth-hotkey-badge');
+        var captureBtn = document.getElementById('stealth-hotkey-capture-btn');
+        var listeningSpan = document.getElementById('stealth-hotkey-listening');
+
+        if (!inp || !badge || !captureBtn) return;
+
+        function formatHotkey(v) {
+            return (v || 'ctrl+b').split('+').map(function (p) {
+                return p.charAt(0).toUpperCase() + p.slice(1);
+            }).join('+');
+        }
+
+        badge.textContent = formatHotkey(inp.value);
+
+        captureBtn.addEventListener('click', function () {
+            captureBtn.classList.add('hidden');
+            listeningSpan.classList.remove('hidden');
+
+            function onKey(e) {
+                var mods = [];
+                if (e.ctrlKey) mods.push('ctrl');
+                if (e.shiftKey) mods.push('shift');
+                if (e.altKey) mods.push('alt');
+                var key = e.key.toLowerCase();
+                if (['control', 'shift', 'alt', 'meta'].indexOf(key) !== -1) return;
+                if (mods.length === 0) return;
+                e.preventDefault();
+                var combo = mods.concat([key]).join('+');
+                inp.value = combo;
+                badge.textContent = formatHotkey(combo);
+                captureBtn.classList.remove('hidden');
+                listeningSpan.classList.add('hidden');
+                document.removeEventListener('keydown', onKey, true);
+            }
+            document.addEventListener('keydown', onKey, true);
+        });
+    })();
+</script>
+
 {% endblock %}

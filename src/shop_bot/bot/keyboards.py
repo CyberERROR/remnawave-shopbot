@@ -378,6 +378,39 @@ def create_plans_keyboard(plans: list[dict], action: str, host_name: str, key_id
     builder.adjust(1) 
     return builder.as_markup()
 
+
+def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int, action: str, key_id: int = 0, selected_tier_id: int = None) -> InlineKeyboardMarkup:
+    from shop_bot.data_manager.database import get_plan_by_id
+    plan = get_plan_by_id(plan_id) if plan_id else None
+    months = int(plan.get('months') or 1) if plan else 1
+
+    builder = InlineKeyboardBuilder()
+    base_icon = "🟢" if selected_tier_id == 0 else "⚪️"
+    builder.button(text=f"{base_icon} 1 (вкл.)", callback_data="select_tier_0")
+    total_btns = 1
+    for t in tiers:
+        is_selected = (selected_tier_id == t['tier_id'])
+        icon = "🟢" if is_selected else "⚪️"
+        total_price = (t['device_count'] - 1) * t['price'] * months
+        label = f"{icon} {t['device_count']} (+{total_price:.0f}₽)"
+        builder.button(text=label, callback_data=f"select_tier_{t['tier_id']}")
+        total_btns += 1
+    if selected_tier_id is not None:
+        builder.button(text="✅ Продолжить", callback_data="confirm_tier")
+    if action == "extend":
+        back_cb = "manage_keys"
+    else:
+        from shop_bot.data_manager.remnawave_repository import get_all_hosts
+        hosts = get_all_hosts(visible_only=True) or []
+        back_cb = "back_to_main_menu" if len(hosts) == 1 else "buy_new_key"
+    builder.button(text="⬅️ Назад", callback_data=back_cb)
+    rows = [2] * ((total_btns + 1) // 2)
+    if selected_tier_id is not None:
+        rows.append(1)
+    rows.append(1)
+    builder.adjust(*rows)
+    return builder.as_markup()
+
 def create_skip_email_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="➡️ Продолжить без почты", callback_data="skip_email")
@@ -401,6 +434,7 @@ def create_payment_method_keyboard(
     pm = {
         "yookassa": bool((get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or "")),
         "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
+        "platega_crypto": ((get_setting("platega_crypto_enabled") or "false").strip().lower() == "true"),
         "heleket": bool((get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or "")),
         "cryptobot": bool(get_setting("cryptobot_token") or ""),
         "tonconnect": bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or "")),
@@ -427,6 +461,8 @@ def create_payment_method_keyboard(
     
     if pm.get("platega"):
         builder.button(text="💳 СБП / Platega", callback_data="pay_platega")
+    if pm.get("platega_crypto"):
+        builder.button(text="🪙 Crypto / Platega", callback_data="pay_platega_crypto")
     if pm.get("cryptobot"):
         builder.button(text="💎 Криптовалюта", callback_data="pay_cryptobot")
     elif pm.get("heleket"):
@@ -449,33 +485,33 @@ def create_payment_method_keyboard(
     builder.adjust(1)
     return builder.as_markup()
 
-def create_ton_connect_keyboard(connect_url: str) -> InlineKeyboardMarkup:
+def create_ton_connect_keyboard(connect_url: str, back_callback: str = "back_to_main_menu") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="🚀 Открыть кошелек", url=connect_url)
-    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 
-def create_payment_keyboard(payment_url: str) -> InlineKeyboardMarkup:
+def create_payment_keyboard(payment_url: str, back_callback: str = "back_to_main_menu") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к оплате", url=payment_url)
-    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 
-def create_yoomoney_payment_keyboard(payment_url: str, payment_id: str) -> InlineKeyboardMarkup:
+def create_yoomoney_payment_keyboard(payment_url: str, payment_id: str, back_callback: str = "back_to_main_menu") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к оплате", url=payment_url)
     builder.button(text="🔄 Проверить оплату", callback_data=f"check_pending:{payment_id}")
-    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 
-def create_cryptobot_payment_keyboard(payment_url: str, invoice_id: int | str) -> InlineKeyboardMarkup:
+def create_cryptobot_payment_keyboard(payment_url: str, invoice_id: int | str, back_callback: str = "back_to_main_menu") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к оплате", url=payment_url)
     builder.button(text="🔄 Проверить оплату", callback_data=f"check_crypto_invoice:{invoice_id}")
-    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 
@@ -489,6 +525,7 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
         "tonconnect": bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or "")),
         "yoomoney": ((get_setting("yoomoney_enabled") or "false").strip().lower() == "true"),
         "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
+        "platega_crypto": ((get_setting("platega_crypto_enabled") or "false").strip().lower() == "true"),
         "stars": ((get_setting("stars_enabled") or "false").strip().lower() == "true"),
     }
 
@@ -510,6 +547,8 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
         builder.button(text="💜 ЮMoney (кошелёк)", callback_data="topup_pay_yoomoney")
     if pm.get("platega"):
         builder.button(text="💳 СБП / Platega", callback_data="topup_pay_platega")
+    if pm.get("platega_crypto"):
+        builder.button(text="💎 Крипта / Platega", callback_data="topup_pay_platega_crypto")
 
     builder.button(text="⬅️ Назад", callback_data="show_profile")
     builder.adjust(1)
@@ -667,7 +706,17 @@ def create_profile_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text=(get_setting("btn_topup_text") or "💳 Пополнить баланс"), callback_data="top_up_start")
     builder.button(text=(get_setting("btn_referral_text") or "🤝 Реферальная программа"), callback_data="show_referral_program")
+    builder.button(text="🎁 Ввести промокод", callback_data="promo_uni")
     builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+def create_uni_promo_keys_keyboard(keys: list, code: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for i, key in enumerate(keys):
+        host_name = key.get('host_name', 'Неизвестный хост')
+        builder.button(text=f"Ключ #{i+1} ({host_name})", callback_data=f"apply_uni_{code}_{key['key_id']}")
+    builder.button(text="❌ Отмена", callback_data="show_profile")
     builder.adjust(1)
     return builder.as_markup()
 

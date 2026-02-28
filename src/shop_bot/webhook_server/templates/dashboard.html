@@ -655,6 +655,43 @@
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         };
 
+        const getRelativeTimeJS = (dateStr, isHourly = false) => {
+            if (isHourly) {
+                const target = new Date(dateStr.replace(' ', 'T'));
+                if (isNaN(target.getTime())) return "";
+                const now = new Date();
+                let diffHours = Math.floor((now - target) / 3600000);
+                if (diffHours <= 0) return "менее 1 ч. назад";
+                return `${diffHours} ч. назад`;
+            }
+
+            const parts = dateStr.split(' ')[0].split('-');
+            const y = parts[0], m = parts[1], d = parts[2];
+            if (!y || !m || !d) return "";
+
+            const target = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+
+            const diffTime = Math.max(0, now - target);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) return "сегодня";
+            if (diffDays === 1) return "вчера";
+
+            if (diffDays < 30) {
+                return `${diffDays} д. назад`;
+            }
+
+            const diffMonths = Math.floor(diffDays / 30);
+            if (diffMonths < 12) {
+                return `${diffMonths} м. назад`;
+            }
+
+            const diffYears = Math.floor(diffDays / 365);
+            return `${diffYears} г. назад`;
+        };
+
         const initIncomeChart = (incomeData) => {
             const ctx = document.getElementById('incomeChart').getContext('2d');
             const dates = Object.keys(incomeData || {}).sort();
@@ -697,6 +734,7 @@
                         if (currentIncomePeriod === 'today') return d.slice(11, 16);
                         return d.slice(5, 10).replace(/-/g, '.');
                     }),
+                    fullDates: dates,
                     datasets: datasets
                 },
                 options: {
@@ -716,6 +754,32 @@
                                 return tooltipItem.raw > 0;
                             },
                             callbacks: {
+                                title: function (context) {
+                                    if (!context || !context.length) return '';
+                                    let chart = context[0].chart;
+                                    let idx = context[0].dataIndex;
+                                    let rawDate = chart.config.data.fullDates ? chart.config.data.fullDates[idx] : null;
+                                    let displayTitle = context[0].label;
+                                    if (rawDate) {
+                                        let isHourly = currentIncomePeriod === 'today';
+                                        let relTime = getRelativeTimeJS(rawDate, isHourly);
+
+                                        let parts = rawDate.split(' ')[0].split('-');
+                                        if (parts.length >= 3) {
+                                            let dateFmt = `${parts[2]}.${parts[1]}.${parts[0].slice(-2)}`;
+                                            if (isHourly) {
+                                                displayTitle = `${dateFmt} ${context[0].label}`;
+                                            } else {
+                                                displayTitle = dateFmt;
+                                            }
+                                        }
+
+                                        if (relTime) {
+                                            return `${displayTitle} (${relTime})`;
+                                        }
+                                    }
+                                    return displayTitle;
+                                },
                                 label: (context) => ` ${context.dataset.label}: ${context.parsed.y.toLocaleString('ru-RU')} ₽`
                             }
                         }
@@ -767,6 +831,7 @@
                 if (currentIncomePeriod === 'today') return d.slice(11, 16);
                 return d.slice(5, 10).replace(/-/g, '.');
             });
+            chart.data.fullDates = dates;
             chart.data.datasets = datasets;
             chart.update('none');
         };

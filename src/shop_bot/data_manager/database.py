@@ -556,6 +556,7 @@ def initialize_db():
                 "stars_per_rub": "1",
                 
                 "platega_enabled": "false",
+                "platega_crypto_enabled": "false",
                 "platega_merchant_id": None,
                 "platega_api_key": None,
 
@@ -581,6 +582,8 @@ def initialize_db():
                 "key_ready_image": None,
                 "devices_list_image": None,
                 "key_gemini": None,
+                "stealth_login_enabled": "0",
+                "stealth_login_hotkey": "ctrl+b",
             }
             _ensure_default_values(cursor, "bot_settings", default_settings)
             conn.commit()
@@ -662,12 +665,27 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
         "remnawave_api_token": "TEXT",
         "see": "INTEGER DEFAULT 1",
         "traffic_limit_strategy": "TEXT DEFAULT 'NO_RESET'",
+        "device_mode": "TEXT DEFAULT 'plan'",
+        "tier_lock_extend": "INTEGER DEFAULT 0",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "xui_hosts", column, definition)
 
 
 # =================================
+
+
+def _ensure_device_tiers_table(cursor: sqlite3.Cursor) -> None:
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS device_tiers (
+            tier_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            host_name TEXT NOT NULL,
+            device_count INTEGER NOT NULL,
+            price REAL NOT NULL DEFAULT 0,
+            sort_order INTEGER DEFAULT 0,
+            UNIQUE(host_name, device_count)
+        )
+    ''')
 
 
 # ===== _ENSURE_PLANS_COLUMNS =====
@@ -903,6 +921,7 @@ def run_migration():
             cursor.execute("PRAGMA foreign_keys = OFF")
             _ensure_users_columns(cursor)
             _ensure_hosts_columns(cursor)
+            _ensure_device_tiers_table(cursor)
             _ensure_plans_columns(cursor)
             _ensure_support_tickets_columns(cursor)
             _ensure_vpn_keys_schema(cursor)
@@ -1219,6 +1238,8 @@ def _ensure_promo_tables(cursor: sqlite3.Cursor) -> None:
             code TEXT PRIMARY KEY,
             discount_percent REAL,
             discount_amount REAL,
+            promo_type TEXT DEFAULT 'discount',
+            reward_value INTEGER DEFAULT 0,
             usage_limit_total INTEGER,
             usage_limit_per_user INTEGER,
             used_total INTEGER DEFAULT 0,
@@ -1231,6 +1252,14 @@ def _ensure_promo_tables(cursor: sqlite3.Cursor) -> None:
         )
         """
     )
+    
+    mapping = {
+        "promo_type": "TEXT DEFAULT 'discount'",
+        "reward_value": "INTEGER DEFAULT 0"
+    }
+    for column, definition in mapping.items():
+        _ensure_table_column(cursor, "promo_codes", column, definition)
+
     _ensure_index(cursor, "idx_promo_codes_valid", "promo_codes", "valid_until")
     cursor.execute(
         """
@@ -1703,6 +1732,25 @@ def toggle_host_visibility(host_name: str, visible: int) -> bool:
     if cursor and cursor.rowcount > 0: logging.info(f"Видимость хоста '{host_name_n}' обновлена: see={visible_int}")
     return _check_rowcount(cursor, f"хост '{host_name_n}'", "")
 # ==================================
+
+
+def get_device_tiers(host_name: str) -> list[dict]:
+    return _fetch_list("SELECT * FROM device_tiers WHERE TRIM(host_name)=TRIM(?) ORDER BY sort_order, device_count", (host_name,))
+
+def add_device_tier(host_name: str, device_count: int, price: float) -> int | None:
+    r = _exec("INSERT OR REPLACE INTO device_tiers (host_name, device_count, price) VALUES (?,?,?)", (host_name, device_count, price))
+    return r.lastrowid if r else None
+
+def delete_device_tier(tier_id: int) -> bool:
+    r = _exec("DELETE FROM device_tiers WHERE tier_id=?", (tier_id,))
+    return r is not None and r.rowcount > 0
+
+def get_device_tier_by_id(tier_id: int) -> dict | None:
+    return _fetch_row("SELECT * FROM device_tiers WHERE tier_id=?", (tier_id,))
+
+def update_host_device_mode(host_name: str, mode: str) -> bool:
+    r = _exec("UPDATE xui_hosts SET device_mode=? WHERE TRIM(host_name)=TRIM(?)", (mode, host_name))
+    return r is not None and r.rowcount > 0
 
 
 # ===== DELETE_KEY_BY_ID =====
@@ -2776,11 +2824,12 @@ def add_new_key(
     description: str | None = None,
     tag: str | None = None,
     comment_key: str | None = None,
+    created_at_ms: int | None = None,
 ) -> int | None:
     host_name_norm = normalize_host_name(host_name) if host_name else None
     email_normalized = _normalize_email(key_email) or key_email.strip()
     expire_str = _to_datetime_str(expiry_timestamp_ms) or _now_str()
-    created_str = _now_str()
+    created_str = _to_datetime_str(created_at_ms) or _now_str() if created_at_ms is not None else _now_str()
     strategy_value = traffic_limit_strategy or "NO_RESET"
     
     cursor = _exec(

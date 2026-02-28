@@ -923,6 +923,38 @@
             setTimeout(() => { window.location.href = '/login'; }, 1500);
         };
 
+        // ===== ГЛОБАЛЬНЫЙ ПЕРЕХВАТ FETCH =====
+        const originalFetch = window.fetch;
+        window.fetch = async function (...args) {
+            let response;
+            try {
+                response = await originalFetch.apply(this, args);
+            } catch (err) {
+                throw err;
+            }
+
+            if (response.status === 401 || response.status === 403) {
+                if (window.handleSessionExpiry) window.handleSessionExpiry();
+                return response;
+            }
+
+            // Перехват HTML-ответа с авторизацией (если бэкенд возвращает 200 OK со страницей входа)
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+                const clone = response.clone();
+                try {
+                    const text = await clone.text();
+                    if (window.isLoginPage && window.isLoginPage(text, response.url)) {
+                        if (window.handleSessionExpiry) window.handleSessionExpiry();
+                        return new Response('Session expired', { status: 401, statusText: 'Unauthorized' });
+                    }
+                } catch (e) {
+                    console.error('Fetch intercept error:', e);
+                }
+            }
+            return response;
+        };
+
         // ===== СЕТЕВЫЕ ЗАПРОСЫ API =====
         // Универсальная функция для выполнения HTTP-запросов с CSRF
         window.apiRequest = async function (url, options = {}) {

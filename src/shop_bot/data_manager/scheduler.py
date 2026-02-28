@@ -372,10 +372,16 @@ async def sync_keys_with_panels():
                          # Но если в existing_key user_id=None (что невозможно по схеме), то ок.
                          pass
                     else:
-                        logger.warning(
-                            "Scheduler: Осиротевший пользователь '%s' в Remnawave не содержит user_id — пропускаю (ключ останется в панели, но не привяжется).",
-                            remote_email,
-                        )
+                        if remote_email.startswith('gift-'):
+                            logger.info(
+                                "Scheduler: Подарочный ключ '%s' в Remnawave ожидает активации — оставляем в БД и панели без изменений.",
+                                remote_email,
+                            )
+                        else:
+                            logger.warning(
+                                "Scheduler: Осиротевший пользователь '%s' в Remnawave не содержит user_id — пропускаю (ключ останется в панели, но не привяжется).",
+                                remote_email,
+                            )
                         continue
 
                 # Автоматическая регистрация пользователя, если его нет в БД (и это не подарок без владельца)

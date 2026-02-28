@@ -96,6 +96,7 @@ def record_key(
     tag: str | None = None,
     description: str | None = None,
     comment_key: str | None = None,
+    created_at_ms: int | None = None,
 ) -> int | None:
     expire_ms = expire_at_ms if expire_at_ms is not None else _default_expire_at_ms()
     email_normalized = _normalize_email(email)
@@ -141,6 +142,7 @@ def record_key(
             description=description,
             tag=tag,
             comment_key=comment_key,
+            created_at_ms=created_at_ms,
         )
     except Exception:
         logger.exception("Remnawave repository failed to record key for user %s", user_id)
@@ -168,6 +170,16 @@ def record_key_from_payload(
                 expire_at_ms = int(datetime.fromisoformat(str(expire_iso).replace('Z', '+00:00')).timestamp() * 1000)
             except Exception:
                 expire_at_ms = None
+                
+    created_at_ms = payload.get('created_at_ms')
+    if created_at_ms is None:
+        created_iso = payload.get('createdAt') or payload.get('createdDate')
+        if created_iso:
+            try:
+                created_at_ms = int(datetime.fromisoformat(str(created_iso).replace('Z', '+00:00')).timestamp() * 1000)
+            except Exception:
+                created_at_ms = None
+                
     return record_key(
         user_id=user_id,
         squad_uuid=squad_uuid,
@@ -183,6 +195,7 @@ def record_key_from_payload(
         traffic_limit_strategy=payload.get('traffic_limit_strategy') or payload.get('trafficLimitStrategy'),
         tag=tag or payload.get('tag'),
         description=description or payload.get('description'),
+        created_at_ms=created_at_ms,
     )
 
 
@@ -318,6 +331,11 @@ _LEGACY_FORWARDERS = (
     "update_key_status_from_server",
     "update_plan",
     "update_setting",
+    "get_device_tiers",
+    "add_device_tier",
+    "delete_device_tier",
+    "get_device_tier_by_id",
+    "update_host_device_mode",
     "update_ticket_subject",
     "update_ticket_thread_info",
     "update_user_stats",
@@ -501,6 +519,8 @@ def create_promo_code(
     *,
     discount_percent: float | None = None,
     discount_amount: float | None = None,
+    promo_type: str = 'discount',
+    reward_value: int = 0,
     usage_limit_total: int | None = None,
     usage_limit_per_user: int | None = None,
     valid_from: datetime | None = None,
@@ -511,23 +531,29 @@ def create_promo_code(
     code_s = (code or "").strip().upper()
     if not code_s:
         raise ValueError("code is required")
-    if (discount_percent or 0) <= 0 and (discount_amount or 0) <= 0:
+    if promo_type == 'discount' and (discount_percent or 0) <= 0 and (discount_amount or 0) <= 0:
         raise ValueError("discount must be positive")
+    if promo_type == 'universal' and reward_value <= 0:
+        raise ValueError("reward_value for universal promo must be positive")
+    if promo_type == 'balance' and reward_value <= 0:
+        raise ValueError("reward_value for balance promo must be positive")
     try:
         with _connect() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
                 INSERT INTO promo_codes (
-                    code, discount_percent, discount_amount,
+                    code, discount_percent, discount_amount, promo_type, reward_value,
                     usage_limit_total, usage_limit_per_user,
                     valid_from, valid_until, created_by, description
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     code_s,
                     float(discount_percent) if discount_percent is not None else None,
                     float(discount_amount) if discount_amount is not None else None,
+                    promo_type,
+                    reward_value,
                     usage_limit_total,
                     usage_limit_per_user,
                     valid_from.isoformat() if isinstance(valid_from, datetime) else valid_from,
@@ -575,6 +601,7 @@ def check_promo_code_available(code: str, user_id: int) -> tuple[dict | None, st
         cursor.execute(
             """
             SELECT code, discount_percent, discount_amount,
+                   promo_type, reward_value,
                    usage_limit_total, usage_limit_per_user,
                    used_total, valid_from, valid_until, is_active
             FROM promo_codes
@@ -665,6 +692,7 @@ def redeem_promo_code(code: str, user_id: int, *, applied_amount: float, order_i
         cursor.execute(
             """
             SELECT code, discount_percent, discount_amount,
+                   promo_type, reward_value,
                    usage_limit_total, usage_limit_per_user,
                    used_total, valid_from, valid_until, is_active
             FROM promo_codes
@@ -734,6 +762,95 @@ def redeem_promo_code(code: str, user_id: int, *, applied_amount: float, order_i
             promo["redeemed_by"] = user_id_i
             promo["applied_amount"] = applied_amount_f
             promo["order_id"] = order_id
+            promo["used_at"] = now_iso
+            return promo
+        except sqlite3.Error as e:
+            conn.rollback()
+            if str(e).startswith("FOREIGN KEY constraint failed"):
+                return None
+            raise
+
+
+
+def redeem_universal_promo(code: str, user_id: int) -> dict | None:
+    code_s = (code or "").strip().upper()
+    if not code_s:
+        return None
+    user_id_i = int(user_id)
+    now_iso = get_msk_time().isoformat()
+    with _connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT code, discount_percent, discount_amount,
+                   promo_type, reward_value,
+                   usage_limit_total, usage_limit_per_user,
+                   used_total, valid_from, valid_until, is_active
+            FROM promo_codes
+            WHERE code = ? AND promo_type = 'universal'
+            """,
+            (code_s,),
+        )
+        promo_row = cursor.fetchone()
+        if promo_row is None:
+            return None
+        promo = dict(promo_row)
+        if not promo.get("is_active"):
+            return None
+        valid_from = promo.get("valid_from")
+        valid_until = promo.get("valid_until")
+        now_dt = get_msk_time().replace(tzinfo=None)
+        if valid_from:
+            try:
+                if datetime.fromisoformat(str(valid_from)) > now_dt:
+                    return None
+            except Exception:
+                pass
+        if valid_until:
+            try:
+                if datetime.fromisoformat(str(valid_until)) < now_dt:
+                    try:
+                        update_promo_code_status(code_s, is_active=False)
+                    except Exception:
+                        pass
+                    return None
+            except Exception:
+                pass
+        usage_limit_total = promo.get("usage_limit_total")
+        used_total = promo.get("used_total") or 0
+        if usage_limit_total and used_total >= usage_limit_total:
+            return None
+        usage_limit_per_user = promo.get("usage_limit_per_user")
+        per_user_count = 0
+        if usage_limit_per_user:
+            cursor.execute(
+                "SELECT COUNT(1) FROM promo_code_usages WHERE code = ? AND user_id = ?",
+                (code_s, user_id_i),
+            )
+            per_user_count = cursor.fetchone()[0]
+            if per_user_count >= usage_limit_per_user:
+                return None
+        try:
+            cursor.execute(
+                """
+                INSERT INTO promo_code_usages (code, user_id, applied_amount, order_id, used_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (code_s, user_id_i, 0, 'UNIVERSAL_PROMO', now_iso),
+            )
+            cursor.execute(
+                """
+                UPDATE promo_codes
+                SET used_total = COALESCE(used_total, 0) + 1
+                WHERE code = ?
+                """,
+                (code_s,),
+            )
+            conn.commit()
+            promo["used_total"] = used_total + 1
+            promo["usage_limit_per_user"] = usage_limit_per_user
+            promo["user_used_count"] = per_user_count + 1
+            promo["redeemed_by"] = user_id_i
             promo["used_at"] = now_iso
             return promo
         except sqlite3.Error as e:

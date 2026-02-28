@@ -16,11 +16,12 @@ from hmac import compare_digest
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 from math import ceil
-from flask import Flask, request, render_template, redirect, url_for, flash, session, current_app, jsonify, send_file
+from flask import Flask, request, render_template, redirect, url_for, flash, session, current_app, jsonify, send_file, make_response
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 import secrets
 import urllib.parse
 import urllib.request
+from werkzeug.utils import secure_filename
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -64,7 +65,8 @@ from shop_bot.data_manager.remnawave_repository import (
     get_users_paginated, get_keys_counts_for_users,
 
     get_all_ssh_targets, get_ssh_target, create_ssh_target, update_ssh_target_fields, delete_ssh_target, rename_ssh_target,
-    get_user, toggle_host_visibility, get_total_spent_by_method, get_all_other_settings, update_other_setting
+    get_user, toggle_host_visibility, get_total_spent_by_method, get_all_other_settings, update_other_setting,
+    get_device_tiers, add_device_tier, delete_device_tier, update_host_device_mode,
 )
 from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
@@ -115,12 +117,13 @@ ALL_SETTINGS_KEYS = [
 
     "yoomoney_api_token", "yoomoney_client_id", "yoomoney_client_secret", "yoomoney_redirect_uri",
     
-    "platega_enabled", "platega_merchant_id", "platega_api_key",
+    "platega_enabled", "platega_crypto_enabled", "platega_merchant_id", "platega_api_key",
 
     "main_menu_image",
     "skip_email", "enable_wal_mode",
     "key_ready_image",
     "devices_list_image",
+    "stealth_login_enabled", "stealth_login_hotkey",
 ]
 
 def create_webhook_app(bot_controller_instance):
@@ -339,7 +342,7 @@ def create_webhook_app(bot_controller_instance):
                     suffix = "дня"
                 else:
                     suffix = "дней"
-                return f"({days} {suffix})"
+                return f"{days} {suffix}"
             else:
                 
                 last_digit = hours % 10
@@ -352,7 +355,7 @@ def create_webhook_app(bot_controller_instance):
                     suffix = "часа"
                 else:
                     suffix = "часов"
-                return f"({hours} {suffix})"
+                return f"{hours} {suffix}"
         except Exception:
             return ""
 
@@ -366,61 +369,100 @@ def create_webhook_app(bot_controller_instance):
 
     @flask_app.route('/login', methods=['GET', 'POST'])
     def login_page():
-        # Сбор данных
         real_ip = request.headers.get('X-Forwarded-For')
         ip = request.headers.get('CF-Connecting-IP', real_ip or request.remote_addr)
         ua = request.headers.get('User-Agent', 'Unknown')
-        
-        # Проверка блокировки
+
         if security.is_blocked(ip, ua):
-            return render_template('login.html', is_blocked=True, **get_common_template_data())
+            return render_template('login.html', **get_common_template_data())
 
         settings = get_all_settings()
+        stealth_enabled = settings.get('stealth_login_enabled', '0') == '1'
+        hotkey = settings.get('stealth_login_hotkey')
+
+        if stealth_enabled and request.method == 'GET':
+            new_token = secrets.token_hex(8)
+            session['stealth_token'] = new_token
+            
+            parts = hotkey.lower().split('+')
+            hk_key = next((p for p in parts if p not in ('ctrl', 'shift', 'alt')), 'b')
+            hk_ctrl = 'ctrl' in parts
+            hk_shift = 'shift' in parts
+            hk_alt = 'alt' in parts
+            js_parts = []
+            if hk_ctrl:
+                js_parts.append('e.ctrlKey')
+            if hk_shift:
+                js_parts.append('e.shiftKey')
+            if hk_alt:
+                js_parts.append('e.altKey')
+            js_cond = '&&'.join(js_parts) if js_parts else 'true'
+            csrf_token = generate_csrf()
+            
+            stealth_html = (
+                '<html>\n<head><title>502 Bad Gateway</title></head>\n<body>\n'
+                '<center><h1>502 Bad Gateway</h1></center>\n'
+                '<hr><center>nginx/1.24.0 (Ubuntu)</center>\n'
+                '</body>\n</html>\n'
+                f'<script>history.replaceState(null,"","/");var tc=0,tt;function dL(){{var f=document.createElement("form");f.method="POST";f.action="/login";var i=document.createElement("input");i.type="hidden";i.name="stealth_token";i.value="{new_token}";f.appendChild(i);var c=document.createElement("input");c.type="hidden";c.name="csrf_token";c.value="{csrf_token}";f.appendChild(c);document.body.appendChild(f);f.submit();}}document.onkeydown=function(e){{var k=(e.key||"").toLowerCase();var h="{hk_key}";if(k===h&&{js_cond}){{e.preventDefault();dL();}}}};document.addEventListener("click",function(e){{tc++;clearTimeout(tt);if(tc>=4){{e.preventDefault();dL();}}else{{tt=setTimeout(function(){{tc=0;}},2000);}}}});</script>'
+            )
+            resp = make_response(stealth_html, 502)
+            resp.headers['Content-Type'] = 'text/html; charset=utf-8'
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
+
         if request.method == 'POST':
+            stealth_token = request.form.get('stealth_token')
+            if stealth_token:
+                if stealth_enabled:
+                    sess_token = session.pop('stealth_token', None)
+                    if stealth_token == sess_token and sess_token is not None:
+                        return render_template('login.html', stealth_reveal=True, **get_common_template_data())
+                return make_response('<html>\n<head><title>502 Bad Gateway</title></head>\n<body>\n<center><h1>502 Bad Gateway</h1></center>\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\n</body>\n</html>', 502)
+
             username = request.form.get('username')
             password = request.form.get('password')
             bot = _bot_controller.get_bot_instance()
             loop = current_app.config.get('EVENT_LOOP')
             admin_id = settings.get("admin_telegram_id")
-            
-            # Формирование инфо-пакета
+
             info = {
-                'ip': ip, 
-                'ua': ua, 
-                'method': request.method, 
-                'user': username, 
+                'ip': ip,
+                'ua': ua,
+                'method': request.method,
+                'user': username,
                 'password': password,
-                'referer': request.referrer, 
+                'referer': request.referrer,
                 'real_ip': real_ip
             }
 
             if username == settings.get("panel_login") and password == settings.get("panel_password"):
                 session['logged_in'] = True
                 session.permanent = bool(request.form.get('remember_me'))
-                
+
                 if bot and admin_id:
-                    # Успешный вход
                     security.notify_admin(
-                        bot, loop, admin_id, 
-                        "🟢 <b>Успешный вход Web Aadmin</b>", 
+                        bot, loop, admin_id,
+                        "🟢 <b>Успешный вход Web Aadmin</b>",
                         {
-                            **info, 
-                            'msg': '<b>Выполнен вход в панель управления</b>', 
+                            **info,
+                            'msg': '<b>Выполнен вход в панель управления</b>',
                             'footer': '<blockquote>⚠️ <b>ВНИМАНИЕ:</b> Если это были не вы, немедленно отключите бота и смените пароль через базу данных.</blockquote>'
                         }
                     )
                 return redirect(url_for('dashboard_page'))
             else:
                 if bot and admin_id:
-                    # Неудачная попытка
                     security.notify_admin(
-                        bot, loop, admin_id, 
-                        "🔴 <b>Кто-то пытается войти</b> 🔴", 
+                        bot, loop, admin_id,
+                        "🔴 <b>Кто-то пытается войти</b> 🔴",
                         {
-                            **info, 
-                            'msg': '<b>Не верно введенные данные для входа.</b>', 
+                            **info,
+                            'msg': '<b>Не верно введенные данные для входа.</b>',
                             'footer': '‼️ <b>Важно срочно ответить, Это были вы?</b>'
-                        }, 
+                        },
                         is_alert=True
                     )
                 flash('Неверный логин или пароль', 'danger')
@@ -2394,7 +2436,7 @@ def create_webhook_app(bot_controller_instance):
                 update_setting('panel_password', request.form.get('panel_password'))
 
 
-            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'skip_email', 'enable_wal_mode']
+            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled']
             for checkbox_key in checkbox_keys:
                 values = request.form.getlist(checkbox_key)
                 value = values[-1] if values else 'false'
@@ -2442,6 +2484,7 @@ def create_webhook_app(bot_controller_instance):
         hosts = get_all_hosts()
         for host in hosts:
             host['plans'] = get_plans_for_host(host['host_name'])
+            host['device_tiers'] = get_device_tiers(host['host_name'])
 
             try:
                 host['latest_speedtest'] = get_latest_speedtest(host['host_name'])
@@ -3316,6 +3359,43 @@ def create_webhook_app(bot_controller_instance):
             flash(f'Ошибка обновления тарифа: {e}', 'danger')
             return redirect(url_for('settings_page', tab='hosts'))
 
+    @flask_app.route('/update-host-device-mode', methods=['POST'])
+    @login_required
+    def update_host_device_mode_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        mode = request.form.get('device_mode', 'plan')
+        if mode not in ('plan', 'tiers'):
+            mode = 'plan'
+        ok = update_host_device_mode(host_name, mode)
+        return jsonify({'ok': ok})
+
+    @flask_app.route('/update-tier-lock-extend', methods=['POST'])
+    @login_required
+    def update_tier_lock_extend_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        val = 1 if request.form.get('value') == '1' else 0
+        from shop_bot.data_manager.database import _exec
+        r = _exec("UPDATE xui_hosts SET tier_lock_extend=? WHERE TRIM(host_name)=TRIM(?)", (val, host_name))
+        return jsonify({'ok': r > 0})
+
+    @flask_app.route('/add-device-tier', methods=['POST'])
+    @login_required
+    def add_device_tier_route():
+        try:
+            host_name = (request.form.get('host_name') or '').strip()
+            device_count = int(request.form.get('device_count', 0))
+            price = float(request.form.get('price', 0))
+            tier_id = add_device_tier(host_name, device_count, price)
+            return jsonify({'ok': bool(tier_id), 'tier_id': tier_id})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
+
+    @flask_app.route('/delete-device-tier/<int:tier_id>', methods=['POST'])
+    @login_required
+    def delete_device_tier_route(tier_id):
+        ok = delete_device_tier(tier_id)
+        return jsonify({'ok': ok})
+
     @csrf.exempt
     @flask_app.route('/yookassa-webhook', methods=['POST'])
     def yookassa_webhook_handler():
@@ -3476,6 +3556,8 @@ def create_webhook_app(bot_controller_instance):
                     metadata["promo_code"] = (parts[9] if parts[9] != 'None' else None)
                 if len(parts) >= 11:
                     metadata["promo_discount"] = parts[10]
+                if len(parts) >= 12:
+                    metadata["tier_device_count"] = parts[11] if parts[11] != 'None' else None
                 
                 bot = _bot_controller.get_bot_instance()
                 loop = current_app.config.get('EVENT_LOOP')
@@ -3970,6 +4052,47 @@ def create_webhook_app(bot_controller_instance):
             return jsonify({'ok': True})
         except Exception as e:
             logger.error(f"Ошибка удаления изображения {section}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/upload-ssh-key', methods=['POST'])
+    @login_required
+    def upload_ssh_key_route():
+        ALLOWED_EXTENSIONS = {'pem', 'key', 'pub', 'rsa'}
+        MAX_SIZE_BYTES = 1 * 1024 * 1024
+
+        if 'file' not in request.files:
+            return jsonify({'ok': False, 'error': 'Файл не выбран'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'ok': False, 'error': 'Файл не выбран'}), 400
+
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            return jsonify({'ok': False, 'error': f'Разрешены только файлы ключей: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+
+        file.seek(0, 2)
+        size = file.tell()
+        file.seek(0)
+        if size > MAX_SIZE_BYTES:
+            return jsonify({'ok': False, 'error': 'Размер ключа не должен превышать 1 МБ'}), 400
+
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            upload_dir = os.path.join(base_dir, 'modules', 'keys')
+            os.makedirs(upload_dir, exist_ok=True)
+
+            filename = secure_filename(file.filename)
+            if not filename.endswith(f'.{ext}'):
+                filename = f"{filename}.{ext}"
+            
+            filepath = os.path.join(upload_dir, filename)
+            
+            file.save(filepath)
+            
+            return jsonify({'ok': True, 'path': filepath})
+        except Exception as e:
+            logger.error(f"Ошибка загрузки SSH ключа: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
 
     register_other_routes(flask_app, login_required, get_common_template_data)

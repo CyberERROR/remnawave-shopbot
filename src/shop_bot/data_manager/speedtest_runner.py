@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import re
 from urllib.parse import urlparse
 
@@ -183,18 +184,27 @@ async def ssh_speedtest_for_host(host_row: dict) -> dict:
     def _run_ssh() -> dict:
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        pkey = None
         if ssh_key_path:
-            pkey = None
-            try:
-                pkey = paramiko.RSAKey.from_private_key_file(ssh_key_path)
-            except Exception:
+            actual_key_path = ssh_key_path
+            if not os.path.exists(actual_key_path):
+                filename = os.path.basename(ssh_key_path)
+                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                alt_path = os.path.join(base_dir, 'modules', 'keys', filename)
+                if os.path.exists(alt_path):
+                    actual_key_path = alt_path
+
+            if os.path.exists(actual_key_path):
                 try:
-                    pkey = paramiko.Ed25519Key.from_private_key_file(ssh_key_path)
+                    pkey = paramiko.RSAKey.from_private_key_file(actual_key_path)
                 except Exception:
-                    pkey = None
-            ssh.connect(ssh_host, port=ssh_port, username=ssh_user, password=ssh_password, pkey=pkey, timeout=20)
-        else:
-            ssh.connect(ssh_host, port=ssh_port, username=ssh_user, password=ssh_password, timeout=20)
+                    try:
+                        pkey = paramiko.Ed25519Key.from_private_key_file(actual_key_path)
+                    except Exception:
+                        pkey = None
+        
+        ssh.connect(ssh_host, port=ssh_port, username=ssh_user, password=ssh_password, pkey=pkey, timeout=20)
 
 
         data, err = _ssh_exec_json(ssh, [
@@ -303,13 +313,22 @@ def _ssh_connect(host_row: dict) -> paramiko.SSHClient:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     pkey = None
     if ssh_key_path:
-        try:
-            pkey = paramiko.RSAKey.from_private_key_file(ssh_key_path)
-        except Exception:
+        actual_key_path = ssh_key_path
+        if not os.path.exists(actual_key_path):
+            filename = os.path.basename(ssh_key_path)
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            alt_path = os.path.join(base_dir, 'modules', 'keys', filename)
+            if os.path.exists(alt_path):
+                actual_key_path = alt_path
+
+        if os.path.exists(actual_key_path):
             try:
-                pkey = paramiko.Ed25519Key.from_private_key_file(ssh_key_path)
+                pkey = paramiko.RSAKey.from_private_key_file(actual_key_path)
             except Exception:
-                pkey = None
+                try:
+                    pkey = paramiko.Ed25519Key.from_private_key_file(actual_key_path)
+                except Exception:
+                    pkey = None
     ssh.connect(ssh_host, port=ssh_port, username=ssh_user, password=ssh_password, pkey=pkey, timeout=20)
     return ssh
 
