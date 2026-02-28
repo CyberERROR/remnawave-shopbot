@@ -2824,6 +2824,24 @@ def create_webhook_app(bot_controller_instance):
         flash('Remnawave-настройки обновлены.' if ok else 'Не удалось обновить Remnawave-настройки.', 'success' if ok else 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
 
+    @flask_app.route('/update-host-base-devices', methods=['POST'])
+    @login_required
+    def update_host_base_devices_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        count = request.form.get('count')
+        try:
+            count = int(count)
+            if count < 1: count = 1
+        except Exception:
+            count = 1
+        if host_name:
+            update_setting(f"base_device_{host_name}", str(count))
+            wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            if wants_json:
+                return jsonify({'ok': True, 'count': count})
+        return jsonify({'ok': False, 'error': 'Invalid request'}), 400
+
+
     @flask_app.route('/rename-host', methods=['POST'])
     @login_required
     def rename_host_route():
@@ -4100,5 +4118,3 @@ def create_webhook_app(bot_controller_instance):
     register_gemini_routes(flask_app, login_required)
 
     return flask_app
-
-
