@@ -377,7 +377,6 @@
             animation: bg-pulse-warning 0.9s infinite ease-in-out;
         }
 
-        /* Global Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 6px !important;
             height: 6px !important;
@@ -430,9 +429,11 @@
                                 <span class="material-symbols-outlined text-xl">edit</span>
                             </button>
                             <button type="button" id="about-info-btn"
-                                class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all relative"
+                                class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
                                 title="О проекте">
-                                <span class="material-symbols-outlined text-xl">info</span>
+                                <span id="about-info-icon" class="material-symbols-outlined text-xl">info</span>
+                                <span id="about-new-badge"
+                                    class="hidden flex h-4 w-auto px-1 items-center justify-center rounded bg-red-500 text-[8px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-bounce">NEW</span>
                             </button>
                         </div>
                     </div>
@@ -1166,6 +1167,11 @@
                     if (data && data.update_available) {
                         aboutBtn.classList.remove('text-white/40', 'hover:text-white');
                         aboutBtn.classList.add('text-primary', 'animate-glow-pulse');
+                        const badge = document.getElementById('about-new-badge');
+                        const infoIcon = document.getElementById('about-info-icon');
+                        if (badge) badge.classList.remove('hidden');
+                        if (infoIcon) infoIcon.classList.add('hidden');
+
                         if (updateNotification && latestVersionSpan) {
                             latestVersionSpan.textContent = data.latest_version;
                             updateNotification.classList.remove('hidden');
@@ -1173,6 +1179,11 @@
                     } else {
                         aboutBtn.classList.add('text-white/40', 'hover:text-white');
                         aboutBtn.classList.remove('text-primary', 'animate-glow-pulse');
+                        const badge = document.getElementById('about-new-badge');
+                        const infoIcon = document.getElementById('about-info-icon');
+                        if (badge) badge.classList.add('hidden');
+                        if (infoIcon) infoIcon.classList.remove('hidden');
+
                         if (updateNotification) updateNotification.classList.add('hidden');
                     }
                 } catch (e) {
