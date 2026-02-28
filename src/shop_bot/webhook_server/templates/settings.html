@@ -1620,11 +1620,26 @@
                         <div id="device-tiers-block-{{ host.host_name }}"
                             class="{% if host.device_mode != 'tiers' %}hidden{% endif %} mt-3 pt-3 border-t border-white/5">
                             <div id="device-tiers-list-{{ host.host_name }}" class="flex flex-wrap gap-2 mb-3">
-                                <div
-                                    class="flex items-center gap-2 bg-black/20 border border-cyan-500/30 rounded-lg px-3 py-2">
-                                    <span class="text-cyan-400 text-xs font-bold">1 устр.</span>
+                                {% set basen = settings.get('base_device_' ~ host.host_name, '1') %}
+                                <div id="base-tier-display-{{ host.host_name }}"
+                                    class="flex items-center gap-2 bg-black/20 border border-cyan-500/30 rounded-lg px-3 py-2 cursor-pointer group hover:bg-black/30 transition-colors"
+                                    onclick="editBaseTier('{{ host.host_name }}')">
+                                    <span class="text-cyan-400 text-xs font-bold"
+                                        id="base-tier-count-{{ host.host_name }}">{{ basen }} устр.</span>
                                     <span class="text-white/30 text-[10px]">—</span>
                                     <span class="text-white/40 text-[10px]">базовое</span>
+                                    <span
+                                        class="material-symbols-outlined text-xs text-white/30 opacity-0 group-hover:opacity-100 transition-opacity ml-1">edit</span>
+                                </div>
+                                <div id="base-tier-edit-{{ host.host_name }}"
+                                    class="hidden items-center gap-2 bg-black/40 border border-cyan-500/50 rounded-lg px-3 py-1.5 transition-colors">
+                                    <input type="number" id="base-tier-input-{{ host.host_name }}" value="{{ basen }}"
+                                        min="1"
+                                        class="w-12 bg-transparent border-b border-cyan-500/50 text-cyan-400 text-xs font-bold focus:outline-none focus:border-cyan-400 text-center px-1"
+                                        onkeydown="if(event.key === 'Enter') saveBaseTier('{{ host.host_name }}')" />
+                                    <span class="text-white/40 text-[10px] whitespace-nowrap">устр. — базовое</span>
+                                    <button type="button" onclick="saveBaseTier('{{ host.host_name }}')"
+                                        class="material-symbols-outlined text-sm text-green-400 hover:text-green-300 transition-colors ml-1 w-5 h-5 flex items-center justify-center rounded-md hover:bg-green-400/10">check</button>
                                 </div>
                                 {% for tier in host.device_tiers %}
                                 <div class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2"
@@ -3646,6 +3661,40 @@
         const r = await sendRequest('/update-host-device-mode', 'POST', fd);
         if (r.ok) showToast('success', 'Режим устройств сохранён');
         else showToast('danger', r.error || 'Ошибка сохранения');
+    }
+
+    function editBaseTier(hostName) {
+        document.getElementById('base-tier-display-' + hostName).classList.add('hidden');
+        document.getElementById('base-tier-display-' + hostName).classList.remove('flex');
+        const editDiv = document.getElementById('base-tier-edit-' + hostName);
+        editDiv.classList.remove('hidden');
+        editDiv.classList.add('flex');
+        const input = document.getElementById('base-tier-input-' + hostName);
+        input.focus();
+        input.select();
+    }
+
+    async function saveBaseTier(hostName) {
+        const input = document.getElementById('base-tier-input-' + hostName);
+        if (!input) return;
+        const parsed = parseInt(input.value);
+        if (isNaN(parsed) || parsed < 1) { showToast('danger', 'Укажите число 1 или более'); return; }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('count', parsed);
+        const r = await sendRequest('/update-host-base-devices', 'POST', fd);
+        if (r.ok) {
+            const el = document.getElementById('base-tier-count-' + hostName);
+            if (el) el.textContent = r.count + ' устр.';
+            showToast('success', 'Базовое кол-во устройств сохранено');
+            input.value = r.count;
+            document.getElementById('base-tier-edit-' + hostName).classList.add('hidden');
+            document.getElementById('base-tier-edit-' + hostName).classList.remove('flex');
+            document.getElementById('base-tier-display-' + hostName).classList.remove('hidden');
+            document.getElementById('base-tier-display-' + hostName).classList.add('flex');
+        } else {
+            showToast('danger', r.error || 'Ошибка');
+        }
     }
 
     async function addDeviceTier(hostName) {
