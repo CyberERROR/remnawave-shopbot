@@ -2355,13 +2355,19 @@ def get_user_router() -> Router:
                             preset_found = True
                             break
                 if not preset_found:
+                    from shop_bot.data_manager.database import get_plan_by_id, get_setting
+                    plan = get_plan_by_id(data.get('plan_id')) if data.get('plan_id') else None
+                    months = int(plan.get('months') or 1) if plan else 1
+                    base_devices = int(get_setting(f"base_device_{host_name}") or "1")
                     await state.update_data(
-                        tier_device_count=1, tier_price=0.0, selected_tier_id=0,
+                        tier_device_count=base_devices, tier_price=0.0, selected_tier_id=0,
                         _extend_tier_preset=True
                     )
             else:
+                from shop_bot.data_manager.database import get_setting
+                base_devices = int(get_setting(f"base_device_{host_name}") or "1")
                 await state.update_data(
-                    tier_device_count=1, tier_price=0.0, selected_tier_id=0,
+                    tier_device_count=base_devices, tier_price=0.0, selected_tier_id=0,
                     _extend_tier_preset=False
                 )
 
@@ -2431,12 +2437,18 @@ def get_user_router() -> Router:
         data = await state.get_data()
         host_name = data.get('host_name', '')
         if tier_id == 0:
-            await state.update_data(tier_device_count=1, tier_price=0.0, selected_tier_id=0)
+            from shop_bot.data_manager.database import get_setting
+            base_devices = int(get_setting(f"base_device_{host_name}") or "1")
+            await state.update_data(tier_device_count=base_devices, tier_price=0.0, selected_tier_id=0)
         else:
             tier = get_device_tier_by_id(tier_id)
             if not tier:
                 return
-            calculated_price = float((tier['device_count'] - 1) * tier['price'])
+            from shop_bot.data_manager.database import get_setting
+            base_devices = int(get_setting(f"base_device_{host_name}") or "1")
+            diff = tier['device_count'] - base_devices
+            if diff < 0: diff = 0
+            calculated_price = float(diff * tier['price'])
             await state.update_data(tier_device_count=tier['device_count'], tier_price=calculated_price, selected_tier_id=tier_id)
         tiers = get_device_tiers(host_name)
         await _show_device_tiers(callback.message, tiers, host_name, data.get('plan_id', 0), data.get('action', 'new'), data.get('key_id', 0), selected_tier_id=tier_id)
