@@ -380,18 +380,21 @@ def create_plans_keyboard(plans: list[dict], action: str, host_name: str, key_id
 
 
 def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int, action: str, key_id: int = 0, selected_tier_id: int = None) -> InlineKeyboardMarkup:
-    from shop_bot.data_manager.database import get_plan_by_id
+    from shop_bot.data_manager.database import get_plan_by_id, get_setting
     plan = get_plan_by_id(plan_id) if plan_id else None
     months = int(plan.get('months') or 1) if plan else 1
+    base_devices = int(get_setting(f"base_device_{host_name}") or "1")
 
     builder = InlineKeyboardBuilder()
     base_icon = "🟢" if selected_tier_id == 0 else "⚪️"
-    builder.button(text=f"{base_icon} 1 (вкл.)", callback_data="select_tier_0")
+    builder.button(text=f"{base_icon} {base_devices} (вкл.)", callback_data="select_tier_0")
     total_btns = 1
     for t in tiers:
         is_selected = (selected_tier_id == t['tier_id'])
         icon = "🟢" if is_selected else "⚪️"
-        total_price = (t['device_count'] - 1) * t['price'] * months
+        diff = t['device_count'] - base_devices
+        if diff < 0: diff = 0
+        total_price = diff * t['price'] * months
         label = f"{icon} {t['device_count']} (+{total_price:.0f}₽)"
         builder.button(text=label, callback_data=f"select_tier_{t['tier_id']}")
         total_btns += 1
