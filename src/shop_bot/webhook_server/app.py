@@ -3414,6 +3414,18 @@ def create_webhook_app(bot_controller_instance):
         ok = delete_device_tier(tier_id)
         return jsonify({'ok': ok})
 
+    @flask_app.route('/edit-device-tier/<int:tier_id>', methods=['POST'])
+    @login_required
+    def edit_device_tier_route(tier_id):
+        try:
+            device_count = int(request.form.get('device_count', 0))
+            price = float(request.form.get('price', 0))
+            from shop_bot.data_manager.database import update_device_tier
+            ok = update_device_tier(tier_id, device_count, price)
+            return jsonify({'ok': ok})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
+
     @csrf.exempt
     @flask_app.route('/yookassa-webhook', methods=['POST'])
     def yookassa_webhook_handler():
@@ -4118,3 +4130,5 @@ def create_webhook_app(bot_controller_instance):
     register_gemini_routes(flask_app, login_required)
 
     return flask_app
+
+
