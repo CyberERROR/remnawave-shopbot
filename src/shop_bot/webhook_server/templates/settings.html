@@ -1642,17 +1642,34 @@
                                         class="material-symbols-outlined text-sm text-green-400 hover:text-green-300 transition-colors ml-1 w-5 h-5 flex items-center justify-center rounded-md hover:bg-green-400/10">check</button>
                                 </div>
                                 {% for tier in host.device_tiers %}
-                                <div class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2"
-                                    id="tier-row-{{ tier.tier_id }}">
-                                    <span class="text-cyan-400 text-xs font-bold">{{ tier.device_count }} устр.</span>
+                                <div class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2 cursor-pointer group hover:bg-black/30 transition-colors"
+                                    id="tier-display-{{ tier.tier_id }}" onclick="editExtraTier('{{ tier.tier_id }}')">
+                                    <span class="text-cyan-400 text-xs font-bold"
+                                        id="tier-display-count-{{ tier.tier_id }}">{{ tier.device_count }} устр.</span>
                                     <span class="text-white/30 text-[10px]">—</span>
-                                    <span class="text-white text-xs font-bold">{{ '%.0f'|format(tier.price)
+                                    <span class="text-white text-xs font-bold"
+                                        id="tier-display-price-{{ tier.tier_id }}">{{ '%.0f'|format(tier.price)
                                         }}₽/шт</span>
+                                    <span
+                                        class="material-symbols-outlined text-xs text-white/30 opacity-0 group-hover:opacity-100 transition-opacity ml-1">edit</span>
                                     <button type="button"
-                                        onclick="deleteDeviceTier('{{ tier.tier_id }}', '{{ host.host_name }}')"
+                                        onclick="event.stopPropagation(); deleteDeviceTier('{{ tier.tier_id }}', '{{ host.host_name }}')"
                                         class="w-5 h-5 rounded-md bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500/30 transition-all ml-1">
                                         <span class="material-symbols-outlined text-sm">close</span>
                                     </button>
+                                </div>
+                                <div id="tier-edit-{{ tier.tier_id }}"
+                                    class="hidden items-center gap-2 bg-black/40 border border-cyan-500/50 rounded-lg px-3 py-1.5 transition-colors">
+                                    <input type="number" id="tier-input-count-{{ tier.tier_id }}"
+                                        value="{{ tier.device_count }}" min="2"
+                                        class="w-10 bg-transparent border-b border-cyan-500/50 text-cyan-400 text-xs font-bold focus:outline-none focus:border-cyan-400 text-center px-1" />
+                                    <span class="text-white/30 text-[10px]">—</span>
+                                    <input type="number" id="tier-input-price-{{ tier.tier_id }}"
+                                        value="{{ '%.0f'|format(tier.price) }}" min="0"
+                                        class="w-10 bg-transparent border-b border-cyan-500/50 text-white text-xs font-bold focus:outline-none focus:border-cyan-400 text-center px-1" />
+                                    <span class="text-white/40 text-[10px] whitespace-nowrap">₽/шт</span>
+                                    <button type="button" onclick="saveExtraTier('{{ tier.tier_id }}')"
+                                        class="material-symbols-outlined text-sm text-green-400 hover:text-green-300 transition-colors ml-1 w-5 h-5 flex items-center justify-center rounded-md hover:bg-green-400/10">check</button>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -3697,6 +3714,40 @@
         }
     }
 
+    function editExtraTier(tierId) {
+        document.getElementById('tier-display-' + tierId).classList.add('hidden');
+        document.getElementById('tier-display-' + tierId).classList.remove('flex');
+        const editDiv = document.getElementById('tier-edit-' + tierId);
+        editDiv.classList.remove('hidden');
+        editDiv.classList.add('flex');
+        document.getElementById('tier-input-count-' + tierId).focus();
+    }
+
+    async function saveExtraTier(tierId) {
+        const countInput = document.getElementById('tier-input-count-' + tierId);
+        const priceInput = document.getElementById('tier-input-price-' + tierId);
+        if (!countInput || !priceInput) return;
+        const count = parseInt(countInput.value);
+        const price = parseFloat(priceInput.value);
+        if (isNaN(count) || count < 2 || isNaN(price) || price < 0) { showToast('danger', 'Укажите корректные значения'); return; }
+
+        const fd = new FormData();
+        fd.append('device_count', count);
+        fd.append('price', price);
+        const r = await sendRequest('/edit-device-tier/' + tierId, 'POST', fd);
+        if (r.ok) {
+            document.getElementById('tier-display-count-' + tierId).textContent = count + ' устр.';
+            document.getElementById('tier-display-price-' + tierId).textContent = Math.round(price) + '₽/шт';
+            showToast('success', 'Резерв устройств обновлён');
+            document.getElementById('tier-edit-' + tierId).classList.add('hidden');
+            document.getElementById('tier-edit-' + tierId).classList.remove('flex');
+            document.getElementById('tier-display-' + tierId).classList.remove('hidden');
+            document.getElementById('tier-display-' + tierId).classList.add('flex');
+        } else {
+            showToast('danger', r.error || 'Ошибка');
+        }
+    }
+
     async function addDeviceTier(hostName) {
         const countEl = document.getElementById('tier-count-' + hostName);
         const priceEl = document.getElementById('tier-price-' + hostName);
@@ -3711,11 +3762,7 @@
         if (r.ok && r.tier_id) {
             const list = document.getElementById('device-tiers-list-' + hostName);
             if (list) {
-                const div = document.createElement('div');
-                div.className = 'flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2';
-                div.id = 'tier-row-' + r.tier_id;
-                div.innerHTML = '<span class="text-cyan-400 text-xs font-bold">' + count + ' устр.</span><span class="text-white/30 text-[10px]">—</span><span class="text-white text-xs font-bold">' + Math.round(price) + '₽/шт</span><button type="button" onclick="deleteDeviceTier(' + r.tier_id + ',\'' + hostName + '\')" class="w-5 h-5 rounded-md bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500/30 transition-all ml-1"><span class="material-symbols-outlined text-sm">close</span></button>';
-                list.appendChild(div);
+                window.location.reload();
             }
             if (countEl) countEl.value = '';
             if (priceEl) priceEl.value = '';
@@ -3726,8 +3773,11 @@
     async function deleteDeviceTier(tierId, hostName) {
         const r = await sendRequest('/delete-device-tier/' + tierId, 'POST');
         if (r.ok) {
-            const row = document.getElementById('tier-row-' + tierId);
-            if (row) row.remove();
+            const displayRow = document.getElementById('tier-display-' + tierId);
+            const editRow = document.getElementById('tier-edit-' + tierId);
+            if (displayRow) displayRow.remove();
+            if (editRow) editRow.remove();
+            showToast('success', 'Удалено');
             showToast('success', 'Тир удалён');
         } else showToast('danger', r.error || 'Ошибка');
     }
