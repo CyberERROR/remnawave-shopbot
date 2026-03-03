@@ -903,7 +903,10 @@
                         badge.style.display = 'none';
                     }
                 }
-            } catch (e) { console.error('Badge update error:', e); }
+            } catch (e) {
+                if (e.name === 'TypeError') return;
+                console.error('Badge update error:', e);
+            }
         };
 
         // Запускаем сразу и периодически обновляем
