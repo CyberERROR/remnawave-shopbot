@@ -181,6 +181,13 @@
                             <button type="button" onclick="insertTag('pre')"
                                 class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs font-mono font-bold transition-all"
                                 title="Блок кода">Pre</button>
+                            <button type="button" onclick="insertTag('blockquote')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs font-mono font-bold transition-all"
+                                title="Цитата">Quote</button>
+                            <button type="button" onclick="insertTag('tg-emoji')"
+                                class="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-white/60 text-xs font-mono font-bold transition-all flex items-center gap-1"
+                                title="Premium Emoji"><span
+                                    class="material-symbols-outlined text-[14px]">add_reaction</span></button>
                         </div>
                     </div>
 
@@ -223,11 +230,18 @@
                                 class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold mb-4 ml-1">Клавиатура</label>
                             <div id="buttons-list"
                                 class="space-y-2 mb-3 flex-1 overflow-y-auto max-h-[200px] pr-1 custom-scrollbar"></div>
-                            <button type="button" id="btn-add-button"
-                                class="w-full py-3.5 rounded-xl bg-white/5 hover:border-white/30 border border-white/10 text-white text-[11px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 mt-auto">
-                                <span class="material-symbols-outlined text-lg">add_circle</span>
-                                Добавить кнопку
-                            </button>
+                            <div class="flex gap-2 mt-auto">
+                                <button type="button" id="btn-add-button"
+                                    class="flex-1 py-3.5 rounded-xl bg-white/5 hover:border-white/30 border border-white/10 text-white text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-base">link</span>
+                                    URL КНОПКА
+                                </button>
+                                <button type="button" id="btn-add-promo-button"
+                                    class="flex-1 py-3.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-base">local_activity</span>
+                                    PROMO CALLBACK
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -2890,9 +2904,20 @@
             buttons.forEach((btn, idx) => {
                 const item = document.createElement('div');
                 item.className = 'flex gap-2';
+
+                let inputField = '';
+                if (btn.type === 'promo') {
+                    inputField = `<input type="text" value="${btn.value || ''}" placeholder="Код промокода (например, 6UFW43SD)" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="value" />`;
+                } else {
+                    inputField = `<input type="url" value="${btn.url || ''}" placeholder="https://..." class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="url" />`;
+                }
+
                 item.innerHTML = `
-                    <input type="text" value="${btn.text}" placeholder="Текст кнопки" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="text" />
-                    <input type="url" value="${btn.url}" placeholder="https://..." class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="url" />
+                    <input type="text" value="${btn.text || ''}" placeholder="Текст кнопки" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="text" />
+                    <div class="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/50 text-[10px] uppercase font-bold flex items-center justify-center min-w-[80px] select-none">
+                        ${btn.type === 'promo' ? 'Callback' : 'URL'}
+                    </div>
+                    ${inputField}
                     <button type="button" class="px-2.5 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors" data-remove="${idx}">
                         <span class="material-symbols-outlined text-base">delete</span>
                     </button>
@@ -2922,9 +2947,21 @@
                 window.showToast('warning', 'Максимум 6 кнопок');
                 return;
             }
-            buttons.push({ text: '', url: '' });
+            buttons.push({ type: 'url', text: '', url: '' });
             renderButtons();
         });
+
+        const btnAddPromo = document.getElementById('btn-add-promo-button');
+        if (btnAddPromo) {
+            btnAddPromo.addEventListener('click', () => {
+                if (buttons.length >= 6) {
+                    window.showToast('warning', 'Максимум 6 кнопок');
+                    return;
+                }
+                buttons.push({ type: 'promo', text: '🎁 Активировать промокод', value: '' });
+                renderButtons();
+            });
+        }
 
         document.getElementById('btn-preview').addEventListener('click', async () => {
             const text = document.getElementById('broadcast-text').value.trim();
@@ -3106,6 +3143,10 @@
                                 setTimeout(() => pollStatus(taskId), 2000);
                             }
                         } catch (e) {
+                            if (e.name === 'TypeError') {
+                                setTimeout(() => pollStatus(taskId), 5000);
+                                return;
+                            }
                             console.error('Error polling broadcast status:', e);
                         }
                     };
@@ -5613,6 +5654,20 @@
             return;
         }
 
+        if (tag === 'tg-emoji') {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            window._broadcastSelection = { start, end };
+
+            const emojiInput = document.getElementById('emoji-id-input');
+            if (emojiInput) {
+                emojiInput.value = '';
+                openModal('emojiModal');
+                setTimeout(() => emojiInput.focus(), 100);
+            }
+            return;
+        }
+
         let startTag = `<${tag}>`;
         let endTag = `</${tag}>`;
 
@@ -5648,6 +5703,27 @@
                     }
                 }
                 closeModal('linkModal');
+            });
+        }
+
+        const insertEmojiBtn = document.getElementById('btn-insert-emoji');
+        if (insertEmojiBtn) {
+            insertEmojiBtn.addEventListener('click', () => {
+                const idInput = document.getElementById('emoji-id-input');
+                const emojiId = idInput.value.trim();
+                const textarea = document.getElementById('broadcast-text');
+                if (textarea && window._broadcastSelection) {
+                    const start = window._broadcastSelection.start;
+                    const end = window._broadcastSelection.end;
+                    const text = textarea.value;
+                    const selected = text.substring(start, end);
+                    const inner = selected || '😀';
+
+                    const replacement = emojiId ? `<tg-emoji emoji-id="${emojiId}">${inner}</tg-emoji>` : inner;
+                    textarea.setRangeText(replacement, start, end, 'select');
+                    textarea.focus();
+                }
+                closeModal('emojiModal');
             });
         }
 
@@ -5853,6 +5929,23 @@
             <button type="button" onclick="closeModal('linkModal')"
                 class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all">Отмена</button>
             <button type="button" id="btn-insert-link"
+                class="px-5 py-2.5 rounded-xl bg-primary text-background-dark text-sm font-bold hover:bg-primary/90 transition-all">Вставить</button>
+        </div>
+    </div>
+</div>
+
+<div id="emojiModal" class="modal-overlay">
+    <div class="modal-content p-6 max-w-lg">
+        <h3 class="text-xl font-bold text-white mb-4">Вставить Premium Emoji</h3>
+        <div class="mb-6">
+            <label class="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">ID Emoji</label>
+            <input type="text" id="emoji-id-input" placeholder="Например: 5368324170671202286"
+                class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none" />
+        </div>
+        <div class="flex gap-3 justify-end">
+            <button type="button" onclick="closeModal('emojiModal')"
+                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all">Отмена</button>
+            <button type="button" id="btn-insert-emoji"
                 class="px-5 py-2.5 rounded-xl bg-primary text-background-dark text-sm font-bold hover:bg-primary/90 transition-all">Вставить</button>
         </div>
     </div>
