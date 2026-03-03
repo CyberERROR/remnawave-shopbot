@@ -593,6 +593,37 @@ def get_user_router() -> Router:
                 await message.answer("✅ <b>Авторизация успешна!</b>\n\nМожете вернуться в браузер — страница обновится автоматически.")
                 return
 
+        if command.args and command.args.startswith('promo:'):
+            code = command.args[6:].upper()
+            promo, err_msg = check_promo_code_available(code, user_id)
+            err_map = {
+                "not_found": "Этот промокод не найден.",
+                "not_active": "Этот код деактивирован.",
+                "expired": "Промокод истёк.",
+                "user_limit_reached": "Вы уже использовали его.",
+                "total_limit_reached": "Лимит исчерпан."
+            }
+            if promo and promo.get('promo_type') in ('universal', 'balance'):
+                if promo.get('promo_type') == 'balance':
+                    reward = int(promo.get('reward_value', 0))
+                    if adjust_user_balance(user_id, float(reward)):
+                        redeem_universal_promo(code, user_id)
+                        await message.answer(f"✅ <b>Промокод активирован!</b>\nВам начислено {reward} ₽", reply_markup=InlineKeyboardBuilder().button(text="В профиль", callback_data="show_profile").as_markup())
+                else:
+                    keys = get_user_keys(user_id)
+                    if keys:
+                        if len(keys) == 1:
+                            await _apply_uni_promo(message, user_id, keys[0]['key_id'], code, promo)
+                        else:
+                            kb = keyboards.create_uni_promo_keys_keyboard(keys, code)
+                            await message.answer("🎁 <b>Активация промокода</b>\nВыберите подписку (ключ):", reply_markup=kb)
+                    else:
+                        kb_buy = InlineKeyboardBuilder().button(text="🛒 Купить", callback_data="buy_new_key").as_markup()
+                        await message.answer("❌ У вас нет активных подписок для применения промокода на дни.", reply_markup=kb_buy)
+            else:
+                msg = err_map.get(err_msg, err_msg) if err_msg else "Данный промокод недействителен."
+                await message.answer(f"❌ {msg}")
+
         try: reward_type = (get_setting("referral_reward_type") or "percent_purchase").strip()
         except Exception: reward_type = "percent_purchase"
         
@@ -2851,13 +2882,56 @@ def get_user_router() -> Router:
     # ===== Конец функции key_comment_input_handler =====
 
 # ===== ОБРАБОТЧИКИ УНИВЕРСАЛЬНЫХ ПРОМОКОДОВ =====
-    @user_router.callback_query(F.data == "promo_uni")
+    @user_router.callback_query(F.data.startswith("promo_uni"))
     async def promo_uni_handler(callback: types.CallbackQuery, state: FSMContext):
-        await state.set_state(PromoUniProcess.waiting_for_promo_code)
-        kb = InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup()
-        msg = await smart_edit_message(callback.message, "🎁 <b>Активация бонусного промокода</b>\n\nВведите ваш универсальный промокод:", reply_markup=kb)
-        if msg: await state.update_data(promo_uni_prompt_mid=msg.message_id)
+        data = callback.data
+        if data == "promo_uni":
+            await state.set_state(PromoUniProcess.waiting_for_promo_code)
+            kb = InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup()
+            msg = await smart_edit_message(callback.message, "🎁 <b>Активация бонусного промокода</b>\n\nВведите ваш универсальный промокод:", reply_markup=kb)
+            if msg: await state.update_data(promo_uni_prompt_mid=msg.message_id)
+            await callback.answer()
+            return
+            
+        code = data.split(':', 1)[1].upper()
         await callback.answer()
+        
+        uid = callback.from_user.id
+        promo, err_msg = check_promo_code_available(code, uid)
+        err_map = {
+            "not_found": "Промокод не найден/неправильно написан.",
+            "not_active": "Промокод деактивирован.",
+            "expired": "Промокод истёк.",
+            "user_limit_reached": "Вы уже использовали этот промокод.",
+            "total_limit_reached": "Лимит активаций для этого промокода исчерпан."
+        }
+        
+        if not promo or promo.get('promo_type') not in ('universal', 'balance'):
+            msg = err_map.get(err_msg, err_msg) if err_msg else "Данный промокод недействителен."
+            await smart_edit_message(callback.message, f"❌ <b>Ошибка</b>\n{msg}", reply_markup=InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+            return
+            
+        if promo.get('promo_type') == 'balance':
+            reward = int(promo.get('reward_value', 0))
+            success = adjust_user_balance(uid, float(reward))
+            if success:
+                redeem_universal_promo(code, uid)
+                await smart_edit_message(callback.message, f"✅ <b>Баланс пополнен!</b>\nВам начислено {reward} ₽", reply_markup=InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+            else:
+                await smart_edit_message(callback.message, "❌ <b>Ошибка</b>\nНе удалось пополнить баланс.", reply_markup=InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+            return
+            
+        keys = get_user_keys(uid)
+        if not keys:
+            kb_buy = InlineKeyboardBuilder().button(text="🛒 Купить подписку", callback_data="buy_new_key").button(text="⬅️ Назад", callback_data="show_profile").adjust(1).as_markup()
+            await smart_edit_message(callback.message, "❌ У вас нет активных подписок для применения промокода.", reply_markup=kb_buy)
+            return
+            
+        if len(keys) == 1:
+            await _apply_uni_promo(callback.message, uid, keys[0]['key_id'], code, promo, is_callback=True)
+        else:
+            kb = keyboards.create_uni_promo_keys_keyboard(keys, code)
+            await smart_edit_message(callback.message, "Выберите подписку для промокода:", reply_markup=kb)
 
     @user_router.message(PromoUniProcess.waiting_for_promo_code)
     async def process_uni_promo_code(message: types.Message, state: FSMContext):
