@@ -340,9 +340,18 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
                 from aiogram.utils.keyboard import InlineKeyboardBuilder
                 builder = InlineKeyboardBuilder()
                 for btn in buttons:
-                    btn_text, btn_url = btn.get('text', '').strip(), btn.get('url', '').strip()
-                    if btn_text and btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
-                        builder.button(text=btn_text, url=btn_url)
+                    btn_text = btn.get('text', '').strip()
+                    btn_type = btn.get('type', 'url')
+                    if not btn_text: continue
+                    
+                    if btn_type == 'promo':
+                        promo_val = btn.get('value', '').strip()
+                        cb_data = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
+                        builder.button(text=btn_text, callback_data=cb_data)
+                    else:
+                        btn_url = btn.get('url', '').strip()
+                        if btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
+                            builder.button(text=btn_text, url=btn_url)
                 builder.adjust(1)
                 keyboard = builder.as_markup() if builder.export() else None
             
@@ -557,9 +566,18 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 from aiogram.utils.keyboard import InlineKeyboardBuilder
                 builder = InlineKeyboardBuilder()
                 for btn in buttons:
-                    btn_text, btn_url = btn.get('text', '').strip(), btn.get('url', '').strip()
-                    if btn_text and btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
-                        builder.button(text=btn_text, url=btn_url)
+                    btn_text = btn.get('text', '').strip()
+                    btn_type = btn.get('type', 'url')
+                    if not btn_text: continue
+                    
+                    if btn_type == 'promo':
+                        promo_val = btn.get('value', '').strip()
+                        cb_data = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
+                        builder.button(text=btn_text, callback_data=cb_data)
+                    else:
+                        btn_url = btn.get('url', '').strip()
+                        if btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
+                            builder.button(text=btn_text, url=btn_url)
                 builder.adjust(1)
                 keyboard = builder.as_markup() if builder.export() else None
             
