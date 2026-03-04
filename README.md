@@ -321,14 +321,6 @@ https://t.me/<bot_username>?start=ref_<telegram_id>
 
 ---
 
-## 💎 Авторство
-
-**Исходный код и все права принадлежат:** [@tweopi](https://github.com/tweopi)
-
-**Текущая версия:** [Releases](https://github.com/CyberERROR/remnawave-shopbot/releases)
-
----
-
 ## 📄 Лицензия
 
 Проект распространяется по лицензии [GPLv3](LICENSE).
