@@ -42,16 +42,15 @@
 
 <section id="tab-broadcast" class="tab-content">
     <div class="space-y-6">
-        <!-- Header Card -->
-        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-            <div class="flex items-center gap-4">
-                <div
-                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div class="relative flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                     <span class="material-symbols-outlined text-3xl">campaign</span>
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white tracking-tight">Создать рассылку</h3>
-                    <p class="text-white/60 text-xs font-medium">Массовая отправка сообщений и управление аудиторией</p>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Массовая отправка сообщений и управление аудиторией</p>
                 </div>
             </div>
         </div>
@@ -106,10 +105,16 @@
                     'green-400'},
                     {'l': 'Всего в ЧС (У нас)', 'id': 'stat-banned-count', 'icon': 'groups', 'color': 'white/40'}
                     ] %}
-                    <div class="bg-black/20 border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
+                    <div class="bg-black/20 border border-white/5 rounded-2xl p-4 flex flex-col gap-2 relative">
                         <div class="flex items-center gap-2">
                             <span class="material-symbols-outlined text-{{ res.color }} text-sm">{{ res.icon }}</span>
                             <p class="text-white/40 text-[9px] uppercase font-bold tracking-wider">{{ res.l }}</p>
+                            {% if res.id == 'stat-banned-count' %}
+                            <button type="button" id="btn-delete-banned-users" title="Удалить всех из БД"
+                                class="ml-auto text-red-500 hover:text-red-400 hover:scale-110 transition-transform flex items-center justify-center">
+                                <span class="material-symbols-outlined text-sm">delete</span>
+                            </button>
+                            {% endif %}
                         </div>
                         <p class="text-xl font-bold text-white" id="{{ res.id }}">0</p>
                     </div>
@@ -413,25 +418,33 @@
 
 <section id="tab-promo" class="tab-content hidden">
 
-    <div
-        class="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl mb-8 group hover:border-primary/30 transition-all duration-500">
-        <div
-            class="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 blur-[80px] rounded-full pointer-events-none transition-all duration-500">
+        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group mb-6">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div class="relative flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <span class="material-symbols-outlined text-3xl">local_activity</span>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white tracking-tight">Промокоды</h3>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление скидками и специальными предложениями</p>
+                </div>
+            </div>
         </div>
 
-        <div class="p-5 sm:p-6 relative z-10">
-            <form id="promo-create-form" autocomplete="off">
-
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 rounded-lg bg-primary/10 text-primary">
-                            <span class="material-symbols-outlined text-2xl">local_activity</span>
+        <div class="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl mb-8 group hover:border-primary/30 transition-all duration-500">
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 blur-[80px] rounded-full pointer-events-none transition-all duration-500"></div>
+            <div class="p-5 sm:p-6 relative z-10">
+                <form id="promo-create-form" autocomplete="off">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-primary/10 text-primary">
+                                <span class="material-symbols-outlined text-xl">add_circle</span>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold text-white leading-tight">Создать промокод</h2>
+                                <p class="text-[10px] text-white/40 uppercase tracking-wider font-semibold">Новая акция или скидка</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 class="text-lg font-bold text-white leading-tight">Создать промокод</h2>
-                            <p class="text-xs text-white/50 font-medium">Скидки и специальные предложения</p>
-                        </div>
-                    </div>
 
                     <div class="bg-black/40 p-1 rounded-xl flex w-full sm:w-auto overflow-hidden relative shadow-inner border border-white/5"
                         id="promo_mode_switch">
@@ -1268,22 +1281,15 @@
 <section id="tab-webapp" class="tab-content hidden">
     <div class="space-y-6">
         <!-- Header Card -->
-        <div
-            class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-md group">
-            <div
-                class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
-            </div>
-            <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div class="flex items-center gap-5">
-                    <div
-                        class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary shadow-inner border border-primary/20">
-                        <span class="material-symbols-outlined text-4xl">language</span>
-                    </div>
-                    <div>
-                        <h3 class="text-2xl font-bold text-white tracking-tight">Настройки Web App</h3>
-                        <p class="text-white/40 text-sm font-medium mt-1">Персонализация и управление вашим
-                            веб-приложением</p>
-                    </div>
+        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div class="relative flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <span class="material-symbols-outlined text-3xl">language</span>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white tracking-tight">Настройки Web App</h3>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Персонализация и управление веб-приложением</p>
                 </div>
             </div>
         </div>
@@ -1291,151 +1297,102 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Main Settings -->
             <div class="lg:col-span-2 space-y-6">
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl">
+                <div class="bg-white/5 border border-white/10 rounded-3xl p-1.5 shadow-2xl backdrop-blur-xl">
                     <div class="p-6">
-                        <form id="webapp-settings-form" class="space-y-8">
+                        <form id="webapp-settings-form" class="space-y-6">
                             <!-- Status Toggle -->
-                            <div
-                                class="relative overflow-hidden bg-black/40 rounded-2xl p-6 border border-white/5 group/toggle">
+                            <div class="relative overflow-hidden bg-black/40 rounded-2xl p-5 border border-white/5 group/toggle">
                                 <div class="flex items-center justify-between relative z-10">
                                     <div class="flex items-center gap-4">
-                                        <div
-                                            class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-white/40 group-hover/toggle:text-primary transition-colors">
-                                            <span class="material-symbols-outlined">power_settings_new</span>
+                                        <div class="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center text-white/30 group-hover/toggle:text-primary transition-colors border border-white/5">
+                                            <span class="material-symbols-outlined text-2xl">power_settings_new</span>
                                         </div>
                                         <div>
-                                            <h4 class="text-white font-bold text-base tracking-tight">Статус приложения
-                                            </h4>
-                                            <p class="text-white/30 text-xs mt-0.5">Включите или выключите доступ
-                                                пользователей к Web App</p>
+                                            <h4 class="text-white font-bold text-sm tracking-tight text-white/90">Статус приложения</h4>
+                                            <p class="text-white/30 text-[10px] mt-0.5 uppercase tracking-tighter">Доступ пользователей к приложению</p>
                                         </div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" name="webapp_enable" id="webapp_enable"
-                                            class="peer sr-only" {{ 'checked' if webapp.webapp_enable else '' }}>
-                                        <div
-                                            class="w-14 h-7 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[19px] after:w-[19px] after:transition-all peer-checked:bg-primary shadow-inner">
+                                        <input type="checkbox" name="webapp_enable" id="webapp_enable" class="peer sr-only" {{ 'checked' if webapp.webapp_enable else '' }}>
+                                        <div class="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary shadow-inner">
                                         </div>
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <!-- Title Input -->
-                                <div class="space-y-2.5">
-                                    <label
-                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-white/40 font-black ml-1">
                                         <span class="material-symbols-outlined text-sm">badge</span>
                                         Название магазина
                                     </label>
-                                    <div class="relative group/input">
-                                        <input type="text" name="webapp_title" id="webapp_title"
-                                            value="{{ webapp.webapp_title or '' }}"
-                                            class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-medium"
-                                            placeholder="Напр: My VPN Store">
-                                        <div
-                                            class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
-                                        </div>
-                                    </div>
+                                    <input type="text" name="webapp_title" id="webapp_title"
+                                        value="{{ webapp.webapp_title or '' }}"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all font-medium placeholder:text-white/5"
+                                        placeholder="Напр: TOR VPN">
                                 </div>
 
                                 <!-- Domain Input -->
-                                <div class="space-y-2.5">
-                                    <label
-                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-white/40 font-black ml-1">
                                         <span class="material-symbols-outlined text-sm">link</span>
                                         Доменное имя
                                     </label>
-                                    <div class="relative group/input">
-                                        <input type="text" name="webapp_domen" id="webapp_domen"
-                                            value="{{ webapp.webapp_domen or '' }}"
-                                            class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
-                                            placeholder="example.com">
-                                        <div
-                                            class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
-                                        </div>
-                                    </div>
+                                    <input type="text" name="webapp_domen" id="webapp_domen"
+                                        value="{{ webapp.webapp_domen or '' }}"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all font-mono placeholder:text-white/5"
+                                        placeholder="lk.torapp.vip">
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <!-- Logo URL -->
-                                <div class="space-y-2.5">
-                                    <label
-                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-white/40 font-black ml-1">
                                         <span class="material-symbols-outlined text-sm">image</span>
-                                        Логотип (URL адрес)
+                                        Логотип (URL)
                                     </label>
-                                    <div class="flex flex-col md:flex-row gap-4">
-                                        <div class="relative flex-1 group/input">
-                                            <input type="text" name="webapp_logo" id="webapp_logo"
-                                                value="{{ webapp.webapp_logo or '' }}"
-                                                class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
-                                                placeholder="https://your-domain.com/logo.png">
-                                            <div
-                                                class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            class="relative w-full md:w-20 h-20 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 group/preview transition-all hover:border-primary/30">
+                                    <div class="flex gap-3">
+                                        <input type="text" name="webapp_logo" id="webapp_logo"
+                                            value="{{ webapp.webapp_logo or '' }}"
+                                            class="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all font-mono placeholder:text-white/5"
+                                            placeholder="https://i.imgur.com/...">
+                                        <div class="w-12 h-12 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 group/preview transition-all hover:border-primary/30">
                                             <img id="webapp-logo-preview" src="{{ webapp.webapp_logo }}"
                                                 onerror="this.style.display='none'"
                                                 class="w-full h-full object-contain p-2 {{ 'hidden' if not webapp.webapp_logo else '' }}">
-                                            <span
-                                                class="material-symbols-outlined text-white/10 text-3xl {{ 'hidden' if webapp.webapp_logo else '' }}"
-                                                id="webapp-logo-placeholder">image</span>
-                                            <div
-                                                class="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 flex items-center justify-center transition-opacity">
-                                                <span
-                                                    class="text-[8px] text-white font-bold uppercase tracking-tighter">Preview</span>
-                                            </div>
+                                            <span class="material-symbols-outlined text-white/10 text-xl {{ 'hidden' if webapp.webapp_logo else '' }}" id="webapp-logo-placeholder">image</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Favicon URL -->
-                                <div class="space-y-2.5">
-                                    <label
-                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-black ml-1">
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-white/40 font-black ml-1">
                                         <span class="material-symbols-outlined text-sm">language</span>
-                                        Favicon (URL адрес)
+                                        Favicon (URL)
                                     </label>
-                                    <div class="flex flex-col md:flex-row gap-4">
-                                        <div class="relative flex-1 group/input">
-                                            <input type="text" name="webapp_icon" id="webapp_icon"
-                                                value="{{ webapp.webapp_icon or '' }}"
-                                                class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all font-mono"
-                                                placeholder="https://your-domain.com/favicon.ico">
-                                            <div
-                                                class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-focus-within/input:opacity-100 pointer-events-none transition-opacity">
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            class="relative w-full md:w-20 h-20 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 group/preview transition-all hover:border-primary/30">
+                                    <div class="flex gap-3">
+                                        <input type="text" name="webapp_icon" id="webapp_icon"
+                                            value="{{ webapp.webapp_icon or '' }}"
+                                            class="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all font-mono placeholder:text-white/5"
+                                            placeholder="https://i.imgur.com/...">
+                                        <div class="w-12 h-12 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 group/preview transition-all hover:border-primary/30">
                                             <img id="webapp-icon-preview" src="{{ webapp.webapp_icon }}"
                                                 onerror="this.style.display='none'"
                                                 class="w-full h-full object-contain p-2 {{ 'hidden' if not webapp.webapp_icon else '' }}">
-                                            <span
-                                                class="material-symbols-outlined text-white/10 text-3xl {{ 'hidden' if webapp.webapp_icon else '' }}"
-                                                id="webapp-icon-placeholder">language</span>
-                                            <div
-                                                class="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 flex items-center justify-center transition-opacity">
-                                                <span
-                                                    class="text-[8px] text-white font-bold uppercase tracking-tighter">Preview</span>
-                                            </div>
+                                            <span class="material-symbols-outlined text-white/10 text-xl {{ 'hidden' if webapp.webapp_icon else '' }}" id="webapp-icon-placeholder">language</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Save Button -->
-                            <div class="pt-4 border-t border-white/5">
+                            <div class="pt-4">
                                 <button type="submit" id="btn-save-webapp"
-                                    class="w-full px-8 py-5 rounded-2xl bg-primary text-background-dark font-black uppercase tracking-[0.2em] text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_20px_40px_-15px_rgba(19,236,128,0.3)] flex items-center justify-center gap-3 group/save">
-                                    <span
-                                        class="material-symbols-outlined group-hover:rotate-12 transition-transform">save</span>
+                                    class="w-full h-14 rounded-2xl bg-primary text-background-dark font-black uppercase tracking-[0.15em] text-xs hover:scale-[1.01] active:scale-[0.99] transition-all shadow-[0_10px_30px_-5px_rgba(19,236,128,0.3)] flex items-center justify-center gap-3">
+                                    <span class="material-symbols-outlined text-base">save</span>
                                     Сохранить конфигурацию
                                 </button>
                             </div>
@@ -1446,12 +1403,31 @@
 
             <!-- Info Sidebar -->
             <div class="space-y-6">
-                <div
-                    class="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <!-- Instruction Block -->
+                <div class="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl"></div>
+                    <div class="relative">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined">terminal</span>
+                        </div>
+                        <h4 class="text-white font-bold mb-2">Установка и SSL</h4>
+                        <p class="text-white/60 text-xs leading-relaxed mb-3">
+                            Выполните эти команды на сервере для установки Web App и получения SSL сертификатов:
+                        </p>
+                        <div class="bg-black/40 border border-white/10 rounded-xl p-3 flex items-center justify-between gap-3 group/copy">
+                            <pre class="text-[10px] text-blue-300 font-mono whitespace-pre-wrap flex-1">cd /root/remnawave-shopbot/src/shop_bot/webapp && chmod +x install.sh && ./install.sh</pre>
+                            <button type="button" onclick="navigator.clipboard.writeText('cd /root/remnawave-shopbot/src/shop_bot/webapp && chmod +x install.sh && ./install.sh')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white flex items-center justify-center transition-all flex-shrink-0" title="Скопировать">
+                                <span class="material-symbols-outlined text-sm flex pointer-events-none">content_copy</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips Block -->
+                <div class="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-2xl p-6 shadow-xl relative overflow-hidden">
                     <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
                     <div class="relative">
-                        <div
-                            class="w-10 h-10 rounded-xl bg-primary text-background-dark flex items-center justify-center mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-primary text-background-dark flex items-center justify-center mb-4">
                             <span class="material-symbols-outlined">lightbulb</span>
                         </div>
                         <h4 class="text-white font-bold mb-2">Советы по настройке</h4>
@@ -1471,28 +1447,6 @@
                         </ul>
                     </div>
                 </div>
-
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl">
-                    <h4 class="text-white font-bold mb-4 flex items-center gap-2 text-sm">
-                        <span class="material-symbols-outlined text-primary text-lg">info</span>
-                        Информация о системе
-                    </h4>
-                    <div class="space-y-4">
-                        <div
-                            class="flex justify-between items-center text-[10px] uppercase font-bold tracking-widest p-3 bg-black/20 rounded-xl border border-white/5">
-                            <span class="text-white/40">API Status</span>
-                            <span class="text-primary flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                                Online
-                            </span>
-                        </div>
-                        <div
-                            class="flex justify-between items-center text-[10px] uppercase font-bold tracking-widest p-3 bg-black/20 rounded-xl border border-white/5">
-                            <span class="text-white/40">SSL Certificate</span>
-                            <span class="text-primary">Active</span>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -1500,8 +1454,21 @@
 {% endif %}
 
 <section id="tab-remnawave" class="tab-content hidden">
-    <div
-        class="bg-white/5 border border-white/10 rounded-2xl p-8 shadow-xl backdrop-blur-md text-center max-w-2xl mx-auto">
+    <div class="space-y-6">
+        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div class="relative flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <span class="material-symbols-outlined text-3xl">graphic_eq</span>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white tracking-tight">Remnawave</h3>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Интеграция и управление панелью управления</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-8 shadow-xl backdrop-blur-md text-center max-w-2xl mx-auto">
         <div
             class="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6 border border-primary/20">
             <span class="material-symbols-outlined text-5xl">engineering</span>
@@ -1521,17 +1488,15 @@
 
 <section id="tab-servers" class="tab-content hidden">
     <div class="space-y-6">
-        <!-- Header Card -->
-        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-            <div class="flex items-center gap-4">
-                <div
-                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div class="relative flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                     <span class="material-symbols-outlined text-3xl">dns</span>
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white tracking-tight">Управление серверами</h3>
-                    <p class="text-white/60 text-xs font-medium">Контроль ресурсов, развертывание нод и сетевые
-                        настройки</p>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Контроль ресурсов и сетевые настройки</p>
                 </div>
             </div>
         </div>
@@ -1604,6 +1569,18 @@
 
 <section id="tab-logs" class="tab-content hidden">
     <div class="space-y-6">
+        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div class="relative flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <span class="material-symbols-outlined text-3xl">article</span>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white tracking-tight">Логи Бота</h3>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Мониторинг системных событий и ошибок в реальном времени</p>
+                </div>
+            </div>
+        </div>
 
 
         <div id="logs-wrapper"
@@ -2012,11 +1989,13 @@
 
             <form id="exec-command-form" class="mt-3 flex-shrink-0">
                 <div class="flex items-center gap-2">
-                    <div class="flex-1 relative">
-                        <span
-                            class="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400/60 text-sm font-bold">$</span>
-                        <input type="text" id="exec-command-input" placeholder="Введите команду..."
-                            class="w-full bg-black/30 border border-white/[0.06] rounded-lg pl-7 pr-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 font-mono text-sm transition-all" />
+                    <div class="flex-1 relative flex items-start">
+                        <span class="absolute left-3 top-[11px] text-emerald-400/60 text-sm font-bold">$</span>
+                        <textarea id="exec-command-input"
+                            placeholder="Введите команды... (Shift+Enter для новой строки)"
+                            class="w-full bg-black/30 border border-white/[0.06] rounded-lg pl-7 pr-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 font-mono text-sm transition-all resize-none overflow-y-auto"
+                            rows="1" style="min-height: 42px; max-height: 200px;"
+                            oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 200) + 'px'"></textarea>
                     </div>
                     <button type="button" id="btn-stop-command"
                         class="w-[42px] h-[42px] rounded-lg bg-red-500/10 hover:border-red-500/30 border border-red-500/30 flex items-center justify-center transition-all group"
@@ -2105,7 +2084,7 @@
                         <div class="soft-select flex-1" data-target="schedulerUnit">
                             <div
                                 class="soft-select-toggle bg-black/30 border border-white/[0.06] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none cursor-pointer flex items-center justify-between">
-                                <span class="soft-select-text">Часов</span>
+                                <span class="soft-select-text">Дней</span>
                                 <span class="material-symbols-outlined text-white/50 text-lg">expand_more</span>
                             </div>
                             <div
@@ -2113,8 +2092,8 @@
                             </div>
                             <select id="schedulerUnit" class="absolute opacity-0 pointer-events-none">
                                 <option value="minutes">Минут</option>
-                                <option value="hours" selected>Часов</option>
-                                <option value="days">Дней</option>
+                                <option value="hours">Часов</option>
+                                <option value="days" selected>Дней</option>
                             </select>
                         </div>
                     </div>
@@ -2177,7 +2156,7 @@
                 class="bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer">
                 <option value="minutes">Минут</option>
                 <option value="hours">Часов</option>
-                <option value="days">Дней</option>
+                <option value="days" selected>Дней</option>
             </select>
         </div>
     </div>
@@ -3038,6 +3017,38 @@
             finally { btn.disabled = false; }
         });
 
+        const btnDeleteBanned = document.getElementById('btn-delete-banned-users');
+        if (btnDeleteBanned) {
+            btnDeleteBanned.addEventListener('click', async function () {
+                if (!await window.showConfirm({
+                    title: 'Удаление пользователей',
+                    message: 'Вы уверены, что хотите полностью удалить из базы данных всех пользователей, добавленных в список "В ЧС (У нас)"? Это действие необратимо.',
+                    type: 'danger',
+                    confirmText: 'Удалить'
+                })) return;
+
+                const btn = this;
+                btn.disabled = true;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span>';
+
+                try {
+                    const resp = await fetch('/other/broadcast/delete-banned-users', { method: 'POST', headers: { 'X-CSRFToken': window.getCsrfToken() } });
+                    const data = await resp.json();
+                    if (data.ok) {
+                        window.showToast('success', data.message);
+                        loadStats();
+                    } else {
+                        window.showToast('danger', data.error || 'Ошибка');
+                    }
+                } catch (e) { window.showToast('danger', 'Ошибка сети'); }
+                finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
+        }
+
         document.getElementById('broadcast-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -3468,14 +3479,12 @@
                     document.querySelector('input[name="edit_usage_limit_per_user"]').value = promo.usage_limit_per_user || '';
 
                     if (promo.valid_from) {
-                        const dt = new Date(promo.valid_from);
-                        document.querySelector('input[name="edit_valid_from"]').value = dt.toISOString().slice(0, 16);
+                        document.querySelector('input[name="edit_valid_from"]').value = promo.valid_from.slice(0, 16);
                     } else {
                         document.querySelector('input[name="edit_valid_from"]').value = '';
                     }
                     if (promo.valid_until) {
-                        const dt = new Date(promo.valid_until);
-                        document.querySelector('input[name="edit_valid_until"]').value = dt.toISOString().slice(0, 16);
+                        document.querySelector('input[name="edit_valid_until"]').value = promo.valid_until.slice(0, 16);
                     } else {
                         document.querySelector('input[name="edit_valid_until"]').value = '';
                     }
@@ -5367,6 +5376,14 @@
             document.getElementById('exec-output').innerHTML = '<div class="term-line"><span class="text-white/30">Ожидание команды...</span></div>';
         });
 
+        const execInput = document.getElementById('exec-command-input');
+        execInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('exec-command-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        });
+
         document.getElementById('exec-command-form').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -5416,6 +5433,7 @@
 
             // Очищаем поле ввода для следующей команды
             document.getElementById('exec-command-input').value = '';
+            document.getElementById('exec-command-input').style.height = '';
 
             try {
                 const formData = new FormData();
@@ -5479,7 +5497,7 @@
         // Initialize soft select for discount type
         if (window.initSoftSelect) {
             window.initSoftSelect('discount_type_select', '%');
-            window.initSoftSelect('schedulerUnit', 'Часов');
+            window.initSoftSelect('schedulerUnit', 'Дней');
         }
 
 

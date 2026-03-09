@@ -798,17 +798,10 @@ def create_webhook_app(bot_controller_instance):
         tickets, total = get_tickets_paginated(page=page, per_page=per_page, status=status)
         total_pages = ceil(total / per_page) if per_page else 1
         
-        # Рендерим таблицу (в зависимости от режима мобильный/десктоп)
+         
         if is_mobile:
             table_html = ""
-            for ticket in tickets:
-                # Встраиваем мобильную разметку прямо здесь или используем имеющийся паршиал если он есть.
-                # Но для мобилок у нас нет отдельного файла, поэтому я просто отрендерил бы строки.
-                # Однако, чтобы не дублировать код, логичнее было бы иметь partials/support_mobile_item.html
-                # Но пользователь просил НЕ создавать новые файлы. 
-                # Так что отрендерим через render_template_string или просто возвращая кусок.
-                # Я использую support.html с флагом, но это может быть тяжело. 
-                # Давайте для мобилок рендерить просто HTML-строки здесь.
+            for ticket in tickets: 
                 table_html += f"""
                 <div class="relative">
                     <a href="/support/{ticket['ticket_id']}" class="chat-item pr-14 {'ring-1 ring-yellow-500/30 bg-yellow-500/5' if ticket['status'] == 'open' and ticket['last_sender'] == 'user' else ''}">

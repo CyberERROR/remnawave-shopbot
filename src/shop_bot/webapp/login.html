@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ panel_brand_title }}">
+    <link rel="apple-touch-icon" href="{{ webapp_icon }}">
+    <link rel="icon" type="image/x-icon" href="{{ webapp_icon }}">
+    <title>Загрузка...</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981",
+                        "background-dark": "#0a0a0a",
+                    },
+                    animation: {
+                        'spin-slow': 'spin 3s linear infinite',
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loader" class="flex flex-col items-center justify-center gap-6 relative z-10">
+        <!-- Декоративное свечение -->
+        <div class="absolute -top-10 -left-10 w-40 h-40 bg-primary/20 rounded-full blur-[60px] animate-pulse-fast">
+        </div>
+        <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-600/10 rounded-full blur-[60px] animate-pulse-fast"
+            style="animation-delay: 0.5s;"></div>
+
+        <!-- Логотип/Спиннер -->
+        <div class="relative flex justify-center items-center">
+            <!-- Внешнее кольцо -->
+            <div class="absolute inset-0 rounded-full border-2 border-primary/20"></div>
+            <!-- Вращающееся кольцо -->
+            <div
+                class="w-16 h-16 rounded-full border-2 border-primary border-t-transparent animate-spin shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+            </div>
+            <!-- Иконка по центру -->
+            <div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-6 h-6 text-primary fill-current animate-pulse" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-1">
+            <h2 class="text-sm font-bold text-white tracking-widest uppercase">Загрузка</h2>
+            <p class="text-[10px] text-gray-500 font-medium animate-pulse">Инициализация безопасного входа...</p>
+        </div>
+    </div>
+
+    <div id="auth-container"
+        class="hidden flex flex-col items-center justify-center gap-6 relative z-10 px-6 text-center">
+        <div class="absolute -top-10 -left-10 w-40 h-40 bg-primary/20 rounded-full blur-[60px] animate-pulse-fast">
+        </div>
+        <div class="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center border border-primary/20 mb-2">
+            <svg class="w-10 h-10 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.52-1.4.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.45-.42-1.39-.89.03-.24.36-.49.99-.75 3.88-1.69 6.47-2.8 7.76-3.34 3.69-1.54 4.45-1.81 4.95-1.82.11 0 .35.03.5.16.13.11.17.26.18.37 0 .01.01.12 0 .21z" />
+            </svg>
+        </div>
+        <h1 class="text-xl font-black text-white uppercase tracking-tighter">Авторизация</h1>
+        <p class="text-gray-400 text-sm leading-relaxed max-w-[280px]">Пожалуйста, авторизуйтесь через нашего Telegram
+            бота для доступа к кабинету</p>
+
+        <a id="auth-link" href="#"
+            class="w-full bg-white dark:bg-gray-200 text-gray-900 dark:text-black font-bold py-4 rounded-2xl text-sm shadow-md hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+            <span>Войти через Telegram</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+        </a>
+
+        <div class="flex items-center gap-2 mt-2 opacity-50">
+            <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Ожидание подтверждения...</span>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const loader = document.getElementById('loader');
+            const authContainer = document.getElementById('auth-container');
+            const authLink = document.getElementById('auth-link');
+
+            function setAuthToken(token) {
+                localStorage.setItem('auth_token', token);
+                document.cookie = "auth_token=" + encodeURIComponent(token) + "; max-age=31536000; path=/; SameSite=Lax";
+            }
+
+            function getAuthToken() {
+                let token = localStorage.getItem('auth_token');
+                if (!token) {
+                    const match = document.cookie.match(new RegExp('(^| )auth_token=([^;]+)'));
+                    if (match) {
+                        token = decodeURIComponent(match[2]);
+                        localStorage.setItem('auth_token', token);
+                    }
+                } else {
+                    document.cookie = "auth_token=" + encodeURIComponent(token) + "; max-age=31536000; path=/; SameSite=Lax";
+                }
+                return token;
+            }
+
+            function removeAuthToken() {
+                localStorage.removeItem('auth_token');
+                document.cookie = "auth_token=; max-age=0; path=/; SameSite=Lax";
+            }
+
+            if (window.location.search.includes('token=') || window.location.pathname.includes('token=')) {
+                removeAuthToken();
+                window.history.replaceState(null, '', '/');
+            }
+
+            const savedToken = getAuthToken();
+            if (savedToken) {
+                window.location.href = "/?token=" + savedToken;
+                return;
+            }
+
+            async function startAuthPolling(token) {
+                const interval = setInterval(async () => {
+                    try {
+                        const response = await fetch('/api/auth/check-token/' + token);
+                        const data = await response.json();
+                        if (data.authorized) {
+                            clearInterval(interval);
+                            const finalToken = data.token || token;
+                            setAuthToken(finalToken);
+                            window.location.href = "/?token=" + finalToken;
+                        }
+                    } catch (e) { }
+                }, 2000);
+            }
+
+            async function handleExternalAuth() {
+                try {
+                    const response = await fetch('/api/auth/request-token');
+                    const data = await response.json();
+                    if (data.ok) {
+                        authLink.href = data.auth_url;
+                        loader.classList.add('hidden');
+                        authContainer.classList.remove('hidden');
+                        startAuthPolling(data.token);
+                    }
+                } catch (e) { }
+            }
+
+            async function loginWithToken(token) {
+                setAuthToken(token);
+                window.location.href = "/?token=" + token;
+            }
+
+            async function tryDirectAuth(userId) {
+                try {
+                    const response = await fetch('/api/auth/telegram-direct', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.token) {
+                            loginWithToken(data.token);
+                            return true;
+                        }
+                    }
+                    return false;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            async function tryTelegramAuth() {
+                try {
+                    const tg = window.Telegram && window.Telegram.WebApp;
+                    if (!tg) return false;
+
+                    tg.ready();
+                    tg.expand();
+
+                    const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+                    if (!user || !user.id) return false;
+
+                    const initData = tg.initData;
+                    if (initData && initData.length > 0) {
+                        const response = await fetch('/api/auth/token', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ init_data: initData })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.token) {
+                                loginWithToken(data.token);
+                                return true;
+                            }
+                        }
+                    }
+
+                    return await tryDirectAuth(user.id);
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            setTimeout(async () => {
+                let success = await tryTelegramAuth();
+                if (!success) {
+                    await new Promise(r => setTimeout(r, 500));
+                    success = await tryTelegramAuth();
+                }
+                if (!success) {
+                    handleExternalAuth();
+                }
+            }, 300);
+        });
+    </script>
+</body>
+
+</html>

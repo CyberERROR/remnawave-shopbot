@@ -640,6 +640,19 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
 
 # =================================
 
+# ===== DELETE_USER =====
+def delete_user(telegram_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM users WHERE telegram_id = ?", (telegram_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Ошибка удаления пользователя {telegram_id}: {e}")
+        return False
+# =======================
+
 
 # ===== _ENSURE_HOSTS_COLUMNS =====
 def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:

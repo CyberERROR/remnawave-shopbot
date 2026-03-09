@@ -101,9 +101,13 @@
             <div class="flex-1 w-full">
                 <div class="grid grid-cols-1 gap-4">
                     <div>
-                        <label
-                            class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">SSH
-                            цель</label>
+                        <div class="flex items-center justify-between mb-1.5 ml-1">
+                            <label
+                                class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-0 ml-0">SSH
+                                цель</label>
+                            <span id="st-target-ip" class="text-[10px] text-white/40 font-mono tracking-wider ml-2"
+                                title="IP адрес выбранного сервера">IP: —</span>
+                        </div>
                         <div class="soft-select w-full" data-target="st-target">
                             <button type="button"
                                 class="soft-select-toggle w-full text-left bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 transition-all font-medium flex items-center justify-between"
@@ -847,9 +851,12 @@
         const latestBox = document.getElementById('st-latest');
         const topCanvas = document.getElementById('st-top-canvas');
 
+        let sshTargetsData = [];
+
         const loadSSHTargets = async () => {
             const data = await fetchJSON("{{ url_for('dashboard_ssh_targets_json') }}");
             if (data && data.targets) {
+                sshTargetsData = data.targets;
                 // Populate Select
                 targetSelect.innerHTML = data.targets.map(t => `<option value="${t.target_name}">${t.target_name}</option>`).join('');
 
@@ -866,11 +873,23 @@
                 targetSelect.addEventListener('change', () => {
                     localStorage.setItem('st_target_cache', targetSelect.value);
                     localStorage.setItem('st_target_time', Date.now());
+
+                    const selected = sshTargetsData.find(t => t.target_name === targetSelect.value);
+                    const ipSpan = document.getElementById('st-target-ip');
+                    if (ipSpan) {
+                        ipSpan.textContent = selected && selected.ssh_host ? `IP: ${selected.ssh_host}` : 'IP: —';
+                    }
+
                     loadTop();
                 });
 
                 // Load data immediately if value exists
                 if (targetSelect.value) {
+                    const selected = sshTargetsData.find(t => t.target_name === targetSelect.value);
+                    const ipSpan = document.getElementById('st-target-ip');
+                    if (ipSpan) {
+                        ipSpan.textContent = selected && selected.ssh_host ? `IP: ${selected.ssh_host}` : 'IP: —';
+                    }
                     loadTop();
                 } else {
                     // If no targets, show empty state

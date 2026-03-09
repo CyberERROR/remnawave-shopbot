@@ -257,6 +257,7 @@ _LEGACY_FORWARDERS = (
     "delete_key_by_id",
     "delete_plan",
     "delete_ticket",
+    "delete_user",
     "delete_user_keys",
     "find_and_complete_ton_transaction",
     "find_and_complete_pending_transaction",
@@ -579,6 +580,55 @@ def get_promo_code(code: str) -> dict | None:
         return dict(row) if row else None
 
 
+def update_promo_code_params(
+    code: str,
+    *,
+    discount_percent: float | None = None,
+    discount_amount: float | None = None,
+    promo_type: str = 'discount',
+    reward_value: int = 0,
+    usage_limit_total: int | None = None,
+    usage_limit_per_user: int | None = None,
+    valid_from: datetime | None = None,
+    valid_until: datetime | None = None,
+    description: str | None = None,
+) -> bool:
+    code_s = (code or "").strip().upper()
+    if not code_s:
+        return False
+    with _connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE promo_codes SET
+                discount_percent = ?,
+                discount_amount = ?,
+                promo_type = ?,
+                reward_value = ?,
+                usage_limit_total = ?,
+                usage_limit_per_user = ?,
+                valid_from = ?,
+                valid_until = ?,
+                description = ?
+            WHERE code = ?
+            """,
+            (
+                float(discount_percent) if discount_percent is not None else None,
+                float(discount_amount) if discount_amount is not None else None,
+                promo_type,
+                reward_value,
+                usage_limit_total,
+                usage_limit_per_user,
+                valid_from.isoformat() if isinstance(valid_from, datetime) else valid_from,
+                valid_until.isoformat() if isinstance(valid_until, datetime) else valid_until,
+                description,
+                code_s,
+            )
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
+
 def list_promo_codes(include_inactive: bool = True) -> list[dict]:
     query = "SELECT * FROM promo_codes"
     if not include_inactive:
@@ -787,7 +837,7 @@ def redeem_universal_promo(code: str, user_id: int) -> dict | None:
                    usage_limit_total, usage_limit_per_user,
                    used_total, valid_from, valid_until, is_active
             FROM promo_codes
-            WHERE code = ? AND promo_type = 'universal'
+            WHERE code = ? AND promo_type IN ('universal', 'balance')
             """,
             (code_s,),
         )

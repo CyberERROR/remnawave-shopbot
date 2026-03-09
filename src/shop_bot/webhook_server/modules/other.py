@@ -546,6 +546,29 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             return jsonify({'ok': False, 'error': str(e)}), 500
     # ===== Конец роута broadcast_clear_banned =====
     
+    # ===== УДАЛЕНИЕ ЗАБАНЕННЫХ ПОЛЬЗОВАТЕЛЕЙ ИЗ БД =====
+    @flask_app.route('/other/broadcast/delete-banned-users', methods=['POST'])
+    @login_required
+    def broadcast_delete_banned_users():
+        try:
+            banned_data = get_banned_users_data()
+            banned_ids = banned_data.get('id', [])
+            if not banned_ids:
+                return jsonify({'ok': True, 'message': 'Нет пользователей для удаления', 'deleted': 0})
+            
+            deleted_count = 0
+            for uid in banned_ids:
+                if rw_repo.delete_user(uid):
+                    deleted_count += 1
+            
+            save_banned_users_data([])
+            
+            return jsonify({'ok': True, 'message': f'Успешно удалено {deleted_count} пользователей', 'deleted': deleted_count})
+        except Exception as e:
+            logger.error(f"Ошибка удаления забаненных пользователей: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    # ===== Конец роута broadcast_delete_banned_users =====
+    
     # ===== ПРЕДПРОСМОТР РАССЫЛКИ =====
     # Отправляет тестовое сообщение администратору для проверки внешнего вида
     @flask_app.route('/other/broadcast/preview', methods=['POST'])
@@ -885,11 +908,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             params, error = validate_promo_params(request.form)
             if error: return error
             
-            rw_repo.delete_promo_code(code)
-            admin_id, error = get_admin_id_safe()
-            created_by = int(admin_id) if not error else None
-            
-            if rw_repo.create_promo_code(code=code, created_by=created_by, **params):
+            if rw_repo.update_promo_code_params(code=code, **params):
                 return jsonify({'ok': True, 'message': 'Промокод успешно обновлен'})
             return jsonify({'ok': False, 'error': 'Не удалось обновить промокод'}), 500
         except Exception as e:

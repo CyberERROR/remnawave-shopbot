@@ -124,17 +124,15 @@
 
     <section id="tab-panel" class="tab-content">
         <div class="space-y-6">
-            <!-- Header Card -->
-            <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+                <div class="relative flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                         <span class="material-symbols-outlined text-3xl">admin_panel_settings</span>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white tracking-tight">Настройки Панели</h3>
-                        <p class="text-white/60 text-xs font-medium">Управление доступом, базой данных и системными
-                            функциями</p>
+                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление доступом, базой данных и системными функциями</p>
                     </div>
                 </div>
             </div>
@@ -549,16 +547,15 @@
 
     <section id="tab-bot" class="tab-content hidden">
         <div class="space-y-6">
-            <!-- Header Card -->
-            <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+                <div class="relative flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                         <span class="material-symbols-outlined text-3xl">smart_toy</span>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white tracking-tight">Настройки ботов</h3>
-                        <p class="text-white/60 text-xs font-medium">Конфигурация основного бота и службы поддержки</p>
+                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Конфигурация основного бота и службы поддержки</p>
                     </div>
                 </div>
             </div>
@@ -687,17 +684,15 @@
         'https://') %}
         {% set base_url = base_url.rstrip('/') %}
         <div class="space-y-6">
-            <!-- Header Card -->
-            <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+                <div class="relative flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                         <span class="material-symbols-outlined text-3xl">account_balance_wallet</span>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white tracking-tight">Платежные системы</h3>
-                        <p class="text-white/60 text-xs font-medium">Настройка методов оплаты и параметров транзакций
-                        </p>
+                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Настройка методов оплаты и параметров транзакций</p>
                     </div>
                 </div>
             </div>
@@ -1224,6 +1219,18 @@
 
 <section id="tab-hosts" class="tab-content hidden">
     <div class="space-y-6">
+        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div class="relative flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <span class="material-symbols-outlined text-3xl">dns</span>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white tracking-tight">Управление Хостами</h3>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Подключение и настройка панелей Remnawave</p>
+                </div>
+            </div>
+        </div>
 
         <!-- ===== ДОБАВЛЕНИЕ НОВОГО ХОСТА ===== -->
         <!-- Форма для подключения новой панели Remnawave -->
@@ -1897,15 +1904,15 @@
 
 <section id="tab-ssh" class="tab-content hidden">
     <div class="space-y-6">
-        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-            <div class="flex items-center gap-4">
-                <div
-                    class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10">
+        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700"></div>
+            <div class="relative flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10 border border-blue-500/20">
                     <span class="material-symbols-outlined text-3xl">terminal</span>
                 </div>
                 <div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">SSH цели для Speedtest & Ноды</h3>
-                    <p class="text-white/60 text-xs font-medium">Сервера, не зависящие от хостов</p>
+                    <h3 class="text-xl font-bold text-white tracking-tight">SSH цели</h3>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Сервера для Speedtest и мониторинга нод</p>
                 </div>
             </div>
         </div>
@@ -2213,29 +2220,25 @@
 
     <section id="tab-referrals" class="tab-content hidden">
         <div class="space-y-6">
-            <!-- Header Card -->
-            <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative">
                     <div class="flex items-center gap-4">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                        <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                             <span class="material-symbols-outlined text-3xl">group_add</span>
                         </div>
                         <div>
                             <h3 class="text-xl font-bold text-white tracking-tight">Реферальная система</h3>
-                            <p class="text-white/60 text-xs font-medium">Управляйте условиями партнерской программы</p>
+                            <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление условиями партнерской программы</p>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-3 bg-black/20 rounded-xl px-4 py-2 border border-white/5">
-                        <span class="text-xs font-bold uppercase tracking-widest text-white/60">Статус системы</span>
+                    <div class="flex items-center gap-3 bg-black/20 rounded-xl px-4 py-2 border border-white/5 relative z-10">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">Статус системы</span>
                         <input type="hidden" name="enable_referrals" value="false" />
                         <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="enable_referrals" value="true" id="enable_referrals" {% if
-                                settings.enable_referrals=='true' %}checked{% endif %} class="sr-only peer" />
-                            <div
-                                class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
-                            </div>
+                            <input type="checkbox" name="enable_referrals" value="true" id="enable_referrals" {% if settings.enable_referrals=='true' %}checked{% endif %} class="sr-only peer" />
+                            <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                         </label>
                     </div>
                 </div>
@@ -2379,16 +2382,15 @@
 
     <section id="tab-content" class="tab-content hidden">
         <div class="space-y-6">
-            <!-- Header Card -->
-            <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+                <div class="relative flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                         <span class="material-symbols-outlined text-3xl">article</span>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white tracking-tight">Настройки контента</h3>
-                        <p class="text-white/60 text-xs font-medium">Управление текстами и медиафайлами в боте</p>
+                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление текстами и медиафайлами в боте</p>
                     </div>
                 </div>
             </div>
