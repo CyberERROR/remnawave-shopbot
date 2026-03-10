@@ -1,6 +1,7 @@
 import json
 import os
 import requests
+import time
 
 def get_current_version():
     os_json_path = os.path.join(os.path.dirname(__file__), 'os.json')
@@ -22,7 +23,14 @@ def check_for_updates():
         current_version = get_current_version()
         update_url = get_update_url()
         
-        response = requests.get(update_url, timeout=5)
+        separator = '&' if '?' in update_url else '?'
+        cache_busting_url = f"{update_url}{separator}t={int(time.time())}"
+        
+        response = requests.get(
+            cache_busting_url, 
+            headers={"Cache-Control": "no-cache", "Pragma": "no-cache"}, 
+            timeout=5
+        )
         response.raise_for_status()
         
         remote_data = response.json()
