@@ -2118,9 +2118,9 @@ def create_gift_key(user_id: int, host_name: str, key_email: str, months: int, r
 
 
 # ===== GET_SETTING =====
-def get_setting(key: str) -> str | None:
+def get_setting(key: str, default: str | None = None) -> str | None:
     row = _fetch_row("SELECT value FROM bot_settings WHERE key = ?", (key,), f"Не удалось получить настройку '{key}'")
-    return row["value"] if row else None
+    return row["value"] if row else default
 
 # =======================
 
@@ -3592,7 +3592,9 @@ def get_all_other_settings() -> dict:
 def get_webapp_settings() -> dict:
     row = _fetch_row("SELECT * FROM webapp_settings WHERE id = 1")
     if not row:
-        _ensure_webapp_settings_table(sqlite3.connect(DB_FILE).cursor())
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            _ensure_webapp_settings_table(conn.cursor())
+            conn.commit()
         row = _fetch_row("SELECT * FROM webapp_settings WHERE id = 1")
     # Преобразуем sqlite3.Row в обычный словарь
     return dict(row) if row else {}
