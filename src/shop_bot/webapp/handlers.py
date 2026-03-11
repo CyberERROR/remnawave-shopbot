@@ -605,11 +605,11 @@ def _get_profile_keys_html(keys: list) -> str:
                          </button>
                      </div>
 
-                     <a href="{data['sub_url']}" target="_blank"
+                     <button onclick="openLinkSafe('{data['sub_url']}')"
                         class="w-full bg-white text-black py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-wider shadow-[0_4px_15px_rgba(255,255,255,0.1)] hover:shadow-[0_6px_20px_rgba(255,255,255,0.2)] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
                          <span class="material-icons-round text-sm">bolt</span>
                          <span>Подключить</span>
-                     </a>
+                     </button>
                      
                      <div class="grid grid-cols-2 gap-2 mt-1">
                          <button onclick="openActionModal('devices', {data['key_id']}, '{data.get('host_name', '')}')"
@@ -691,11 +691,11 @@ def _get_setup_keys_html(keys: list) -> str:
                          </button>
                      </div>
 
-                     <a href="{data['sub_url']}" target="_blank"
+                     <button onclick="openLinkSafe('{data['sub_url']}')"
                         class="w-full bg-white text-black py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-wider shadow-[0_4px_15px_rgba(255,255,255,0.1)] hover:shadow-[0_6px_20px_rgba(255,255,255,0.2)] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
                          <span class="material-icons-round text-sm">bolt</span>
                          <span>Открыть инструкцию</span>
-                     </a>
+                     </button>
                      
                      <div class="grid grid-cols-2 gap-2 mt-1">
                          <button onclick="openActionModal('devices', {data['key_id']}, '{data.get('host_name', '')}')"

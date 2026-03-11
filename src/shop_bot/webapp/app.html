@@ -765,6 +765,18 @@
             }
         }
 
+        window.openLinkSafe = function (url) {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+                try {
+                    window.Telegram.WebApp.openLink(url);
+                } catch (e) {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                }
+            } else {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        };
+
         let themeColorTimer = null;
         function onPageScroll() {
             if (themeColorTimer) return;
@@ -1243,6 +1255,7 @@
             element.classList.remove('border-white/10');
             element.classList.add('border-primary', 'bg-primary/10', 'border-2');
             const price = element.getAttribute('data-price');
+            const basePrice = element.getAttribute('data-base-price') || price;
             const host = element.getAttribute('data-host');
             const planId = element.getAttribute('data-plan-id');
             const planName = element.getAttribute('data-plan-name');
@@ -1257,7 +1270,7 @@
                 payBtn.classList.add('bg-white', 'text-black', 'shadow-[0_8px_30px_rgba(255,255,255,0.2)]', 'hover:shadow-white/40', 'active:scale-[0.97]');
                 payBtn.setAttribute('data-host', host);
                 payBtn.setAttribute('data-plan-id', planId);
-                payBtn.setAttribute('data-base-price', price);
+                payBtn.setAttribute('data-base-price', basePrice);
                 payBtn.setAttribute('data-price', price);
                 payBtn.setAttribute('data-plan-name', planName);
             }
@@ -1761,6 +1774,59 @@
             }
         }
 
+        function getTierIndexFromEvent(e, container, totalTiers) {
+            const rect = container.getBoundingClientRect();
+            let clientX;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+            } else {
+                clientX = e.clientX;
+            }
+            let x = clientX - rect.left;
+            let pct = x / rect.width;
+            pct = Math.max(0, Math.min(1, pct));
+            return Math.round(pct * (totalTiers - 1));
+        }
+
+        function bindTierDragEvents(container, totalTiers, target) {
+            let isDragging = false;
+
+            function handleMove(e) {
+                if (!isDragging) return;
+                if (e.cancelable && e.type === 'touchmove') {
+                    e.preventDefault();
+                }
+                const idx = getTierIndexFromEvent(e, container, totalTiers);
+                const data = activeTierData[target];
+                if (data && data.selected !== idx) {
+                    const dot = container.querySelector(`.tier-dot[data-idx="${idx}"]`);
+                    if (dot) window.selectTierDot(dot);
+                }
+            }
+
+            function handleStart(e) {
+                isDragging = true;
+                const idx = getTierIndexFromEvent(e, container, totalTiers);
+                const dot = container.querySelector(`.tier-dot[data-idx="${idx}"]`);
+                if (dot) window.selectTierDot(dot);
+            }
+
+            function handleEnd(e) {
+                isDragging = false;
+            }
+
+            container.addEventListener('mousedown', handleStart);
+            document.addEventListener('mousemove', handleMove, { passive: false });
+            document.addEventListener('mouseup', handleEnd);
+
+            container.addEventListener('touchstart', handleStart, { passive: true });
+            document.addEventListener('touchmove', handleMove, { passive: false });
+            document.addEventListener('touchend', handleEnd);
+            document.addEventListener('touchcancel', handleEnd);
+        }
+
         function renderTierDots(tiers, target, baseCount = 1) {
             const isRenew = target === 'renew';
             const slider = document.getElementById(isRenew ? 'device-tier-slider-renew' : 'device-tier-slider');
@@ -1769,21 +1835,23 @@
             const allOptions = [{ tier_id: 0, device_count: baseCount, price: 0 }, ...tiers];
             activeTierData[target] = { tiers: allOptions, selected: 0, deviceCount: baseCount, tierPrice: 0 };
 
-            let dotsHtml = '<div class="relative flex-1 flex items-center">';
-            dotsHtml += '<div class="absolute left-0 right-0 h-[3px] bg-white/10 rounded-full"></div>';
-            dotsHtml += '<div id="' + (isRenew ? 'tier-track-fill-renew' : 'tier-track-fill') + '" class="absolute left-0 h-[3px] bg-primary rounded-full transition-all duration-200" style="width:0%"></div>';
-            dotsHtml += '<div class="relative flex justify-between w-full">';
+            let dotsHtml = '<div class="relative flex-1 flex items-center tier-drag-container" style="cursor: pointer; touch-action: pan-y; padding: 15px 0; margin: -10px 0;">';
+            dotsHtml += '<div class="absolute left-0 right-0 h-[7px] bg-white/10 rounded-full pointer-events-none"></div>';
+            dotsHtml += '<div id="' + (isRenew ? 'tier-track-fill-renew' : 'tier-track-fill') + '" class="absolute left-0 h-[7px] bg-primary rounded-full transition-all duration-150 pointer-events-none" style="width:0%"></div>';
+            dotsHtml += '<div class="relative flex justify-between w-full pointer-events-none">';
 
             allOptions.forEach((opt, idx) => {
                 const isActive = idx === 0;
-                const activeClass = isActive ? 'bg-primary border-primary shadow-[0_0_6px_rgba(16,185,129,0.4)]' : 'bg-[#1a1a1a] border-white/20 hover:border-primary/50';
-                dotsHtml += `<button class="tier-dot w-5 h-5 rounded-full border-2 ${activeClass} transition-all duration-200 relative z-10" data-idx="${idx}" data-target="${target}" onclick="selectTierDot(this)"></button>`;
+                const activeClass = isActive ? 'bg-primary border-primary shadow-[0_0_6px_rgba(16,185,129,0.4)]' : 'bg-[#1a1a1a] border-white/20';
+                dotsHtml += `<div class="tier-dot w-5 h-5 rounded-full border-2 ${activeClass} transition-all duration-150 relative z-10 pointer-events-none" data-idx="${idx}" data-target="${target}"></div>`;
             });
 
             dotsHtml += '</div></div>';
             container.innerHTML = dotsHtml;
             slider.style.display = 'block';
             updateTierLabels(target, 0);
+
+            bindTierDragEvents(container.querySelector('.tier-drag-container'), allOptions.length, target);
         }
 
         window.selectTierDot = function (el) {
@@ -1798,12 +1866,12 @@
             data.tierPrice = opt.device_count > data.tiers[0].device_count ? (opt.device_count - data.tiers[0].device_count) * opt.price : 0;
 
             const isRenew = target === 'renew';
-            const dots = el.closest('.flex-1').querySelectorAll('.tier-dot');
+            const dots = el.closest('.tier-drag-container').querySelectorAll('.tier-dot');
             dots.forEach((d, i) => {
                 if (i <= idx) {
-                    d.className = 'tier-dot w-5 h-5 rounded-full border-2 bg-primary border-primary shadow-[0_0_6px_rgba(16,185,129,0.4)] transition-all duration-200 relative z-10';
+                    d.className = 'tier-dot w-5 h-5 rounded-full border-2 bg-primary border-primary shadow-[0_0_6px_rgba(16,185,129,0.4)] transition-all duration-150 relative z-10 pointer-events-none';
                 } else {
-                    d.className = 'tier-dot w-5 h-5 rounded-full border-2 bg-[#1a1a1a] border-white/20 hover:border-primary/50 transition-all duration-200 relative z-10';
+                    d.className = 'tier-dot w-5 h-5 rounded-full border-2 bg-[#1a1a1a] border-white/20 transition-all duration-150 relative z-10 pointer-events-none';
                 }
             });
 

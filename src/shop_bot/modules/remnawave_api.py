@@ -697,18 +697,34 @@ async def create_or_update_key_on_host(
             
             
             current_user = await get_user_by_email(email, host_name=host_name)
+            
+            # Локальные данные как fallback для надежности
+            local_key = rw_repo.get_key_by_email(email)
+            target_dt_base = None
+
             if current_user:
                 current_expire = current_user.get("expireAt")
                 if current_expire:
                     try:
-                        base_dt = datetime.fromisoformat(current_expire.replace("Z", "+00:00")) 
-                        target_dt = base_dt + timedelta(days=days)
+                        target_dt_base = datetime.fromisoformat(current_expire.replace("Z", "+00:00"))
                     except Exception:
-                        target_dt = get_msk_time() + timedelta(days=days)
-                else:
-                    target_dt = get_msk_time() + timedelta(days=days)
+                        pass
+                        
+            # Если с сервера дата не пришла, берем из локальной БД
+            if not target_dt_base and local_key and local_key.get("expire_at_ms"):
+                try:
+                     msk_tz = timezone(timedelta(hours=3))
+                     target_dt_base = datetime.fromtimestamp(local_key["expire_at_ms"] / 1000, tz=msk_tz)
+                except Exception:
+                     pass
+
+            now_msk = get_msk_time()
+            if target_dt_base and target_dt_base > now_msk:
+                # Если подписка еще активна, прибавляем дни к дате окончания
+                target_dt = target_dt_base + timedelta(days=days)
             else:
-                target_dt = get_msk_time() + timedelta(days=days)
+                # Если подписки нет или она уже истекла, отсчет идет с текущего момента
+                target_dt = now_msk + timedelta(days=days)
 
         # Default traffic strategy from host
         traffic_limit_strategy = squad.get('default_traffic_strategy') or 'NO_RESET'
