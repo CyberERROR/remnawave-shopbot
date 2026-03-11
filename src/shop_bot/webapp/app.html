@@ -1273,6 +1273,7 @@
                 payBtn.setAttribute('data-base-price', basePrice);
                 payBtn.setAttribute('data-price', price);
                 payBtn.setAttribute('data-plan-name', planName);
+                payBtn.setAttribute('data-months', element.getAttribute('data-months') || "1");
             }
             if (payText) payText.textContent = btnLabel + price + ' ₽';
 
@@ -1910,9 +1911,7 @@
                 if (btn.closest('.server-plans-container') && btn.closest('.server-plans-container').style.display === 'none') return;
                 const basePrice = parseFloat(btn.getAttribute('data-base-price') || btn.getAttribute('data-price') || '0');
                 if (!btn.getAttribute('data-base-price')) btn.setAttribute('data-base-price', basePrice);
-                const planName = btn.getAttribute('data-plan-name') || '';
-                const mMatch = planName.match(/(\d+)/);
-                const m = mMatch ? parseInt(mMatch[1]) : 1;
+                const m = parseInt(btn.getAttribute('data-months') || '1');
                 const tierTotal = (data.tierPrice || 0) * m;
                 const newPrice = Math.round(basePrice + tierTotal);
                 btn.setAttribute('data-price', newPrice);
@@ -1923,9 +1922,7 @@
             const payBtn = document.getElementById(btnId);
             if (!payBtn || payBtn.disabled) return;
             const basePrice = parseFloat(payBtn.getAttribute('data-base-price') || payBtn.getAttribute('data-price') || '0');
-            const planName = payBtn.getAttribute('data-plan-name') || '';
-            const monthsMatch = planName.match(/(\d+)/);
-            const months = monthsMatch ? parseInt(monthsMatch[1]) : 1;
+            const months = parseInt(payBtn.getAttribute('data-months') || '1');
             const tierTotal = (data.tierPrice || 0) * months;
             const newPrice = Math.round(basePrice + tierTotal);
             payBtn.setAttribute('data-price', newPrice);
@@ -1939,8 +1936,9 @@
             const host = this.getAttribute('data-host');
             const price = this.getAttribute('data-price');
             const name = this.getAttribute('data-plan-name') || "Подписка";
+            const months = this.getAttribute('data-months') || "1";
             const td = activeTierData.purchase;
-            if (planId) openPaymentModal(planId, host, 'new', null, price, name, td.deviceCount, td.tierPrice);
+            if (planId) openPaymentModal(planId, host, 'new', null, price, name, td.deviceCount, td.tierPrice, months);
         };
 
         document.getElementById('renew-pay-button').onclick = function () {
@@ -1948,6 +1946,7 @@
             const host = this.getAttribute('data-host');
             const price = this.getAttribute('data-price');
             const name = this.getAttribute('data-plan-name') || "Продление подписки";
+            const months = this.getAttribute('data-months') || "1";
             let kId = window.selectedKeyId;
             if (!kId) {
                 const dispEl = document.getElementById('display-selected-key');
@@ -1958,18 +1957,42 @@
                 }
             }
             const td = activeTierData.renew;
-            if (planId && kId) openPaymentModal(planId, host, 'extend', kId, price, name, td.deviceCount, td.tierPrice);
+            if (planId && kId) openPaymentModal(planId, host, 'extend', kId, price, name, td.deviceCount, td.tierPrice, months);
         };
 
-        function getSubscriptionEndDate(months) {
-            const d = new Date();
+        function getSubscriptionEndDate(months, isExtend = false) {
+            let d = new Date();
+            if (isExtend) {
+                const dispEl = document.getElementById('display-selected-key');
+                if (dispEl) {
+                    const txt = dispEl.textContent || '';
+                    const dotMatch = txt.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+                    if (dotMatch) {
+                        const day = parseInt(dotMatch[1]);
+                        const month = parseInt(dotMatch[2]) - 1;
+                        const year = parseInt(dotMatch[3]);
+                        const expiryDate = new Date(year, month, day);
+                        if (expiryDate > d) d = expiryDate;
+                    } else {
+                        const dateMatch = txt.match(/(\d{1,2})\s+(янв|фев|мар|апр|мая|июн|июл|авг|сен|окт|ноя|дек)[а-я]*\s+(\d{4})/i);
+                        if (dateMatch) {
+                            const day = parseInt(dateMatch[1]);
+                            const monthMap = { 'янв': 0, 'фев': 1, 'мар': 2, 'апр': 3, 'мая': 4, 'июн': 5, 'июл': 6, 'авг': 7, 'сен': 8, 'окт': 9, 'ноя': 10, 'дек': 11 };
+                            const monthShort = dateMatch[2].toLowerCase();
+                            const year = parseInt(dateMatch[3]);
+                            const expiryDate = new Date(year, monthMap[monthShort], day);
+                            if (expiryDate > d) d = expiryDate;
+                        }
+                    }
+                }
+            }
             d.setMonth(d.getMonth() + parseInt(months || 1));
             const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
             return d.getDate() + ' ' + monthNames[d.getMonth()] + ' ' + d.getFullYear();
         }
 
-        async function openPaymentModal(planId, hostName, action, keyId, price, planName, tierDeviceCount = 1, tierPrice = 0) {
-            currentPaymentData = { planId, hostName, action, keyId, price, planName, tierDeviceCount, tierPrice, promoCode: null };
+        async function openPaymentModal(planId, hostName, action, keyId, price, planName, tierDeviceCount = 1, tierPrice = 0, planMonths = "1") {
+            currentPaymentData = { planId, hostName, action, keyId, price, planName, tierDeviceCount, tierPrice, planMonths, promoCode: null };
             selectedMethod = null;
             activePaymentUrl = null;
 
@@ -2005,9 +2028,9 @@
             const btn = document.getElementById('final-pay-btn');
             const btnText = document.getElementById('final-pay-btn-text');
 
-            const monthsMatch = planName ? planName.match(/(\d+)/) : null;
-            const months = monthsMatch ? monthsMatch[1] : '1';
-            const endDate = getSubscriptionEndDate(months);
+            const months = planMonths || "1";
+            const isExtend = action === 'extend';
+            const endDate = getSubscriptionEndDate(months, isExtend);
 
             if (elName) elName.textContent = 'Подписка до ' + endDate;
             if (elDetails) elDetails.textContent = 'Количество дней: ' + (parseInt(months) * 30) + ', ' + months + ' мес.';
