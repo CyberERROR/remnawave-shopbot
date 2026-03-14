@@ -123,7 +123,7 @@ ALL_SETTINGS_KEYS = [
     "skip_email", "enable_wal_mode",
     "key_ready_image",
     "devices_list_image",
-    "stealth_login_enabled", "stealth_login_hotkey",
+    "stealth_login_enabled", "stealth_login_hotkey", "dashboard_layout",
 ]
 
 def create_webhook_app(bot_controller_instance):
@@ -510,6 +510,7 @@ def create_webhook_app(bot_controller_instance):
             project_info = {}
         
         return {
+            "settings": settings,
             "bot_status": bot_status,
             "main_running": bot_status.get("is_running", False),
             "all_settings_ok": all_settings_ok,
@@ -2508,7 +2509,7 @@ def create_webhook_app(bot_controller_instance):
             backups = []
 
         common_data = get_common_template_data()
-        return render_template('settings.html', settings=current_settings, hosts=hosts, ssh_targets=ssh_targets, backups=backups, pay_info=pay_info, **common_data)
+        return render_template('settings.html', hosts=hosts, ssh_targets=ssh_targets, backups=backups, pay_info=pay_info, **common_data)
 
 
     @flask_app.route('/api/settings/update-pay-info', methods=['POST'])

@@ -5,11 +5,12 @@ import logging
 import uuid
 import threading
 from datetime import datetime, timezone, timedelta
-from flask import render_template, request, jsonify, current_app
+from flask import render_template, request, jsonify, current_app, flash, redirect, url_for
 from werkzeug.utils import secure_filename
 from aiogram.types import FSInputFile
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, TelegramAPIError
 from shop_bot.data_manager import remnawave_repository as rw_repo
+from shop_bot.data_manager import speedtest_runner
 from . import server_plan
 
 logger = logging.getLogger(__name__)
@@ -449,7 +450,8 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def other_page():
         common_data = get_common_template_data()
         webapp = rw_repo.get_webapp_settings()
-        return render_template('other.html', webapp=webapp, **common_data)
+        ssh_targets = rw_repo.get_all_ssh_targets()
+        return render_template('other.html', webapp=webapp, ssh_targets=ssh_targets, **common_data)
     # ===== Конец роута other_page =====
 
     # ===== СОХРАНЕНИЕ НАСТРОЕК WEBAPP =====
@@ -458,6 +460,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def webapp_save():
         try:
             enable = request.form.get('enable') == 'true'
+            tg_fullscreen = request.form.get('tg_fullscreen') == 'true'
             title = request.form.get('title', '').strip()
             domen = request.form.get('domen', '').strip()
             logo = request.form.get('logo', '').strip()
@@ -468,7 +471,8 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 webapp_domen=domen,
                 webapp_enable=1 if enable else 0,
                 webapp_logo=logo,
-                webapp_icon=icon
+                webapp_icon=icon,
+                tg_fullscreen=1 if tg_fullscreen else 0
             )
             return jsonify({'ok': True, 'message': 'Настройки Webapp сохранены'})
         except Exception as e:
@@ -840,6 +844,18 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             logger.error(f"Ошибка получения списка промокодов: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
     # ===== Конец роута promo_list =====
+
+    # ===== СПИСОК АКТИВАЦИЙ ПРОМОКОДА =====
+    @flask_app.route('/other/promo/usages/<code>')
+    @login_required
+    def promo_usages(code):
+        try:
+            usages = rw_repo.get_promo_code_usages(code)
+            return jsonify({'ok': True, 'usages': usages})
+        except Exception as e:
+            logger.error(f"Ошибка получения активаций промокода {code}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+    # ===== Конец роута promo_usages =====
     
     # ===== СОЗДАНИЕ ПРОМОКОДА =====
     # Генерирует или сохраняет новый промокод с заданными параметрами
@@ -1410,7 +1426,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def logs_history():
         try:
             lines_count = int(request.args.get('lines', 50))
-            lines_count = min(lines_count, 50) # Принудительное ограничение
+            lines_count = min(lines_count, 200) # Принудительное ограничение
             offset = int(request.args.get('offset', 0))
         except ValueError: return jsonify({'ok': False, 'error': 'Некорректные параметры'})
 
@@ -2085,3 +2101,161 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
         except Exception as e:
             logger.error(f"Ошибка сохранения настроек планировщика для {target_name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
+
+    # ===== SSH ROUTES =====
+    @flask_app.route('/admin/ssh-targets/create', methods=['POST'])
+    @login_required
+    def create_ssh_target_route():
+        name = (request.form.get('target_name') or '').strip()
+        ssh_host = (request.form.get('ssh_host') or '').strip()
+        ssh_port = request.form.get('ssh_port')
+        ssh_user = (request.form.get('ssh_user') or '').strip() or None
+        ssh_password = request.form.get('ssh_password')
+        ssh_key_path = (request.form.get('ssh_key_path') or '').strip() or None
+        description = (request.form.get('description') or '').strip() or None
+        try:
+            ssh_port_val = int(ssh_port) if ssh_port else 22
+        except Exception:
+            ssh_port_val = 22
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if not name or not ssh_host:
+            if wants_json:
+                return jsonify({'ok': False, 'error': 'Укажите имя цели и SSH хост.'}), 400
+            flash('Укажите имя цели и SSH хост.', 'warning')
+            return redirect(url_for('other_page'))
+        ok = rw_repo.create_ssh_target(
+            target_name=name,
+            ssh_host=ssh_host,
+            ssh_port=ssh_port_val,
+            ssh_user=ssh_user,
+            ssh_password=ssh_password,
+            ssh_key_path=ssh_key_path,
+            description=description,
+        )
+        if wants_json:
+            return jsonify({'ok': ok, 'message': 'SSH-цель добавлена' if ok else 'Не удалось добавить SSH-цель'})
+        flash('SSH-цель добавлена.' if ok else 'Не удалось добавить SSH-цель.', 'success' if ok else 'danger')
+        return redirect(url_for('other_page'))
+
+    @flask_app.route('/admin/ssh-targets/<target_name>/update', methods=['POST'])
+    @login_required
+    def update_ssh_target_route(target_name: str):
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        new_target_name = (request.form.get('new_target_name') or '').strip() if 'new_target_name' in request.form else None
+        
+        ssh_host = (request.form.get('ssh_host') or '').strip() if 'ssh_host' in request.form else None
+        ssh_port_raw = (request.form.get('ssh_port') or '').strip() if 'ssh_port' in request.form else None
+        ssh_user = (request.form.get('ssh_user') or '').strip() if 'ssh_user' in request.form else None
+        ssh_password = request.form.get('ssh_password') if 'ssh_password' in request.form else None
+        ssh_key_path = (request.form.get('ssh_key_path') or '').strip() if 'ssh_key_path' in request.form else None
+        description = (request.form.get('description') or '').strip() if 'description' in request.form else None
+        try:
+            ssh_port = int(ssh_port_raw) if ssh_port_raw else None
+        except Exception:
+            ssh_port = None
+        
+        actual_target_name = target_name
+        if new_target_name and new_target_name != target_name:
+            rename_ok = rw_repo.rename_ssh_target(target_name, new_target_name)
+            if not rename_ok:
+                if wants_json:
+                    return jsonify({'ok': False, 'error': 'Не удалось переименовать SSH-цель. Возможно, цель с таким именем уже существует.'}), 400
+                flash('Не удалось переименовать SSH-цель. Возможно, цель с таким именем уже существует.', 'danger')
+                return redirect(request.referrer or url_for('other_page'))
+            actual_target_name = new_target_name
+        
+        ok = rw_repo.update_ssh_target_fields(
+            actual_target_name,
+            ssh_host=ssh_host,
+            ssh_port=ssh_port,
+            ssh_user=ssh_user,
+            ssh_password=ssh_password,
+            ssh_key_path=ssh_key_path,
+            description=description,
+        )
+        if wants_json:
+            return jsonify({'ok': ok, 'message': 'SSH-цель обновлена' if ok else 'Не удалось обновить SSH-цель'})
+        flash('SSH-цель обновлена.' if ok else 'Не удалось обновить SSH-цель.', 'success' if ok else 'danger')
+        return redirect(request.referrer or url_for('other_page'))
+
+    @flask_app.route('/admin/ssh-targets/<target_name>/delete', methods=['POST'])
+    @login_required
+    def delete_ssh_target_route(target_name: str):
+        ok = rw_repo.delete_ssh_target(target_name)
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify({'ok': ok, 'message': 'SSH-цель удалена' if ok else 'Не удалось удалить SSH-цель'})
+        flash('SSH-цель удалена.' if ok else 'Не удалось удалить SSH-цель.', 'success' if ok else 'danger')
+        return redirect(url_for('other_page'))
+
+    @flask_app.route('/admin/ssh-targets/<target_name>/speedtest/install', methods=['POST'])
+    @login_required
+    def auto_install_speedtest_on_target_route(target_name: str):
+        try:
+            res = asyncio.run(speedtest_runner.auto_install_speedtest_on_target(target_name))
+        except Exception as e:
+            res = {'ok': False, 'log': str(e)}
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify({"ok": bool(res.get('ok')), "log": res.get('log')})
+        flash(('Установка завершена успешно.' if res.get('ok') else 'Не удалось установить speedtest на цель.') , 'success' if res.get('ok') else 'danger')
+        try:
+            log = res.get('log') or ''
+            short = '\n'.join((log.splitlines() or [])[-20:])
+            if short:
+                flash(short, 'secondary')
+        except Exception:
+            pass
+        return redirect(request.referrer or url_for('other_page'))
+
+    @flask_app.route('/admin/ssh-targets/<target_name>/speedtest/run', methods=['POST'])
+    @login_required
+    def run_ssh_target_speedtest_route(target_name: str):
+        logger.info(f"Панель: запущен спидтест для SSH-цели '{target_name}'")
+        try:
+            res = asyncio.run(speedtest_runner.run_and_store_ssh_speedtest_for_target(target_name))
+        except Exception as e:
+            res = {"ok": False, "error": str(e)}
+        if res and res.get('ok'):
+            logger.info(f"Панель: спидтест для SSH-цели '{target_name}' завершён успешно")
+        else:
+            logger.warning(f"Панель: спидтест для SSH-цели '{target_name}' завершился с ошибкой: {res.get('error') if res else 'unknown'}")
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify(res)
+        flash(('Тест выполнен.' if res and res.get('ok') else f"Ошибка теста: {res.get('error') if res else 'unknown'}"), 'success' if res and res.get('ok') else 'danger')
+        return redirect(request.referrer or url_for('other_page'))
+
+    @flask_app.route('/admin/ssh-targets/speedtests/run-all', methods=['POST'])
+    @login_required
+    def run_all_ssh_target_speedtests_route():
+        logger.info("Панель: запуск спидтеста ДЛЯ ВСЕХ SSH-целей")
+        try:
+            targets = rw_repo.get_all_ssh_targets()
+        except Exception:
+            targets = []
+        errors = []
+        ok_count = 0
+        total = 0
+        for t in targets or []:
+            name = (t.get('target_name') or '').strip()
+            if not name:
+                continue
+            total += 1
+            try:
+                res = asyncio.run(speedtest_runner.run_and_store_ssh_speedtest_for_target(name))
+                if res and res.get('ok'):
+                    ok_count += 1
+                else:
+                    errors.append(f"{name}: {res.get('error') if res else 'unknown'}")
+            except Exception as e:
+                errors.append(f"{name}: {e}")
+        logger.info(f"Панель: завершён спидтест ДЛЯ ВСЕХ SSH-целей: ок={ok_count}, всего={total}")
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return jsonify({"ok": len(errors) == 0, "done": ok_count, "total": total, "errors": errors})
+        if errors:
+            flash(f"SSH цели: выполнено {ok_count}/{total}. Ошибки: {'; '.join(errors[:3])}{'…' if len(errors) > 3 else ''}", 'warning')
+        else:
+            flash(f"SSH цели: тесты скорости выполнены для всех ({ok_count}/{total})", 'success')
+        return redirect(request.referrer or url_for('other_page'))

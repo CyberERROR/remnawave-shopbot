@@ -584,6 +584,7 @@ def initialize_db():
                 "key_gemini": None,
                 "stealth_login_enabled": "0",
                 "stealth_login_hotkey": "ctrl+b",
+                "dashboard_layout": "sidebar",
             }
             _ensure_default_values(cursor, "bot_settings", default_settings)
             conn.commit()
@@ -896,7 +897,8 @@ def _ensure_webapp_settings_table(cursor: sqlite3.Cursor):
                 webapp_domen TEXT DEFAULT '',
                 webapp_enable INTEGER DEFAULT 0,
                 webapp_logo TEXT DEFAULT '',
-                webapp_icon TEXT DEFAULT ''
+                webapp_icon TEXT DEFAULT '',
+                tg_fullscreen INTEGER DEFAULT 0
             )
         ''')
         
@@ -913,6 +915,8 @@ def _ensure_webapp_settings_table(cursor: sqlite3.Cursor):
             cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_logo TEXT DEFAULT ''")
         if "webapp_icon" not in columns:
             cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_icon TEXT DEFAULT ''")
+        if "tg_fullscreen" not in columns:
+            cursor.execute("ALTER TABLE webapp_settings ADD COLUMN tg_fullscreen INTEGER DEFAULT 0")
 
         cursor.execute("INSERT OR IGNORE INTO webapp_settings (id, webapp_title, webapp_domen, webapp_enable, webapp_logo, webapp_icon) VALUES (1, 'VPN', '', 0, '', '')")
             
@@ -975,7 +979,8 @@ def run_migration():
             
             _ensure_default_values(cursor, "bot_settings", {
                 "skip_email": "0",
-                "enable_wal_mode": "0"
+                "enable_wal_mode": "0",
+                "dashboard_layout": "sidebar"
             })
             
             _ensure_default_values(cursor, "other", {
@@ -3600,7 +3605,7 @@ def get_webapp_settings() -> dict:
     return dict(row) if row else {}
 
 # Обновление настроек веб-приложения
-def update_webapp_settings(webapp_title: str = None, webapp_domen: str = None, webapp_enable: int = None, webapp_logo: str = None, webapp_icon: str = None) -> bool:
+def update_webapp_settings(webapp_title: str = None, webapp_domen: str = None, webapp_enable: int = None, webapp_logo: str = None, webapp_icon: str = None, tg_fullscreen: int = None) -> bool:
     try:
         updates = []
         params = []
@@ -3619,6 +3624,9 @@ def update_webapp_settings(webapp_title: str = None, webapp_domen: str = None, w
         if webapp_icon is not None:
             updates.append("webapp_icon = ?")
             params.append(webapp_icon)
+        if tg_fullscreen is not None:
+            updates.append("tg_fullscreen = ?")
+            params.append(int(tg_fullscreen))
         
         if not updates:
             return False

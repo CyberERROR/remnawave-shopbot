@@ -124,22 +124,28 @@
 
     <section id="tab-panel" class="tab-content">
         <div class="space-y-6">
-            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div
+                class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div
+                    class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
+                </div>
                 <div class="relative flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                         <span class="material-symbols-outlined text-3xl">admin_panel_settings</span>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white tracking-tight">Настройки Панели</h3>
-                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление доступом, базой данных и системными функциями</p>
+                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление доступом,
+                            базой данных и системными функциями</p>
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <!-- Access & Global Settings -->
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col">
+                <div
+                    class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col xl:col-span-2">
                     <div class="flex items-center gap-2 mb-4">
                         <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <span class="material-symbols-outlined text-lg">security</span>
@@ -251,6 +257,33 @@
                                     </label>
                                 </div>
                             </div>
+
+                            <!-- Dashboard Layout -->
+                            <div
+                                class="bg-black/20 border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-primary/70">
+                                        <span class="material-symbols-outlined text-sm">view_quilt</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-white uppercase tracking-wider block">Вид
+                                            панели</span>
+                                        <p
+                                            class="text-[9px] text-white/50 uppercase tracking-tighter leading-tight mt-0.5">
+                                            Боковое (Sidebar) или Верхнее (Header)</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <select name="dashboard_layout"
+                                        class="bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-white text-[10px] uppercase font-bold outline-none focus:border-primary/50 transition-all cursor-pointer">
+                                        <option value="sidebar" {% if settings.dashboard_layout=='sidebar' %}selected{%
+                                            endif %}>Sidebar (Сбоку)</option>
+                                        <option value="header" {% if settings.dashboard_layout=='header' %}selected{%
+                                            endif %}>Header (Сверху)</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="pt-2">
@@ -305,79 +338,6 @@
                     </div>
                 </div>
 
-                <!-- Backup Management Card -->
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col">
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                            <span class="material-symbols-outlined text-lg">database</span>
-                        </div>
-                        <h4 class="text-white font-bold text-sm">Резервное копирование</h4>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 h-full">
-                        <div class="space-y-3">
-                            <div
-                                class="bg-black/20 border border-white/5 rounded-xl p-3 flex flex-col justify-between h-full">
-                                <div>
-                                    <span
-                                        class="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-2">Текущая
-                                        база</span>
-                                    <p class="text-[11px] text-white/50 leading-relaxed mb-3">Скачать полный дамп базы
-                                        данных прямо сейчас</p>
-                                </div>
-                                <button type="submit" formaction="{{ url_for('backup_db_route') }}"
-                                    class="w-full px-4 py-2.5 rounded-xl bg-primary/20 text-primary text-xs font-bold uppercase tracking-widest hover:bg-primary/30 transition-all border border-primary/20 flex items-center justify-center gap-2">
-                                    <span class="material-symbols-outlined text-sm">download</span>
-                                    Скачать .DB
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="space-y-2">
-                            <div class="bg-black/20 border border-white/5 rounded-xl p-3">
-                                <span
-                                    class="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-2">Из
-                                    имеющихся</span>
-                                <div class="soft-select" data-target="existing_backup">
-                                    <button type="button"
-                                        class="soft-select-toggle w-full text-left bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 truncate"
-                                        id="existing_backup_toggle">
-                                        — Выберите архив —
-                                    </button>
-                                    <div class="soft-select-menu"></div>
-                                    <select name="existing_backup" id="existing_backup" class="hidden">
-                                        <option value="">— Выберите архив —</option>
-                                        {% for b in backups %}
-                                        <option value="{{ b.name }}" data-mtime="{{ b.mtime }}">{{ b.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="bg-black/20 border border-white/5 rounded-xl p-3">
-                                <span
-                                    class="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-2">Загрузить
-                                    файл</span>
-                                <div class="flex gap-2">
-                                    <button type="button" id="btn-pick-file"
-                                        class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-[10px] font-bold hover:bg-white/20 transition-all shrink-0">ВЫБРАТЬ</button>
-                                    <span id="picked-file-name"
-                                        class="flex-1 flex items-center px-2 rounded-lg bg-black/40 text-white/30 text-[9px] truncate">Нет
-                                        файла</span>
-                                </div>
-                                <input type="file" id="db_file" name="db_file" accept=".zip,.db" class="hidden" />
-                            </div>
-
-                            <button type="submit" formaction="{{ url_for('restore_db_route') }}"
-                                formenctype="multipart/form-data"
-                                class="w-full py-2.5 rounded-xl bg-red-500/20 text-red-500 hover:bg-red-500/30 text-[10px] font-bold uppercase tracking-widest transition-all border border-red-500/10 flex items-center justify-center gap-2"
-                                data-confirm="Все текущие данные будут заменены данными из бэкапа. Продолжить?">
-                                <span class="material-symbols-outlined text-sm">settings_backup_restore</span>
-                                Восстановить базу
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Trial Period Card -->
                 <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col">
@@ -540,6 +500,81 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Backup Management Card -->
+                <div
+                    class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col xl:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-lg">database</span>
+                        </div>
+                        <h4 class="text-white font-bold text-sm">Резервное копирование</h4>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 h-full">
+                        <div class="space-y-3">
+                            <div
+                                class="bg-black/20 border border-white/5 rounded-xl p-3 flex flex-col justify-between h-full">
+                                <div>
+                                    <span
+                                        class="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-2">Текущая
+                                        база</span>
+                                    <p class="text-[11px] text-white/50 leading-relaxed mb-3">Скачать полный дамп базы
+                                        данных прямо сейчас</p>
+                                </div>
+                                <button type="submit" formaction="{{ url_for('backup_db_route') }}"
+                                    class="w-full px-4 py-2.5 rounded-xl bg-primary/20 text-primary text-xs font-bold uppercase tracking-widest hover:bg-primary/30 transition-all border border-primary/20 flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">download</span>
+                                    Скачать .DB
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="bg-black/20 border border-white/5 rounded-xl p-3">
+                                <span
+                                    class="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-2">Из
+                                    имеющихся</span>
+                                <div class="soft-select" data-target="existing_backup">
+                                    <button type="button"
+                                        class="soft-select-toggle w-full text-left bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 truncate"
+                                        id="existing_backup_toggle">
+                                        — Выберите архив —
+                                    </button>
+                                    <div class="soft-select-menu"></div>
+                                    <select name="existing_backup" id="existing_backup" class="hidden">
+                                        <option value="">— Выберите архив —</option>
+                                        {% for b in backups %}
+                                        <option value="{{ b.name }}" data-mtime="{{ b.mtime }}">{{ b.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="bg-black/20 border border-white/5 rounded-xl p-3">
+                                <span
+                                    class="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-2">Загрузить
+                                    файл</span>
+                                <div class="flex gap-2">
+                                    <button type="button" id="btn-pick-file"
+                                        class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-[10px] font-bold hover:bg-white/20 transition-all shrink-0">ВЫБРАТЬ</button>
+                                    <span id="picked-file-name"
+                                        class="flex-1 flex items-center px-2 rounded-lg bg-black/40 text-white/30 text-[9px] truncate">Нет
+                                        файла</span>
+                                </div>
+                                <input type="file" id="db_file" name="db_file" accept=".zip,.db" class="hidden" />
+                            </div>
+
+                            <button type="submit" formaction="{{ url_for('restore_db_route') }}"
+                                formenctype="multipart/form-data"
+                                class="w-full py-2.5 rounded-xl bg-red-500/20 text-red-500 hover:bg-red-500/30 text-[10px] font-bold uppercase tracking-widest transition-all border border-red-500/10 flex items-center justify-center gap-2"
+                                data-confirm="Все текущие данные будут заменены данными из бэкапа. Продолжить?">
+                                <span class="material-symbols-outlined text-sm">settings_backup_restore</span>
+                                Восстановить базу
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section><!-- ===== Конец мониторинга ресурсов ===== -->
@@ -547,15 +582,20 @@
 
     <section id="tab-bot" class="tab-content hidden">
         <div class="space-y-6">
-            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div
+                class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div
+                    class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
+                </div>
                 <div class="relative flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                         <span class="material-symbols-outlined text-3xl">smart_toy</span>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white tracking-tight">Настройки ботов</h3>
-                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Конфигурация основного бота и службы поддержки</p>
+                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Конфигурация основного
+                            бота и службы поддержки</p>
                     </div>
                 </div>
             </div>
@@ -684,15 +724,20 @@
         'https://') %}
         {% set base_url = base_url.rstrip('/') %}
         <div class="space-y-6">
-            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div
+                class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div
+                    class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
+                </div>
                 <div class="relative flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                         <span class="material-symbols-outlined text-3xl">account_balance_wallet</span>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white tracking-tight">Платежные системы</h3>
-                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Настройка методов оплаты и параметров транзакций</p>
+                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Настройка методов
+                            оплаты и параметров транзакций</p>
                     </div>
                 </div>
             </div>
@@ -1219,15 +1264,20 @@
 
 <section id="tab-hosts" class="tab-content hidden">
     <div class="space-y-6">
-        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-            <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+        <div
+            class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div
+                class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
+            </div>
             <div class="relative flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                <div
+                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                     <span class="material-symbols-outlined text-3xl">dns</span>
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white tracking-tight">Управление Хостами</h3>
-                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Подключение и настройка панелей Remnawave</p>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Подключение и настройка
+                        панелей Remnawave</p>
                 </div>
             </div>
         </div>
@@ -1904,15 +1954,20 @@
 
 <section id="tab-ssh" class="tab-content hidden">
     <div class="space-y-6">
-        <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-            <div class="absolute -right-16 -top-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700"></div>
+        <div
+            class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+            <div
+                class="absolute -right-16 -top-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700">
+            </div>
             <div class="relative flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10 border border-blue-500/20">
+                <div
+                    class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10 border border-blue-500/20">
                     <span class="material-symbols-outlined text-3xl">terminal</span>
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white tracking-tight">SSH цели</h3>
-                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Сервера для Speedtest и мониторинга нод</p>
+                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Сервера для Speedtest и
+                        мониторинга нод</p>
                 </div>
             </div>
         </div>
@@ -2220,25 +2275,35 @@
 
     <section id="tab-referrals" class="tab-content hidden">
         <div class="space-y-6">
-            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div
+                class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div
+                    class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
+                </div>
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative">
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                             <span class="material-symbols-outlined text-3xl">group_add</span>
                         </div>
                         <div>
                             <h3 class="text-xl font-bold text-white tracking-tight">Реферальная система</h3>
-                            <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление условиями партнерской программы</p>
+                            <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление
+                                условиями партнерской программы</p>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-3 bg-black/20 rounded-xl px-4 py-2 border border-white/5 relative z-10">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">Статус системы</span>
+                    <div
+                        class="flex items-center gap-3 bg-black/20 rounded-xl px-4 py-2 border border-white/5 relative z-10">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">Статус
+                            системы</span>
                         <input type="hidden" name="enable_referrals" value="false" />
                         <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="enable_referrals" value="true" id="enable_referrals" {% if settings.enable_referrals=='true' %}checked{% endif %} class="sr-only peer" />
-                            <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            <input type="checkbox" name="enable_referrals" value="true" id="enable_referrals" {% if
+                                settings.enable_referrals=='true' %}checked{% endif %} class="sr-only peer" />
+                            <div
+                                class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                            </div>
                         </label>
                     </div>
                 </div>
@@ -2382,15 +2447,20 @@
 
     <section id="tab-content" class="tab-content hidden">
         <div class="space-y-6">
-            <div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-                <div class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div
+                class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
+                <div
+                    class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
+                </div>
                 <div class="relative flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
                         <span class="material-symbols-outlined text-3xl">article</span>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white tracking-tight">Настройки контента</h3>
-                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление текстами и медиафайлами в боте</p>
+                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление текстами и
+                            медиафайлами в боте</p>
                     </div>
                 </div>
             </div>

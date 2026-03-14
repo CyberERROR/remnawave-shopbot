@@ -625,9 +625,9 @@
                     </button>
                     <button id="udm-action-ban"
                         class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
-                        <span
+                        <span id="udm-action-ban-icon"
                             class="material-symbols-outlined text-white/50 group-hover:text-red-500 transition-colors">block</span>
-                        <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Бан</span>
+                        <span id="udm-action-ban-text" class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Бан</span>
                     </button>
                     <button id="udm-action-revoke-all"
                         class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
@@ -1034,33 +1034,9 @@
         // Reusable function to open message modal
         function openMessageModalForUser(uid, uname) {
             document.getElementById('mm-user').textContent = `@${uname} (#${uid})`;
-            document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
+            document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0', `/${uid}`);
             document.querySelector('#mm-form textarea[name="message"]').value = '';
             openModal('messageModal');
-        }
-
-        // Reusable function to ban user
-        async function banUser(uid, uname) {
-            document.getElementById('banModalText').innerHTML = `Вы уверены, что хотите изменить статус блокировки для <span class="text-primary font-bold">@${uname}</span>?`;
-
-            const confirmBtn = document.getElementById('banConfirmBtn');
-            confirmBtn.onclick = async () => {
-                const data = await apiRequest(
-                    `{{ url_for('toggle_block_user_route', user_id=0) }}`.replace('/0/', `/${uid}/`),
-                    'POST',
-                    {},
-                    'Статус блокировки изменен'
-                );
-                if (data) {
-                    closeModal('banConfirmModal');
-                    // Refresh details if modal is open
-                    const udmContent = document.getElementById('udm-content');
-                    if (!udmContent.classList.contains('hidden')) {
-                        fetchUserDetails(uid);
-                    }
-                }
-            };
-            openModal('banConfirmModal');
         }
 
         // Reusable function to revoke all keys
@@ -1068,7 +1044,7 @@
             const confirmBtn = document.getElementById('revokeAllConfirmBtn');
             confirmBtn.onclick = async () => {
                 const data = await apiRequest(
-                    `{{ url_for('revoke_keys_route', user_id=0) }}`.replace('/0/', `/${uid}/`),
+                    `{{ url_for('revoke_keys_route', user_id=0) }}`.replace('/0', `/${uid}`),
                     'POST',
                     {},
                     'Все ключи пользователя отозваны'
@@ -1201,7 +1177,7 @@
             document.getElementById('udm-content').classList.add('hidden');
 
             try {
-                const resp = await fetch(`{{ url_for('user_details_json', user_id=0) }}`.replace('/0/', `/${uid}/`), {
+                const resp = await fetch(`{{ url_for('user_details_json', user_id=0) }}`.replace('/0', `/${uid}`), {
                     headers: { 'Accept': 'application/json' },
                     credentials: 'same-origin'
                 });
@@ -1319,6 +1295,23 @@
                         } else {
                             pinIcon.style.color = '';
                             pinIcon.classList.remove('rotate-45');
+                        }
+                    }
+
+                    const banText = document.getElementById('udm-action-ban-text');
+                    const banIcon = document.getElementById('udm-action-ban-icon');
+                    if (banText) banText.textContent = data.user.is_banned ? 'Раз Бан' : 'Бан';
+                    if (banIcon) {
+                        if (data.user.is_banned) {
+                            banIcon.textContent = 'check_circle';
+                            banIcon.style.color = '#22c55e';
+                            banIcon.classList.remove('group-hover:text-red-500');
+                            banIcon.classList.add('group-hover:text-green-500');
+                        } else {
+                            banIcon.textContent = 'block';
+                            banIcon.style.color = '';
+                            banIcon.classList.add('group-hover:text-red-500');
+                            banIcon.classList.remove('group-hover:text-green-500');
                         }
                     }
 
@@ -1476,7 +1469,7 @@
 
                 // Fetch Referrals
                 try {
-                    const refResp = await fetch(`{{ url_for('user_referrals_json', user_id=0) }}`.replace('/0/', `/${uid}/`), {
+                    const refResp = await fetch(`{{ url_for('user_referrals_json', user_id=0) }}`.replace('/0', `/${uid}`), {
                         headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
                     });
                     const refData = await refResp.json();
@@ -1618,7 +1611,7 @@
                 const isAdd = action === 'add-bal';
                 document.getElementById('bm-user').textContent = `@${uname} (#${uid})`;
                 document.getElementById('bm-balance').textContent = balance;
-                document.getElementById('bm-form').action = `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
+                document.getElementById('bm-form').action = `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0', `/${uid}`);
                 document.getElementById('bm-refcount').textContent = document.getElementById('udm-ref-count').textContent;
                 document.getElementById('bm-reflist').innerHTML = ''; // Simplified, or fetch again
 
@@ -1632,11 +1625,9 @@
                 window.location.href = `{{ url_for('admin_keys_page') }}?user_id=${uid}`;
             } else if (action === 'msg') {
                 document.getElementById('mm-user').textContent = `@${uname} (#${uid})`;
-                document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
+                document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0', `/${uid}`);
                 document.querySelector('#mm-form textarea[name="message"]').value = '';
                 openModal('messageModal');
-            } else if (action === 'ban') {
-                banUser(uid, uname);
             } else if (action === 'revoke-all') {
                 revokeAllKeys(uid, uname);
             } else if (action === 'pin') {
@@ -1676,6 +1667,50 @@
                             }
                         }
                     });
+            } else if (action === 'ban') {
+                document.getElementById('banModalText').innerHTML = `Вы уверены, что хотите изменить статус блокировки для <span class="text-primary font-bold">@${uname}</span>?`;
+                const confirmBtn = document.getElementById('banConfirmBtn');
+                confirmBtn.onclick = async () => {
+                    const data = await apiRequest(
+                        `{{ url_for('toggle_block_user_route', user_id=0) }}`.replace('/0', `/${uid}`),
+                        'POST',
+                        {},
+                        'Статус блокировки изменен'
+                    );
+                    if (data) {
+                        closeModal('banConfirmModal');
+                        const isBannedNow = data.is_banned;
+                        const banText = document.getElementById('udm-action-ban-text');
+                        const banIcon = document.getElementById('udm-action-ban-icon');
+                        
+                        // Локальное обновление БЕЗ перерисовки всей модалки
+                        if (banText) banText.textContent = isBannedNow ? 'Раз Бан' : 'Бан';
+                        if (banIcon) {
+                            if (isBannedNow) {
+                                banIcon.textContent = 'check_circle';
+                                banIcon.style.color = '#22c55e';
+                                banIcon.classList.remove('group-hover:text-red-500');
+                                banIcon.classList.add('group-hover:text-green-500');
+                            } else {
+                                banIcon.textContent = 'block';
+                                banIcon.style.color = '';
+                                banIcon.classList.add('group-hover:text-red-500');
+                                banIcon.classList.remove('group-hover:text-green-500');
+                            }
+                        }
+
+                        // Обновляем таблицу в фоне
+                        const tbody = document.getElementById('users-tbody');
+                        if (tbody) {
+                            const urlStr = tbody.getAttribute('data-fetch-url');
+                            if (urlStr) {
+                                const params = new URLSearchParams(new URL(urlStr, location.origin).search);
+                                updateTableAndPagination(params);
+                            }
+                        }
+                    }
+                };
+                openModal('banConfirmModal');
             }
         });
 
@@ -1686,7 +1721,7 @@
             const label = document.getElementById('udm-trial-label');
 
             try {
-                const resp = await fetch(`{{ url_for('toggle_trial_used_route', user_id=0) }}`.replace('/0/', `/${userId}/`), {
+                const resp = await fetch(`{{ url_for('toggle_trial_used_route', user_id=0) }}`.replace('/0', `/${userId}`), {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrfToken() },
                     credentials: 'same-origin'
@@ -1732,7 +1767,7 @@
                 const fd = new FormData();
                 fd.append('csrf_token', '{{ csrf_token() }}'); // Using template var since JS is in template
                 fd.append('delta_days', delta);
-                const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0/', `/${expiryKeyId}/`);
+                const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0', `/${expiryKeyId}`);
                 const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
                 if (resp.ok) {
                     showToast('success', 'Срок обновлён');
@@ -1762,7 +1797,7 @@
                 const fd = new FormData();
                 fd.append('csrf_token', '{{ csrf_token() }}');
                 fd.append('comment', comment);
-                const url = `{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0/', `/${commentKeyId}/`);
+                const url = `{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0', `/${commentKeyId}`);
                 const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
                 if (resp.ok) {
                     showToast('success', 'Комментарий сохранён');
@@ -1789,7 +1824,7 @@
             try {
                 const fd = new FormData();
                 fd.append('csrf_token', '{{ csrf_token() }}');
-                const url = `{{ url_for('delete_key_route', key_id=0) }}`.replace('/0/', `/${revokeKeyId}/`);
+                const url = `{{ url_for('delete_key_route', key_id=0) }}`.replace('/0', `/${revokeKeyId}`);
                 const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
                 if (resp.ok) {
                     showToast('success', 'Ключ отозван');

@@ -83,6 +83,7 @@
             },
         };
     </script>
+    {{ tg_fullscreen_css }}
     <style>
         html,
         body {
@@ -110,17 +111,6 @@
             overscroll-behavior-y: contain;
             padding-top: max(env(safe-area-inset-top), 8px);
         }
-
-        /* Временно закомментировано для отключения отступа из Telegram
-        .tg-miniapp #main-page,
-        .tg-miniapp #purchase-page,
-        .tg-miniapp #renew-page,
-        .tg-miniapp #setup-page,
-        .tg-miniapp #profile-page,
-        .tg-miniapp #support-page {
-            padding-top: max(env(safe-area-inset-top), 70px) !important;
-        }
-        */
 
         #main-page::-webkit-scrollbar,
         #purchase-page::-webkit-scrollbar,

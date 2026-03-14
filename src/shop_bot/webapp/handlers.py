@@ -222,6 +222,18 @@ def _process_template_placeholders(html: str, user_id: int, webapp_settings: dic
         "{{ webapp_icon }}": context_data.get("webapp_icon", ""),
         "{{ logo_hidden }}": "hidden" if not context_data.get("webapp_logo") else "",
         "{{ user_id }}": str(user_id),
+        "{{ tg_fullscreen_css }}": """
+    <style>
+        .tg-miniapp #main-page,
+        .tg-miniapp #purchase-page,
+        .tg-miniapp #renew-page,
+        .tg-miniapp #setup-page,
+        .tg-miniapp #profile-page,
+        .tg-miniapp #support-page {
+            padding-top: max(env(safe-area-inset-top), 70px) !important;
+        }
+    </style>
+        """ if webapp_settings.get("tg_fullscreen") else "",
     }
     
     # Selected key display variants
@@ -820,6 +832,7 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
             <button
                 class="plan-btn glass-card border border-white/10 rounded-2xl p-3.5 flex flex-col items-center justify-center text-center transition-all active:scale-95 hover:border-primary/40 hover:bg-white/5 group{span_class}"
                 data-host="{host_name}" data-plan-id="{plan['plan_id']}" data-price="{final_price}" data-plan-name="{plan.get('plan_name', '')}"
+                data-months="{months}"
                 onclick="selectPlan(this)">
                 <span
                     class="plan-label text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 group-hover:text-gray-300 transition-colors">{months} {month_label}</span>
@@ -880,11 +893,99 @@ def _get_servers_and_plans_html(user_id: int | None = None):
     return server_options_html, plans_html
 
 
+def _render_banned_page(webapp_settings: dict):
+    title = webapp_settings.get("webapp_title") or get_setting("panel_brand_title") or "TOR VPN"
+    logo = webapp_settings.get("webapp_logo") or ""
+    icon = webapp_settings.get("webapp_icon") or ""
+    
+    html = f"""<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {{
+            darkMode: 'class',
+            theme: {{
+                extend: {{
+                    colors: {{
+                        primary: '#10b981',
+                        surface: {{
+                            dark: '#121212',
+                            card: '#1e1e1e',
+                            highlight: '#2a2a2a'
+                        }}
+                    }}
+                }}
+            }}
+        }}
+    </script>
+    <style>
+        body {{ font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }}
+        .glass {{ background: rgba(30, 30, 30, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }}
+    </style>
+</head>
+<body class="bg-surface-dark text-white h-screen flex flex-col items-center justify-center p-6 select-none overflow-hidden">
+    <div class="fixed inset-0 pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]"></div>
+    </div>
+
+    <div class="relative z-10 flex flex-col items-center text-center max-w-sm w-full">
+        {f'<img src="{logo}" class="h-20 mb-8 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)]">' if logo else f'<div class="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center mb-8 border border-primary/30 shadow-[0_0_30px_rgba(16,185,129,0.2)]"><span class="material-icons-round text-primary text-4xl">block</span></div>'}
+        
+        <h1 class="text-3xl font-black mb-3 tracking-tight">Доступ ограничен</h1>
+        <p class="text-gray-400 font-medium leading-relaxed mb-8">
+            Ваш аккаунт был заблокирован за нарушение правил сервиса. Использование функций WebApp временно недоступно.
+        </p>
+
+        <div class="glass rounded-[2rem] p-6 w-full border border-red-500/20 shadow-2xl">
+            <div class="flex items-center gap-4 text-left">
+                <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center shrink-0 border border-red-500/20">
+                    <span class="material-icons-round text-red-500">lock_person</span>
+                </div>
+                <div>
+                    <div class="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Статус аккаунта</div>
+                    <div class="text-lg font-black text-red-500 leading-none">ЗАБЛОКИРОВАН</div>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-white/5">
+                <p class="text-[11px] text-gray-500 font-semibold mb-4 text-center">Если вы считаете, что это ошибка, обратитесь в нашу поддержку</p>
+                <a href="https://t.me/{get_setting('support_bot_username')}" target="_blank"
+                   class="flex items-center justify-center gap-2 w-full bg-white text-black py-4 rounded-2xl font-black text-sm uppercase tracking-wider hover:opacity-90 active:scale-[0.98] transition-all shadow-xl">
+                    <span class="material-icons-round text-lg">headset_mic</span>
+                    <span>Написать в поддержку</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-8 opacity-40 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+            <span>{title}</span>
+            <span class="w-1 h-1 bg-gray-600 rounded-full"></span>
+            <span>Security Module</span>
+        </div>
+    </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html, status_code=403)
+
+
 async def _render_main_page(user_id: int):
     webapp_settings = get_webapp_settings()
     
+    # 1. Check if Webapp is enabled
     if not webapp_settings.get("webapp_enable"):
          return HTMLResponse(content="<h1>Webapp is disabled</h1>", status_code=403)
+         
+    # 2. Check if user is banned
+    user = get_user(user_id)
+    if user and user.get('is_banned'):
+         return _render_banned_page(webapp_settings)
          
     # Можно использовать webapp_domen для проверок или редиректов если нужно
     # current_domain = webapp_settings.get("webapp_domen")
@@ -1101,6 +1202,11 @@ async def index(request: Request, user_id: int | None = None, token: str | None 
             else:
                 return HTMLResponse(content="<h1>Login page not found</h1>", status_code=404)
 
+        webapp_settings = get_webapp_settings()
+        user = get_user(user_id)
+        if user and user.get('is_banned'):
+            return _render_banned_page(webapp_settings)
+
         return await _render_main_page(user_id)
 
     except Exception as e:
@@ -1218,6 +1324,8 @@ async def api_check_auth_token(token: str):
     # 2. Check in DB (already authorized)
     user = database.get_user_by_auth_token(token)
     if user:
+        if user.get('is_banned'):
+            return {"ok": True, "authorized": False, "error": "Banned"}
         return {"ok": True, "authorized": True, "user_id": user['telegram_id'], "token": token}
     
     # 2.1 Check if user has persistent token (deep link flow edge case)
@@ -1240,6 +1348,11 @@ async def api_create_token(req: TokenRequest):
     user_id = user_data.get("id")
     from shop_bot.data_manager import database
     
+    # Check ban status
+    user = get_user(user_id)
+    if user and user.get('is_banned'):
+        return {"ok": False, "error": "Access denied"}
+    
     # Check if user already has a persistent token
     existing_token = database.get_auth_token_by_user_id(user_id)
     if existing_token:
@@ -1260,6 +1373,9 @@ async def api_telegram_direct_auth(req: TelegramDirectAuthRequest):
         user = get_user(req.user_id)
         if not user:
             return {"ok": False, "error": "User not registered"}
+            
+        if user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
 
         existing_token = database.get_auth_token_by_user_id(req.user_id)
         if existing_token:
@@ -1363,25 +1479,26 @@ async def api_create_payment(req: CreatePaymentRequest):
         if req.action == 'extend' and req.key_id:
             host_data = get_host(req.host_name) if req.host_name else None
             if host_data and host_data.get('device_mode') == 'tiers' and int(host_data.get('tier_lock_extend', 0) or 0):
-                key = get_key_by_id(req.key_id)
-                if key and key.get('remnawave_user_uuid'):
-                    try:
-                        user_info = await remnawave_api.get_user_by_uuid(key['remnawave_user_uuid'], host_name=req.host_name)
-                        if user_info:
-                            hwid = int(user_info.get('hwidDeviceLimit') or 1)
-                            if hwid > 1:
-                                from shop_bot.data_manager import database
-                                base_devices = int(database.get_setting(f"base_device_{req.host_name}", "1"))
-                                tiers = get_device_tiers(req.host_name)
-                                for t in tiers:
-                                    if t['device_count'] == hwid:
-                                        tier_device_count = hwid
-                                        diff = hwid - base_devices
-                                        if diff < 0: diff = 0
-                                        tier_price_per_month = float(diff * t['price'])
-                                        break
-                    except Exception as e:
-                        logger.error(f"Auto-detect hwid error: {e}")
+                if not tier_price_per_month: 
+                    key = get_key_by_id(req.key_id)
+                    if key and key.get('remnawave_user_uuid'):
+                        try:
+                            user_info = await remnawave_api.get_user_by_uuid(key['remnawave_user_uuid'], host_name=req.host_name)
+                            if user_info:
+                                hwid = int(user_info.get('hwidDeviceLimit') or 1)
+                                if hwid > 1:
+                                    from shop_bot.data_manager import database
+                                    base_devices = int(database.get_setting(f"base_device_{req.host_name}", "1"))
+                                    tiers = get_device_tiers(req.host_name)
+                                    for t in tiers:
+                                        if t['device_count'] == hwid:
+                                            tier_device_count = hwid
+                                            diff = hwid - base_devices
+                                            if diff < 0: diff = 0
+                                            tier_price_per_month = float(diff * t['price'])
+                                            break
+                        except Exception as e:
+                            logger.error(f"Auto-detect hwid error: {e}")
         
         if tier_price_per_month > 0:
             final_price += tier_price_per_month * months
@@ -1617,6 +1734,9 @@ async def api_create_payment(req: CreatePaymentRequest):
 @app.post("/api/apply-promo")
 async def api_apply_promo(req: ApplyPromoRequest):
     try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
         user_id = req.user_id
         code = req.promo_code.strip().upper()
         
@@ -1731,6 +1851,10 @@ class CommentRequest(BaseModel):
 @app.post("/api/key/devices")
 async def api_key_devices(req: KeyActionRequest):
     try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+            
         from shop_bot.data_manager.remnawave_repository import get_key_by_id
         from shop_bot.modules import remnawave_api
         key = get_key_by_id(req.key_id)
@@ -1754,6 +1878,10 @@ async def api_key_devices(req: KeyActionRequest):
 @app.post("/api/key/device/delete")
 async def api_key_device_delete(req: DeleteDeviceRequest):
     try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+            
         from shop_bot.data_manager.remnawave_repository import get_key_by_id
         from shop_bot.modules import remnawave_api
         key = get_key_by_id(req.key_id)
@@ -1776,6 +1904,10 @@ async def api_key_device_delete(req: DeleteDeviceRequest):
 @app.post("/api/key/comment")
 async def api_key_comment(req: CommentRequest):
     try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+            
         from shop_bot.data_manager.remnawave_repository import get_key_by_id, update_key
         key = get_key_by_id(req.key_id)
         if not key or key.get("user_id") != req.user_id:
@@ -1790,6 +1922,10 @@ async def api_key_comment(req: CommentRequest):
 @app.post("/api/support/status")
 async def api_support_status(req: SupportStatusRequest):
     try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+            
         from shop_bot.data_manager.remnawave_repository import get_user_tickets, get_ticket_messages
         tickets = get_user_tickets(req.user_id) or []
         open_tickets = [t for t in tickets if t.get('status') == 'open']
@@ -1824,6 +1960,10 @@ async def api_support_status(req: SupportStatusRequest):
 @app.post("/api/support/create")
 async def api_support_create(req: SupportTicketCreateRequest):
     try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+            
         from shop_bot.data_manager.remnawave_repository import get_or_create_open_ticket, add_support_message, get_setting
         
         subject_text = req.subject.strip()[:64]
@@ -1882,6 +2022,10 @@ async def api_support_create(req: SupportTicketCreateRequest):
 @app.post("/api/support/send")
 async def api_support_send(req: SupportMessageSendRequest):
     try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+            
         from shop_bot.data_manager.remnawave_repository import get_ticket, add_support_message, get_setting
         ticket = get_ticket(req.ticket_id)
         if not ticket or ticket.get('user_id') != req.user_id or ticket.get('status') != 'open':
@@ -1946,6 +2090,10 @@ async def api_support_send(req: SupportMessageSendRequest):
 @app.get("/api/user-status")
 async def api_user_status(user_id: int):
     try:
+        user = get_user(user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+            
         keys = get_user_keys(user_id)
         # Sort keys by key_id descending to get the latest one first
         formatted_keys = []
@@ -1966,6 +2114,9 @@ async def dynamic_route(request: Request, path_param: str):
             from shop_bot.data_manager import database
             user = database.get_user_by_auth_token(token)
             if user:
+                webapp_settings = get_webapp_settings()
+                if user.get('is_banned'):
+                    return _render_banned_page(webapp_settings)
                 return await _render_main_page(user['telegram_id'])
             else:
                  # Token not valid or expired -> Render Login Page

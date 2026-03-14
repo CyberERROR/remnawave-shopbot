@@ -2,148 +2,177 @@
 {% block title %}Мониторинг ресурсов{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="mb-8">
-    <div
-        class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div class="flex items-center gap-4">
-            <div
-                class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
-                <span class="material-symbols-outlined text-3xl">monitoring</span>
+<!-- ===== ЗАГОЛОВОК СТРАНИЦЫ ===== -->
+<div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="space-y-1">
+        <h2 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            Мониторинг
+            <span
+                class="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-widest border border-primary/20">Система</span>
+        </h2>
+        <p class="text-white/40 text-[11px] font-medium uppercase tracking-[0.2em] ml-1">Состояние панели и серверов в
+            реальном времени</p>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <button type="button" id="clear-metrics"
+            class="group relative z-0 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 font-semibold text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 overflow-hidden"
+            title="БЕЗОПАСНО: Удалить старые замеры">
+            <div class="absolute inset-0 bg-red-500/20 translate-y-full group-hover:translate-y-0 transition-transform">
             </div>
-            <div>
-                <h2 class="text-2xl font-bold text-white tracking-tight">Мониторинг системы</h2>
-                <p class="text-white/60 text-sm font-medium">Состояние панели и серверов в реальном времени</p>
+            <span
+                class="material-symbols-outlined text-sm relative z-10 group-hover:rotate-12 transition-transform">delete_sweep</span>
+            <span class="relative z-10 hidden sm:inline">Очистить БД</span>
+        </button>
+        <button type="button" id="refresh-all"
+            class="group relative z-0 px-5 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary font-semibold text-xs uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all flex items-center gap-2 overflow-hidden">
+            <div class="absolute inset-0 bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform">
             </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-            <button type="button" id="clear-metrics"
-                class="px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2 group"
-                title="БЕЗОПАСНО: Удалить старые замеры">
-                <span
-                    class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">delete_sweep</span>
-                <span class="hidden sm:inline">Очистить метрики</span>
-            </button>
-            <button type="button" id="refresh-all"
-                class="px-4 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 hover:border-primary/40 transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2 group">
-                <span class="material-symbols-outlined text-lg group-hover:animate-spin">refresh</span>
-                Обновить все
-            </button>
-        </div>
+            <span class="material-symbols-outlined text-sm relative z-10 group-hover:animate-spin">refresh</span>
+            <span class="relative z-10">Обновить</span>
+        </button>
     </div>
 </div>
 
-<!-- Stats Cards -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+<!-- ===== КАРТОЧКИ СВОДКИ ===== -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- CPU -->
     <div
-        class="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-primary/30 transition-all duration-300 group">
-        <div class="flex flex-col items-center text-center">
-            <div
-                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-primary/10">
-                <span class="material-symbols-outlined text-2xl text-primary">memory</span>
-            </div>
-            <div class="text-3xl font-bold text-white mb-1 tracking-tight" id="cpu-stat">—</div>
-            <div class="text-white/50 text-xs font-bold uppercase tracking-widest">Процессор</div>
-            <div class="text-white/30 text-[10px] mt-2 font-mono bg-white/5 px-2 py-0.5 rounded-full" id="cpu-trend">
-            </div>
+        class="bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col relative overflow-hidden group">
+        <div
+            class="absolute -right-6 -top-6 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all">
         </div>
+        <div class="w-full flex justify-between items-center mb-3">
+            <span class="text-white/40 text-[10px] uppercase font-bold tracking-widest">Процессор (CPU)</span>
+            <span class="material-symbols-outlined text-primary text-sm">memory</span>
+        </div>
+        <div class="flex items-baseline gap-2">
+            <div class="text-3xl font-bold text-white tracking-tight" id="cpu-stat">—</div>
+        </div>
+        <div class="text-white/30 text-[10px] mt-1 font-mono uppercase" id="cpu-trend">—</div>
     </div>
+
+    <!-- Memory -->
     <div
-        class="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-green-500/30 transition-all duration-300 group">
-        <div class="flex flex-col items-center text-center">
-            <div
-                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-500/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-green-500/10">
-                <span class="material-symbols-outlined text-2xl text-green-400">storage</span>
-            </div>
-            <div class="text-3xl font-bold text-white mb-1 tracking-tight" id="memory-stat">—</div>
-            <div class="text-white/50 text-xs font-bold uppercase tracking-widest">Память</div>
-            <div class="text-white/30 text-[10px] mt-2 font-mono bg-white/5 px-2 py-0.5 rounded-full" id="memory-trend">
-            </div>
+        class="bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col relative overflow-hidden group">
+        <div
+            class="absolute -right-6 -top-6 w-16 h-16 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all">
         </div>
+        <div class="w-full flex justify-between items-center mb-3">
+            <span class="text-white/40 text-[10px] uppercase font-bold tracking-widest">ОЗУ (RAM)</span>
+            <span class="material-symbols-outlined text-green-400 text-sm">storage</span>
+        </div>
+        <div class="flex items-baseline gap-2">
+            <div class="text-3xl font-bold text-white tracking-tight" id="memory-stat">—</div>
+        </div>
+        <div class="text-white/30 text-[10px] mt-1 font-mono uppercase" id="memory-trend">—</div>
     </div>
+
+    <!-- Disk -->
     <div
-        class="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-yellow-500/30 transition-all duration-300 group">
-        <div class="flex flex-col items-center text-center">
-            <div
-                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-yellow-500/10">
-                <span class="material-symbols-outlined text-2xl text-yellow-400">hard_drive</span>
-            </div>
-            <div class="text-3xl font-bold text-white mb-1 tracking-tight" id="disk-stat">—</div>
-            <div class="text-white/50 text-xs font-bold uppercase tracking-widest">Диск</div>
-            <div class="text-white/30 text-[10px] mt-2 font-mono bg-white/5 px-2 py-0.5 rounded-full" id="disk-trend">
-            </div>
+        class="bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col relative overflow-hidden group">
+        <div
+            class="absolute -right-6 -top-6 w-16 h-16 bg-yellow-400/10 rounded-full blur-2xl group-hover:bg-yellow-400/20 transition-all">
         </div>
+        <div class="w-full flex justify-between items-center mb-3">
+            <span class="text-white/40 text-[10px] uppercase font-bold tracking-widest">Накопитель (Disk)</span>
+            <span class="material-symbols-outlined text-yellow-400 text-sm">hard_drive</span>
+        </div>
+        <div class="flex items-baseline gap-2">
+            <div class="text-3xl font-bold text-white tracking-tight" id="disk-stat">—</div>
+        </div>
+        <div class="text-white/30 text-[10px] mt-1 font-mono uppercase" id="disk-trend">—</div>
     </div>
+
+    <!-- Network -->
     <div
-        class="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-blue-500/30 transition-all duration-300 group">
-        <div class="flex flex-col items-center text-center">
-            <div
-                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/10">
-                <span class="material-symbols-outlined text-2xl text-blue-400">lan</span>
-            </div>
-            <div class="text-3xl font-bold text-white mb-1 tracking-tight" id="network-stat">—</div>
-            <div class="text-white/50 text-xs font-bold uppercase tracking-widest">Сеть</div>
-            <div class="text-white/30 text-[10px] mt-2 font-mono bg-white/5 px-2 py-0.5 rounded-full"
-                id="network-trend"></div>
+        class="bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col relative overflow-hidden group">
+        <div
+            class="absolute -right-6 -top-6 w-16 h-16 bg-blue-400/10 rounded-full blur-2xl group-hover:bg-blue-400/20 transition-all">
         </div>
+        <div class="w-full flex justify-between items-center mb-3">
+            <span class="text-white/40 text-[10px] uppercase font-bold tracking-widest">Сеть (Net)</span>
+            <span class="material-symbols-outlined text-blue-400 text-sm">lan</span>
+        </div>
+        <div class="flex items-baseline gap-2">
+            <div class="text-xl md:text-2xl font-bold tracking-tight text-white/90" id="network-stat">—</div>
+        </div>
+        <div class="text-white/30 text-[10px] mt-1 font-mono" id="network-trend">—</div>
     </div>
 </div>
 
-<!-- Charts Row -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-    <!-- Main Chart -->
-    <div class="lg:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
-        <div class="flex items-center justify-between mb-6">
+<!-- ===== ОСНОВНОЙ БЛОК ГРАФИКОВ ===== -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+    <!-- Chart -->
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col leading-none xl:col-span-2 relative overflow-hidden group">
+        <div
+            class="absolute -left-16 -top-16 w-64 h-64 bg-primary/5 rounded-full blur-3xl transition-all duration-700 pointer-events-none">
+        </div>
+
+        <div class="flex items-center justify-between mb-4 relative z-10">
             <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-primary text-xl">ssid_chart</span>
-                <h3 class="text-white font-bold text-lg">Производительность</h3>
+                <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined text-sm">ssid_chart</span>
+                </div>
+                <h4 class="text-white font-bold text-sm tracking-tight">Производительность</h4>
             </div>
-            <div class="flex bg-black/30 p-1 rounded-lg border border-white/5">
+
+            <div class="flex bg-black/30 p-1 rounded-lg border border-white/5 items-center">
                 <button
-                    class="period-btn px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all bg-primary/20 text-primary hover:bg-primary/30"
-                    data-period="1">1ч</button>
+                    class="period-btn px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all bg-primary/20 text-primary hover:bg-primary/30"
+                    data-period="6">6 Часов</button>
                 <button
-                    class="period-btn px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all text-white/50 hover:text-white hover:bg-white/5"
-                    data-period="6">6ч</button>
+                    class="period-btn px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all text-white/50 hover:text-white hover:bg-white/5"
+                    data-period="24">24 Часа</button>
                 <button
-                    class="period-btn px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all text-white/50 hover:text-white hover:bg-white/5"
-                    data-period="24">24ч</button>
+                    class="period-btn px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all text-white/50 hover:text-white hover:bg-white/5"
+                    data-period="168">Неделя</button>
+                <button
+                    class="period-btn px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all text-white/50 hover:text-white hover:bg-white/5"
+                    data-period="720">Месяц</button>
             </div>
         </div>
-        <div class="h-72 w-full"><canvas id="main-chart"></canvas></div>
+
+        <div class="flex-1 min-h-[250px] w-full relative z-10">
+            <canvas id="main-chart"></canvas>
+        </div>
     </div>
 
-    <!-- Local Server Info -->
-    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-sm flex flex-col">
-        <div class="flex items-center justify-between mb-6">
+    <!-- Info Server -->
+    <div
+        class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col relative z-20">
+        <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-green-400 text-xl">server</span>
+                <div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
+                    <span class="material-symbols-outlined text-sm">checklist</span>
+                </div>
+                <h4 class="text-white font-bold text-sm tracking-tight">Сервер</h4>
             </div>
 
             {% if hosts %}
-            <div class="soft-select relative z-20" data-target="server-selector">
+            <div class="soft-select relative z-30 flex-shrink-0" data-target="server-selector"
+                style="min-width: 130px;">
                 <button type="button"
-                    class="soft-select-toggle px-3 py-1.5 bg-black/30 border border-white/10 rounded-lg text-xs font-bold text-white/90 hover:border-primary/50 transition-all flex items-center gap-2">
-                    <span>Локальная панель</span>
-                    <span class="material-symbols-outlined text-sm text-white/50">expand_more</span>
+                    class="soft-select-toggle px-3 py-1.5 bg-black/30 border border-white/10 rounded-lg text-[10px] uppercase font-bold text-white/90 hover:border-primary/50 transition-all flex items-center justify-between gap-2 w-full">
+                    <span class="truncate">Локальная</span>
+                    <span class="material-symbols-outlined text-[14px] text-white/50 shrink-0">expand_more</span>
                 </button>
                 <div
                     class="soft-select-menu absolute right-0 mt-2 w-48 bg-[#0a1812] border border-white/10 rounded-xl shadow-xl overflow-hidden hidden transform origin-top-right transition-all">
-                    <div class="soft-select-item px-4 py-2.5 hover:bg-white/5 cursor-pointer text-xs font-bold text-white/80 transition-colors border-l-2 border-transparent hover:border-primary flex items-center gap-2 is-active"
+                    <div class="soft-select-item px-3 py-2 hover:bg-white/5 cursor-pointer text-xs font-bold text-white/80 transition-colors border-l-2 border-transparent hover:border-primary flex items-center gap-2 is-active"
                         data-value="local">
-                        <span class="material-symbols-outlined text-sm text-primary">dns</span>
-                        Локальная панель
+                        <span class="material-symbols-outlined text-xs text-primary">dns</span> Локальная
                     </div>
                     {% for h in hosts %}
-                    <div class="soft-select-item px-4 py-2.5 hover:bg-white/5 cursor-pointer text-xs font-bold text-white/80 transition-colors border-l-2 border-transparent hover:border-blue-400 flex items-center gap-2"
+                    <div class="soft-select-item px-3 py-2 hover:bg-white/5 cursor-pointer text-xs font-bold text-white/80 transition-colors border-l-2 border-transparent hover:border-primary flex items-center gap-2"
                         data-value="remote:{{ h.host_name }}">
-                        <span class="material-symbols-outlined text-sm text-blue-400">cloud</span>
-                        {{ h.host_name }}
+                        <span class="material-symbols-outlined text-xs text-blue-400">cloud</span> {{ h.host_name }}
                     </div>
                     {% endfor %}
                 </div>
-                <select id="server-selector" class="absolute inset-0 opacity-0 pointer-events-none">
-                    <option value="local" selected>Локальная панель</option>
+                <select id="server-selector" class="hidden">
+                    <option value="local" selected>Локальная</option>
                     {% for h in hosts %}
                     <option value="remote:{{ h.host_name }}">{{ h.host_name }}</option>
                     {% endfor %}
@@ -152,144 +181,152 @@
             {% endif %}
         </div>
 
-        <div id="local-metrics" class="flex-1 space-y-4 text-sm text-white/70">
-            <div class="flex flex-col items-center justify-center h-full text-white/30 gap-2">
+        <div id="local-metrics" class="flex-1 text-sm text-white/70 overflow-y-auto pr-2 custom-scrollbar">
+            <div class="flex flex-col items-center justify-center h-full text-white/30 gap-2 min-h-[150px]">
                 <span class="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
-                <span class="text-xs uppercase tracking-widest font-bold">Сбор данных...</span>
+                <span class="text-[10px] uppercase tracking-widest font-bold">Сбор данных...</span>
             </div>
         </div>
-        <div class="h-32 mt-6 relative"><canvas id="local-mini-chart"></canvas></div>
+
+        <div class="h-28 mt-4 relative shrink-0">
+            <canvas id="local-mini-chart"></canvas>
+        </div>
     </div>
 </div>
 
-<!-- Servers & SSH Targets Grid -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Серверы (xui_hosts) -->
-    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-        <div class="flex items-center justify-between mb-6">
+<!-- ===== СПИСКИ СЕРВЕРОВ ===== -->
+<div class="space-y-6 mb-6">
+    <!-- Хосты Remnawave -->
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-3">
                 <div
-                    class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/10">
-                    <span class="material-symbols-outlined text-blue-400 text-xl">dns</span>
+                    class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
+                    <span class="material-symbols-outlined text-[20px]">dns</span>
                 </div>
                 <div>
-                    <h3 class="text-white font-bold text-base">Серверы Remnawave</h3>
-                    <p class="text-white/40 text-[10px] font-medium uppercase tracking-wider">Удаленные панели
-                        управления</p>
+                    <h4 class="text-white font-bold text-base tracking-tight">Серверы Remnawave</h4>
+                    <p class="text-[10px] text-white/40 uppercase tracking-widest">Удаленные панели</p>
                 </div>
             </div>
             <span
-                class="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold font-mono"
-                id="hosts-count">{{ hosts|length }}</span>
+                class="px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold font-mono">{{
+                hosts|length }}</span>
         </div>
 
-        <div class="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-            {% if hosts %}
+        {% if hosts %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for h in hosts %}
-            <div class="bg-black/20 border border-white/5 rounded-xl p-4 hover:border-blue-500/30 transition-all duration-300 group"
+            <div class="bg-black/20 border border-white/5 rounded-xl p-4 hover:border-blue-500/30 transition-all duration-300 group flex flex-col"
                 data-host="{{ h.host_name }}">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                        <div class="relative">
-                            <div class="w-2.5 h-2.5 rounded-full bg-white/20 transition-all duration-500"
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-start gap-3">
+                        <div class="mt-1 relative shrink-0">
+                            <div class="w-2.5 h-2.5 rounded-full bg-white/20 transition-all duration-500 shadow-[0_0_10px_currentColor]"
                                 id="host-status-{{ loop.index }}"></div>
                         </div>
                         <div>
-                            <div class="text-white font-bold text-sm tracking-tight flex items-center gap-2">
+                            <div class="text-white font-bold text-[15px] tracking-tight flex items-center gap-2">
                                 {{ h.host_name }}
-                                <span
-                                    class="material-symbols-outlined text-[10px] text-white/30 group-hover:text-blue-400 transition-colors">open_in_new</span>
+                                {% if h.host_url %}
+                                <a href="{{ h.host_url }}" target="_blank"
+                                    class="material-symbols-outlined text-[14px] text-white/30 hover:text-blue-400 transition-colors pointer-events-auto">open_in_new</a>
+                                {% endif %}
                             </div>
-                            <div class="text-white/30 text-[10px] font-mono mt-0.5">{{ h.host_url or 'URL не указан' }}
-                            </div>
+                            <div class="text-white/30 text-[10px] font-mono mt-0.5 truncate max-w-[200px]">{{ h.host_url
+                                or 'Нет URL' }}</div>
                         </div>
                     </div>
                     <button
-                        class="host-refresh-btn p-2 rounded-lg bg-white/5 hover:bg-blue-500/20 text-white/50 hover:text-blue-400 transition-all"
+                        class="host-refresh-btn w-8 h-8 shrink-0 flex items-center justify-center rounded-lg bg-white/5 hover:bg-blue-500/20 text-white/50 hover:text-blue-400 transition-all border border-transparent hover:border-blue-500/20"
                         data-host="{{ h.host_name }}" data-target="#host-metrics-{{ loop.index }}" title="Обновить">
-                        <span class="material-symbols-outlined text-lg">refresh</span>
+                        <span
+                            class="material-symbols-outlined text-[16px] group-hover:rotate-180 transition-transform duration-500">sync</span>
                     </button>
                 </div>
-                <div class="server-metrics bg-white/5 rounded-lg p-3 text-xs" id="host-metrics-{{ loop.index }}">
-                    <div class="flex items-center justify-center gap-2 text-white/30 py-1">
-                        <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                        <span class="uppercase tracking-widest font-bold text-[10px]">Ожидание</span>
+                <div class="server-metrics bg-white/5 rounded-lg p-3 flex-1 flex flex-col justify-center gap-2"
+                    id="host-metrics-{{ loop.index }}">
+                    <div class="flex items-center justify-center gap-2 text-white/30 py-2">
+                        <span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                        <span class="uppercase tracking-widest font-bold text-[10px]">Ожидание данных...</span>
                     </div>
                 </div>
             </div>
             {% endfor %}
-            {% else %}
-            <div
-                class="flex flex-col items-center justify-center py-12 text-white/20 border-2 border-dashed border-white/5 rounded-xl">
-                <span class="material-symbols-outlined text-4xl mb-2">dns</span>
-                <p class="text-xs font-bold uppercase tracking-widest">Список пуст</p>
-            </div>
-            {% endif %}
         </div>
+        {% else %}
+        <div
+            class="flex flex-col items-center justify-center py-12 text-white/20 border-2 border-dashed border-white/10 rounded-2xl">
+            <span class="material-symbols-outlined text-4xl mb-3 opacity-50">dns</span>
+            <span class="text-xs font-bold uppercase tracking-widest">Список хостов пуст</span>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- SSH-цели -->
-    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-        <div class="flex items-center justify-between mb-6">
+    <!-- SSH Цели -->
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-3">
                 <div
-                    class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/10">
-                    <span class="material-symbols-outlined text-yellow-400 text-xl">terminal</span>
+                    class="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20">
+                    <span class="material-symbols-outlined text-[20px]">terminal</span>
                 </div>
                 <div>
-                    <h3 class="text-white font-bold text-base">SSH-цели</h3>
-                    <p class="text-white/40 text-[10px] font-medium uppercase tracking-wider">Прямое подключение</p>
+                    <h4 class="text-white font-bold text-base tracking-tight">SSH-цели</h4>
+                    <p class="text-[10px] text-white/40 uppercase tracking-widest">Прямое подключение к серверам</p>
                 </div>
             </div>
             <span
-                class="px-2.5 py-1 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-bold font-mono"
-                id="targets-count">{{ ssh_targets|length }}</span>
+                class="px-3 py-1 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs font-bold font-mono">{{
+                ssh_targets|length }}</span>
         </div>
 
-        <div class="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-            {% if ssh_targets %}
+        {% if ssh_targets %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for t in ssh_targets %}
-            <div class="bg-black/20 border border-white/5 rounded-xl p-4 hover:border-yellow-500/30 transition-all duration-300 group"
+            <div class="bg-black/20 border border-white/5 rounded-xl p-4 hover:border-yellow-500/30 transition-all duration-300 group flex flex-col"
                 data-target="{{ t.target_name }}">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                        <div class="relative">
-                            <div class="w-2.5 h-2.5 rounded-full bg-white/20 transition-all duration-500"
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-start gap-3">
+                        <div class="mt-1 relative shrink-0">
+                            <div class="w-2.5 h-2.5 rounded-full bg-white/20 transition-all duration-500 shadow-[0_0_10px_currentColor]"
                                 id="target-status-{{ loop.index }}"></div>
                         </div>
                         <div>
-                            <div class="text-white font-bold text-sm tracking-tight flex items-center gap-2">
+                            <div class="text-white font-bold text-[15px] tracking-tight flex items-center gap-2">
                                 {{ t.target_name }}
                                 <span
-                                    class="material-symbols-outlined text-[10px] text-white/30 group-hover:text-yellow-400 transition-colors">code</span>
+                                    class="material-symbols-outlined text-[14px] text-white/30 group-hover:text-yellow-500 transition-colors">code</span>
                             </div>
-                            <div class="text-white/30 text-[10px] font-mono mt-0.5">{{ t.ssh_host }}:{{ t.ssh_port or 22
-                                }}</div>
+                            <div class="text-white/30 text-[10px] font-mono mt-0.5 truncate max-w-[200px]">{{ t.ssh_host
+                                }}:{{ t.ssh_port or 22 }}</div>
                         </div>
                     </div>
                     <button
-                        class="target-refresh-btn p-2 rounded-lg bg-white/5 hover:bg-yellow-500/20 text-white/50 hover:text-yellow-400 transition-all"
+                        class="target-refresh-btn w-8 h-8 shrink-0 flex items-center justify-center rounded-lg bg-white/5 hover:bg-yellow-500/20 text-white/50 hover:text-yellow-500 transition-all border border-transparent hover:border-yellow-500/20"
                         data-target-name="{{ t.target_name }}" data-target="#target-metrics-{{ loop.index }}"
                         title="Обновить">
-                        <span class="material-symbols-outlined text-lg">refresh</span>
+                        <span
+                            class="material-symbols-outlined text-[16px] group-hover:rotate-180 transition-transform duration-500">sync</span>
                     </button>
                 </div>
-                <div class="server-metrics bg-white/5 rounded-lg p-3 text-xs" id="target-metrics-{{ loop.index }}">
-                    <div class="flex items-center justify-center gap-2 text-white/30 py-1">
-                        <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                        <span class="uppercase tracking-widest font-bold text-[10px]">Ожидание</span>
+                <div class="server-metrics bg-white/5 rounded-lg p-3 flex-1 flex flex-col justify-center gap-2"
+                    id="target-metrics-{{ loop.index }}">
+                    <div class="flex items-center justify-center gap-2 text-white/30 py-2">
+                        <span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                        <span class="uppercase tracking-widest font-bold text-[10px]">Ожидание данных...</span>
                     </div>
                 </div>
             </div>
             {% endfor %}
-            {% else %}
-            <div
-                class="flex flex-col items-center justify-center py-12 text-white/20 border-2 border-dashed border-white/5 rounded-xl">
-                <span class="material-symbols-outlined text-4xl mb-2">terminal</span>
-                <p class="text-xs font-bold uppercase tracking-widest">Список пуст</p>
-            </div>
-            {% endif %}
         </div>
+        {% else %}
+        <div
+            class="flex flex-col items-center justify-center py-12 text-white/20 border-2 border-dashed border-white/10 rounded-2xl">
+            <span class="material-symbols-outlined text-4xl mb-3 opacity-50">terminal</span>
+            <span class="text-xs font-bold uppercase tracking-widest">Список целей пуст</span>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -303,7 +340,7 @@
         let mainChart = null;
         let localMiniChart = null;
         let autoRefreshInterval = null;
-        let currentPeriod = 1;
+        let currentPeriod = 6;
         let lastNetworkData = null;
         let lastNetworkTime = null;
         const NETWORK_DATA_KEY = 'monitor_network_data';
@@ -411,172 +448,131 @@
             const speedUp = fmtBytes(networkSpeed.upSpeed) + '/с';
             const speedDown = fmtBytes(networkSpeed.downSpeed) + '/с';
             document.getElementById('network-stat').innerHTML = `<span class="text-blue-400">${speedTotal}</span>`;
-            document.getElementById('network-trend').innerHTML = `↑${speedUp} ↓${speedDown}`;
+            document.getElementById('network-trend').innerHTML = `↓${speedDown}  ↑${speedUp}`;
         }
 
         function renderLocal(el, data) {
             if (!data || !data.ok) {
-                el.innerHTML = `<div class="flex items-center justify-center h-full text-red-400 gap-2"><span class="material-symbols-outlined">error</span> ${data?.error || 'Неизвестная ошибка'}</div>`;
+                el.innerHTML = `<div class="flex items-center justify-center p-4 h-full text-red-500 gap-2"><span class="material-symbols-outlined text-sm">error</span> <span class="text-[10px] font-bold tracking-widest uppercase">${data?.error || 'Сбой получения данных'}</span></div>`;
                 return;
             }
             const cpu = data.cpu || {};
             const mem = data.memory || {};
             const sw = data.swap || {};
-            const net = data.net || {};
-            const networkSpeed = calculateNetworkSpeed(net, 'local_details');
-            const disks = (data.disks || []).map(d => `
-            <div class="flex flex-col gap-1 mb-2 last:mb-0">
-                <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/40">
-                    <span>${d.mountpoint || d.device}</span>
-                    <span class="${getStatusColor(d.percent)}">${fmtPct(d.percent)}</span>
+            const disks = (data.disks || []);
+
+            let diskHtml = disks.map(d => `
+                <div>
+                    <div class="flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1.5">
+                        <span>${d.mountpoint || d.device}</span>
+                        <span class="${getStatusColor(d.percent)}">${fmtPct(d.percent)}</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                        <div class="h-full ${d.percent >= 90 ? 'bg-red-500' : d.percent >= 70 ? 'bg-yellow-400' : 'bg-primary'} transition-all duration-500" style="width: ${d.percent || 0}%"></div>
+                    </div>
                 </div>
-                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div class="h-full ${d.percent >= 90 ? 'bg-red-500' : d.percent >= 70 ? 'bg-yellow-500' : 'bg-primary'} transition-all duration-500" style="width: ${d.percent || 0}%"></div>
-                </div>
-            </div>
-        `).join('');
+            `).join('');
+
             el.innerHTML = `
-        <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-                 <div class="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Система</div>
-                    <div class="text-xs font-bold text-white truncate" title="${data.hostname}">${data.hostname || '—'}</div>
-                    <div class="text-[10px] text-white/30 truncate">${data.platform || ''}</div>
-                </div>
-                <div class="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Uptime</div>
-                    <div class="text-xs font-bold text-blue-400">${secsToDHMS(data.uptime_sec)}</div>
-                </div>
-            </div>
-            
-            <div class="space-y-3">
-                <!-- CPU -->
-                <div>
-                   <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
-                        <span>CPU (${cpu.count_logical || '—'})</span>
-                        <span class="${getStatusColor(cpu.percent)}">${fmtPct(cpu.percent)}</span>
-                   </div>
-                   <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div class="h-full bg-primary transition-all duration-500" style="width: ${cpu.percent || 0}%"></div>
-                   </div>
-                </div>
-                
-                <!-- RAM -->
-                <div>
-                   <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
-                        <span>RAM</span>
-                        <span class="${getStatusColor(mem.percent)}">${fmtPct(mem.percent)}</span>
-                   </div>
-                   <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div class="h-full bg-green-500 transition-all duration-500" style="width: ${mem.percent || 0}%"></div>
-                   </div>
-                   <div class="text-[10px] text-right text-white/30 mt-0.5">${fmtBytes(mem.used || 0)} / ${fmtBytes(mem.total || 0)}</div>
-                </div>
-
-                <!-- SWAP -->
-                ${sw.total ? `
-                <div>
-                   <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
-                        <span>SWAP</span>
-                        <span class="${getStatusColor(sw.percent)}">${fmtPct(sw.percent)}</span>
-                   </div>
-                   <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div class="h-full bg-purple-500 transition-all duration-500" style="width: ${sw.percent || 0}%"></div>
-                   </div>
-                </div>` : ''}
-            </div>
-
-            <!-- Network -->
-            <div class="bg-white/5 rounded-xl p-3 border border-white/5 flex items-center justify-between">
-                <div>
-                    <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Загрузка</div>
-                     <div class="flex gap-2 text-[10px] font-mono text-cyan-400">
-                        <span>↓${fmtBytes(networkSpeed.downSpeed)}/s</span>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                     <div class="bg-black/20 rounded-xl p-3 border border-white/5 flex flex-col justify-center items-center">
+                        <div class="text-[8px] uppercase tracking-widest text-white/40 font-bold mb-1">Хостнейм</div>
+                        <div class="text-[11px] font-bold text-white truncate w-full text-center" title="${data.hostname}">${data.hostname || '—'}</div>
+                    </div>
+                    <div class="bg-black/20 rounded-xl p-3 border border-white/5 flex flex-col justify-center items-center">
+                        <div class="text-[8px] uppercase tracking-widest text-white/40 font-bold mb-1">Uptime</div>
+                        <div class="text-[11px] font-bold text-primary">${secsToDHMS(data.uptime_sec)}</div>
                     </div>
                 </div>
-                 <div class="text-right">
-                    <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Отдача</div>
-                    <div class="flex gap-2 text-[10px] font-mono text-blue-400">
-                        <span>↑${fmtBytes(networkSpeed.upSpeed)}/s</span>
-                    </div>
-                </div>
-            </div>
 
-            ${disks ? `<div class="pt-2 border-t border-white/5">${disks}</div>` : ''}
-        </div>`;
+                <div class="space-y-4 pr-1">
+                    <div>
+                        <div class="flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1.5">
+                            <span>CPU (${cpu.count_logical || '—'} cores)</span>
+                            <span class="${getStatusColor(cpu.percent)}">${fmtPct(cpu.percent)}</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary transition-all duration-500" style="width: ${cpu.percent || 0}%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1.5">
+                            <span>RAM</span>
+                            <span class="${getStatusColor(mem.percent)}">${fmtPct(mem.percent)}</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div class="h-full bg-green-500 transition-all duration-500" style="width: ${mem.percent || 0}%"></div>
+                        </div>
+                        <div class="mt-1 flex justify-end text-[8px] text-white/30 font-mono tracking-tighter">${fmtBytes(mem.used)} / ${fmtBytes(mem.total)}</div>
+                    </div>
+                    ${sw.total ? `
+                    <div>
+                        <div class="flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1.5">
+                            <span>SWAP</span>
+                            <span class="${getStatusColor(sw.percent)}">${fmtPct(sw.percent)}</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div class="h-full bg-purple-500 transition-all duration-500" style="width: ${sw.percent || 0}%"></div>
+                        </div>
+                    </div>` : ''}
+                    
+                    ${diskHtml}
+                </div>
+            `;
         }
 
         function renderRemote(el, data) {
             if (!data || !data.ok) {
-                el.innerHTML = `<div class="flex items-center justify-center p-4 text-red-400 gap-2"><span class="material-symbols-outlined">error</span> ${data?.error || 'Недоступен'}</div>`;
+                el.innerHTML = `<div class="flex items-center justify-center p-3 text-red-500 gap-2"><span class="material-symbols-outlined text-sm">error</span> <span class="text-[9px] font-bold tracking-widest uppercase">${data?.error || 'Сбой данных'}</span></div>`;
                 return;
             }
             const cpu = { percent: data.cpu_percent || 0, count: data.cpu_count || '—' };
             const mem = { percent: data.memory_percent || 0, used_mb: data.memory_used_mb || 0, total_mb: data.memory_total_mb || 0 };
             const disk = { percent: data.disk_percent || 0, mountpoint: data.disk_mountpoint || '/' };
-            const net = { bytes_sent: data.network_sent || 0, bytes_recv: data.network_recv || 0 };
-            const networkSpeed = calculateNetworkSpeed(net, 'remote_' + (data.uname || 'unknown'));
 
             el.innerHTML = `
-            <div class="space-y-4">
-                 <div class="grid grid-cols-2 gap-3">
-                     <div class="bg-white/5 rounded-lg p-2 border border-white/5">
-                        <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Система</div>
-                        <div class="text-xs font-bold text-white truncate" title="${data.uname}">${data.uname || '—'}</div>
+                 <div class="grid grid-cols-2 gap-2 mb-3">
+                     <div class="bg-black/20 rounded-lg p-2.5 border border-white/5 flex flex-col items-center justify-center">
+                        <div class="text-[8px] uppercase tracking-widest text-white/40 font-bold mb-1">Система</div>
+                        <div class="text-[10px] font-bold text-white truncate w-full text-center" title="${data.uname}">${data.uname || '—'}</div>
                     </div>
-                    <div class="bg-white/5 rounded-lg p-2 border border-white/5">
-                        <div class="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Uptime</div>
-                        <div class="text-xs font-bold text-blue-400">${secsToDHMS(data.uptime_sec)}</div>
+                    <div class="bg-black/20 rounded-lg p-2.5 border border-white/5 flex flex-col items-center justify-center">
+                        <div class="text-[8px] uppercase tracking-widest text-white/40 font-bold mb-1">Uptime</div>
+                        <div class="text-[10px] font-bold text-blue-400 truncate">${secsToDHMS(data.uptime_sec)}</div>
                     </div>
                 </div>
 
-                <div class="space-y-3">
-                    <!-- CPU -->
+                <div class="space-y-3 pt-1">
                     <div>
-                       <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
-                            <span>CPU (${cpu.count} ядра)</span>
+                        <div class="flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1.5">
+                            <span>CPU (${cpu.count} ЯДЕР)</span>
                             <span class="${getStatusColor(cpu.percent)}">${fmtPct(cpu.percent)}</span>
-                       </div>
-                       <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                            <div class="h-full bg-primary transition-all duration-500" style="width: ${cpu.percent || 0}%"></div>
-                       </div>
-                       <div class="text-[10px] text-right text-white/30 mt-0.5">Load: ${(data.loadavg || []).join(', ') || '—'}</div>
+                        </div>
+                        <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary transition-all duration-500" style="width: ${cpu.percent}%"></div>
+                        </div>
                     </div>
-                    
-                    <!-- RAM -->
                     <div>
-                       <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
+                        <div class="flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1.5">
                             <span>RAM</span>
                             <span class="${getStatusColor(mem.percent)}">${fmtPct(mem.percent)}</span>
-                       </div>
-                       <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500 transition-all duration-500" style="width: ${mem.percent || 0}%"></div>
-                       </div>
-                       <div class="text-[10px] text-right text-white/30 mt-0.5">${mem.used_mb} / ${mem.total_mb} MB</div>
+                        </div>
+                        <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div class="h-full bg-green-500 transition-all duration-500" style="width: ${mem.percent}%"></div>
+                        </div>
+                        <div class="mt-1 flex justify-end text-[8px] text-white/30 font-mono tracking-tighter">${mem.used_mb}MB / ${mem.total_mb}MB</div>
                     </div>
-
-                    <!-- Disk -->
                     <div>
-                       <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider text-white/50 mb-1">
-                            <span>Disk (${disk.mountpoint})</span>
+                        <div class="flex justify-between text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1.5">
+                            <span>DISK (${disk.mountpoint})</span>
                             <span class="${getStatusColor(disk.percent)}">${fmtPct(disk.percent)}</span>
-                       </div>
-                       <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                            <div class="h-full bg-yellow-500 transition-all duration-500" style="width: ${disk.percent || 0}%"></div>
-                       </div>
+                        </div>
+                        <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div class="h-full bg-yellow-400 transition-all duration-500" style="width: ${disk.percent}%"></div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Network -->
-                <div class="bg-white/5 rounded-lg p-2 border border-white/5 flex items-center justify-between">
-                     <div class="text-[10px] font-mono text-cyan-400">
-                        ↓ ${fmtBytes(networkSpeed.downSpeed)}/s
-                    </div>
-                     <div class="text-[10px] font-mono text-blue-400">
-                        ↑ ${fmtBytes(networkSpeed.upSpeed)}/s
-                    </div>
-                </div>
-            </div>`;
+            `;
         }
 
         function createMainChart() {
@@ -588,40 +584,40 @@
                     labels: [],
                     datasets: [
                         {
-                            label: 'CPU %',
+                            label: 'CPU',
                             data: [],
-                            borderColor: '#3b82f6', // Blue-500
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderColor: '#13ec80',
+                            backgroundColor: 'rgba(19, 236, 128, 0.05)',
                             borderWidth: 2,
                             fill: true,
                             tension: 0.4,
-                            pointRadius: 0,
+                            pointRadius: 2,
                             pointHoverRadius: 6,
-                            pointBackgroundColor: '#3b82f6'
+                            pointBackgroundColor: '#13ec80'
                         },
                         {
-                            label: 'RAM %',
+                            label: 'RAM',
                             data: [],
-                            borderColor: '#22c55e', // Green-500 
-                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderColor: '#22c55e',
+                            backgroundColor: 'rgba(34, 197, 94, 0.05)',
                             borderWidth: 2,
                             fill: true,
                             tension: 0.4,
-                            pointRadius: 0,
+                            pointRadius: 2,
                             pointHoverRadius: 6,
                             pointBackgroundColor: '#22c55e'
                         },
                         {
-                            label: 'Диск %',
+                            label: 'Disk',
                             data: [],
-                            borderColor: '#eab308', // Yellow-500
-                            backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                            borderColor: '#facc15',
+                            backgroundColor: 'rgba(250, 204, 21, 0.05)',
                             borderWidth: 2,
                             fill: true,
                             tension: 0.4,
-                            pointRadius: 0,
+                            pointRadius: 2,
                             pointHoverRadius: 6,
-                            pointBackgroundColor: '#eab308'
+                            pointBackgroundColor: '#facc15'
                         }
                     ]
                 },
@@ -638,34 +634,34 @@
                                 usePointStyle: true,
                                 boxWidth: 6,
                                 padding: 20,
-                                font: { family: "'Inter', sans-serif", size: 11, weight: 500 }
+                                font: { family: "'Inter', sans-serif", size: 10, weight: 600 }
                             }
                         },
                         tooltip: {
-                            backgroundColor: '#1f2937', // Gray-800
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)', // Gray-800
                             titleColor: '#f3f4f6', // Gray-100
                             bodyColor: '#d1d5db', // Gray-300
-                            borderColor: '#374151', // Gray-700
+                            borderColor: 'rgba(255,255,255,0.1)', // Gray-700
                             borderWidth: 1,
                             cornerRadius: 8,
-                            padding: 12,
+                            padding: 10,
                             displayColors: true,
                             boxPadding: 4,
-                            titleFont: { size: 13, weight: 600 },
-                            bodyFont: { size: 12 }
+                            titleFont: { size: 11, weight: 600, family: "'Inter', sans-serif" },
+                            bodyFont: { size: 10, family: "'Inter', sans-serif" }
                         }
                     },
                     scales: {
                         x: {
                             ticks: {
                                 color: '#6b7280', // Gray-500
-                                font: { size: 10 },
+                                font: { size: 9, family: "'Inter', sans-serif" },
                                 maxRotation: 0,
                                 autoSkip: true,
                                 maxTicksLimit: 8
                             },
                             grid: {
-                                color: 'rgba(255,255,255,0.03)',
+                                color: 'rgba(255,255,255,0.02)',
                                 drawBorder: false
                             }
                         },
@@ -674,12 +670,12 @@
                             max: 100,
                             ticks: {
                                 color: '#6b7280', // Gray-500
-                                font: { size: 10 },
+                                font: { size: 9, family: "'Inter', sans-serif" },
                                 callback: v => v + '%',
                                 stepSize: 20
                             },
                             grid: {
-                                color: 'rgba(255,255,255,0.03)',
+                                color: 'rgba(255,255,255,0.02)',
                                 drawBorder: false
                             }
                         }
@@ -696,10 +692,29 @@
             localMiniChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['CPU', 'RAM', 'Диск'],
-                    datasets: [{ data: [0, 0, 0], backgroundColor: ['rgba(168,85,247,0.8)', 'rgba(34,197,94,0.8)', 'rgba(245,158,11,0.8)'], borderWidth: 0 }]
+                    labels: ['CPU', 'RAM', 'Disk'],
+                    datasets: [{ data: [0, 0, 0], backgroundColor: ['#13ec80', '#22c55e', '#facc15'], borderWidth: 0, hoverOffset: 4 }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', boxWidth: 10, usePointStyle: true } } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            bodyFont: { size: 10, family: "'Inter', sans-serif" },
+                            boxPadding: 4,
+                            callbacks: {
+                                label: function (context) {
+                                    return ' ' + context.label + ': ' + context.raw + '%';
+                                }
+                            }
+                        }
+                    }
+                }
             });
             return localMiniChart;
         }
@@ -738,6 +753,7 @@
             mainChart.data.datasets[1].data = items.map(i => i.mem_percent ?? null);
             mainChart.data.datasets[2].data = items.map(i => i.disk_percent ?? null);
             mainChart.update('none');
+
             if (localMiniChart && items.length > 0) {
                 const last = items[items.length - 1];
                 localMiniChart.data.datasets[0].data = [last.cpu_percent || 0, last.mem_percent || 0, last.disk_percent || 0];
@@ -762,12 +778,11 @@
             }
         }
 
-        // Обновление хоста по имени
         async function refreshHost(hostName, metricsEl, statusEl) {
             if (metricsEl) {
-                metricsEl.innerHTML = `<div class="flex items-center gap-2 text-white/40"><span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Загрузка...</div>`;
+                metricsEl.innerHTML = `<div class="flex items-center gap-2 text-white/40"><span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> <span class="text-[9px] font-bold uppercase tracking-widest">Загрузка...</span></div>`;
             }
-            if (statusEl) statusEl.className = 'w-2 h-2 rounded-full bg-yellow-500';
+            if (statusEl) statusEl.className = 'w-2 h-2 rounded-full bg-yellow-400';
             const data = await fetchJSON(`{{ url_for('monitor_host_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(hostName)));
             if (metricsEl) renderRemote(metricsEl, data);
             if (statusEl) {
@@ -775,12 +790,11 @@
             }
         }
 
-        // Обновление SSH-цели по имени
         async function refreshTarget(targetName, metricsEl, statusEl) {
             if (metricsEl) {
-                metricsEl.innerHTML = `<div class="flex items-center gap-2 text-white/40"><span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Загрузка...</div>`;
+                metricsEl.innerHTML = `<div class="flex items-center gap-2 text-white/40"><span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> <span class="text-[9px] font-bold uppercase tracking-widest">Загрузка...</span></div>`;
             }
-            if (statusEl) statusEl.className = 'w-2 h-2 rounded-full bg-yellow-500';
+            if (statusEl) statusEl.className = 'w-2 h-2 rounded-full bg-yellow-400';
             const data = await fetchJSON(`{{ url_for('monitor_target_json', target_name='__T__') }}`.replace('__T__', encodeURIComponent(targetName)));
             if (metricsEl) renderRemote(metricsEl, data);
             if (statusEl) {
@@ -788,7 +802,6 @@
             }
         }
 
-        // Обновление всех хостов
         function refreshAllHosts() {
             document.querySelectorAll('.host-refresh-btn').forEach(btn => {
                 const hostName = btn.getAttribute('data-host');
@@ -800,7 +813,6 @@
             });
         }
 
-        // Обновление всех SSH-целей
         function refreshAllTargets() {
             document.querySelectorAll('.target-refresh-btn').forEach(btn => {
                 const targetName = btn.getAttribute('data-target-name');
@@ -827,7 +839,39 @@
             document.getElementById('refresh-all')?.addEventListener('click', refreshAll);
 
             if (document.getElementById('server-selector')) {
-                initSoftSelect('server-selector', 'Локальная панель');
+                if (typeof initSoftSelect === 'function') {
+                    initSoftSelect('server-selector', 'Локальная');
+                } else {
+                    // Fallback to basic select functionality if initSoftSelect is not available
+                    const sel = document.getElementById('server-selector');
+                    const menus = document.querySelectorAll('.soft-select-item');
+                    const toggle = document.querySelector('.soft-select-toggle span:first-child');
+
+                    menus.forEach(menuItem => {
+                        menuItem.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            menus.forEach(m => m.classList.remove('is-active', 'bg-white/5'));
+                            this.classList.add('is-active', 'bg-white/5');
+
+                            const val = this.getAttribute('data-value');
+                            if (toggle) toggle.textContent = this.textContent.trim();
+
+                            if (sel) {
+                                sel.value = val;
+                                sel.dispatchEvent(new Event('change'));
+                            }
+
+                            document.querySelector('.soft-select-menu').classList.add('hidden');
+                        });
+                    });
+
+                    const tgBtn = document.querySelector('.soft-select-toggle');
+                    if (tgBtn) {
+                        tgBtn.addEventListener('click', () => {
+                            document.querySelector('.soft-select-menu').classList.toggle('hidden');
+                        });
+                    }
+                }
             }
 
             const serverSelector = document.getElementById('server-selector');
@@ -838,42 +882,49 @@
                 });
             }
 
-            // Кнопка очистки метрик
             document.getElementById('clear-metrics')?.addEventListener('click', () => {
-                showConfirmModal('Вы уверены, что хотите удалить все старые замеры из БД?\n\nЭто действие необратимо и освободит память, но не повлияет на текущую статистику.', async () => {
-                    const btn = document.getElementById('clear-metrics');
-                    const originalHTML = btn.innerHTML;
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span> Очистка...';
-
-                    try {
-                        const resp = await fetch('/monitor/clear-metrics', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : ''
-                            }
-                        });
-                        const data = await resp.json();
-
-                        if (data.ok) {
-                            window.showToast('success', data.message || 'Метрики успешно очищены');
-                            // Обновляем графики
-                            await refreshCharts();
-                        } else {
-                            window.showToast('danger', data.error || 'Ошибка очистки метрик');
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        window.showToast('danger', 'Ошибка очистки метрик');
-                    } finally {
-                        btn.disabled = false;
-                        btn.innerHTML = originalHTML;
-                    }
-                });
+                if (window.showConfirmModal) {
+                    showConfirmModal('Вы уверены, что хотите удалить все старые замеры из БД?\n\nЭто действие необратимо и освободит память, но не повлияет на текущую статистику.', async () => {
+                        await performClearMetrics();
+                    });
+                } else if (confirm('Вы уверены, что хотите удалить все старые замеры из БД?\n\nЭто действие необратимо и освободит память, но не повлияет на текущую статистику.')) {
+                    performClearMetrics();
+                }
             });
 
-            // Кнопки обновления хостов
+            async function performClearMetrics() {
+                const btn = document.getElementById('clear-metrics');
+                const originalHTML = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> Очистка...';
+
+                try {
+                    const resp = await fetch(`{{ url_for('clear_monitor_metrics_route') if clear_monitor_metrics_route else '/monitor/clear-metrics' }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': window.getCsrfToken ? window.getCsrfToken() : '{{ csrf_token() }}'
+                        }
+                    });
+                    const data = await resp.json();
+
+                    if (data.ok) {
+                        if (window.showToast) window.showToast('success', data.message || 'Метрики успешно очищены');
+                        else alert(data.message || 'Метрики успешно очищены');
+                        await refreshCharts();
+                    } else {
+                        if (window.showToast) window.showToast('danger', data.error || 'Ошибка очистки метрик');
+                        else alert(data.error || 'Ошибка очистки метрик');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    if (window.showToast) window.showToast('danger', 'Ошибка очистки метрик');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }
+            }
+
             document.querySelectorAll('.host-refresh-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const hostName = btn.getAttribute('data-host');
@@ -885,7 +936,6 @@
                 });
             });
 
-            // Кнопки обновления SSH-целей
             document.querySelectorAll('.target-refresh-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const targetName = btn.getAttribute('data-target-name');
@@ -897,21 +947,19 @@
                 });
             });
 
-            // Переключатели периода
             document.querySelectorAll('.period-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.period-btn').forEach(b => {
-                        b.classList.remove('bg-primary/20', 'text-primary');
-                        b.classList.add('bg-white/10', 'text-white/70');
+                        b.classList.remove('bg-primary/20', 'text-primary', 'hover:bg-primary/30');
+                        b.classList.add('bg-white/10', 'text-white/50', 'hover:text-white', 'hover:bg-white/5');
                     });
-                    btn.classList.remove('bg-white/10', 'text-white/70');
-                    btn.classList.add('bg-primary/20', 'text-primary');
-                    currentPeriod = parseInt(btn.getAttribute('data-period') || '1', 10);
+                    btn.classList.remove('bg-white/10', 'text-white/50', 'hover:text-white', 'hover:bg-white/5');
+                    btn.classList.add('bg-primary/20', 'text-primary', 'hover:bg-primary/30');
+                    currentPeriod = parseInt(btn.getAttribute('data-period') || '6', 10);
                     refreshCharts();
                 });
             });
 
-            // Автообновление каждую минуту
             autoRefreshInterval = setInterval(refreshAll, 60000);
         });
     })();

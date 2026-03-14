@@ -1,0 +1,196 @@
+01:01:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/subscriptions/by-uuid/4929e5cd-3a66-4b39-8816-6556081a48bd
+01:01:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/subscriptions/by-uuid/ad315c5e-634f-4798-a234-5a183446ce7a
+01:01:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/subscriptions/by-uuid/7c594fbf-3b9d-4dd3-a977-ceead45d6f8e
+01:01:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/subscriptions/by-uuid/7c594fbf-3b9d-4dd3-a977-ceead45d6f8e — 200 OK (70 мс)
+01:01:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/subscriptions/by-uuid/ad315c5e-634f-4798-a234-5a183446ce7a — 200 OK (78 мс)
+01:01:56 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/subscriptions/by-uuid/4929e5cd-3a66-4b39-8816-6556081a48bd — 200 OK (113 мс)
+01:01:56 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/hwid/devices/4929e5cd-3a66-4b39-8816-6556081a48bd
+01:01:56 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/hwid/devices/4929e5cd-3a66-4b39-8816-6556081a48bd — 200 OK (52 мс)
+01:01:56 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/hwid/devices/ad315c5e-634f-4798-a234-5a183446ce7a
+01:01:56 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/hwid/devices/ad315c5e-634f-4798-a234-5a183446ce7a — 200 OK (54 мс)
+01:01:56 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/hwid/devices/7c594fbf-3b9d-4dd3-a977-ceead45d6f8e
+01:01:56 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/hwid/devices/7c594fbf-3b9d-4dd3-a977-ceead45d6f8e — 200 OK (201 мс)
+01:02:42 [INFO] 💳 Обработка платежа: 2124087220 | new
+01:02:42 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users/by-email/lililililililili-2%40bot.local
+01:02:42 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users/by-email/lililililililili-2%40bot.local — 200 OK (89 мс)
+01:02:42 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users/by-email/lililililililili-2%40bot.local
+01:02:42 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users/by-email/lililililililili-2%40bot.local — 200 OK (52 мс)
+01:02:42 [INFO] Remnawave: пользователь lililililililili-2@bot.local не найден на '🔥 ҕᴀзовый ⦙ 1 ʏст.' — создаю нового (сквад d42591a9-dc64-48c5-8eeb-219397c16ab6, срок до 2026-04-10T22:02:42.880975Z)
+01:02:42 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: POST https://os.opusos.ru/api/users
+01:02:43 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: POST /api/users — 201 OK (125 мс)
+01:02:43 [INFO] Remnawave: пользователь lililililililili-2@bot.local (f356e693-f054-4143-b75f-ffe591df87a9) на '🔥 ҕᴀзовый ⦙ 1 ʏст.' успешно создан. Истекает: 2026-04-10T22:02:42.880Z
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users/by-email/lililililililili%40bot.local
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users/by-email/lililililililili-1%40bot.local
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users/by-email/lililililililili-2%40bot.local
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users/by-email/trial_lililililililili%40bot.local
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users/by-email/lililililililili-2%40bot.local — 200 OK (63 мс)
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users/by-email/trial_lililililililili%40bot.local — 200 OK (58 мс)
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users/by-email/lililililililili-1%40bot.local — 200 OK (110 мс)
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users/by-email/lililililililili%40bot.local — 200 OK (116 мс)
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/subscriptions/by-uuid/4929e5cd-3a66-4b39-8816-6556081a48bd
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/subscriptions/by-uuid/ad315c5e-634f-4798-a234-5a183446ce7a
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/subscriptions/by-uuid/f356e693-f054-4143-b75f-ffe591df87a9
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/subscriptions/by-uuid/7c594fbf-3b9d-4dd3-a977-ceead45d6f8e
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/subscriptions/by-uuid/7c594fbf-3b9d-4dd3-a977-ceead45d6f8e — 200 OK (64 мс)
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/subscriptions/by-uuid/f356e693-f054-4143-b75f-ffe591df87a9 — 200 OK (71 мс)
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/subscriptions/by-uuid/4929e5cd-3a66-4b39-8816-6556081a48bd — 200 OK (159 мс)
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/subscriptions/by-uuid/ad315c5e-634f-4798-a234-5a183446ce7a — 200 OK (214 мс)
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/hwid/devices/4929e5cd-3a66-4b39-8816-6556081a48bd
+01:02:55 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/hwid/devices/4929e5cd-3a66-4b39-8816-6556081a48bd — 200 OK (51 мс)
+01:02:55 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/hwid/devices/ad315c5e-634f-4798-a234-5a183446ce7a
+01:02:56 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/hwid/devices/ad315c5e-634f-4798-a234-5a183446ce7a — 200 OK (99 мс)
+01:02:56 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/hwid/devices/f356e693-f054-4143-b75f-ffe591df87a9
+01:02:56 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/hwid/devices/f356e693-f054-4143-b75f-ffe591df87a9 — 200 OK (52 мс)
+01:02:56 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/hwid/devices/7c594fbf-3b9d-4dd3-a977-ceead45d6f8e
+01:02:56 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/hwid/devices/7c594fbf-3b9d-4dd3-a977-ceead45d6f8e — 200 OK (101 мс)
+01:04:58 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=d42591a9-dc64-48c5-8eeb-219397c16ab6
+01:04:58 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users — 200 OK (204 мс)
+01:04:58 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=587e3d31-45d6-49ec-90fb-f24e6224847a
+01:04:58 [INFO] ⬅️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET /api/users — 200 OK (156 мс)
+01:04:58 [INFO] Scheduler: Подарочный ключ 'gift-e98e0986@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+01:04:58 [INFO] Scheduler: Подарочный ключ 'gift-ea896f91@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+01:04:58 [INFO] Scheduler: Подарочный ключ 'gift-5187c263@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+01:04:58 [WARNING] Scheduler: Осиротевший пользователь 'vxiiliaw@bot.local' в Remnawave не содержит user_id — пропускаю (ключ останется в панели, но не привяжется).
+01:04:58 [INFO] ➡️ Remnawave[🏡 сᴇмᴇйный ⦙ 5 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=bdffe32f-24ca-438f-929b-1542ca506829
+01:04:59 [INFO] ⬅️ Remnawave[🏡 сᴇмᴇйный ⦙ 5 ʏст.]: GET /api/users — 200 OK (390 мс)
+01:04:59 [INFO] ➡️ Remnawave[🏢 ҕизнᴇс ⦙ 30 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=b0a31ac8-3c3f-4d39-a8bf-929ca9ace7f1
+01:04:59 [INFO] ⬅️ Remnawave[🏢 ҕизнᴇс ⦙ 30 ʏст.]: GET /api/users — 200 OK (152 мс)
+01:04:59 [INFO] Scheduler: Цикл завершён. Следующая проверка через 300 сек.
+01:09:59 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=d42591a9-dc64-48c5-8eeb-219397c16ab6
+01:09:59 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users — 200 OK (206 мс)
+01:09:59 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=587e3d31-45d6-49ec-90fb-f24e6224847a
+01:10:00 [INFO] ⬅️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET /api/users — 200 OK (217 мс)
+01:10:00 [INFO] Scheduler: Подарочный ключ 'gift-e98e0986@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:23:44 [INFO] ⬅️ Remnawave[🏢 ҕизнᴇс ⦙ 30 ʏст.]: GET /api/users — 200 OK (239 мс)
+10:23:44 [INFO] Scheduler: Цикл завершён. Следующая проверка через 300 сек.
+10:28:44 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=d42591a9-dc64-48c5-8eeb-219397c16ab6
+10:28:44 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users — 200 OK (157 мс)
+10:28:44 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=587e3d31-45d6-49ec-90fb-f24e6224847a
+10:28:44 [INFO] ⬅️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET /api/users — 200 OK (228 мс)
+10:28:44 [INFO] Scheduler: Подарочный ключ 'gift-e98e0986@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:28:44 [INFO] Scheduler: Подарочный ключ 'gift-ea896f91@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:28:44 [INFO] Scheduler: Подарочный ключ 'gift-5187c263@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:28:44 [WARNING] Scheduler: Осиротевший пользователь 'vxiiliaw@bot.local' в Remnawave не содержит user_id — пропускаю (ключ останется в панели, но не привяжется).
+10:28:44 [INFO] ➡️ Remnawave[🏡 сᴇмᴇйный ⦙ 5 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=bdffe32f-24ca-438f-929b-1542ca506829
+10:28:44 [INFO] ⬅️ Remnawave[🏡 сᴇмᴇйный ⦙ 5 ʏст.]: GET /api/users — 200 OK (190 мс)
+10:28:44 [INFO] ➡️ Remnawave[🏢 ҕизнᴇс ⦙ 30 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=b0a31ac8-3c3f-4d39-a8bf-929ca9ace7f1
+10:28:45 [INFO] ⬅️ Remnawave[🏢 ҕизнᴇс ⦙ 30 ʏст.]: GET /api/users — 200 OK (183 мс)
+10:28:45 [INFO] Scheduler: Цикл завершён. Следующая проверка через 300 сек.
+10:33:45 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=d42591a9-dc64-48c5-8eeb-219397c16ab6
+10:33:45 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users — 200 OK (214 мс)
+10:33:45 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=587e3d31-45d6-49ec-90fb-f24e6224847a
+10:33:45 [INFO] ⬅️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET /api/users — 200 OK (195 мс)
+10:33:45 [INFO] Scheduler: Подарочный ключ 'gift-e98e0986@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:33:45 [INFO] Scheduler: Подарочный ключ 'gift-ea896f91@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:33:45 [INFO] Scheduler: Подарочный ключ 'gift-5187c263@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:33:45 [WARNING] Scheduler: Осиротевший пользователь 'vxiiliaw@bot.local' в Remnawave не содержит user_id — пропускаю (ключ останется в панели, но не привяжется).
+10:33:45 [INFO] ➡️ Remnawave[🏡 сᴇмᴇйный ⦙ 5 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=bdffe32f-24ca-438f-929b-1542ca506829
+10:33:45 [INFO] ⬅️ Remnawave[🏡 сᴇмᴇйный ⦙ 5 ʏст.]: GET /api/users — 200 OK (196 мс)
+10:33:45 [INFO] ➡️ Remnawave[🏢 ҕизнᴇс ⦙ 30 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=b0a31ac8-3c3f-4d39-a8bf-929ca9ace7f1
+10:33:49 [ERROR] Scheduler: Не удалось получить пользователей Remnawave для '🏢 ҕизнᴇс ⦙ 30 ʏст.': [Errno -5] No address associated with hostname
+10:33:50 [INFO] Scheduler: Цикл завершён. Следующая проверка через 300 сек.
+10:35:16 [INFO] Обновление 303912999 обработано за 304 мс (бот 7580464478)
+10:35:30 [INFO] Обновление 303913000 обработано за 187 мс (бот 7580464478)
+10:37:45 [INFO] Пользователь 1028665710 пришел по реферальной ссылке от 853223158
+10:37:45 [INFO] Обновление 303913001 обработано за 129 мс (бот 7580464478)
+10:37:51 [INFO] Пользователь 1028665710 согласился с условиями.
+10:35:16 [INFO] Обновление 303912999 обработано за 304 мс (бот 7580464478)
+10:35:30 [INFO] Обновление 303913000 обработано за 187 мс (бот 7580464478)
+10:37:45 [INFO] Пользователь 1028665710 пришел по реферальной ссылке от 853223158
+10:37:45 [INFO] Обновление 303913001 обработано за 129 мс (бот 7580464478)
+10:37:51 [INFO] Пользователь 1028665710 согласился с условиями.
+10:37:51 [INFO] Обновление 303913002 обработано за 154 мс (бот 7580464478)
+10:37:55 [INFO] Обновление 303913003 обработано за 125 мс (бот 7580464478)
+10:38:05 [INFO] Обновление 303913004 обработано за 115 мс (бот 7580464478)
+10:38:33 [INFO] Обновление 303913005 обработано за 171 мс (бот 7580464478)
+10:38:45 [INFO] Оплата (YooKassa): пользователь 1028665710, план 14, сумма 93.75 RUB
+10:38:46 [INFO] Обновление 303913006 обработано за 587 мс (бот 7580464478)
+10:38:50 [INFO] ➡️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=d42591a9-dc64-48c5-8eeb-219397c16ab6
+10:38:50 [INFO] ⬅️ Remnawave[🔥 ҕᴀзовый ⦙ 1 ʏст.]: GET /api/users — 200 OK (164 мс)
+10:38:50 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=587e3d31-45d6-49ec-90fb-f24e6224847a
+10:38:50 [INFO] ⬅️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET /api/users — 200 OK (161 мс)
+10:38:50 [INFO] Scheduler: Подарочный ключ 'gift-e98e0986@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:38:50 [INFO] Scheduler: Подарочный ключ 'gift-ea896f91@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:38:50 [INFO] Scheduler: Подарочный ключ 'gift-5187c263@bot.local' в Remnawave ожидает активации — оставляем в БД и панели без изменений.
+10:38:50 [WARNING] Scheduler: Осиротевший пользователь 'vxiiliaw@bot.local' в Remnawave не содержит user_id — пропускаю (ключ останется в панели, но не привяжется).
+10:38:50 [INFO] ➡️ Remnawave[🏡 сᴇмᴇйный ⦙ 5 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=bdffe32f-24ca-438f-929b-1542ca506829
+10:38:50 [INFO] ⬅️ Remnawave[🏡 сᴇмᴇйный ⦙ 5 ʏст.]: GET /api/users — 200 OK (186 мс)
+10:38:50 [INFO] ➡️ Remnawave[🏢 ҕизнᴇс ⦙ 30 ʏст.]: GET https://os.opusos.ru/api/users?page=0&size=1000&squadUuid=b0a31ac8-3c3f-4d39-a8bf-929ca9ace7f1
+10:38:50 [INFO] ⬅️ Remnawave[🏢 ҕизнᴇс ⦙ 30 ʏст.]: GET /api/users — 200 OK (235 мс)
+10:38:51 [INFO] Scheduler: Цикл завершён. Следующая проверка через 300 сек.
+10:39:19 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/users/by-email/sexyswa9-3%40bot.local
+10:39:19 [INFO] ⬅️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET /api/users/by-email/sexyswa9-3%40bot.local — 200 OK (58 мс)
+10:39:19 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/subscriptions/by-uuid/f95434ad-1570-4496-8507-bfeb651e4188
+10:39:19 [INFO] ⬅️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET /api/subscriptions/by-uuid/f95434ad-1570-4496-8507-bfeb651e4188 — 200 OK (65 мс)
+10:39:19 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/hwid/devices/f95434ad-1570-4496-8507-bfeb651e4188
+10:39:19 [INFO] ⬅️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET /api/hwid/devices/f95434ad-1570-4496-8507-bfeb651e4188 — 200 OK (53 мс)
+10:39:21 [INFO] 💳 Обработка платежа: 1028665710 | new
+10:39:21 [INFO] ➡️ Remnawave[👥 пᴀᴘный ⦙ 2 ʏст.]: GET https://os.opusos.ru/api/users/by-email/nittts%40bot.local
+10:39:25 [ERROR] Remnawave: непредвиденная ошибка create_or_update_key_on_host для 👥 пᴀᴘный ⦙ 2 ʏст./nittts@bot.local
+Traceback (most recent call last):
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_transports/default.py", line 72, in map_httpcore_exceptions
+    yield
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_transports/default.py", line 377, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/app/.venv/lib/python3.11/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpcore/_async/connection.py", line 101, in handle_async_request
+    raise exc
+  File "/app/.venv/lib/python3.11/site-packages/httpcore/_async/connection.py", line 78, in handle_async_request
+    stream = await self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpcore/_async/connection.py", line 124, in _connect
+    stream = await self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpcore/_backends/auto.py", line 31, in connect_tcp
+    return await self._backend.connect_tcp(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpcore/_backends/anyio.py", line 113, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/local/lib/python3.11/contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/app/.venv/lib/python3.11/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [Errno -5] No address associated with hostname
+The above exception was the direct cause of the following exception:
+Traceback (most recent call last):
+  File "/app/project/src/shop_bot/modules/remnawave_api.py", line 699, in create_or_update_key_on_host
+    current_user = await get_user_by_email(email, host_name=host_name)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/project/src/shop_bot/modules/remnawave_api.py", line 247, in get_user_by_email
+    response = await _request_for_host(host_name, "GET", f"/api/users/by-email/{encoded_email}", expected_status=(200, 404))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/project/src/shop_bot/modules/remnawave_api.py", line 209, in _request_for_host
+    response = await client.request(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_client.py", line 1776, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_transports/default.py", line 376, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/local/lib/python3.11/contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/app/.venv/lib/python3.11/site-packages/httpx/_transports/default.py", line 89, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [Errno -5] No address associated with hostname
+10:39:36 [INFO] Обновление 303913007 обработано за 230 мс (бот 7580464478)
+10:39:39 [INFO] Обновление 303913008 обработано за 162 мс (бот 7580464478)
+10:39:44 [INFO] Обновление 303913009 обработано за 139 мс (бот 7580464478)
+10:39:46 [INFO] Обновление 303913010 обработано за 149 мс (бот 7580464478)
+10:39:48 [INFO] Обновление 303913011 обработано за 149 мс (бот 7580464478)

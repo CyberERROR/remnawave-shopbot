@@ -23,10 +23,10 @@
             {% for item in [
             {'id': 'broadcast', 'label': 'Рассылка', 'icon': 'send'},
             {'id': 'promo', 'label': 'Промо коды', 'icon': 'confirmation_number'},
-            {'id': 'servers', 'label': 'Сервера', 'icon': 'dns'},
+            {'id': 'servers', 'label': 'Сервера', 'icon': 'dns'}, 
             {'id': 'logs', 'label': 'Логи Бота', 'icon': 'article'},
             {'id': 'webapp', 'label': 'WebApp', 'icon': 'language'} if webapp_exists else none,
-            {'id': 'remnawave', 'label': 'Remnawave', 'icon': 'graphic_eq'}
+            яв
             ] %}
             {% if item %}
             <button type="button" data-tab="{{ item.id }}"
@@ -482,6 +482,13 @@
                     </div>
                 </div>
 
+                <style>
+                    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+                        filter: invert(58%) sepia(85%) saturate(415%) hue-rotate(95deg) brightness(95%) contrast(92%);
+                        cursor: pointer;
+                    }
+                </style>
+
                 <div id="manual-code-field" class="mode-section hidden mb-4">
                     <label
                         class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Код</label>
@@ -536,19 +543,21 @@
                     <div id="promo-discount-field" class="relative group/input lg:col-span-1">
                         <label
                             class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">Скидка</label>
-                        <div class="flex">
+                        <div class="flex relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg z-10">payments</span>
                             <input type="number" name="discount_value" step="0.01" min="0" required
-                                class="w-full bg-black/20 border border-white/10 rounded-l-xl border-r-0 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-inner"
-                                placeholder="10" />
-                            <div class="soft-select relative min-w-[90px]" data-target="discount_type_select">
+                                class="w-full bg-black/20 border border-white/10 rounded-l-xl border-r-0 pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-inner"
+                                placeholder="Например: 10" />
+                            <div class="soft-select relative min-w-[60px]" data-target="discount_type_select">
                                 <button type="button"
-                                    class="soft-select-toggle h-full w-full bg-black/30 border border-white/10 rounded-r-xl border-l-[0px] px-3 py-3 text-sm text-white font-bold hover:bg-black/40 transition-colors flex items-center justify-between">
+                                    class="soft-select-toggle h-full w-full bg-black/30 border border-white/10 rounded-r-xl border-l-[0px] px-3 py-3 text-sm text-white font-bold hover:bg-black/40 transition-colors flex items-center justify-center">
                                     %
                                 </button>
                                 <div class="soft-select-menu"></div>
                                 <select name="discount_type" id="discount_type_select" class="hidden">
                                     <option value="percent">%</option>
-                                    <option value="fixed">RUB</option>
+                                    <option value="fixed">₽</option>
                                 </select>
                             </div>
                         </div>
@@ -589,7 +598,7 @@
                                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">groups</span>
                             <input type="number" name="usage_limit_total" min="1"
                                 class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
-                                placeholder="∞" />
+                                placeholder="Например: 100" />
                         </div>
                     </div>
 
@@ -602,7 +611,7 @@
                                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">person</span>
                             <input type="number" name="usage_limit_per_user" min="1"
                                 class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
-                                placeholder="1" />
+                                placeholder="Например: 1" />
                         </div>
                     </div>
 
@@ -623,11 +632,16 @@
                         <label
                             class="block text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1.5 ml-1">до</label>
                         <div class="relative">
-                            <span
-                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">event_busy</span>
-                            <input type="datetime-local" name="valid_until" id="promo_valid_until"
-                                class="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-2 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
-                                placeholder="Конец" />
+                            <div class="flex">
+                                <input type="datetime-local" name="valid_until" id="promo_valid_until"
+                                    class="w-full bg-black/20 border border-white/10 rounded-l-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                                    placeholder="Конец" />
+                                <div class="relative min-w-[80px]">
+                                    <input type="number" id="promo_days_input" min="1"
+                                        class="w-full h-full bg-black/30 border border-white/10 rounded-r-xl border-l-0 px-3 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none text-center font-bold"
+                                        placeholder="Дни" />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1319,29 +1333,56 @@
                 <div class="bg-white/5 border border-white/10 rounded-3xl p-1.5 shadow-2xl backdrop-blur-xl">
                     <div class="p-6">
                         <form id="webapp-settings-form" class="space-y-6">
-                            <!-- Status Toggle -->
-                            <div
-                                class="relative overflow-hidden bg-black/40 rounded-2xl p-5 border border-white/5 group/toggle">
-                                <div class="flex items-center justify-between relative z-10">
-                                    <div class="flex items-center gap-4">
-                                        <div
-                                            class="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center text-white/30 group-hover/toggle:text-primary transition-colors border border-white/5">
-                                            <span class="material-symbols-outlined text-2xl">power_settings_new</span>
+                            <!-- Status Toggle Row -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div
+                                    class="relative overflow-hidden bg-black/40 rounded-2xl p-5 border border-white/5 group/toggle">
+                                    <div class="flex items-center justify-between relative z-10">
+                                        <div class="flex items-center gap-4">
+                                            <div
+                                                class="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center text-white/30 group-hover/toggle:text-primary transition-colors border border-white/5">
+                                                <span
+                                                    class="material-symbols-outlined text-2xl">power_settings_new</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-white font-bold text-sm tracking-tight text-white/90">
+                                                    Статус приложения</h4>
+                                                <p class="text-white/30 text-[10px] mt-0.5 uppercase tracking-tighter">
+                                                    Доступ пользователей к приложению</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 class="text-white font-bold text-sm tracking-tight text-white/90">Статус
-                                                приложения</h4>
-                                            <p class="text-white/30 text-[10px] mt-0.5 uppercase tracking-tighter">
-                                                Доступ пользователей к приложению</p>
-                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="webapp_enable" id="webapp_enable"
+                                                class="peer sr-only" {{ 'checked' if webapp.webapp_enable else '' }}>
+                                            <div
+                                                class="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary shadow-inner">
+                                            </div>
+                                        </label>
                                     </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" name="webapp_enable" id="webapp_enable"
-                                            class="peer sr-only" {{ 'checked' if webapp.webapp_enable else '' }}>
-                                        <div
-                                            class="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary shadow-inner">
+                                </div>
+                                <div
+                                    class="relative overflow-hidden bg-black/40 rounded-2xl p-5 border border-white/5 group/toggle">
+                                    <div class="flex items-center justify-between relative z-10">
+                                        <div class="flex items-center gap-4">
+                                            <div
+                                                class="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center text-white/30 group-hover/toggle:text-primary transition-colors border border-white/5">
+                                                <span class="material-symbols-outlined text-2xl">fullscreen</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-white font-bold text-sm tracking-tight text-white/90">TG
+                                                    FullScreen</h4>
+                                                <p class="text-white/30 text-[10px] mt-0.5 uppercase tracking-tighter">
+                                                    Полноэкранный режим в Telegram</p>
+                                            </div>
                                         </div>
-                                    </label>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="tg_fullscreen" id="tg_fullscreen"
+                                                class="peer sr-only" {{ 'checked' if webapp.tg_fullscreen else '' }}>
+                                            <div
+                                                class="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary shadow-inner">
+                                            </div>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1610,9 +1651,16 @@
                                 управление нодами</p>
                         </div>
                     </div>
-                    <span
-                        class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20"
-                        id="ssh-targets-count">0</span>
+                    <div class="flex items-center gap-3">
+                        <button onclick="clearServersCache()" id="btn-clear-servers-cache"
+                            class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 hover:text-white text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all">
+                            <span class="material-symbols-outlined text-sm">delete_history</span>
+                            Сбросить кеш (0)
+                        </button>
+                        <span
+                            class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20"
+                            id="ssh-targets-count">0</span>
+                    </div>
                 </div>
 
                 <div id="ssh-targets-list" class="animate-in fade-in duration-500">
@@ -1679,6 +1727,34 @@
                             <span class="material-symbols-outlined text-sm">delete_sweep</span>
                             Очистить
                         </button>
+
+                        <div
+                            class="relative flex items-center bg-black/40 rounded-xl border border-white/5 px-3 group/search focus-within:border-primary/50 transition-all">
+                            <span
+                                class="material-symbols-outlined text-white/30 text-sm group-focus-within/search:text-primary transition-colors">search</span>
+                            <input type="text" id="logs-search-input" placeholder="Поиск..."
+                                class="bg-transparent border-none text-[10px] font-bold uppercase tracking-widest text-white placeholder:text-white/20 px-2 py-2 outline-none w-24 focus:w-40 transition-all">
+
+                            <button type="button" id="btn-load-more-logs" onclick="loadMoreLogsHistory()"
+                                class="ml-1 p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-primary transition-all flex items-center gap-1"
+                                title="Загрузить +200 строк истории">
+                                <span class="material-symbols-outlined text-sm">history</span>
+                                <span class="text-[9px] font-bold">+200</span>
+                            </button>
+
+                            <div class="flex items-center gap-1 border-l border-white/10 ml-2 pl-2">
+                                <span id="logs-search-count"
+                                    class="text-[9px] font-mono text-white/30 hidden">0/0</span>
+                                <button type="button" id="btn-logs-search-prev"
+                                    class="text-white/30 hover:text-white transition-colors" title="Предыдущий">
+                                    <span class="material-symbols-outlined text-sm">keyboard_arrow_up</span>
+                                </button>
+                                <button type="button" id="btn-logs-search-next"
+                                    class="text-white/30 hover:text-white transition-colors" title="Следующий">
+                                    <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+                                </button>
+                            </div>
+                        </div>
 
                         <button type="button" id="btn-fullscreen-logs" onclick="toggleLogsFullscreen()"
                             class="px-3 py-2 rounded-xl bg-white/5 text-white/50 hover:text-white hover:bg-white/10 border border-white/5 transition-all text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"
@@ -2195,6 +2271,39 @@
         checkbox.checked = !checkbox.checked;
     }
 </script>
+<div id="usagePromoModal" class="modal-overlay">
+    <div class="modal-content p-6 max-w-2xl w-full">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">analytics</span>
+                Активации промокода: <span id="usage-promo-name" class="text-primary"></span>
+            </h3>
+            <button onclick="closeModal('usagePromoModal')" class="text-white/50 hover:text-white transition-all">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="overflow-x-auto max-h-[60vh] custom-scrollbar mb-4 border border-white/10 rounded-xl bg-black/20">
+            <table class="w-full text-left border-separate border-spacing-0">
+                <thead class="sticky top-0 bg-[#0c1411] z-10 shadow-sm">
+                    <tr class="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                        <th class="px-4 py-3 border-b border-white/10">Пользователь</th>
+                        <th class="px-4 py-3 border-b border-white/10">ID</th>
+                        <th class="px-4 py-3 border-b border-white/10">Сумма</th>
+                        <th class="px-4 py-3 border-b border-white/10">Дата</th>
+                    </tr>
+                </thead>
+                <tbody id="usage-promo-table-body" class="text-sm">
+                    <!-- Данные будут здесь -->
+                </tbody>
+            </table>
+        </div>
+        <div class="flex justify-end">
+            <button onclick="closeModal('usagePromoModal')"
+                class="px-6 py-2.5 rounded-xl bg-white/5 text-white/70 hover:text-white hover:bg-white/10 font-bold transition-all text-sm uppercase tracking-widest border border-white/10">Закрыть</button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 <div
     class="p-6 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-blue-900/20 to-transparent">
@@ -2447,10 +2556,75 @@
                 logsContainer.scrollTop = logsContainer.scrollHeight;
             }
 
-            if (logsContainer.children.length > 50) {
+            if (logsContainer.children.length > 200) {
                 logsContainer.removeChild(logsContainer.firstChild);
             }
         }
+
+        let currentSearchIndex = -1;
+        let searchResults = [];
+
+        function performLogsSearch() {
+            const query = document.getElementById('logs-search-input').value.toLowerCase();
+            const countEl = document.getElementById('logs-search-count');
+            const lines = Array.from(logsContainer.querySelectorAll('div:not(.text-center)'));
+
+            searchResults = [];
+            currentSearchIndex = -1;
+
+            lines.forEach(line => {
+                line.classList.remove('bg-primary/20', 'border-primary/40');
+                const text = line.textContent.toLowerCase();
+                if (query && text.includes(query)) {
+                    searchResults.push(line);
+                }
+            });
+
+            if (query && searchResults.length > 0) {
+                countEl.classList.remove('hidden');
+                currentSearchIndex = 0;
+                updateSearchUI();
+                scrollToSearchResult();
+            } else {
+                countEl.classList.add('hidden');
+            }
+        }
+
+        function updateSearchUI() {
+            const query = document.getElementById('logs-search-input').value.toLowerCase();
+            const countEl = document.getElementById('logs-search-count');
+            countEl.textContent = `${currentSearchIndex + 1}/${searchResults.length}`;
+
+            searchResults.forEach((el, idx) => {
+                el.classList.toggle('bg-primary/30', idx === currentSearchIndex);
+                el.classList.toggle('bg-primary/10', idx !== currentSearchIndex && query && el.textContent.toLowerCase().includes(query));
+            });
+        }
+
+        function scrollToSearchResult() {
+            if (currentSearchIndex >= 0 && searchResults[currentSearchIndex]) {
+                isAutoScrolling = false;
+                searchResults[currentSearchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                searchResults.forEach(el => el.classList.remove('bg-primary/30', 'ring-1', 'ring-primary'));
+                searchResults[currentSearchIndex].classList.add('bg-primary/30', 'ring-1', 'ring-primary');
+            }
+        }
+
+        document.getElementById('logs-search-input').addEventListener('input', performLogsSearch);
+        document.getElementById('btn-logs-search-next').addEventListener('click', () => {
+            if (searchResults.length > 0) {
+                currentSearchIndex = (currentSearchIndex + 1) % searchResults.length;
+                updateSearchUI();
+                scrollToSearchResult();
+            }
+        });
+        document.getElementById('btn-logs-search-prev').addEventListener('click', () => {
+            if (searchResults.length > 0) {
+                currentSearchIndex = (currentSearchIndex - 1 + searchResults.length) % searchResults.length;
+                updateSearchUI();
+                scrollToSearchResult();
+            }
+        });
 
         function prependLog(text) {
             if (!logsContainer) return;
@@ -2458,22 +2632,22 @@
             logsContainer.insertBefore(line, logsContainer.firstChild);
         }
 
-        async function loadHistory() {
+        async function loadHistory(linesCount = 50) {
             if (isLoadingHistory) return;
             isLoadingHistory = true;
 
-            const currentLines = logsContainer.children.length;
+            const currentLines = Array.from(logsContainer.children).filter(el => !el.classList.contains('history-loader-status')).length;
 
             const loading = document.createElement('div');
-            loading.className = 'text-center text-xs text-white/30 py-1';
-            loading.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>';
+            loading.className = 'history-loader-status text-center text-xs text-white/30 py-1';
+            loading.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">progress_activity</span> <span class="text-[10px] uppercase font-bold tracking-widest">Загрузка истории...</span>';
             logsContainer.insertBefore(loading, logsContainer.firstChild);
 
             try {
-                const resp = await fetch(`/other/logs/history?lines=50&offset=${currentLines}`);
+                const resp = await fetch(`/other/logs/history?lines=${linesCount}&offset=${currentLines}`);
                 const data = await resp.json();
 
-                logsContainer.removeChild(loading);
+                if (logsContainer.contains(loading)) logsContainer.removeChild(loading);
 
                 if (data.ok && data.lines && data.lines.length > 0) {
                     const oldHeight = logsContainer.scrollHeight;
@@ -2486,8 +2660,15 @@
 
                     logsContainer.insertBefore(fragment, logsContainer.firstChild);
 
-                    const newHeight = logsContainer.scrollHeight;
-                    logsContainer.scrollTop = oldScroll + (newHeight - oldHeight);
+                    if (linesCount <= 50) {
+                        const newHeight = logsContainer.scrollHeight;
+                        logsContainer.scrollTop = oldScroll + (newHeight - oldHeight);
+                    } else {
+                        window.showToast('success', `Загружено ${data.lines.length} строк истории`);
+                        performLogsSearch();
+                    }
+                } else if (linesCount > 50) {
+                    window.showToast('info', 'Больше нет доступной истории');
                 }
             } catch (e) {
                 console.error("History error:", e);
@@ -2496,6 +2677,10 @@
                 isLoadingHistory = false;
             }
         }
+
+        window.loadMoreLogsHistory = function () {
+            loadHistory(200);
+        };
 
         logsContainer.addEventListener('scroll', () => {
             if (logsContainer.scrollTop + logsContainer.clientHeight < logsContainer.scrollHeight - 50) {
@@ -3197,7 +3382,12 @@
 
                             if (progress.status === 'completed') {
                                 setTimeout(() => {
-                                    document.getElementById('broadcast-progress-container').classList.add('hidden');
+                                    const progressTitle = document.querySelector('#broadcast-progress-container h4');
+                                    if (progressTitle) {
+                                        progressTitle.textContent = 'Рассылка завершена';
+                                        progressTitle.previousElementSibling.classList.remove('animate-pulse');
+                                    }
+
                                     btn.disabled = false;
                                     btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
 
@@ -3373,6 +3563,85 @@
             }
         };
 
+        window.formatRelativeTime = function (dateString) {
+            if (!dateString) return '—';
+            const now = new Date();
+            const past = new Date(dateString.replace(' ', 'T'));
+            let diff = Math.floor((now - past) / 1000);
+
+            if (diff < 0) diff = 0;
+            if (diff < 60) return 'только что';
+
+            const years = Math.floor(diff / (365 * 24 * 3600));
+            diff %= (365 * 24 * 3600);
+            const months = Math.floor(diff / (30 * 24 * 3600));
+            diff %= (30 * 24 * 3600);
+            const days = Math.floor(diff / (24 * 3600));
+            diff %= (24 * 3600);
+            const hours = Math.floor(diff / 3600);
+            diff %= 3600;
+            const mins = Math.floor(diff / 60);
+
+            const parts = [];
+            if (years > 0) parts.push(`${years}год`);
+            if (months > 0) parts.push(`${months}мес`);
+            if (days > 0) parts.push(`${days}д`);
+            if (hours > 0) parts.push(`${hours}ч`);
+            if (mins > 0) parts.push(`${mins}мин`);
+
+            return parts.join(', ');
+        };
+
+        window.showPromoUsages = async function (code) {
+            const tableBody = document.getElementById('usage-promo-table-body');
+            const promoName = document.getElementById('usage-promo-name');
+
+            if (promoName) promoName.textContent = code;
+            if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-white/50"><span class="material-symbols-outlined animate-spin text-sm mr-2">progress_activity</span>Загрузка...</td></tr>';
+
+            openModal('usagePromoModal');
+
+            try {
+                const resp = await fetch(`/other/promo/usages/${code}`);
+                const data = await resp.json();
+
+                if (data.ok && data.usages) {
+                    if (data.usages.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-white/50">Активаций пока нет</td></tr>';
+                    } else {
+                        tableBody.innerHTML = data.usages.map(u => {
+                            const date = window.formatRelativeTime(u.used_at);
+                            const userLabel = u.username ? `@${u.username}` : 'Юзер';
+
+                            let rewardDisplay = '—';
+                            if (u.promo_type === 'universal') {
+                                rewardDisplay = `+${u.reward_value} дн.`;
+                            } else if (u.promo_type === 'balance') {
+                                rewardDisplay = `+${u.reward_value} ₽`;
+                            } else {
+                                const val = u.discount_percent ? `${u.discount_percent}%` : `${u.discount_amount} ₽`;
+                                rewardDisplay = `${val}`;
+                            }
+
+                            return `
+                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <td class="px-4 py-3 text-white font-medium">${userLabel}</td>
+                                    <td class="px-4 py-3 text-white/50 font-mono text-xs">${u.user_id}</td>
+                                    <td class="px-4 py-3 text-white">${rewardDisplay}</td>
+                                    <td class="px-4 py-3 text-white/50 text-xs">${date}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">Ошибка: ${data.error || 'Не удалось загрузить данные'}</td></tr>`;
+                }
+            } catch (err) {
+                console.error(err);
+                tableBody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-red-400">Ошибка подключения к серверу</td></tr>';
+            }
+        };
+
         async function loadPromos() {
             try {
                 const resp = await fetch('/other/promo/list');
@@ -3423,6 +3692,9 @@
                         <td class="px-4 py-3 ${statusColor}">${statusText}</td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-2">
+                                <button onclick="showPromoUsages('${promo.code}')" class="p-2 rounded hover:border-white/20 border border-transparent text-white/50 hover:text-white transition-all" title="Статистика активаций">
+                                    <span class="material-symbols-outlined">info</span>
+                                </button>
                                 <button onclick="togglePromo('${promo.code}')" class="p-2 rounded hover:border-white/20 border border-transparent transition-all" title="Вкл/Выкл">
                                     <span class="material-symbols-outlined ${statusColor}">${toggleIcon}</span>
                                 </button>
@@ -3656,21 +3928,71 @@
 
 
         async function loadServers() {
+            const cachedData = localStorage.getItem('remnawave_servers_cache');
+            if (cachedData) {
+                try {
+                    const data = JSON.parse(cachedData);
+                    sshTargetsData = data.ssh_targets || [];
+                    renderHosts(data.hosts || [], true);
+                    renderSshTargets(data.ssh_targets || [], true);
+                    updateClearCacheBtn();
+
+                    setTimeout(() => refreshAllServersWithDelay(), 500);
+                    return;
+                } catch (e) {
+                    console.error('Failed to parse servers cache:', e);
+                }
+            }
+
             try {
                 const resp = await fetch('/other/servers/list');
                 const data = await resp.json();
 
                 if (data.ok) {
+                    localStorage.setItem('remnawave_servers_cache', JSON.stringify(data));
+                    updateClearCacheBtn();
                     sshTargetsData = data.ssh_targets || [];
                     renderHosts(data.hosts || []);
                     renderSshTargets(data.ssh_targets || []);
+
+                    setTimeout(() => refreshAllServersWithDelay(), 500);
                 }
             } catch (e) {
                 console.error('Failed to load servers:', e);
             }
         }
 
-        function renderHosts(hosts) {
+        async function refreshAllServersWithDelay() {
+            const hostCards = document.querySelectorAll('.host-card');
+            const targetCards = document.querySelectorAll('.ssh-target-card');
+
+            let delay = 0;
+
+            hostCards.forEach((card, idx) => {
+                const name = card.dataset.hostName;
+                if (name) {
+                    setTimeout(() => loadUptime('host', name, idx), delay);
+                    delay += 100;
+                }
+            });
+
+            targetCards.forEach((card, idx) => {
+                const name = card.dataset.targetName;
+                if (name) {
+                    setTimeout(() => loadUptime('ssh', name, idx), delay);
+                    delay += 100;
+                }
+            });
+        }
+
+        setInterval(() => {
+            const activeTab = document.querySelector('.tab-btn.bg-primary');
+            if (activeTab && activeTab.getAttribute('data-tab') === 'servers') {
+                refreshAllServersWithDelay();
+            }
+        }, 300000);
+
+        function renderHosts(hosts, fromCache = false) {
             const listEl = document.getElementById('remna-hosts-list');
             const countEl = document.getElementById('remna-hosts-count');
 
@@ -3729,10 +4051,13 @@
                                 </div>
                                 
                                 <div class="rounded-lg bg-black/20 border border-white/[0.04] p-3 mb-3" id="host-uptime-${idx}">
-                                    <div class="flex items-center justify-center gap-2 text-white/40 py-2">
-                                        <span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                                        <span class="text-xs">Загрузка...</span>
-                                    </div>
+                                    ${host.uptime_data
+                    ? getUptimeHTML(host.uptime_data)
+                    : `<div class="flex items-center justify-center gap-2 text-white/40 py-2">
+                                            <span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                                            <span class="text-xs">Загрузка...</span>
+                                           </div>`
+                }
                                 </div>
                                 
                                 <div class="flex gap-2">
@@ -3748,9 +4073,11 @@
                 </div>
             `;
 
-            hosts.forEach((host, idx) => {
-                loadUptime('host', host.host_name, idx);
-            });
+            if (!fromCache) {
+                hosts.forEach((host, idx) => {
+                    loadUptime('host', host.host_name, idx);
+                });
+            }
 
             initHostsDragAndDrop();
         }
@@ -3836,7 +4163,7 @@
             }
         });
 
-        function renderSshTargets(targets) {
+        function renderSshTargets(targets, fromCache = false) {
             const listEl = document.getElementById('ssh-targets-list');
             const countEl = document.getElementById('ssh-targets-count');
 
@@ -3912,10 +4239,13 @@
                                 </div>
                                 
                                 <div class="rounded-lg bg-black/20 border border-white/[0.04] p-3 mb-3" id="target-uptime-${idx}">
-                                    <div class="flex items-center justify-center gap-2 text-white/40 py-2">
-                                        <span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                                        <span class="text-xs">Загрузка...</span>
-                                    </div>
+                                    ${target.uptime_data
+                    ? getUptimeHTML(target.uptime_data)
+                    : `<div class="flex items-center justify-center gap-2 text-white/40 py-2">
+                                            <span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                                            <span class="text-xs">Загрузка...</span>
+                                           </div>`
+                }
                                 </div>
                                 
                                 <div class="flex gap-2">
@@ -3936,9 +4266,11 @@
                 </div>
             `;
 
-            targets.forEach((target, idx) => {
-                loadUptime('ssh', target.target_name, idx);
-            });
+            if (!fromCache) {
+                targets.forEach((target, idx) => {
+                    loadUptime('ssh', target.target_name, idx);
+                });
+            }
 
             initSshDragAndDrop();
         }
@@ -3958,6 +4290,119 @@
             }
         });
 
+        function getUptimeHTML(data) {
+            const uptimeSeconds = data.uptime_seconds || 0;
+            const isUptimeLong = uptimeSeconds >= 864000;
+
+            const cpuPercent = data.cpu_percent || 0;
+            const ramPercent = data.ram_percent || 0;
+            const swapPercent = data.swap_percent || 0;
+
+            let cpuBarColor = 'from-emerald-500 to-emerald-400';
+            let cpuTextColor = 'text-emerald-400';
+            if (cpuPercent > 70) { cpuBarColor = 'from-red-500 to-red-400'; cpuTextColor = 'text-red-400'; }
+            else if (cpuPercent > 40) { cpuBarColor = 'from-amber-500 to-yellow-400'; cpuTextColor = 'text-amber-400'; }
+
+            let ramBarColor = 'from-emerald-500 to-emerald-400';
+            let ramTextColor = 'text-emerald-400';
+            if (ramPercent > 85) { ramBarColor = 'from-red-500 to-red-400'; ramTextColor = 'text-red-400'; }
+            else if (ramPercent > 55) { ramBarColor = 'from-amber-500 to-yellow-400'; ramTextColor = 'text-amber-400'; }
+
+            let swapBarColor = 'from-emerald-500 to-emerald-400';
+            let swapTextColor = 'text-emerald-400';
+            if (swapPercent > 85) { swapBarColor = 'from-red-500 to-red-400'; swapTextColor = 'text-red-400'; }
+            else if (swapPercent > 65) { swapBarColor = 'from-amber-500 to-yellow-400'; swapTextColor = 'text-amber-400'; }
+
+            return `
+                <div class="space-y-3 animate-in fade-in duration-300">
+                    <div class="flex items-center justify-between pb-2 border-b border-white/[0.04]">
+                        <div class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-white/30" style="font-size: 14px">schedule</span>
+                            <span class="text-[11px] text-white/70 font-medium">Uptime</span>
+                        </div>
+                        <span class="text-[11px] ${isUptimeLong ? 'text-emerald-400' : 'text-white'} font-semibold">${data.uptime_formatted}</span>
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined ${cpuTextColor}" style="font-size: 13px">memory</span>
+                                <span class="text-[11px] text-white/70">CPU</span>
+                            </div>
+                            <span class="text-[11px] ${cpuTextColor} font-semibold">${cpuPercent}% <span class="text-white/40 font-normal">(${data.cpu_cores} ядер${data.cpu_cores > 1 && data.cpu_cores < 5 ? 'а' : ''})</span></span>
+                        </div>
+                        <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r ${cpuBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${cpuPercent}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined ${ramTextColor}" style="font-size: 13px">developer_board</span>
+                                <span class="text-[11px] text-white/70">RAM</span>
+                            </div>
+                            <span class="text-[11px] ${ramTextColor} font-semibold">${ramPercent}% <span class="text-white/40 font-normal">(${data.ram_used} / ${data.ram_total} МБ)</span></span>
+                        </div>
+                        <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r ${ramBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${ramPercent}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined ${data.swap_total > 0 ? swapTextColor : 'text-white/30'}" style="font-size: 13px">swap_horiz</span>
+                                <span class="text-[11px] text-white/70">SWAP</span>
+                            </div>
+                            ${data.swap_total > 0
+                    ? `<span class="text-[11px] ${swapTextColor} font-semibold">${swapPercent}% <span class="text-white/40 font-normal">(${data.swap_used} / ${data.swap_total} МБ) от ${data.swappiness}%</span></span>`
+                    : `<span class="text-[11px] text-white/30 font-medium">НЕТ</span>`
+                }
+                        </div>
+                        ${data.swap_total > 0
+                    ? `<div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r ${swapBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${swapPercent}%"></div>
+                               </div>`
+                    : `<div class="h-1.5 bg-white/5 rounded-full overflow-hidden"></div>`
+                }
+                    </div>
+                    
+                    <div class="flex items-center justify-around pt-2 border-t border-white/[0.04]">
+                        <div class="flex items-center gap-1.5" title="${data.net_rx_mbps} Mbps">
+                            <span class="material-symbols-outlined text-blue-400" style="font-size: 14px">download</span>
+                            <span class="text-[10px] text-white/90 font-mono">${data.net_rx_mbs} MB/s</span>
+                        </div>
+                        <div class="flex items-center gap-1.5" title="${data.net_tx_mbps} Mbps">
+                            <span class="material-symbols-outlined text-orange-400" style="font-size: 14px">upload</span>
+                            <span class="text-[10px] text-white/90 font-mono">${data.net_tx_mbs} MB/s</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.clearServersCache = function () {
+            localStorage.removeItem('remnawave_servers_cache');
+            updateClearCacheBtn();
+            window.showToast('success', 'Кеш серверов очищен');
+            loadServers();
+        };
+
+        function updateClearCacheBtn() {
+            const btn = document.getElementById('btn-clear-servers-cache');
+            if (!btn) return;
+            const cachedStr = localStorage.getItem('remnawave_servers_cache');
+            let count = 0;
+            if (cachedStr) {
+                try {
+                    const cachedObj = JSON.parse(cachedStr);
+                    count = (cachedObj.hosts?.length || 0) + (cachedObj.ssh_targets?.length || 0);
+                } catch (e) { }
+            }
+            btn.innerHTML = `<span class="material-symbols-outlined text-sm">delete_history</span> Сбросить кеш (${count})`;
+        }
+
         async function loadUptime(type, name, idx) {
             const uptimeEl = type === 'host' ? document.getElementById(`host-uptime-${idx}`) : document.getElementById(`target-uptime-${idx}`);
             const statusEl = type === 'host' ? document.getElementById(`host-status-${idx}`) : document.getElementById(`target-status-${idx}`);
@@ -3968,98 +4413,26 @@
 
                 if (data.ok) {
                     if (uptimeEl) {
-                        const uptimeSeconds = data.uptime_seconds || 0;
-                        const isUptimeLong = uptimeSeconds >= 864000;
-
-                        const cpuPercent = data.cpu_percent || 0;
-                        const ramPercent = data.ram_percent || 0;
-                        const swapPercent = data.swap_percent || 0;
-
-                        let cpuBarColor = 'from-emerald-500 to-emerald-400';
-                        let cpuTextColor = 'text-emerald-400';
-                        if (cpuPercent > 70) { cpuBarColor = 'from-red-500 to-red-400'; cpuTextColor = 'text-red-400'; }
-                        else if (cpuPercent > 40) { cpuBarColor = 'from-amber-500 to-yellow-400'; cpuTextColor = 'text-amber-400'; }
-
-                        let ramBarColor = 'from-emerald-500 to-emerald-400';
-                        let ramTextColor = 'text-emerald-400';
-                        if (ramPercent > 85) { ramBarColor = 'from-red-500 to-red-400'; ramTextColor = 'text-red-400'; }
-                        else if (ramPercent > 55) { ramBarColor = 'from-amber-500 to-yellow-400'; ramTextColor = 'text-amber-400'; }
-
-                        let swapBarColor = 'from-emerald-500 to-emerald-400';
-                        let swapTextColor = 'text-emerald-400';
-                        if (swapPercent > 85) { swapBarColor = 'from-red-500 to-red-400'; swapTextColor = 'text-red-400'; }
-                        else if (swapPercent > 65) { swapBarColor = 'from-amber-500 to-yellow-400'; swapTextColor = 'text-amber-400'; }
-
-                        uptimeEl.innerHTML = `
-                            <div class="space-y-2.5">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="material-symbols-outlined ${isUptimeLong ? 'text-emerald-400' : 'text-white/50'}" style="font-size: 13px">schedule</span>
-                                        <span class="text-[11px] text-white/70 font-medium">Uptime</span>
-                                    </div>
-                                    <span class="text-[11px] ${isUptimeLong ? 'text-emerald-400' : 'text-white'} font-semibold">${data.uptime_formatted}</span>
-                                </div>
-                                
-                                <div class="space-y-1.5">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined ${cpuTextColor}" style="font-size: 13px">memory</span>
-                                            <span class="text-[11px] text-white/70">CPU</span>
-                                        </div>
-                                        <span class="text-[11px] ${cpuTextColor} font-semibold">${cpuPercent}% <span class="text-white/40 font-normal">(${data.cpu_cores} ядер${data.cpu_cores > 1 && data.cpu_cores < 5 ? 'а' : ''})</span></span>
-                                    </div>
-                                    <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                        <div class="h-full bg-gradient-to-r ${cpuBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${cpuPercent}%"></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="space-y-1.5">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined ${ramTextColor}" style="font-size: 13px">developer_board</span>
-                                            <span class="text-[11px] text-white/70">RAM</span>
-                                        </div>
-                                        <span class="text-[11px] ${ramTextColor} font-semibold">${ramPercent}% <span class="text-white/40 font-normal">(${data.ram_used} / ${data.ram_total} МБ)</span></span>
-                                    </div>
-                                    <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                        <div class="h-full bg-gradient-to-r ${ramBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${ramPercent}%"></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="space-y-1.5">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined ${data.swap_total > 0 ? swapTextColor : 'text-white/30'}" style="font-size: 13px">swap_horiz</span>
-                                            <span class="text-[11px] text-white/70">SWAP</span>
-                                        </div>
-                                        ${data.swap_total > 0
-                                ? `<span class="text-[11px] ${swapTextColor} font-semibold">${swapPercent}% <span class="text-white/40 font-normal">(${data.swap_used} / ${data.swap_total} МБ) от ${data.swappiness}%</span></span>`
-                                : `<span class="text-[11px] text-white/30 font-medium">НЕТ</span>`
-                            }
-                                    </div>
-                                    ${data.swap_total > 0
-                                ? `<div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                            <div class="h-full bg-gradient-to-r ${swapBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${swapPercent}%"></div>
-                                           </div>`
-                                : `<div class="h-1.5 bg-white/5 rounded-full overflow-hidden"></div>`
-                            }
-                                </div>
-                                
-                                <div class="flex items-center justify-around pt-2 border-t border-white/[0.04]">
-                                    <div class="flex items-center gap-1.5" title="${data.net_rx_mbps} Mbps">
-                                        <span class="material-symbols-outlined text-blue-400" style="font-size: 14px">download</span>
-                                        <span class="text-[10px] text-white/90 font-mono">${data.net_rx_mbs} MB/s</span>
-                                    </div>
-                                    <div class="flex items-center gap-1.5" title="${data.net_tx_mbps} Mbps">
-                                        <span class="material-symbols-outlined text-orange-400" style="font-size: 14px">upload</span>
-                                        <span class="text-[10px] text-white/90 font-mono">${data.net_tx_mbs} MB/s</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        uptimeEl.innerHTML = getUptimeHTML(data);
                     }
                     if (statusEl) {
                         statusEl.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-emerald-500 shadow-lg shadow-emerald-500/50';
+                    }
+
+                    const cachedStr = localStorage.getItem('remnawave_servers_cache');
+                    if (cachedStr) {
+                        try {
+                            const cachedObj = JSON.parse(cachedStr);
+                            if (type === 'host') {
+                                const hIdx = cachedObj.hosts.findIndex(h => h.host_name === name);
+                                if (hIdx !== -1) cachedObj.hosts[hIdx].uptime_data = data;
+                            } else {
+                                const tIdx = cachedObj.ssh_targets.findIndex(t => t.target_name === name);
+                                if (tIdx !== -1) cachedObj.ssh_targets[tIdx].uptime_data = data;
+                            }
+                            localStorage.setItem('remnawave_servers_cache', JSON.stringify(cachedObj));
+                            updateClearCacheBtn();
+                        } catch (err) { }
                     }
                 } else {
                     if (uptimeEl) {
@@ -5564,6 +5937,49 @@
             window.initSoftSelect('schedulerUnit', 'Дней');
         }
 
+        const promoValidFrom = document.getElementById('promo_valid_from');
+        const promoValidUntil = document.getElementById('promo_valid_until');
+        const promoDaysInput = document.getElementById('promo_days_input');
+
+        function setInitialDates() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+
+            if (promoValidFrom) {
+                promoValidFrom.value = `${year}-${month}-${day}T00:01`;
+            }
+        }
+
+        if (promoDaysInput && promoValidFrom && promoValidUntil) {
+            promoDaysInput.addEventListener('input', function () {
+                const days = parseInt(this.value);
+                if (!isNaN(days) && days > 0) {
+                    const fromDate = new Date(promoValidFrom.value);
+                    if (!isNaN(fromDate.getTime())) {
+                        const untilDate = new Date(fromDate.getTime() + (days * 24 * 60 * 60 * 1000));
+                        const y = untilDate.getFullYear();
+                        const m = String(untilDate.getMonth() + 1).padStart(2, '0');
+                        const d = String(untilDate.getDate()).padStart(2, '0');
+                        const hh = String(untilDate.getHours()).padStart(2, '0');
+                        const mm = String(untilDate.getMinutes()).padStart(2, '0');
+                        promoValidUntil.value = `${y}-${m}-${d}T${hh}:${mm}`;
+                    }
+                }
+            });
+        }
+
+        setInitialDates();
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.tab === 'promo') {
+                    setInitialDates();
+                }
+            });
+        });
+
 
 
         window.openSchedulerModal = function (targetName) {
@@ -5970,6 +6386,7 @@
                 const formData = new FormData();
                 formData.append('csrf_token', window.getCsrfToken());
                 formData.append('enable', document.getElementById('webapp_enable').checked);
+                formData.append('tg_fullscreen', document.getElementById('tg_fullscreen').checked);
                 formData.append('title', document.getElementById('webapp_title').value);
                 formData.append('domen', document.getElementById('webapp_domen').value);
                 formData.append('logo', document.getElementById('webapp_logo').value);

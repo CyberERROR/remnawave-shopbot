@@ -313,6 +313,78 @@
             }
         }
 
+        .sidebar-accordion .accordion-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .accordion-content {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #main-sidebar {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sidebar-overlay {
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-text {
+            width: 0;
+            opacity: 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-badge {
+            display: none !important;
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-header-actions {
+            opacity: 0;
+            position: absolute;
+            pointer-events: none;
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-brand-link {
+            justify-content: center;
+            width: 100%;
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-section-title span {
+            opacity: 0;
+            width: 0;
+            display: none;
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-section-title div {
+            margin: 0 auto;
+        }
+
+        #main-sidebar.w-\[80px\] nav a,
+        #main-sidebar.w-\[80px\] nav button {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.25rem;
+            padding: 0;
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-bottom-grid {
+            grid-template-columns: 1fr;
+        }
+
+        #main-sidebar.w-\[80px\] .sidebar-bottom-status {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
         .status-dot-animated {
             animation: pulse 2s ease-in-out infinite;
         }
@@ -405,958 +477,1392 @@
     {% block head %}{% endblock %}
 </head>
 
-<body class="bg-[#102219] dark:bg-black font-display text-[#e0e0e0] transition-colors duration-300">
-    <div class="relative flex min-h-screen w-full flex-col">
-        <header
-            class="w-full bg-[#102219] dark:bg-black border-b border-white/10 p-4 lg:p-6 sticky top-0 z-50 transition-colors duration-300">
-            <div class="max-w-7xl mx-auto">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-4">
-                        <a href="{{ url_for('dashboard_page') }}"
-                            class="flex items-center gap-3 hover:opacity-90 transition-opacity">
-                            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"
-                                class="h-9 w-auto object-contain drop-shadow-md" onerror="this.style.display='none'" />
-                            <h1 id="brand-title" class="text-xl font-bold text-white tracking-wide"
-                                data-refresh-part="brand">{{ brand_title or 'Admin Panel' }}</h1>
-                        </a>
+<body
+    class="bg-[#102219] dark:bg-black font-display text-[#e0e0e0] transition-colors duration-300 {% if settings.dashboard_layout == 'sidebar' %}overflow-hidden{% endif %}">
+    {% macro nav_link(endpoint, label, icon, group=[]) %}
+    {% set is_active = request.endpoint == endpoint or request.endpoint in group %}
+    <a href="{{ url_for(endpoint) }}" title="{{ label }}"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 relative group overflow-hidden {{ 'bg-white/10 text-white border border-white/10 shadow-[0_4px_20px_-5px_rgba(255,255,255,0.05)]' if is_active else 'text-white/60 hover:text-white hover:bg-white/5' }}">
+        {% if is_active %}
+        <div class="absolute inset-y-0 left-0 w-1 bg-primary rounded-r-full shadow-[0_0_10px_rgba(19,236,128,0.8)]">
+        </div>
+        {% endif %}
+        <span
+            class="material-symbols-outlined text-[22px] flex-shrink-0 transition-transform group-hover:scale-110 {{ 'text-primary drop-shadow-[0_0_8px_rgba(19,236,128,0.5)]' if is_active else 'group-hover:text-white/80' }}">{{
+            icon }}</span>
+        <span
+            class="text-[14px] font-semibold tracking-wide whitespace-nowrap sidebar-text {{ 'text-white' if is_active else '' }}">{{
+            label }}</span>
+        {% if endpoint == 'support_list_page' %}
+        <span id="sidebar-support-badge"
+            class="hidden absolute right-3 w-5 h-5 rounded-full bg-primary text-background-dark text-[10px] font-bold items-center justify-center shadow-[0_0_10px_rgba(19,236,128,0.4)] sidebar-badge"></span>
+        {% endif %}
+    </a>
+    {% endmacro %}
 
-                        <div class="h-5 w-px bg-white/10 mx-1 hidden sm:block"></div>
+    {% macro nav_link_header(endpoint, label, icon, group=[]) %}
+    {% set is_active = request.endpoint == endpoint or request.endpoint in group %}
+    <a href="{{ url_for(endpoint) }}"
+        class="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 whitespace-nowrap flex-shrink-0 {{ 'bg-white/10 text-white shadow-lg shadow-white/5' if is_active else 'text-white/50 hover:text-white hover:bg-white/5' }}">
+        <span class="material-symbols-outlined text-[20px] {{ 'text-primary' if is_active else '' }}">{{
+            icon }}</span>
+        <span class="text-sm font-semibold tracking-wide">{{ label }}</span>
+        {% if endpoint == 'support_list_page' %}
+        <span id="sidebar-support-badge"
+            class="hidden ml-1 w-5 h-5 rounded-full bg-primary text-background-dark text-[10px] font-bold flex items-center justify-center"></span>
+        {% endif %}
+    </a>
+    {% endmacro %}
 
-                        <div class="flex items-center gap-1">
+    {% macro status_indicator(color, label, pulse=false) %}
+    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-{{ color }}/10 border border-{{ color }}/20">
+        <span class="relative flex h-2 w-2">
+            {% if pulse %}<span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-{{ color }} opacity-75"></span>{%
+            endif %}
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-{{ color }}"></span>
+        </span>
+        <span class="text-xs font-bold text-{{ color }} uppercase tracking-wider">{{ label }}</span>
+    </div>
+    {% endmacro %}
+
+    {% if settings.dashboard_layout == 'sidebar' %}
+    <div class="flex h-screen w-full">
+        {% else %}
+        <div class="relative flex min-h-screen w-full flex-col">
+            {% endif %}
+
+            {% if settings.dashboard_layout == 'sidebar' %}
+            <div id="sidebar-overlay"
+                class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity lg:hidden"
+                onclick="toggleSidebar()"></div>
+
+            <aside id="main-sidebar"
+                class="fixed lg:static inset-y-0 left-0 z-50 w-72 bg-[#14281e] dark:bg-[#0a0f0d] border-r border-white/5 flex flex-col transition-transform duration-300 transform -translate-x-full lg:translate-x-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none pt-4 lg:pt-0">
+                <script>
+                    if (localStorage.getItem('sidebar-collapsed') === 'true' && window.innerWidth >= 1024) {
+                        const sb = document.getElementById('main-sidebar');
+                        if (sb) {
+                            sb.classList.remove('w-72', 'transition-transform', 'duration-300'); // Временно отключаем transition
+                            sb.classList.add('w-[80px]');
+                            // Возвращаем transition после смены ширины
+                            setTimeout(() => sb.classList.add('transition-transform', 'duration-300'), 50);
+                        }
+                    }
+                </script>
+                <div class="px-6 py-5 flex items-center justify-between border-b border-white/5 relative h-[72px]">
+                    <a href="{{ url_for('dashboard_page') }}"
+                        class="flex items-center gap-3 hover:opacity-90 transition-opacity sidebar-brand-link">
+                        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"
+                            class="h-8 w-auto object-contain drop-shadow-md flex-shrink-0"
+                            onerror="this.style.display='none'" />
+                        <h1 id="brand-title"
+                            class="text-lg font-bold text-white tracking-wide whitespace-nowrap overflow-hidden text-ellipsis sidebar-text"
+                            data-refresh-part="brand">{{ brand_title or 'Admin Panel' }}</h1>
+                    </a>
+                    <div class="flex items-center gap-1">
+                        <div class="sidebar-header-actions transition-opacity duration-300 flex items-center gap-1">
                             <button type="button" id="brand-edit"
-                                class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                                class="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
                                 title="Сменить название">
-                                <span class="material-symbols-outlined text-xl">edit</span>
+                                <span class="material-symbols-outlined text-[20px]">edit</span>
                             </button>
-                            <button type="button" id="about-info-btn"
-                                class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
-                                title="О проекте">
-                                <span id="about-info-icon" class="material-symbols-outlined text-xl">info</span>
-                                <span id="about-new-badge"
-                                    class="hidden flex h-4 w-auto px-1 items-center justify-center rounded bg-red-500 text-[8px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-bounce">NEW</span>
+                            <button type="button" onclick="toggleSidebar()"
+                                class="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                <span class="material-symbols-outlined text-[24px]">close</span>
                             </button>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        {% macro header_icon_btn(url, icon, title, text_class='text-white/70',
-                        hover_class='hover:text-white', is_form=true, confirm=none, action_color='bg-white/5') %}
-                        {% if is_form %}
-                        <form action="{{ url }}" method="post" class="inline" {% if confirm
-                            %}data-confirm="{{ confirm }}" {% endif %}>
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <button type="submit" title="{{ title }}"
-                                class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 {{ action_color }}">
-                                <span
-                                    class="material-symbols-outlined text-xl {{ text_class }} {{ hover_class }} group-hover:scale-110 transition-transform">{{
-                                    icon }}</span>
-                            </button>
-                        </form>
-                        {% else %}
-                        <button type="button" id="{{ url }}" title="{{ title }}"
-                            class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 {{ action_color }}">
-                            <span
-                                class="material-symbols-outlined text-xl {{ text_class }} {{ hover_class }} group-hover:scale-110 transition-transform">{{
-                                icon }}</span>
-                        </button>
-                        {% endif %}
-                        {% endmacro %}
-
-                        {% if main_running or support_running %}
-                        {{ header_icon_btn(url_for('stop_both_bots_route'), 'stop_circle', 'Остановить систему',
-                        'text-red-400', 'group-hover:text-red-300', confirm='Остановить работу всех модулей?') }}
-                        {% elif all_settings_ok and support_settings_ok %}
-                        {{ header_icon_btn(url_for('start_both_bots_route'), 'play_circle', 'Запустить систему',
-                        'text-primary', 'group-hover:text-primary') }}
-                        {% endif %}
-
-                        {{ header_icon_btn('btn-restart-bot', 'restart_alt', 'Полная перезагрузка', 'text-blue-400',
-                        'group-hover:text-blue-300', is_form=false) }}
-                        {{ header_icon_btn(url_for('logout_page'), 'logout', 'Выйти', 'text-white/40',
-                        'group-hover:text-white') }}
-
-                        <button type="button" id="theme-toggle-btn" title="Переключить тему"
-                            class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 ml-1">
-                            <span class="material-symbols-outlined text-xl text-white/50 dark:hidden">dark_mode</span>
-                            <span
-                                class="material-symbols-outlined text-xl text-primary hidden dark:block">light_mode</span>
+                        <button type="button" onclick="toggleDesktopSidebar()"
+                            class="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all outline-none">
+                            <span class="material-symbols-outlined text-[20px] transition-transform duration-300"
+                                id="desktop-sidebar-icon">menu_open</span>
+                            <script>
+                                if (localStorage.getItem('sidebar-collapsed') === 'true' && window.innerWidth >= 1024) {
+                                    document.getElementById('desktop-sidebar-icon').textContent = 'menu';
+                                }
+                            </script>
                         </button>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between mt-4">
-                    <nav class="flex items-center w-full gap-2 pb-1 relative">
-                        <div
-                            class="flex items-center gap-2 overflow-x-auto flex-1 md:flex-none no-scrollbar mask-gradient-right">
-                            {% macro nav_link(endpoint, label, icon, group=[]) %}
-                            {% set is_active = request.endpoint == endpoint or request.endpoint in group %}
-                            <a href="{{ url_for(endpoint) }}"
-                                class="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 whitespace-nowrap flex-shrink-0 {{ 'bg-white/10 text-white shadow-lg shadow-white/5' if is_active else 'text-white/50 hover:text-white hover:bg-white/5' }}">
-                                <span
-                                    class="material-symbols-outlined text-[20px] {{ 'text-primary' if is_active else '' }}">{{
-                                    icon }}</span>
-                                <span class="text-sm font-semibold tracking-wide">{{ label }}</span>
-                                <!-- Lazy loaded badge -->
-                                {% if endpoint == 'support_list_page' %}
-                                <span id="sidebar-support-badge"
-                                    class="hidden ml-1 w-5 h-5 rounded-full bg-primary text-background-dark text-[10px] font-bold flex items-center justify-center"></span>
-                                {% endif %}
-                            </a>
-                            {% endmacro %}
+                <nav class="flex-1 px-4 py-6 space-y-8">
+                    <div>
+                        <div class="flex items-center gap-2 px-3 mb-3 sidebar-section-title">
+                            <div class="w-1 h-3.5 bg-sky-500 rounded-full flex-shrink-0"></div>
+                            <span
+                                class="text-[10px] font-bold text-white/40 uppercase tracking-widest whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Обзор</span>
+                        </div>
+                        <div class="space-y-1">
+                            {{ nav_link('dashboard_page', 'Главная', 'star') }}
+                        </div>
+                    </div>
 
-                            {{ nav_link('dashboard_page', 'Главная', 'home') }}
+                    <div class="border-b border-white/5 mx-3 border-dashed"></div>
+
+                    <div>
+                        <div class="flex items-center gap-2 px-3 mb-3 sidebar-section-title">
+                            <div class="w-1 h-3.5 bg-primary rounded-full flex-shrink-0"></div>
+                            <span
+                                class="text-[10px] font-bold text-white/40 uppercase tracking-widest whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Управление</span>
+                        </div>
+                        <div class="space-y-1">
                             {{ nav_link('users_page', 'Пользователи', 'group') }}
                             {{ nav_link('admin_keys_page', 'Ключи', 'key') }}
                             {{ nav_link('support_list_page', 'Поддержка', 'support_agent', ['support_ticket_page']) }}
+                            {{ nav_link('button_constructor_page', 'Конструктор кнопок', 'build') }}
+                        </div>
+                    </div>
+
+                    <div class="border-b border-white/5 mx-3 border-dashed"></div>
+
+                    <div>
+                        <div class="flex items-center gap-2 px-3 mb-3 sidebar-section-title">
+                            <div class="w-1 h-3.5 bg-purple-500 rounded-full flex-shrink-0"></div>
+                            <span
+                                class="text-[10px] font-bold text-white/40 uppercase tracking-widest whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Система</span>
+                        </div>
+                        <div class="space-y-1">
                             {{ nav_link('settings_page', 'Настройки', 'settings') }}
-                        </div>
+                            {{ nav_link('monitor_page', 'Мониторинг', 'monitoring') }}
 
-                        <div
-                            class="relative group shrink-0 ml-1 pl-2 border-l border-white/5 md:border-0 md:ml-0 md:pl-0">
-                            {% set is_other_active = request.endpoint in ['other_page', 'monitor_page',
-                            'button_constructor_page'] %}
-                            <div
-                                class="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap {{ 'bg-white/10 text-white shadow-lg shadow-white/5 border border-white/10' if is_other_active else 'text-white/70 hover:text-white hover:bg-white/5' }}">
-                                <span
-                                    class="material-symbols-outlined text-[20px] {{ 'text-primary' if is_other_active else '' }}">more_horiz</span>
-                                <span class="text-sm font-bold tracking-tight hidden sm:inline">Прочее</span>
-                                <span
-                                    class="material-symbols-outlined text-[16px] opacity-50 group-hover:rotate-180 transition-transform">expand_more</span>
-                            </div>
 
-                            <!-- Dropdown Overlay -->
-                            <div
-                                class="absolute right-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible z-[9999]">
+                            {% set is_other_active = request.endpoint == 'other_page' %}
+                            <div class="sidebar-accordion">
+                                <button type="button" onclick="toggleAccordion(this)" title="Прочее"
+                                    class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 relative group overflow-hidden {{ 'bg-white/5 text-white' if is_other_active else 'text-white/60 hover:text-white hover:bg-white/5' }}">
+                                    <div class="flex items-center gap-3">
+                                        <span
+                                            class="material-symbols-outlined text-[20px] flex-shrink-0 transition-transform group-hover:scale-110 {{ 'text-primary' if is_other_active else '' }}">more_horiz</span>
+                                        <span
+                                            class="text-[14px] font-semibold tracking-wide whitespace-nowrap sidebar-text text-left">Прочее</span>
+                                    </div>
+                                    <span
+                                        class="material-symbols-outlined text-[18px] transition-transform duration-300 accordion-icon rotate-180 sidebar-text">expand_more</span>
+                                </button>
+
                                 <div
-                                    class="w-[180px] bg-[#102219]/40 dark:bg-[#000000]/40 backdrop-blur-md border border-white/10 rounded-2xl p-1.5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] flex flex-col gap-0.5">
-                                    <a href="{{ url_for('monitor_page') }}"
-                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[#06bd5d] hover:bg-white/5 transition-all group/item">
-                                        <span class="material-symbols-outlined text-[16px]">monitoring</span>
-                                        <span class="text-[12px] font-semibold">Мониторинг</span>
-                                    </a>
-                                    <a href="{{ url_for('button_constructor_page') }}"
-                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[#06bd5d] hover:bg-white/5 transition-all">
-                                        <span class="material-symbols-outlined text-[16px]">build</span>
-                                        <span class="text-[12px] font-semibold">Конструктор кнопок</span>
-                                    </a>
-                                    <div class="h-px bg-white/5 my-1 mx-2"></div>
-                                    <a href="{{ url_for('other_page') }}?tab=broadcast"
-                                        data-base-url="{{ url_for('other_page') }}"
-                                        onclick="handleOtherPageNav(event, 'broadcast')"
-                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                        <span class="material-symbols-outlined text-[16px]">send</span>
-                                        <span class="text-[12px] font-semibold">Рассылка</span>
-                                    </a>
-                                    <a href="{{ url_for('other_page') }}?tab=promo"
-                                        data-base-url="{{ url_for('other_page') }}"
-                                        onclick="handleOtherPageNav(event, 'promo')"
-                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                        <span class="material-symbols-outlined text-[16px]">confirmation_number</span>
-                                        <span class="text-[12px] font-semibold">Промо коды</span>
-                                    </a>
-                                    <a href="{{ url_for('other_page') }}?tab=servers"
-                                        data-base-url="{{ url_for('other_page') }}"
-                                        onclick="handleOtherPageNav(event, 'servers')"
-                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                        <span class="material-symbols-outlined text-[16px]">dns</span>
-                                        <span class="text-[12px] font-semibold">Сервера</span>
-                                    </a>
-                                    <a href="{{ url_for('other_page') }}?tab=logs"
-                                        data-base-url="{{ url_for('other_page') }}"
-                                        onclick="handleOtherPageNav(event, 'logs')"
-                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                        <span class="material-symbols-outlined text-[16px]">article</span>
-                                        <span class="text-[12px] font-semibold">Логи Бота</span>
-                                    </a>
-                                    {% if webapp_exists %}
-                                    <a href="{{ url_for('other_page') }}?tab=webapp"
-                                        data-base-url="{{ url_for('other_page') }}"
-                                        onclick="handleOtherPageNav(event, 'webapp')"
-                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                        <span class="material-symbols-outlined text-[16px]">language</span>
-                                        <span class="text-[12px] font-semibold">WebApp</span>
-                                    </a>
-                                    {% endif %}
-                                    <a href="{{ url_for('other_page') }}?tab=remnawave"
-                                        data-base-url="{{ url_for('other_page') }}"
-                                        onclick="handleOtherPageNav(event, 'remnawave')"
-                                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                        <span class="material-symbols-outlined text-[16px]">graphic_eq</span>
-                                        <span class="text-[12px] font-semibold">Remnawave</span>
-                                    </a>
+                                    class="accordion-content overflow-hidden transition-all duration-300 ease-in-out max-h-[800px] opacity-100 mt-1">
+                                    <div class="py-1 space-y-0.5">
+                                        {% macro accordion_link(url, label, icon, current_tab='') %}
+                                        {% set is_sub_active = false %}
+                                        {% if request.endpoint == 'monitor_page' and label == 'Мониторинг' %}
+                                        {% set is_sub_active = true %}
+                                        {% elif request.endpoint == 'button_constructor_page' and label == 'Конструктор
+                                        кнопок' %}
+                                        {% set is_sub_active = true %}
+                                        {% elif request.endpoint == 'other_page' and request.args.get('tab',
+                                        'broadcast') ==
+                                        current_tab %}
+                                        {% set is_sub_active = true %}
+                                        {% endif %}
+
+                                        <a href="{{ url }}" title="{{ label }}"
+                                            data-base-url="{{ url_for('other_page') }}" {% if current_tab
+                                            %}onclick="handleOtherPageNav(event, '{{ current_tab }}')" {% endif %}
+                                            class="flex items-center gap-3 pl-[20px] pr-3 py-2.5 rounded-lg transition-all duration-200 group {{ 'text-white' if is_sub_active else 'text-white/50 hover:text-white hover:bg-white/5' }}">
+                                            <span
+                                                class="material-symbols-outlined text-[18px] flex-shrink-0 {{ 'text-primary' if is_sub_active else 'group-hover:text-white/80' }}">{{
+                                                icon }}</span>
+                                            <span
+                                                class="text-[14px] font-medium tracking-wide whitespace-nowrap sidebar-text">{{
+                                                label }}</span>
+                                        </a>
+                                        {% endmacro %}
+
+
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=broadcast', 'Рассылка', 'send',
+                                        'broadcast') }}
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=promo', 'Промо коды',
+                                        'confirmation_number', 'promo') }}
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=servers', 'Сервера', 'dns',
+                                        'servers') }}
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=logs', 'Логи Бота', 'article',
+                                        'logs') }}
+                                        {% if webapp_exists %}
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=webapp', 'WebApp', 'language',
+                                        'webapp') }}
+                                        {% endif %}
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=remnawave', 'Remnawave',
+                                        'graphic_eq', 'remnawave') }}
+                                    </div>
                                 </div>
+                                <script>
+                                    if (localStorage.getItem('accordion-more-expanded') === 'false') {
+                                        const otherBtn = document.currentScript.previousElementSibling.previousElementSibling;
+                                        const content = document.currentScript.previousElementSibling;
+                                        if (otherBtn && content) {
+                                            const icon = otherBtn.querySelector('.accordion-icon');
+                                            if (icon) {
+                                                content.classList.remove('max-h-[800px]', 'opacity-100', 'mt-1', 'transition-all', 'duration-300');
+                                                content.classList.add('max-h-0', 'opacity-0');
+                                                icon.classList.remove('rotate-180', 'transition-transform', 'duration-300');
+
+                                                // Возвращаем анимации после применения начального состояния
+                                                setTimeout(() => {
+                                                    content.classList.add('transition-all', 'duration-300');
+                                                    icon.classList.add('transition-transform', 'duration-300');
+                                                }, 50);
+                                            }
+                                        }
+                                    }
+                                </script>
                             </div>
-                        </div>
-                    </nav>
 
-                    <div class="items-center gap-3 hidden lg:flex pl-4 border-l border-white/10 ml-4">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-white/30">Status</span>
-                        {% macro status_indicator(color, label, pulse=false) %}
-                        <div
-                            class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-{{ color }}/10 border border-{{ color }}/20">
-                            <span class="relative flex h-2 w-2">
-                                {% if pulse %}<span
-                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-{{ color }} opacity-75"></span>{%
-                                endif %}
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-{{ color }}"></span>
-                            </span>
-                            <span class="text-xs font-bold text-{{ color }} uppercase tracking-wider">{{ label }}</span>
                         </div>
-                        {% endmacro %}
+                    </div>
+                </nav>
 
-                        {% if main_running and support_running %}
-                        {{ status_indicator('primary', 'Live', true) }}
-                        {% elif main_running or support_running %}
-                        {{ status_indicator('yellow-400', 'Limited', true) }}
-                        {% else %}
-                        {{ status_indicator('red-500', 'Stopped') }}
+                <div class="p-4 border-t border-white/5 mt-auto space-y-3">
+                    <div class="flex items-center justify-center gap-1.5 py-1 sidebar-actions-grid">
+                        {% if main_running or support_running %}
+                        <form action="{{ url_for('stop_both_bots_route') }}" method="post" class="inline"
+                            data-confirm="Остановить работу всех модулей?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit" title="Остановить систему"
+                                class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center transition-all group hover:bg-white/10">
+                                <span
+                                    class="material-symbols-outlined text-lg text-red-400 group-hover:text-red-300 group-hover:scale-110 transition-transform">stop_circle</span>
+                            </button>
+                        </form>
+                        {% elif all_settings_ok and support_settings_ok %}
+                        <form action="{{ url_for('start_both_bots_route') }}" method="post" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit" title="Запустить систему"
+                                class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center transition-all group hover:bg-white/10">
+                                <span
+                                    class="material-symbols-outlined text-lg text-primary group-hover:text-primary group-hover:scale-110 transition-transform">play_circle</span>
+                            </button>
+                        </form>
                         {% endif %}
+                        <button type="button" id="btn-restart-bot" title="Полная перезагрузка"
+                            class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center transition-all group hover:bg-white/10">
+                            <span
+                                class="material-symbols-outlined text-lg text-blue-400 group-hover:text-blue-300 group-hover:scale-110 transition-transform">restart_alt</span>
+                        </button>
+                        <button type="button" id="theme-toggle-btn" title="Переключить тему"
+                            class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center transition-all group hover:bg-white/10">
+                            <span class="material-symbols-outlined text-lg text-white/50 dark:hidden">dark_mode</span>
+                            <span
+                                class="material-symbols-outlined text-lg text-primary hidden dark:block">light_mode</span>
+                        </button>
+                        <form action="{{ url_for('logout_page') }}" method="post" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit" title="Выйти"
+                                class="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center transition-all group hover:bg-red-500/20">
+                                <span
+                                    class="material-symbols-outlined text-lg text-white/40 group-hover:text-red-400 group-hover:scale-110 transition-transform">logout</span>
+                            </button>
+                        </form>
                     </div>
-                </div>
-            </div>
-        </header>
 
-        <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
-            <div class="max-w-7xl mx-auto">
-                {% block content %}{% endblock %}
-            </div>
-        </main>
-    </div>
-
-    <div id="toast-container" class="toast-container"></div>
-
-    <div id="brandModal" class="modal-overlay">
-        <div class="modal-content p-6 max-w-lg">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">edit</span>
-                    Название панели
-                </h3>
-                <button onclick="closeModal('brandModal')"
-                    class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-
-            <form data-ajax="true" data-refresh="page" action="{{ url_for('update_brand_title_route') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <div class="mb-6">
-                    <label
-                        class="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Заголовок</label>
-                    <input type="text" id="brand-input" name="title" placeholder="Введите название проекта..."
-                        class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none" />
-                    <p class="text-white/30 text-xs mt-2 ml-1">Это название будет отображаться в левом верхнем углу
-                        шапки.</p>
-                </div>
-
-                <div class="flex gap-3 justify-end pt-4 border-t border-white/5">
-                    <button type="button" onclick="closeModal('brandModal')"
-                        class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all">Отмена</button>
-                    <button type="submit"
-                        class="px-5 py-2.5 rounded-xl bg-primary text-background-dark text-sm font-bold hover:bg-primary/90 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] transition-all">Сохранить
-                        изменения</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="aboutModal" class="modal-overlay">
-        <div class="modal-content modal-about-scale p-0 overflow-hidden">
-            <div class="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                <h3 class="text-xl font-bold text-white/90 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">info</span>
-                    О проекте <span class="px-2 py-0.5 rounded-md bg-white/5 text-white/40 text-xs font-mono ml-2">v{{
-                        project_info.version }}</span>
-                </h3>
-                <button onclick="closeModal('aboutModal')"
-                    class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-
-            <div class="p-6 space-y-6">
-                <div id="update-notification"
-                    class="hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 p-5 shadow-[0_0_30px_-10px_rgba(19,236,128,0.3)] group transition-all duration-500 hover:shadow-[0_0_40px_-5px_rgba(19,236,128,0.4)] backdrop-blur-xl">
-                    <div
-                        class="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/30 transition-all duration-700">
-                    </div>
-                    <div class="relative flex items-center gap-5">
+                    <div class="grid grid-cols-2 gap-2 sidebar-bottom-grid">
                         <div
-                            class="flex-shrink-0 w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/20">
-                            <span class="material-symbols-outlined text-3xl animate-spin-slow">sync</span>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <h4 class="text-white font-black text-lg tracking-tight">Новая версия!
-                                </h4>
-                                <span id="latest-version"
-                                    class="ml-3 px-3 py-1 rounded-full bg-primary text-[#1a2f24] text-sm font-black uppercase ring-1 ring-[#1a2f24]/20"></span>
+                            class="flex items-center justify-between px-2.5 py-2.5 rounded-xl bg-white/5 border border-white/5 sidebar-bottom-status">
+                            <div class="flex items-center gap-1.5">
+                                {% if main_running and support_running %}
+                                <span class="relative flex h-2 w-2">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                <span
+                                    class="text-[9px] font-bold text-primary uppercase tracking-wider sidebar-text">Live</span>
+                                {% elif main_running or support_running %}
+                                <span class="relative flex h-2 w-2">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-400"></span>
+                                </span>
+                                <span
+                                    class="text-[9px] font-bold text-yellow-400 uppercase tracking-wider sidebar-text">Limited</span>
+                                {% else %}
+                                <span class="relative flex h-2 w-2">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
+                                <span
+                                    class="text-[9px] font-bold text-red-500 uppercase tracking-wider sidebar-text">Stopped</span>
+                                {% endif %}
                             </div>
-                            <p class="text-white/60 text-xs leading-relaxed mb-0">Стабильное
-                                обновление готово к
-                                установке</p>
+                            <span
+                                class="text-[7px] font-bold text-white/10 uppercase tracking-widest sidebar-text">Status</span>
                         </div>
-                        <a href="{{ project_info.links.repository }}" target="_blank"
-                            class="flex-shrink-0 w-12 h-12 rounded-2xl bg-primary text-background-dark flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg shadow-primary/30">
-                            <span class="material-symbols-outlined">arrow_forward</span>
-                        </a>
-                    </div>
 
-                    <!-- Install Command Block -->
-                    <div
-                        class="mt-4 p-3 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px] space-y-2 group/cmd relative">
-                        <div class="flex items-center justify-between text-white/30 mb-1">
-                            <span class="flex items-center gap-1.5 uppercase tracking-widest font-bold">
-                                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                                Terminal
-                            </span>
-                        </div>
-                        <div class="text-primary/70 mb-1"># Запустить установщик (загружает свежую версию)</div>
-                        <div class="text-white/90 break-all select-all pr-8">curl -sSL
-                            https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash</div>
-                        <button
-                            onclick="navigator.clipboard.writeText('curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash'); showToast('success', 'Команда скопирована')"
-                            class="absolute right-3 bottom-3 text-white/20 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-white/5">
-                            <span class="material-symbols-outlined text-sm">content_copy</span>
+                        <button type="button" id="about-info-btn-mobile" onclick="openModal('aboutModal')"
+                            title="О проекте"
+                            class="flex items-center justify-center py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all group border border-white/5 relative overflow-hidden">
+                            <span id="about-info-icon-mobile"
+                                class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">info</span>
+                            <div id="about-new-badge-mobile"
+                                class="hidden absolute inset-0 items-center justify-center bg-red-500/20 group-hover:bg-red-500/30 transition-colors">
+                                <span
+                                    class="px-1.5 py-0.5 rounded bg-red-500 text-[9px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse">NEW</span>
+                            </div>
                         </button>
                     </div>
                 </div>
+            </aside>
+            {% endif %}
 
-                <div class="space-y-3">
-                    {% set links = [
-                    (project_info.links.repository, 'code', 'Репозиторий проекта', 'Исходный код и документация',
-                    'text-white', 'text-white/50'),
-                    (project_info.links.releases, 'deployed_code', 'Список изменений', 'История версий и релизы',
-                    'text-blue-400', 'text-blue-400/50'),
-                    (project_info.links.telegram, 'groups', 'Telegram сообщество', 'Чат поддержки и обсуждения',
-                    'text-sky-400', 'text-sky-400/50'),
-                    (project_info.links.developer, 'person', 'Разработчик', 'Автор проекта', 'text-purple-400',
-                    'text-purple-400/50')
-                    ] %}
-                    {% for url, icon, title, desc, icon_color, desc_color in links %}
-                    <a href="{{ url }}" target="_blank"
-                        class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
+            <div
+                class="flex-1 flex flex-col {% if settings.dashboard_layout == 'sidebar' %}h-screen overflow-hidden{% endif %} bg-[#102219] dark:bg-black transition-colors duration-300">
+
+                {% if settings.dashboard_layout == 'sidebar' %}
+                <header
+                    class="w-full border-b border-white/5 p-3 lg:hidden sticky top-0 z-40 bg-[#102219]/90 dark:bg-black/90 backdrop-blur-md transition-colors duration-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <button type="button" onclick="toggleSidebar()"
+                                class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-all">
+                                <span class="material-symbols-outlined text-2xl">menu</span>
+                            </button>
+                            <div class="flex items-center gap-2">
+                                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"
+                                    class="h-8 w-auto object-contain" onerror="this.style.display='none'" />
+                            </div>
+                        </div>
+                    </div>
+                </header>
+                {% else %}
+                <header
+                    class="w-full bg-[#102219] dark:bg-black border-b border-white/10 p-4 lg:p-6 sticky top-0 z-50 transition-colors duration-300">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-4">
+                                <a href="{{ url_for('dashboard_page') }}"
+                                    class="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"
+                                        class="h-9 w-auto object-contain drop-shadow-md"
+                                        onerror="this.style.display='none'" />
+                                    <h1 id="brand-title" class="text-xl font-bold text-white tracking-wide"
+                                        data-refresh-part="brand">{{ brand_title or 'Admin Panel' }}</h1>
+                                </a>
+
+                                <div class="h-5 w-px bg-white/10 mx-1 hidden sm:block"></div>
+
+                                <div class="flex items-center gap-1">
+                                    <button type="button" id="brand-edit"
+                                        class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                                        title="Сменить название">
+                                        <span class="material-symbols-outlined text-xl">edit</span>
+                                    </button>
+                                    <button type="button" id="about-info-btn"
+                                        class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                                        title="О проекте">
+                                        <span id="about-info-icon" class="material-symbols-outlined text-xl">info</span>
+                                        <span id="about-new-badge"
+                                            class="hidden flex h-4 w-auto px-1 items-center justify-center rounded bg-red-500 text-[8px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-bounce">NEW</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                {% macro header_icon_btn(url, icon, title, text_class='text-white/70',
+                                hover_class='hover:text-white', is_form=true, confirm=none, action_color='bg-white/5')
+                                %}
+                                {% if is_form %}
+                                <form action="{{ url }}" method="post" class="inline" {% if confirm
+                                    %}data-confirm="{{ confirm }}" {% endif %}>
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                    <button type="submit" title="{{ title }}"
+                                        class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 {{ action_color }}">
+                                        <span
+                                            class="material-symbols-outlined text-xl {{ text_class }} {{ hover_class }} group-hover:scale-110 transition-transform">{{
+                                            icon }}</span>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <button type="button" id="{{ url }}" title="{{ title }}"
+                                    class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 {{ action_color }}">
+                                    <span
+                                        class="material-symbols-outlined text-xl {{ text_class }} {{ hover_class }} group-hover:scale-110 transition-transform">{{
+                                        icon }}</span>
+                                </button>
+                                {% endif %}
+                                {% endmacro %}
+
+                                {% if main_running or support_running %}
+                                {{ header_icon_btn(url_for('stop_both_bots_route'), 'stop_circle', 'Остановить систему',
+                                'text-red-400', 'group-hover:text-red-300', confirm='Остановить работу всех модулей?')
+                                }}
+                                {% elif all_settings_ok and support_settings_ok %}
+                                {{ header_icon_btn(url_for('start_both_bots_route'), 'play_circle', 'Запустить систему',
+                                'text-primary', 'group-hover:text-primary') }}
+                                {% endif %}
+
+                                {{ header_icon_btn('btn-restart-bot', 'restart_alt', 'Полная перезагрузка',
+                                'text-blue-400',
+                                'group-hover:text-blue-300', is_form=false) }}
+                                {{ header_icon_btn(url_for('logout_page'), 'logout', 'Выйти', 'text-white/40',
+                                'group-hover:text-white') }}
+
+                                <button type="button" id="theme-toggle-btn" title="Переключить тему"
+                                    class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 ml-1">
+                                    <span
+                                        class="material-symbols-outlined text-xl text-white/50 dark:hidden">dark_mode</span>
+                                    <span
+                                        class="material-symbols-outlined text-xl text-primary hidden dark:block">light_mode</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between mt-4">
+                            <nav class="flex items-center w-full gap-2 pb-1 relative">
+                                <div
+                                    class="flex items-center gap-2 overflow-x-auto flex-1 md:flex-none no-scrollbar mask-gradient-right">
+                                    {{ nav_link_header('dashboard_page', 'Главная', 'home') }}
+                                    {{ nav_link_header('users_page', 'Пользователи', 'group') }}
+                                    {{ nav_link_header('admin_keys_page', 'Ключи', 'key') }}
+                                    {{ nav_link_header('support_list_page', 'Поддержка', 'support_agent',
+                                    ['support_ticket_page']) }}
+                                    {{ nav_link_header('settings_page', 'Настройки', 'settings') }}
+                                </div>
+
+                                <div
+                                    class="relative group shrink-0 ml-1 pl-2 border-l border-white/5 md:border-0 md:ml-0 md:pl-0">
+                                    {% set is_other_active = request.endpoint in ['other_page', 'monitor_page',
+                                    'button_constructor_page'] %}
+                                    <div
+                                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap {{ 'bg-white/10 text-white shadow-lg shadow-white/5 border border-white/10' if is_other_active else 'text-white/70 hover:text-white hover:bg-white/5' }}">
+                                        <span
+                                            class="material-symbols-outlined text-[20px] {{ 'text-primary' if is_other_active else '' }}">more_horiz</span>
+                                        <span class="text-sm font-bold tracking-tight hidden sm:inline">Прочее</span>
+                                        <span
+                                            class="material-symbols-outlined text-[16px] opacity-50 group-hover:rotate-180 transition-transform">expand_more</span>
+                                    </div>
+
+                                    <div
+                                        class="absolute right-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible z-[9999]">
+                                        <div
+                                            class="w-[180px] bg-[#102219]/40 dark:bg-[#000000]/40 backdrop-blur-md border border-white/10 rounded-2xl p-1.5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] flex flex-col gap-0.5">
+                                            <a href="{{ url_for('monitor_page') }}"
+                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[#06bd5d] hover:bg-white/5 transition-all group/item">
+                                                <span class="material-symbols-outlined text-[16px]">monitoring</span>
+                                                <span class="text-[12px] font-semibold">Мониторинг</span>
+                                            </a>
+                                            <a href="{{ url_for('button_constructor_page') }}"
+                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[#06bd5d] hover:bg-white/5 transition-all">
+                                                <span class="material-symbols-outlined text-[16px]">build</span>
+                                                <span class="text-[12px] font-semibold">Конструктор кнопок</span>
+                                            </a>
+                                            <div class="h-px bg-white/5 my-1 mx-2"></div>
+                                            <a href="{{ url_for('other_page') }}?tab=broadcast"
+                                                data-base-url="{{ url_for('other_page') }}"
+                                                onclick="handleOtherPageNav(event, 'broadcast')"
+                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                                <span class="material-symbols-outlined text-[16px]">send</span>
+                                                <span class="text-[12px] font-semibold">Рассылка</span>
+                                            </a>
+                                            <a href="{{ url_for('other_page') }}?tab=promo"
+                                                data-base-url="{{ url_for('other_page') }}"
+                                                onclick="handleOtherPageNav(event, 'promo')"
+                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                                <span
+                                                    class="material-symbols-outlined text-[16px]">confirmation_number</span>
+                                                <span class="text-[12px] font-semibold">Промо коды</span>
+                                            </a>
+                                            <a href="{{ url_for('other_page') }}?tab=servers"
+                                                data-base-url="{{ url_for('other_page') }}"
+                                                onclick="handleOtherPageNav(event, 'servers')"
+                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                                <span class="material-symbols-outlined text-[16px]">dns</span>
+                                                <span class="text-[12px] font-semibold">Сервера</span>
+                                            </a>
+                                            <a href="{{ url_for('other_page') }}?tab=logs"
+                                                data-base-url="{{ url_for('other_page') }}"
+                                                onclick="handleOtherPageNav(event, 'logs')"
+                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                                <span class="material-symbols-outlined text-[16px]">article</span>
+                                                <span class="text-[12px] font-semibold">Логи Бота</span>
+                                            </a>
+                                            {% if webapp_exists %}
+                                            <a href="{{ url_for('other_page') }}?tab=webapp"
+                                                data-base-url="{{ url_for('other_page') }}"
+                                                onclick="handleOtherPageNav(event, 'webapp')"
+                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                                <span class="material-symbols-outlined text-[16px]">language</span>
+                                                <span class="text-[12px] font-semibold">WebApp</span>
+                                            </a>
+                                            {% endif %}
+                                            <a href="{{ url_for('other_page') }}?tab=remnawave"
+                                                data-base-url="{{ url_for('other_page') }}"
+                                                onclick="handleOtherPageNav(event, 'remnawave')"
+                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                                <span class="material-symbols-outlined text-[16px]">graphic_eq</span>
+                                                <span class="text-[12px] font-semibold">Remnawave</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </nav>
+
+                            <div class="items-center gap-3 hidden lg:flex pl-4 border-l border-white/10 ml-4">
+                                <span
+                                    class="text-[10px] font-bold uppercase tracking-widest text-white/30">Status</span>
+                                {% if main_running and support_running %}
+                                {{ status_indicator('primary', 'Live', true) }}
+                                {% elif main_running or support_running %}
+                                {{ status_indicator('yellow-400', 'Limited', true) }}
+                                {% else %}
+                                {{ status_indicator('red-500', 'Stopped') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </header>
+                {% endif %}
+
+                <main
+                    class="flex-1 p-{% if settings.dashboard_layout == 'sidebar' %}4{% else %}6{% endif %} lg:p-8 {% if settings.dashboard_layout == 'sidebar' %}overflow-y-auto no-scrollbar{% endif %} relative">
+                    <div class="max-w-7xl mx-auto {% if settings.dashboard_layout == 'sidebar' %}pb-10{% endif %}">
+                        {% block content %}{% endblock %}
+                    </div>
+                </main>
+            </div>
+
+        </div>
+
+        <div id="toast-container" class="toast-container"></div>
+
+        <div id="brandModal" class="modal-overlay">
+            <div class="modal-content p-6 max-w-lg">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">edit</span>
+                        Название панели
+                    </h3>
+                    <button onclick="closeModal('brandModal')"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <form data-ajax="true" data-refresh="page" action="{{ url_for('update_brand_title_route') }}"
+                    method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <div class="mb-6">
+                        <label
+                            class="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Заголовок</label>
+                        <input type="text" id="brand-input" name="title" placeholder="Введите название проекта..."
+                            class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none" />
+                        <p class="text-white/30 text-xs mt-2 ml-1">Это название будет отображаться в левом верхнем углу
+                            шапки.</p>
+                    </div>
+
+                    <div class="flex gap-3 justify-end pt-4 border-t border-white/5">
+                        <button type="button" onclick="closeModal('brandModal')"
+                            class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all">Отмена</button>
+                        <button type="submit"
+                            class="px-5 py-2.5 rounded-xl bg-primary text-background-dark text-sm font-bold hover:bg-primary/90 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] transition-all">Сохранить
+                            изменения</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="aboutModal" class="modal-overlay">
+            <div class="modal-content modal-about-scale p-0 overflow-hidden">
+                <div class="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                    <h3 class="text-xl font-bold text-white/90 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">info</span>
+                        О проекте <span
+                            class="px-2 py-0.5 rounded-md bg-white/5 text-white/40 text-xs font-mono ml-2">v{{
+                            project_info.version }}</span>
+                    </h3>
+                    <button onclick="closeModal('aboutModal')"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <div id="update-notification"
+                        class="hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 p-5 shadow-[0_0_30px_-10px_rgba(19,236,128,0.3)] group transition-all duration-500 hover:shadow-[0_0_40px_-5px_rgba(19,236,128,0.4)] backdrop-blur-xl">
                         <div
-                            class="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center {{ icon_color }} group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined">{{ icon }}</span>
+                            class="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl group-hover:bg-primary/30 transition-all duration-700">
                         </div>
-                        <div class="flex-1">
-                            <h5 class="text-white font-bold text-sm">{{ title }}</h5>
-                            <p class="text-xs {{ desc_color }}">{{ desc }}</p>
+                        <div class="relative flex items-center gap-5">
+                            <div
+                                class="flex-shrink-0 w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-inner border border-primary/20">
+                                <span class="material-symbols-outlined text-3xl animate-spin-slow">sync</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="text-white font-black text-lg tracking-tight">Новая версия!
+                                    </h4>
+                                    <span id="latest-version"
+                                        class="ml-3 px-3 py-1 rounded-full bg-primary text-[#1a2f24] text-sm font-black uppercase ring-1 ring-[#1a2f24]/20"></span>
+                                </div>
+                                <p class="text-white/60 text-xs leading-relaxed mb-0">Стабильное
+                                    обновление готово к
+                                    установке</p>
+                            </div>
+                            <a href="{{ project_info.links.repository }}" target="_blank"
+                                class="flex-shrink-0 w-12 h-12 rounded-2xl bg-primary text-background-dark flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg shadow-primary/30">
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </a>
                         </div>
-                        <span
-                            class="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">chevron_right</span>
-                    </a>
-                    {% endfor %}
+
+                        <!-- Install Command Block -->
+                        <div
+                            class="mt-4 p-3 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px] space-y-2 group/cmd relative">
+                            <div class="flex items-center justify-between text-white/30 mb-1">
+                                <span class="flex items-center gap-1.5 uppercase tracking-widest font-bold">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                    Terminal
+                                </span>
+                            </div>
+                            <div class="text-primary/70 mb-1"># Запустить установщик (загружает свежую версию)</div>
+                            <div class="text-white/90 break-all select-all pr-8">curl -sSL
+                                https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash
+                            </div>
+                            <button
+                                onclick="navigator.clipboard.writeText('curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash'); showToast('success', 'Команда скопирована')"
+                                class="absolute right-3 bottom-3 text-white/20 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-white/5">
+                                <span class="material-symbols-outlined text-sm">content_copy</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        {% set links = [
+                        (project_info.links.repository, 'code', 'Репозиторий проекта', 'Исходный код и документация',
+                        'text-white', 'text-white/50'),
+                        (project_info.links.releases, 'deployed_code', 'Список изменений', 'История версий и релизы',
+                        'text-blue-400', 'text-blue-400/50'),
+                        (project_info.links.telegram, 'groups', 'Telegram сообщество', 'Чат поддержки и обсуждения',
+                        'text-sky-400', 'text-sky-400/50'),
+                        (project_info.links.developer, 'person', 'Разработчик', 'Автор проекта', 'text-purple-400',
+                        'text-purple-400/50')
+                        ] %}
+                        {% for url, icon, title, desc, icon_color, desc_color in links %}
+                        <a href="{{ url }}" target="_blank"
+                            class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center {{ icon_color }} group-hover:scale-110 transition-transform">
+                                <span class="material-symbols-outlined">{{ icon }}</span>
+                            </div>
+                            <div class="flex-1">
+                                <h5 class="text-white font-bold text-sm">{{ title }}</h5>
+                                <p class="text-xs {{ desc_color }}">{{ desc }}</p>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">chevron_right</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="p-4 bg-black/20 text-center border-t border-white/5">
+                    <p class="text-xs font-bold text-white/20 uppercase tracking-widest">Designed by {{
+                        project_info.author
+                        }}</p>
                 </div>
             </div>
+        </div>
 
-            <div class="p-4 bg-black/20 text-center border-t border-white/5">
-                <p class="text-xs font-bold text-white/20 uppercase tracking-widest">Designed by {{
-                    project_info.author
-                    }}</p>
+        <!-- Global Custom Confirmation Modal -->
+        <div id="custom-confirm-modal" class="modal-overlay">
+            <div class="modal-content p-6 max-w-md text-center">
+                <div
+                    class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mx-auto mb-4 border border-red-500/10 shadow-[0_0_30px_rgba(239,68,68,0.15)]">
+                    <span class="material-symbols-outlined text-3xl">warning</span>
+                </div>
+                <h3 id="confirm-modal-title" class="text-xl font-bold text-white mb-2">Вы уверены?</h3>
+                <p id="confirm-modal-text" class="text-white/60 text-sm leading-relaxed mb-8">Это действие необратимо.
+                    Пожалуйста, подтвердите выполнение.</p>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" onclick="closeConfirmModal(false)"
+                        class="px-5 py-3 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-all border border-white/5">
+                        Отмена
+                    </button>
+                    <button type="button" onclick="closeConfirmModal(true)"
+                        class="px-5 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all">
+                        Да, выполнить
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Global Custom Confirmation Modal -->
-    <div id="custom-confirm-modal" class="modal-overlay">
-        <div class="modal-content p-6 max-w-md text-center">
-            <div
-                class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mx-auto mb-4 border border-red-500/10 shadow-[0_0_30px_rgba(239,68,68,0.15)]">
-                <span class="material-symbols-outlined text-3xl">warning</span>
-            </div>
-            <h3 id="confirm-modal-title" class="text-xl font-bold text-white mb-2">Вы уверены?</h3>
-            <p id="confirm-modal-text" class="text-white/60 text-sm leading-relaxed mb-8">Это действие необратимо.
-                Пожалуйста, подтвердите выполнение.</p>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <script id="flash-messages" type="application/json">{{ messages|tojson }}</script>
+        {% endif %}
+        {% endwith %}
 
-            <div class="grid grid-cols-2 gap-3">
-                <button type="button" onclick="closeConfirmModal(false)"
-                    class="px-5 py-3 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-all border border-white/5">
-                    Отмена
-                </button>
-                <button type="button" onclick="closeConfirmModal(true)"
-                    class="px-5 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all">
-                    Да, выполнить
-                </button>
-            </div>
-        </div>
-    </div>
+        <script>
+            // ===== УВЕДОМЛЕНИЯ TOAST =====
+            // Функция для отображения всплывающих сообщений
+            window.showToast = function (type, message, duration = 4000) {
+                const container = document.getElementById('toast-container');
+                if (!container) return;
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.innerHTML = `<span>${message}</span><button onclick="this.parentElement.remove()" class="ml-2 hover:opacity-70">×</button>`;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100%)';
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            };
+            // ===== Конец функции showToast =====
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <script id="flash-messages" type="application/json">{{ messages|tojson }}</script>
-    {% endif %}
-    {% endwith %}
+            // ===== ОБРАБОТКА СИСТЕМНЫХ СООБЩЕНИЙ =====
+            // Вывод уведомлений от сервера при загрузке страницы
+            document.addEventListener('DOMContentLoaded', () => {
+                const flashEl = document.getElementById('flash-messages');
+                if (flashEl) try {
+                    JSON.parse(flashEl.textContent || '[]').forEach(item => {
+                        const type = item[0] === 'danger' ? 'danger' : (item[0] === 'success' ? 'success' : 'warning');
+                        window.showToast(type, item[1] || '');
+                    });
+                } catch (e) { }
+            });
+            // ===== Конец обработки сообщений =====
 
-    <script>
-        // ===== УВЕДОМЛЕНИЯ TOAST =====
-        // Функция для отображения всплывающих сообщений
-        window.showToast = function (type, message, duration = 4000) {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.innerHTML = `<span>${message}</span><button onclick="this.parentElement.remove()" class="ml-2 hover:opacity-70">×</button>`;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                setTimeout(() => toast.remove(), 300);
-            }, duration);
-        };
-        // ===== Конец функции showToast =====
+            // ===== УПРАВЛЕНИЕ МОДАЛЬНЫМИ ОКНАМИ =====
+            // Функции открытия, закрытия и обработки кликов вне окон
+            window.openModal = function (modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.classList.add('open');
+            };
 
-        // ===== ОБРАБОТКА СИСТЕМНЫХ СООБЩЕНИЙ =====
-        // Вывод уведомлений от сервера при загрузке страницы
-        document.addEventListener('DOMContentLoaded', () => {
-            const flashEl = document.getElementById('flash-messages');
-            if (flashEl) try {
-                JSON.parse(flashEl.textContent || '[]').forEach(item => {
-                    const type = item[0] === 'danger' ? 'danger' : (item[0] === 'success' ? 'success' : 'warning');
-                    window.showToast(type, item[1] || '');
-                });
-            } catch (e) { }
-        });
-        // ===== Конец обработки сообщений =====
+            window.getCsrfToken = function () {
+                return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                    document.querySelector('input[name="csrf_token"]')?.value || "";
+            };
 
-        // ===== УПРАВЛЕНИЕ МОДАЛЬНЫМИ ОКНАМИ =====
-        // Функции открытия, закрытия и обработки кликов вне окон
-        window.openModal = function (modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) modal.classList.add('open');
-        };
+            window.closeModal = function (modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.classList.remove('open');
+            };
 
-        window.getCsrfToken = function () {
-            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-                document.querySelector('input[name="csrf_token"]')?.value || "";
-        };
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+            });
+            // ===== Конец блока модальных окон =====
 
-        window.closeModal = function (modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) modal.classList.remove('open');
-        };
+            // ===== ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ КЛАВИАТУРЫ =====
+            // Закрытие всех активных окон по клавише Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+            });
+            // ===== Конец обработчиков клавиатуры =====
 
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
-        });
-        // ===== Конец блока модальных окон =====
+            // ===== НАВИГАЦИЯ DROPDOWN =====
+            // ===== НАВИГАЦИЯ DROPDOWN =====
+            function handleOtherPageNav(e, tab) {
+                const baseUrl = e.currentTarget.dataset.baseUrl;
+                const currentPath = window.location.pathname;
 
-        // ===== ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ КЛАВИАТУРЫ =====
-        // Закрытие всех активных окон по клавише Escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
-        });
-        // ===== Конец обработчиков клавиатуры =====
-
-        // ===== НАВИГАЦИЯ DROPDOWN =====
-        // ===== НАВИГАЦИЯ DROPDOWN =====
-        function handleOtherPageNav(e, tab) {
-            const baseUrl = e.currentTarget.dataset.baseUrl;
-            const currentPath = window.location.pathname;
-
-            // Если мы УЖЕ на странице "Прочее", просто переключаем вкладку без перезагрузки
-            if (currentPath === baseUrl || currentPath === baseUrl + '/') {
-                e.preventDefault();
-                const tabBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-                if (tabBtn) {
-                    tabBtn.click();
-                    // Закрываем выпадающее меню
-                    document.querySelectorAll('[id*="dropdown"]').forEach(m => m.classList.add('hidden'));
-                }
-                // Обновляем URL без перезагрузки
-                const newUrl = new URL(window.location);
-                newUrl.searchParams.set('tab', tab);
-                window.history.pushState({}, '', newUrl);
-            }
-            // Если мы на другой странице, ссылка отработает штатно (redirect с ?tab=...)
-        }
-
-        window.getCsrfToken = function () {
-            const meta = document.querySelector('meta[name="csrf-token"]');
-            return meta ? meta.getAttribute('content') : '';
-        };
-
-        // ===== ФУНКЦИЯ: Асинхронное обновление бейджей =====
-        // Загружает количество тикетов без перезагрузки всей страницы
-        const updateGlobalBadges = async () => {
-            try {
-                const badge = document.getElementById('sidebar-support-badge');
-                if (!badge) return;
-
-                const res = await fetch("{{ url_for('support_badge_counts_json') }}");
-
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.ok && data.open_count > 0) {
-                        badge.textContent = data.open_count;
-                        badge.classList.remove('hidden');
-                        badge.style.display = 'flex';
-
-                        // Анимация если есть ожидающие
-                        if (data.waiting_tickets_count > 0) {
-                            badge.classList.add('animate-bg-pulse');
-                        } else {
-                            badge.classList.remove('animate-bg-pulse');
-                        }
-                    } else {
-                        badge.classList.add('hidden');
-                        badge.style.display = 'none';
+                if (currentPath === baseUrl || currentPath === baseUrl + '/') {
+                    e.preventDefault();
+                    const tabBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+                    if (tabBtn) {
+                        tabBtn.click();
                     }
+
+                    const accordionContent = e.currentTarget.closest('.accordion-content');
+                    if (accordionContent) {
+                        accordionContent.querySelectorAll('a').forEach(link => {
+                            link.classList.remove('text-white');
+                            link.classList.add('text-white/50');
+                            const iconEl = link.querySelector('.material-symbols-outlined');
+                            if (iconEl) {
+                                iconEl.classList.remove('text-primary');
+                                iconEl.classList.add('group-hover:text-white/80');
+                            }
+                        });
+                        e.currentTarget.classList.add('text-white');
+                        e.currentTarget.classList.remove('text-white/50');
+                        const targetIcon = e.currentTarget.querySelector('.material-symbols-outlined');
+                        if (targetIcon) {
+                            targetIcon.classList.remove('group-hover:text-white/80');
+                            targetIcon.classList.add('text-primary');
+                        }
+                    }
+
+                    if (window.innerWidth < 1024) {
+                        toggleSidebar();
+                    }
+
+                    const newUrl = new URL(window.location);
+                    newUrl.searchParams.set('tab', tab);
+                    window.history.pushState({}, '', newUrl);
                 }
-            } catch (e) {
-                if (e.name === 'TypeError') return;
-                console.error('Badge update error:', e);
-            }
-        };
-
-        // Запускаем сразу и периодически обновляем
-        document.addEventListener('DOMContentLoaded', () => {
-            updateGlobalBadges();
-            // Обновляем раз в 2 минуты (120000 мс), чтобы не спамить БД
-            setInterval(updateGlobalBadges, 120000);
-        });
-        window.isLoginPage = (html, url) => {
-            if (url && url.includes('/login')) return true;
-            return typeof html === 'string' && html.includes('id' + '="login-identifier-v2"');
-        };
-
-        window.handleSessionExpiry = function () {
-            if (window._isExpiring) return;
-            window._isExpiring = true;
-            showToast('danger', 'Сессия прервана. Нужна повторная авторизация.', 10000);
-            setTimeout(() => { window.location.href = '/login'; }, 1500);
-        };
-
-        // ===== ГЛОБАЛЬНЫЙ ПЕРЕХВАТ FETCH =====
-        const originalFetch = window.fetch;
-        window.fetch = async function (...args) {
-            let response;
-            try {
-                response = await originalFetch.apply(this, args);
-            } catch (err) {
-                throw err;
             }
 
-            if (response.status === 401 || response.status === 403) {
-                if (window.handleSessionExpiry) window.handleSessionExpiry();
-                return response;
-            }
+            window.getCsrfToken = function () {
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                return meta ? meta.getAttribute('content') : '';
+            };
 
-            // Перехват HTML-ответа с авторизацией (если бэкенд возвращает 200 OK со страницей входа)
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('text/html')) {
-                const clone = response.clone();
+            // ===== ФУНКЦИЯ: Асинхронное обновление бейджей =====
+            // Загружает количество тикетов без перезагрузки всей страницы
+            const updateGlobalBadges = async () => {
                 try {
-                    const text = await clone.text();
-                    if (window.isLoginPage && window.isLoginPage(text, response.url)) {
-                        if (window.handleSessionExpiry) window.handleSessionExpiry();
-                        return new Response('Session expired', { status: 401, statusText: 'Unauthorized' });
+                    const badge = document.getElementById('sidebar-support-badge');
+                    if (!badge) return;
+
+                    const res = await fetch("{{ url_for('support_badge_counts_json') }}");
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.ok && data.open_count > 0) {
+                            badge.textContent = data.open_count;
+                            badge.classList.remove('hidden');
+                            badge.style.display = 'flex';
+
+                            // Анимация если есть ожидающие
+                            if (data.waiting_tickets_count > 0) {
+                                badge.classList.add('animate-bg-pulse');
+                            } else {
+                                badge.classList.remove('animate-bg-pulse');
+                            }
+                        } else {
+                            badge.classList.add('hidden');
+                            badge.style.display = 'none';
+                        }
                     }
                 } catch (e) {
-                    console.error('Fetch intercept error:', e);
+                    if (e.name === 'TypeError') return;
+                    console.error('Badge update error:', e);
                 }
-            }
-            return response;
-        };
-
-        // ===== СЕТЕВЫЕ ЗАПРОСЫ API =====
-        // Универсальная функция для выполнения HTTP-запросов с CSRF
-        window.apiRequest = async function (url, options = {}) {
-            const defaults = {
-                method: options.body ? 'POST' : 'GET',
-                credentials: 'same-origin',
-                headers: { 'X-CSRFToken': getCsrfToken() }
             };
-            const config = { ...defaults, ...options };
-            if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
-                const fd = new FormData();
-                fd.append('csrf_token', getCsrfToken());
-                for (const k in config.body) fd.append(k, config.body[k]);
-                config.body = fd;
-            }
-            const resp = await fetch(url, config);
-            if (!resp.ok) {
-                if (resp.status === 401) { handleSessionExpiry(); return null; }
-                throw new Error(resp.statusText);
-            }
-            const contentType = resp.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) return await resp.json();
-            const text = await resp.text();
-            if (isLoginPage(text, resp.url)) { handleSessionExpiry(); return null; }
-            return text;
-        };
-        // ===== Конец функции apiRequest =====
 
-        // ===== ДИАЛОГ ПОДТВЕРЖДЕНИЯ (MODAL) =====
-        let confirmResolver = null;
-        window.showCustomConfirm = function (message, title = 'Вы уверены?') {
-            return new Promise((resolve) => {
-                const modal = document.getElementById('custom-confirm-modal');
-                const titleEl = document.getElementById('confirm-modal-title');
-                const textEl = document.getElementById('confirm-modal-text');
-                if (titleEl) titleEl.textContent = title;
-                if (textEl) textEl.textContent = message;
-                modal.classList.add('open');
-                confirmResolver = resolve;
+            // Запускаем сразу и периодически обновляем
+            document.addEventListener('DOMContentLoaded', () => {
+                updateGlobalBadges();
+                // Обновляем раз в 2 минуты (120000 мс), чтобы не спамить БД
+                setInterval(updateGlobalBadges, 120000);
             });
-        }
-        window.closeConfirmModal = function (result) {
-            const modal = document.getElementById('custom-confirm-modal');
-            modal.classList.remove('open');
-            if (confirmResolver) confirmResolver(result);
-            confirmResolver = null;
-        }
+            window.isLoginPage = (html, url) => {
+                if (url && url.includes('/login')) return true;
+                return typeof html === 'string' && html.includes('id' + '="login-identifier-v2"');
+            };
 
+            window.handleSessionExpiry = function () {
+                if (window._isExpiring) return;
+                window._isExpiring = true;
+                showToast('danger', 'Сессия прервана. Нужна повторная авторизация.', 10000);
+                setTimeout(() => { window.location.href = '/login'; }, 1500);
+            };
 
-        window.showConfirmModal = async function (titleOrMessage, messageOrCallback, callback) {
-            let title = 'Подтверждение';
-            let message = '';
-            let cb = null;
+            // ===== ГЛОБАЛЬНЫЙ ПЕРЕХВАТ FETCH =====
+            const originalFetch = window.fetch;
+            window.fetch = async function (...args) {
+                let response;
+                try {
+                    response = await originalFetch.apply(this, args);
+                } catch (err) {
+                    throw err;
+                }
 
-            if (typeof messageOrCallback === 'function') {
-                // Вызов: showConfirmModal(message, callback)
-                message = titleOrMessage;
-                cb = messageOrCallback;
-            } else {
-                // Вызов: showConfirmModal(title, message, callback)
-                title = titleOrMessage;
-                message = messageOrCallback;
-                cb = callback;
+                if (response.status === 401 || response.status === 403) {
+                    if (window.handleSessionExpiry) window.handleSessionExpiry();
+                    return response;
+                }
+
+                // Перехват HTML-ответа с авторизацией (если бэкенд возвращает 200 OK со страницей входа)
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('text/html')) {
+                    const clone = response.clone();
+                    try {
+                        const text = await clone.text();
+                        if (window.isLoginPage && window.isLoginPage(text, response.url)) {
+                            if (window.handleSessionExpiry) window.handleSessionExpiry();
+                            return new Response('Session expired', { status: 401, statusText: 'Unauthorized' });
+                        }
+                    } catch (e) {
+                        console.error('Fetch intercept error:', e);
+                    }
+                }
+                return response;
+            };
+
+            // ===== СЕТЕВЫЕ ЗАПРОСЫ API =====
+            // Универсальная функция для выполнения HTTP-запросов с CSRF
+            window.apiRequest = async function (url, options = {}) {
+                const defaults = {
+                    method: options.body ? 'POST' : 'GET',
+                    credentials: 'same-origin',
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                };
+                const config = { ...defaults, ...options };
+                if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
+                    const fd = new FormData();
+                    fd.append('csrf_token', getCsrfToken());
+                    for (const k in config.body) fd.append(k, config.body[k]);
+                    config.body = fd;
+                }
+                const resp = await fetch(url, config);
+                if (!resp.ok) {
+                    if (resp.status === 401) { handleSessionExpiry(); return null; }
+                    throw new Error(resp.statusText);
+                }
+                const contentType = resp.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) return await resp.json();
+                const text = await resp.text();
+                if (isLoginPage(text, resp.url)) { handleSessionExpiry(); return null; }
+                return text;
+            };
+            // ===== Конец функции apiRequest =====
+
+            // ===== ДИАЛОГ ПОДТВЕРЖДЕНИЯ (MODAL) =====
+            let confirmResolver = null;
+            window.showCustomConfirm = function (message, title = 'Вы уверены?') {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('custom-confirm-modal');
+                    const titleEl = document.getElementById('confirm-modal-title');
+                    const textEl = document.getElementById('confirm-modal-text');
+                    if (titleEl) titleEl.textContent = title;
+                    if (textEl) textEl.textContent = message;
+                    modal.classList.add('open');
+                    confirmResolver = resolve;
+                });
+            }
+            window.closeConfirmModal = function (result) {
+                const modal = document.getElementById('custom-confirm-modal');
+                modal.classList.remove('open');
+                if (confirmResolver) confirmResolver(result);
+                confirmResolver = null;
             }
 
-            const confirmed = await showCustomConfirm(message, title);
-            if (confirmed && cb) cb();
-        };
 
-        document.addEventListener('submit', async (e) => {
-            const form = e.target;
-            const action = form.action || '';
-            const isBotControl = action.includes('/stop-both-bots') || action.includes('/start-both-bots');
+            window.showConfirmModal = async function (titleOrMessage, messageOrCallback, callback) {
+                let title = 'Подтверждение';
+                let message = '';
+                let cb = null;
 
-            if (isBotControl) {
-                e.preventDefault();
-                e.stopPropagation();
+                if (typeof messageOrCallback === 'function') {
+                    // Вызов: showConfirmModal(message, callback)
+                    message = titleOrMessage;
+                    cb = messageOrCallback;
+                } else {
+                    // Вызов: showConfirmModal(title, message, callback)
+                    title = titleOrMessage;
+                    message = messageOrCallback;
+                    cb = callback;
+                }
+
+                const confirmed = await showCustomConfirm(message, title);
+                if (confirmed && cb) cb();
+            };
+
+            document.addEventListener('submit', async (e) => {
+                const form = e.target;
+                const action = form.action || '';
+                const isBotControl = action.includes('/stop-both-bots') || action.includes('/start-both-bots');
+
+                if (isBotControl) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const confirmMsg = form.getAttribute('data-confirm');
+                    if (confirmMsg) {
+                        const confirmed = await showCustomConfirm(confirmMsg);
+                        if (!confirmed) return;
+                    }
+
+                    try {
+                        const formData = new FormData(form);
+                        const res = await fetch(action, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: formData
+                        });
+
+                        const data = await res.json();
+                        const messageType = data.ok ? 'success' : 'warning';
+                        showToast(messageType, data.message || 'Выполнено');
+
+                        if (data.ok) {
+                            setTimeout(() => window.location.reload(), 500);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showToast('danger', 'Ошибка отправки');
+                    }
+                    return;
+                }
+                // Если у формы есть свой confirm в onclick или она сама обрабатывает AJAX - не трогаем
+                if (form.classList.contains('ajax-form') || form.getAttribute('data-ajax') === 'true') return;
+                if (form.querySelector('[onclick*="confirm("]')) return;
 
                 const confirmMsg = form.getAttribute('data-confirm');
-                if (confirmMsg) {
+                if (confirmMsg && !form.__standard_confirmed) {
+                    e.preventDefault();
                     const confirmed = await showCustomConfirm(confirmMsg);
-                    if (!confirmed) return;
+                    if (confirmed) {
+                        form.__standard_confirmed = true;
+                        form.submit();
+                    }
+                }
+            });
+            // ===== Конец блока подтверждения =====
+
+            // ===== КАСТОМНЫЙ SELECT =====
+            // Инициализация стилизованного выпадающего списка
+            window.initSoftSelect = function (selectId, placeholder) {
+                const sel = document.getElementById(selectId);
+                const wrap = document.querySelector(`.soft-select[data-target="${selectId}"]`);
+                if (!sel || !wrap) return;
+                const toggle = wrap.querySelector('.soft-select-toggle');
+                const menu = wrap.querySelector('.soft-select-menu');
+                if (!toggle || !menu) return;
+                function render() {
+                    menu.innerHTML = '';
+                    Array.from(sel.options || []).forEach(opt => {
+                        const div = document.createElement('div');
+                        div.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
+                        div.dataset.value = opt.value;
+                        div.textContent = opt.textContent || '';
+                        div.addEventListener('click', () => {
+                            sel.value = opt.value;
+                            menu.querySelectorAll('.soft-select-item').forEach(el => el.classList.remove('is-active'));
+                            div.classList.add('is-active');
+                            const textSpan = toggle.querySelector('.soft-select-text');
+                            if (textSpan) textSpan.textContent = opt.textContent || placeholder || '';
+                            else toggle.textContent = opt.textContent || placeholder || '';
+                            wrap.classList.remove('open');
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        });
+                        menu.appendChild(div);
+                    });
+                    const selOpt = Array.from(sel.options || []).find(o => o.selected) || sel.options[0];
+                    const textSpan = toggle.querySelector('.soft-select-text');
+                    if (textSpan) textSpan.textContent = (selOpt && selOpt.textContent) || placeholder || '';
+                    else toggle.textContent = (selOpt && selOpt.textContent) || placeholder || '';
+                }
+                render();
+                if (wrap.dataset.initialized === 'true') return;
+                sel.addEventListener('change', render);
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    wrap.classList.toggle('open');
+                });
+                document.addEventListener('click', (e) => {
+                    if (!wrap.contains(e.target)) wrap.classList.remove('open');
+                });
+                wrap.dataset.initialized = 'true';
+            };
+            // ===== Конец инициализации select =====
+
+            // ===== ОБНОВЛЕНИЕ КОНТЕЙНЕРОВ ДАННЫХ =====
+            // Функция для динамической перезагрузки контента по ID
+            window.refreshContainerById = async function (id) {
+                const el = document.getElementById(id);
+                if (!el || !el.getAttribute('data-fetch-url')) return;
+                try {
+                    const html = await apiRequest(el.getAttribute('data-fetch-url'), { headers: { 'Accept': 'text/html' } });
+                    if (html) el.innerHTML = html;
+                } catch (e) { }
+            };
+            // ===== Конец функции обновления =====
+
+            // ===== УПРАВЛЕНИЕ НАЗВАНИЕМ ПАНЕЛИ =====
+            // Скрипт для редактирования и сохранения заголовка сайта
+            (function () {
+                const titleEl = document.getElementById('brand-title'), editBtn = document.getElementById('brand-edit'), inputEl = document.getElementById('brand-input');
+                if (!titleEl || !editBtn) return;
+                editBtn.addEventListener('click', () => {
+                    if (inputEl) inputEl.value = titleEl.textContent.trim();
+                    openModal('brandModal');
+                });
+            })();
+            // ===== Конец блока названия =====
+
+            // ===== ПРОВЕРКА ОБНОВЛЕНИЙ =====
+            (function () {
+                const aboutBtns = [document.getElementById('about-info-btn'), document.getElementById('about-info-btn-mobile')].filter(Boolean);
+                if (!aboutBtns.length) return;
+
+                async function checkForUpdates() {
+                    aboutBtns.forEach(btn => {
+                        const icon = btn.querySelector('.material-symbols-outlined');
+                        if (icon) icon.classList.add('animate-spin-slow');
+                    });
+
+                    try {
+                        const data = await apiRequest('/update/check');
+                        const updateNotification = document.getElementById('update-notification');
+                        const latestVersionSpan = document.getElementById('latest-version');
+
+                        if (data && data.update_available) {
+                            aboutBtns.forEach(btn => {
+                                btn.classList.remove('text-white/40', 'hover:text-white', 'text-white/50');
+                                btn.classList.add('text-primary', 'animate-glow-pulse');
+
+                                const badge = btn.querySelector('[id^="about-new-badge"]');
+                                const infoIcon = btn.querySelector('[id^="about-info-icon"]');
+
+                                if (badge) {
+                                    badge.classList.remove('hidden');
+                                    badge.classList.add('flex');
+                                }
+                                if (infoIcon) infoIcon.classList.add('hidden');
+
+                                if (btn.id === 'about-info-btn-mobile') {
+                                    btn.classList.remove('text-primary', 'animate-glow-pulse');
+                                    btn.classList.add('border-red-500/50');
+                                }
+                            });
+
+                            if (updateNotification && latestVersionSpan) {
+                                latestVersionSpan.textContent = data.latest_version;
+                                updateNotification.classList.remove('hidden');
+                            }
+                        } else {
+                            aboutBtns.forEach(btn => {
+                                btn.classList.add('text-white/50', 'hover:text-white');
+                                btn.classList.remove('text-primary', 'animate-glow-pulse', 'border-red-500/50');
+
+                                const badge = btn.querySelector('[id^="about-new-badge"]');
+                                const infoIcon = btn.querySelector('[id^="about-info-icon"]');
+
+                                if (badge) {
+                                    badge.classList.add('hidden');
+                                    badge.classList.remove('flex');
+                                }
+                                if (infoIcon) infoIcon.classList.remove('hidden');
+                            });
+
+                            if (updateNotification) updateNotification.classList.add('hidden');
+                        }
+                    } catch (e) {
+                        console.error('Update check failed:', e);
+                    } finally {
+                        aboutBtns.forEach(btn => {
+                            const icon = btn.querySelector('.material-symbols-outlined');
+                            if (icon) setTimeout(() => icon.classList.remove('animate-spin-slow'), 500);
+                        });
+                    }
+                }
+                checkForUpdates();
+                aboutBtns.forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        openModal('aboutModal');
+                        await checkForUpdates();
+                    });
+                });
+            })();
+
+            // ===== ПЕРЕЗАГРУЗКА СЕРВИСОВ =====
+            // Функция для полного перезапуска бота
+            (function () {
+                const btn = document.getElementById('btn-restart-bot');
+                if (!btn) return;
+                btn.addEventListener('click', async () => {
+                    if (await showCustomConfirm('Перезагрузить систему? Это действие прервет работу бота на 10-20 секунд.')) {
+                        try {
+                            const data = await apiRequest('/other/restart', { method: 'POST' });
+                            if (data && data.ok) {
+                                showToast('success', data.message || 'Перезапуск инициирован');
+                                btn.disabled = true; btn.classList.add('opacity-50');
+                            } else { showToast('danger', (data && data.error) || 'Ошибка при перезагрузке'); }
+                        } catch (e) { showToast('danger', 'Ошибка при попытке связи с сервером'); }
+                    }
+                });
+            })();
+
+            // ===== УНИВЕРСАЛЬНЫЙ AJAX ОБРАБОТЧИК =====
+            // Позволяет отправлять формы без перезагрузки страницы
+            async function handleGlobalAjax(e) {
+                const form = e.target.closest('form[data-ajax="true"], form.ajax-form');
+                if (!form) return;
+
+                // Блокируем всплытие, чтобы другие обработчики (например, в users.html) не перехватили запрос без подтверждения
+                e.stopImmediatePropagation();
+
+                // Проверка на подтверждение
+                const confirmMsg = form.getAttribute('data-confirm');
+                if (confirmMsg && !form.__confirmed) {
+                    e.preventDefault();
+                    (async () => {
+                        const confirmed = await showCustomConfirm(confirmMsg);
+                        if (confirmed) {
+                            form.__confirmed = true;
+                            form.dispatchEvent(new Event('submit', { bubbles: true }));
+                            form.__confirmed = false;
+                        }
+                    })();
+                    return;
+                }
+
+                e.preventDefault();
+                const btn = form.querySelector('button[type="submit"]');
+                const originalContent = btn ? btn.innerHTML : null;
+
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">sync</span>';
                 }
 
                 try {
                     const formData = new FormData(form);
-                    const res = await fetch(action, {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: formData
+                    if (e.submitter && e.submitter.name) {
+                        formData.append(e.submitter.name, e.submitter.value);
+                    }
+                    const response = await fetch(form.action, {
+                        method: form.method || 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrfToken() }
                     });
 
-                    const data = await res.json();
-                    const messageType = data.ok ? 'success' : 'warning';
-                    showToast(messageType, data.message || 'Выполнено');
+                    const contentType = response.headers.get('content-type');
+                    const isJson = contentType && contentType.includes('application/json');
+                    const data = isJson ? await response.json() : null;
+                    const htmlStr = !isJson ? await response.text() : null;
 
-                    if (data.ok) {
-                        setTimeout(() => window.location.reload(), 500);
+                    if (htmlStr && isLoginPage(htmlStr, response.url)) {
+                        handleSessionExpiry();
+                        return;
                     }
-                } catch (err) {
-                    console.error(err);
-                    showToast('danger', 'Ошибка отправки');
-                }
-                return;
-            }
-            // Если у формы есть свой confirm в onclick или она сама обрабатывает AJAX - не трогаем
-            if (form.classList.contains('ajax-form') || form.getAttribute('data-ajax') === 'true') return;
-            if (form.querySelector('[onclick*="confirm("]')) return;
 
-            const confirmMsg = form.getAttribute('data-confirm');
-            if (confirmMsg && !form.__standard_confirmed) {
-                e.preventDefault();
-                const confirmed = await showCustomConfirm(confirmMsg);
-                if (confirmed) {
-                    form.__standard_confirmed = true;
-                    form.submit();
-                }
-            }
-        });
-        // ===== Конец блока подтверждения =====
+                    if (response.ok) {
+                        const successMsg = form.getAttribute('data-success-msg') || form.getAttribute('data-success') || (data && (data.message || data.msg)) || 'Выполнено';
+                        showToast('success', successMsg);
 
-        // ===== КАСТОМНЫЙ SELECT =====
-        // Инициализация стилизованного выпадающего списка
-        window.initSoftSelect = function (selectId, placeholder) {
-            const sel = document.getElementById(selectId);
-            const wrap = document.querySelector(`.soft-select[data-target="${selectId}"]`);
-            if (!sel || !wrap) return;
-            const toggle = wrap.querySelector('.soft-select-toggle');
-            const menu = wrap.querySelector('.soft-select-menu');
-            if (!toggle || !menu) return;
-            function render() {
-                menu.innerHTML = '';
-                Array.from(sel.options || []).forEach(opt => {
-                    const div = document.createElement('div');
-                    div.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
-                    div.dataset.value = opt.value;
-                    div.textContent = opt.textContent || '';
-                    div.addEventListener('click', () => {
-                        sel.value = opt.value;
-                        menu.querySelectorAll('.soft-select-item').forEach(el => el.classList.remove('is-active'));
-                        div.classList.add('is-active');
-                        const textSpan = toggle.querySelector('.soft-select-text');
-                        if (textSpan) textSpan.textContent = opt.textContent || placeholder || '';
-                        else toggle.textContent = opt.textContent || placeholder || '';
-                        wrap.classList.remove('open');
-                        sel.dispatchEvent(new Event('change', { bubbles: true }));
-                    });
-                    menu.appendChild(div);
-                });
-                const selOpt = Array.from(sel.options || []).find(o => o.selected) || sel.options[0];
-                const textSpan = toggle.querySelector('.soft-select-text');
-                if (textSpan) textSpan.textContent = (selOpt && selOpt.textContent) || placeholder || '';
-                else toggle.textContent = (selOpt && selOpt.textContent) || placeholder || '';
-            }
-            render();
-            if (wrap.dataset.initialized === 'true') return;
-            sel.addEventListener('change', render);
-            toggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                wrap.classList.toggle('open');
-            });
-            document.addEventListener('click', (e) => {
-                if (!wrap.contains(e.target)) wrap.classList.remove('open');
-            });
-            wrap.dataset.initialized = 'true';
-        };
-        // ===== Конец инициализации select =====
-
-        // ===== ОБНОВЛЕНИЕ КОНТЕЙНЕРОВ ДАННЫХ =====
-        // Функция для динамической перезагрузки контента по ID
-        window.refreshContainerById = async function (id) {
-            const el = document.getElementById(id);
-            if (!el || !el.getAttribute('data-fetch-url')) return;
-            try {
-                const html = await apiRequest(el.getAttribute('data-fetch-url'), { headers: { 'Accept': 'text/html' } });
-                if (html) el.innerHTML = html;
-            } catch (e) { }
-        };
-        // ===== Конец функции обновления =====
-
-        // ===== УПРАВЛЕНИЕ НАЗВАНИЕМ ПАНЕЛИ =====
-        // Скрипт для редактирования и сохранения заголовка сайта
-        (function () {
-            const titleEl = document.getElementById('brand-title'), editBtn = document.getElementById('brand-edit'), inputEl = document.getElementById('brand-input');
-            if (!titleEl || !editBtn) return;
-            editBtn.addEventListener('click', () => {
-                if (inputEl) inputEl.value = titleEl.textContent.trim();
-                openModal('brandModal');
-            });
-        })();
-        // ===== Конец блока названия =====
-
-        // ===== ПРОВЕРКА ОБНОВЛЕНИЙ =====
-        // Запрос к серверу для поиска новых версий проекта
-        (function () {
-            const aboutBtn = document.getElementById('about-info-btn');
-            if (!aboutBtn) return;
-            const icon = aboutBtn.querySelector('.material-symbols-outlined');
-
-            async function checkForUpdates() {
-                if (icon) icon.classList.add('animate-spin-slow');
-                try {
-                    const data = await apiRequest('/update/check');
-                    const updateNotification = document.getElementById('update-notification');
-                    const latestVersionSpan = document.getElementById('latest-version');
-
-                    if (data && data.update_available) {
-                        aboutBtn.classList.remove('text-white/40', 'hover:text-white');
-                        aboutBtn.classList.add('text-primary', 'animate-glow-pulse');
-                        const badge = document.getElementById('about-new-badge');
-                        const infoIcon = document.getElementById('about-info-icon');
-                        if (badge) badge.classList.remove('hidden');
-                        if (infoIcon) infoIcon.classList.add('hidden');
-
-                        if (updateNotification && latestVersionSpan) {
-                            latestVersionSpan.textContent = data.latest_version;
-                            updateNotification.classList.remove('hidden');
-                        }
-                    } else {
-                        aboutBtn.classList.add('text-white/40', 'hover:text-white');
-                        aboutBtn.classList.remove('text-primary', 'animate-glow-pulse');
-                        const badge = document.getElementById('about-new-badge');
-                        const infoIcon = document.getElementById('about-info-icon');
-                        if (badge) badge.classList.add('hidden');
-                        if (infoIcon) infoIcon.classList.remove('hidden');
-
-                        if (updateNotification) updateNotification.classList.add('hidden');
-                    }
-                } catch (e) {
-                    console.error('Update check failed:', e);
-                } finally {
-                    if (icon) setTimeout(() => icon.classList.remove('animate-spin-slow'), 500);
-                }
-            }
-            checkForUpdates();
-            aboutBtn.addEventListener('click', async () => {
-                openModal('aboutModal');
-                await checkForUpdates();
-            });
-        })();
-        // ===== Конец блока обновлений =====
-
-        // ===== ПЕРЕЗАГРУЗКА СЕРВИСОВ =====
-        // Функция для полного перезапуска бота
-        (function () {
-            const btn = document.getElementById('btn-restart-bot');
-            if (!btn) return;
-            btn.addEventListener('click', async () => {
-                if (await showCustomConfirm('Перезагрузить систему? Это действие прервет работу бота на 10-20 секунд.')) {
-                    try {
-                        const data = await apiRequest('/other/restart', { method: 'POST' });
-                        if (data && data.ok) {
-                            showToast('success', data.message || 'Перезапуск инициирован');
-                            btn.disabled = true; btn.classList.add('opacity-50');
-                        } else { showToast('danger', (data && data.error) || 'Ошибка при перезагрузке'); }
-                    } catch (e) { showToast('danger', 'Ошибка при попытке связи с сервером'); }
-                }
-            });
-        })();
-
-        // ===== УНИВЕРСАЛЬНЫЙ AJAX ОБРАБОТЧИК =====
-        // Позволяет отправлять формы без перезагрузки страницы
-        async function handleGlobalAjax(e) {
-            const form = e.target.closest('form[data-ajax="true"], form.ajax-form');
-            if (!form) return;
-
-            // Блокируем всплытие, чтобы другие обработчики (например, в users.html) не перехватили запрос без подтверждения
-            e.stopImmediatePropagation();
-
-            // Проверка на подтверждение
-            const confirmMsg = form.getAttribute('data-confirm');
-            if (confirmMsg && !form.__confirmed) {
-                e.preventDefault();
-                (async () => {
-                    const confirmed = await showCustomConfirm(confirmMsg);
-                    if (confirmed) {
-                        form.__confirmed = true;
-                        form.dispatchEvent(new Event('submit', { bubbles: true }));
-                        form.__confirmed = false;
-                    }
-                })();
-                return;
-            }
-
-            e.preventDefault();
-            const btn = form.querySelector('button[type="submit"]');
-            const originalContent = btn ? btn.innerHTML : null;
-
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">sync</span>';
-            }
-
-            try {
-                const formData = new FormData(form);
-                if (e.submitter && e.submitter.name) {
-                    formData.append(e.submitter.name, e.submitter.value);
-                }
-                const response = await fetch(form.action, {
-                    method: form.method || 'POST',
-                    body: formData,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrfToken() }
-                });
-
-                const contentType = response.headers.get('content-type');
-                const isJson = contentType && contentType.includes('application/json');
-                const data = isJson ? await response.json() : null;
-                const htmlStr = !isJson ? await response.text() : null;
-
-                if (htmlStr && isLoginPage(htmlStr, response.url)) {
-                    handleSessionExpiry();
-                    return;
-                }
-
-                if (response.ok) {
-                    const successMsg = form.getAttribute('data-success-msg') || form.getAttribute('data-success') || (data && (data.message || data.msg)) || 'Выполнено';
-                    showToast('success', successMsg);
-
-                    // Обновление контента
-                    const refreshPart = form.getAttribute('data-refresh') || form.getAttribute('data-refresh-target');
-                    if (refreshPart === 'page') {
-                        const res = await fetch(window.location.href);
-                        const html = await res.text();
-                        if (isLoginPage(html, res.url)) { handleSessionExpiry(); return; }
-                        const doc = new DOMParser().parseFromString(html, 'text/html');
-                        document.querySelectorAll('[data-refresh-part]').forEach(el => {
-                            const partId = el.getAttribute('data-refresh-part');
-                            const newEl = doc.querySelector(`[data-refresh-part="${partId}"]`);
-                            if (newEl) el.innerHTML = newEl.innerHTML;
-                        });
-                    } else if (refreshPart) {
-                        const target = document.getElementById(refreshPart);
-                        if (target && target.getAttribute('data-fetch-url')) {
-                            const res = await fetch(target.getAttribute('data-fetch-url'));
-                            if (res.ok) {
-                                const contentType = res.headers.get('content-type');
-                                if (contentType && contentType.includes('application/json')) {
-                                    const json = await res.json();
-                                    if (json.table_html) {
-                                        target.innerHTML = json.table_html;
-                                        // Если есть пагинация рядом - обновляем и её
-                                        const pagId = target.id.replace('tbody', 'pagination').replace('list', 'pagination');
-                                        const pagEl = document.getElementById(pagId);
-                                        if (pagEl && json.pagination_html) pagEl.innerHTML = json.pagination_html;
+                        // Обновление контента
+                        const refreshPart = form.getAttribute('data-refresh') || form.getAttribute('data-refresh-target');
+                        if (refreshPart === 'page') {
+                            const res = await fetch(window.location.href);
+                            const html = await res.text();
+                            if (isLoginPage(html, res.url)) { handleSessionExpiry(); return; }
+                            const doc = new DOMParser().parseFromString(html, 'text/html');
+                            document.querySelectorAll('[data-refresh-part]').forEach(el => {
+                                const partId = el.getAttribute('data-refresh-part');
+                                const newEl = doc.querySelector(`[data-refresh-part="${partId}"]`);
+                                if (newEl) el.innerHTML = newEl.innerHTML;
+                            });
+                        } else if (refreshPart) {
+                            const target = document.getElementById(refreshPart);
+                            if (target && target.getAttribute('data-fetch-url')) {
+                                const res = await fetch(target.getAttribute('data-fetch-url'));
+                                if (res.ok) {
+                                    const contentType = res.headers.get('content-type');
+                                    if (contentType && contentType.includes('application/json')) {
+                                        const json = await res.json();
+                                        if (json.table_html) {
+                                            target.innerHTML = json.table_html;
+                                            // Если есть пагинация рядом - обновляем и её
+                                            const pagId = target.id.replace('tbody', 'pagination').replace('list', 'pagination');
+                                            const pagEl = document.getElementById(pagId);
+                                            if (pagEl && json.pagination_html) pagEl.innerHTML = json.pagination_html;
+                                        }
+                                    } else {
+                                        const html = await res.text();
+                                        if (isLoginPage(html, res.url)) { handleSessionExpiry(); return; }
+                                        target.innerHTML = html;
                                     }
-                                } else {
-                                    const html = await res.text();
-                                    if (isLoginPage(html, res.url)) { handleSessionExpiry(); return; }
-                                    target.innerHTML = html;
                                 }
                             }
                         }
+
+                        // Закрытие модалок
+                        if (!form.hasAttribute('data-keep-modal')) {
+                            const modal = form.closest('.modal-overlay');
+                            if (modal) closeModal(modal.id);
+                        }
+
+                        if (form.hasAttribute('data-reset')) form.reset();
+
+                        // Вызов кастомного колбэка если есть
+                        const callback = form.getAttribute('data-callback');
+                        if (callback && typeof window[callback] === 'function') window[callback](data);
+
+                    } else {
+                        const errorMsg = (data && (data.error || data.message)) || 'Ошибка сервера';
+                        showToast('danger', errorMsg);
                     }
-
-                    // Закрытие модалок
-                    if (!form.hasAttribute('data-keep-modal')) {
-                        const modal = form.closest('.modal-overlay');
-                        if (modal) closeModal(modal.id);
+                } catch (err) {
+                    console.error('AJAX Error:', err);
+                    showToast('danger', 'Ошибка сети');
+                } finally {
+                    if (btn && originalContent !== null) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalContent;
                     }
-
-                    if (form.hasAttribute('data-reset')) form.reset();
-
-                    // Вызов кастомного колбэка если есть
-                    const callback = form.getAttribute('data-callback');
-                    if (callback && typeof window[callback] === 'function') window[callback](data);
-
-                } else {
-                    const errorMsg = (data && (data.error || data.message)) || 'Ошибка сервера';
-                    showToast('danger', errorMsg);
-                }
-            } catch (err) {
-                console.error('AJAX Error:', err);
-                showToast('danger', 'Ошибка сети');
-            } finally {
-                if (btn && originalContent !== null) {
-                    btn.disabled = false;
-                    btn.innerHTML = originalContent;
                 }
             }
-        }
 
-        // ===== ПЕРЕКЛЮЧЕНИЕ ТЕМЫ =====
-        (function () {
-            const btn = document.getElementById('theme-toggle-btn');
-            if (!btn) return;
-            btn.addEventListener('click', () => {
-                const isDark = document.documentElement.classList.toggle('dark');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            // ===== ПЕРЕКЛЮЧЕНИЕ ТЕМЫ =====
+            (function () {
+                const btn = document.getElementById('theme-toggle-btn');
+                if (!btn) return;
+                btn.addEventListener('click', () => {
+                    const isDark = document.documentElement.classList.toggle('dark');
+                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                });
+            })();
+
+            document.addEventListener('submit', handleGlobalAjax);
+
+            // ===== УПРАВЛЕНИЕ САЙДБАРОМ =====
+            document.addEventListener('DOMContentLoaded', () => {
+
             });
-        })();
 
-        document.addEventListener('submit', handleGlobalAjax);
-        // ===== Конец AJAX обработчика =====
-    </script>
+            function toggleDesktopSidebar() {
+                const sidebar = document.getElementById('main-sidebar');
+                const icon = document.getElementById('desktop-sidebar-icon');
+                if (!sidebar || !icon) return;
 
-    {% block scripts %}{% endblock %}
+                const isCollapsed = sidebar.classList.contains('w-[80px]');
+
+                if (isCollapsed) {
+                    sidebar.classList.remove('w-[80px]');
+                    sidebar.classList.add('w-72');
+                    icon.textContent = 'menu_open';
+                    localStorage.setItem('sidebar-collapsed', 'false');
+                } else {
+                    sidebar.classList.add('w-[80px]');
+                    sidebar.classList.remove('w-72');
+                    icon.textContent = 'menu';
+                    localStorage.setItem('sidebar-collapsed', 'true');
+                }
+            }
+
+            function toggleSidebar() {
+                const sidebar = document.getElementById('main-sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (!sidebar || !overlay) return;
+
+                sidebar.classList.toggle('-translate-x-full');
+
+                if (sidebar.classList.contains('-translate-x-full')) {
+                    overlay.classList.add('hidden');
+                    setTimeout(() => overlay.classList.remove('opacity-100'), 10);
+                    document.body.classList.remove('overflow-hidden');
+                } else {
+                    overlay.classList.remove('hidden');
+                    setTimeout(() => overlay.classList.add('opacity-100'), 10);
+                }
+            }
+
+            function toggleAccordion(btn) {
+                const content = btn.nextElementSibling;
+                const icon = btn.querySelector('.accordion-icon');
+
+                if (!content || !icon) return;
+
+                if (content.classList.contains('max-h-0')) {
+                    content.classList.remove('max-h-0', 'opacity-0');
+                    content.classList.add('max-h-[800px]', 'opacity-100', 'mt-1');
+                    icon.classList.add('rotate-180');
+                    localStorage.setItem('accordion-more-expanded', 'true');
+                } else {
+                    content.classList.add('max-h-0', 'opacity-0');
+                    content.classList.remove('max-h-[800px]', 'opacity-100', 'mt-1');
+                    icon.classList.remove('rotate-180');
+                    localStorage.setItem('accordion-more-expanded', 'false');
+                }
+            }
+        </script>
+
+        {% block scripts %}{% endblock %}
 </body>
 
 </html>

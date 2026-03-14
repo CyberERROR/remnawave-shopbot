@@ -944,6 +944,30 @@ def get_paginated_trials(page: int = 1, per_page: int = 10) -> tuple[list[dict[s
         return items, total
 
 
+def get_promo_code_usages(code: str) -> list[dict]:
+    code_s = (code or "").strip().upper()
+    query = """
+        SELECT 
+            u.user_id, 
+            us.username, 
+            u.applied_amount, 
+            u.used_at,
+            p.promo_type,
+            p.reward_value,
+            p.discount_percent,
+            p.discount_amount
+        FROM promo_code_usages u
+        LEFT JOIN users us ON u.user_id = us.telegram_id
+        LEFT JOIN promo_codes p ON u.code = p.code
+        WHERE u.code = ?
+        ORDER BY u.used_at DESC
+    """
+    with _connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, (code_s,))
+        return [dict(row) for row in cursor.fetchall()]
+
+
 def get_total_spent_by_method(payment_method: str) -> float:
     return database.get_total_spent_by_method(payment_method)
 
