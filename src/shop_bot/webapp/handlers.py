@@ -894,7 +894,7 @@ def _get_servers_and_plans_html(user_id: int | None = None):
 
 
 def _render_banned_page(webapp_settings: dict):
-    title = webapp_settings.get("webapp_title") or get_setting("panel_brand_title") or "TOR VPN"
+    title = webapp_settings.get("webapp_title") or get_setting("panel_brand_title") or "VPN"
     logo = webapp_settings.get("webapp_logo") or ""
     icon = webapp_settings.get("webapp_icon") or ""
     
