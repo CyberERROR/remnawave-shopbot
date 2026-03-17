@@ -2,6 +2,7 @@ import logging
 from aiogram import Bot, Router, F, types, html
 from aiogram.types import FSInputFile
 import os
+import time
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -254,16 +255,32 @@ def get_support_router() -> Router:
             return True
         return False
 
+    def _cancel_creation_kb() -> types.InlineKeyboardMarkup:
+        return types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="❌ Отменить создание", callback_data="support_cancel_creation")]
+        ])
+
     async def _send_subject_prompt(message: types.Message | types.CallbackQuery, state: FSMContext):
+        current_state = await state.get_state()
+        if current_state in [SupportDialog.waiting_for_subject, SupportDialog.waiting_for_message]:
+            text = "⚠️ <b>Вы уже создаете обращение.</b>\nПожалуйста, завершите текущий процесс или отмените его."
+            if isinstance(message, types.CallbackQuery):
+                await message.answer(text, show_alert=True)
+            else:
+                await message.answer(text, reply_markup=_cancel_creation_kb())
+            return
+
         text = (
             "📝 <b>Шаг 1/2: Тема обращения</b>\n\n"
             "Напишите <b>краткий заголовок</b> (3-5 слов).\n"
-            "<i>Пример: «Не работает VPN», «Проблема с оплатой»</i>"
+            "<i>Пример: «Не работает VPN», «Проблема с оплатой»</i>\n\n"
+            "Подробно описать проблему нужно будет в <b>следующем меню</b>."
         )
         if isinstance(message, types.CallbackQuery):
-            await message.message.edit_text(text)
+            await message.message.edit_text(text, reply_markup=_cancel_creation_kb())
         else:
-            await message.answer(text)
+            await message.answer(text, reply_markup=_cancel_creation_kb())
+        await state.update_data(start_time=time.time())
         await state.set_state(SupportDialog.waiting_for_subject)
     
     async def _send_user_tickets_list(event: types.Message | types.CallbackQuery, user_id: int):
@@ -493,7 +510,6 @@ def get_support_router() -> Router:
              await _safe_edit(call, TXT_ACCESS_DENIED)
              return
 
-        # Check permissions
         if not is_admin:
             if ticket.get('user_id') != call.from_user.id:
                 await _safe_edit(call, TXT_ACCESS_DENIED)
@@ -503,9 +519,7 @@ def get_support_router() -> Router:
                 return
 
         if set_ticket_status(ticket_id, new_status):
-            # Forum update
             await _manage_forum_topic(bot, ticket, 'close' if new_status == 'closed' else 'reopen')
-            # User Notification
             if is_admin:
                  user_id = int(ticket.get('user_id'))
                  await _send_ticket_closed_notification(bot, user_id, ticket_id, is_user_action=False)
@@ -564,12 +578,6 @@ def get_support_router() -> Router:
              return
          await _send_subject_prompt(event, state)
 
-    # ==========================================
-    # 3) HANDLERS
-    # ==========================================
-
-
-
     @router.message(CommandStart(), F.chat.type == "private")
     async def start_handler(message: types.Message, state: FSMContext, bot: Bot):
         args = (message.text or "").split(maxsplit=1)
@@ -598,25 +606,73 @@ def get_support_router() -> Router:
     async def support_new_ticket_handler(callback: types.CallbackQuery, state: FSMContext):
         await _start_ticket_creation_flow(callback, state)
 
+    @router.callback_query(F.data == "support_cancel_creation")
+    async def support_cancel_creation_handler(callback: types.CallbackQuery, state: FSMContext):
+        await state.clear()
+        await callback.answer("✅ Создание обращения отменено.")
+        
+        support_text = get_setting("support_text") or "<b>👨‍💻 Поддержка</b>\n\nЗдесь вы можете создать обращение или посмотреть историю своих заявок."
+        await callback.message.answer(
+            support_text,
+            reply_markup=_user_main_reply_kb()
+        )
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+
     @router.message(SupportDialog.waiting_for_subject, F.chat.type == "private")
     async def support_subject_received(message: types.Message, state: FSMContext):
+        data = await state.get_data()
+        start_time = data.get("start_time", 0)
+        if time.time() - start_time > 900:
+            await state.clear()
+            await _start_ticket_creation_flow(message, state)
+            return
+
         if await _check_banned(message, state):
             return
+
         subject = (message.text or "").strip()
-        await state.update_data(subject=subject)
+        if subject in ["✍️ Новое обращение", "📨 Мои обращения"]:
+            await _send_subject_prompt(message, state)
+            return
+
+        if len(subject) > 50:
+            await message.answer(
+                "⚠️ <b>Заголовок слишком длинный!</b>\n\n"
+                "Пожалуйста, опишите тему кратко (до 50 символов).\n"
+                "Подробности вы сможете написать на следующем шаге."
+            )
+            return
+
+        await state.update_data(subject=subject, start_time=time.time())
         await message.answer(
             "✉️ <b>Шаг 2/2: Описание проблемы</b>\n\n"
             "Теперь максимально подробно опишите ситуацию <b>одним сообщением</b>.\n"
-            "<i>Можете прикрепить скриншот или видео.</i>"
+            "<i>Можете прикрепить скриншот или видео.</i>",
+            reply_markup=_cancel_creation_kb()
         )
         await state.set_state(SupportDialog.waiting_for_message)
 
     @router.message(SupportDialog.waiting_for_message, F.chat.type == "private")
     async def support_message_received(message: types.Message, state: FSMContext, bot: Bot):
+        data = await state.get_data()
+        start_time = data.get("start_time", 0)
+        if time.time() - start_time > 900:
+            await state.clear()
+            await _start_ticket_creation_flow(message, state)
+            return
+
         if await _check_banned(message, state):
             return
+        
+        text_content = (message.text or "").strip()
+        if text_content in ["✍️ Новое обращение", "📨 Мои обращения"]:
+            await _send_subject_prompt(message, state)
+            return
+
         user_id = message.from_user.id
-        data = await state.get_data()
         raw_subject = (data.get("subject") or "").strip()
         subject = raw_subject if raw_subject else "Обращение без темы"
         ticket_id, created_new = get_or_create_open_ticket(user_id, subject)
@@ -627,10 +683,12 @@ def get_support_router() -> Router:
 
         await _process_ticket_message_flow(bot, message, state, ticket_id, subject, created_new)
         
-        # Old logic removed, used helper
-
     @router.callback_query(F.data == "support_my_tickets")
-    async def support_my_tickets_handler(callback: types.CallbackQuery):
+    async def support_my_tickets_handler(callback: types.CallbackQuery, state: FSMContext):
+        current_state = await state.get_state()
+        if current_state in [SupportDialog.waiting_for_subject, SupportDialog.waiting_for_message]:
+            await callback.answer("⚠️ Пожалуйста, сначала завершите создание обращения.", show_alert=True)
+            return
         await callback.answer()
         await _send_user_tickets_list(callback, callback.from_user.id)
 
@@ -649,16 +707,23 @@ def get_support_router() -> Router:
         parts = [
             f"<b>🧾 Тикет #{ticket_id}</b>",
             f"<b>Статус:</b> {human_status}",
-            f"<b>Тема:</b> {ticket.get('subject') or '—'}",
+            f"<b>Тема:</b> <i>{ticket.get('subject') or '—'}</i>",
             f"<b>Важность:</b> {star_line}",
             ""
         ]
         for m in messages:
             if m.get('sender') == 'note':
                 continue
-            who = "<b>Вы</b>" if m.get('sender') == 'user' else '<b>Поддержка</b>'
+            
+            is_user = m.get('sender') == 'user'
+            icon = "👤" if is_user else "👨‍💻"
+            who = "<b>Вы</b>" if is_user else "<b>Поддержка</b>"
             created = m.get('created_at')
-            parts.append(f"{who} ({created}):\n{m.get('content','')}\n")
+            content = m.get('content', '')
+            
+            parts.append(f"{icon} {who} ({created}):")
+            parts.append(f"<blockquote>{content}</blockquote>")
+            
         final_text = "\n".join(parts)
         is_open = (ticket.get('status') == 'open')
         buttons = []
@@ -674,9 +739,6 @@ def get_support_router() -> Router:
         ticket_id = int(callback.data.split("_")[-1])
         ticket = get_ticket(ticket_id)
         if await _check_banned(callback, state):
-             # Original code executed edit_text here if banned.
-             # Our _check_banned does answer(alert).
-             # To preserve UX of "replacing" the menu with banned message:
              markup = _support_contact_markup()
              if markup:
                 await callback.message.edit_text(TXT_BAN_RESTRICTED, reply_markup=markup)
@@ -895,10 +957,6 @@ def get_support_router() -> Router:
     @router.callback_query(F.data.startswith("admin_reply_dm_"))
     async def admin_reply_dm_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
         await callback.answer()
-        # Here logic was slightly different: only check is_admin(callback.from_user.id)
-        # Because Admin DM might happen from private chat where bot is not admin.
-        # _get_ticket_and_check_admin checks both is_admin setting and chat admin.
-        # It should be safe to use it.
         ticket, ticket_id = await _get_ticket_and_check_admin(callback, bot)
         if not ticket:
              return
@@ -932,23 +990,18 @@ def get_support_router() -> Router:
 
         user_id = int(ticket['user_id'])
         
-        # 1. Сохраняем в БД как сообщение от админа
         add_support_message(ticket_id=ticket_id, sender='admin', content=content)
         
-        # 2. Отправляем пользователю в ЛС
         try:
             await _send_admin_reply_to_user(bot, user_id, ticket_id, message, content)
         except Exception as e:
             logger.warning(f"Failed to send reply to user {user_id}: {e}")
             await message.answer("❌ Не удалось доставить сообщение пользователю (возможно, он заблокировал бота).")
-            # Но в базу мы сохранили, так что продолжаем (или можно откатить, но обычно сохраняют)
             
-        # 3. Дублируем в форумный тред (если есть) для истории
         try:
             forum_chat_id = ticket.get('forum_chat_id')
             thread_id = ticket.get('message_thread_id')
             if forum_chat_id and thread_id:
-                 # От своего имени (бота) пишем, что админ (с таким-то ID/именем) ответил через бота
                  admin_tag = _get_username_display(message.from_user, message.from_user.id)
                  await bot.send_message(
                     chat_id=int(forum_chat_id),
@@ -960,10 +1013,6 @@ def get_support_router() -> Router:
 
         await message.answer("✅ <b>Сообщение успешно отправлено пользователю.</b>")
         await state.clear()
-
-    # _support_contact_markup moved to top
-
-    # _notify_user_about_ban moved to top
 
     @router.callback_query(F.data.startswith("admin_ban_user_"))
     async def admin_ban_user(callback: types.CallbackQuery, bot: Bot):
@@ -1073,7 +1122,11 @@ def get_support_router() -> Router:
         await _start_ticket_creation_flow(message, state)
 
     @router.message(F.text == "📨 Мои обращения", F.chat.type == "private")
-    async def my_tickets_text_button(message: types.Message):
+    async def my_tickets_text_button(message: types.Message, state: FSMContext):
+        current_state = await state.get_state()
+        if current_state in [SupportDialog.waiting_for_subject, SupportDialog.waiting_for_message]:
+            await message.answer("⚠️ <b>Вы уже создаете обращение.</b>\nПожалуйста, завершите текущий процесс.")
+            return
         await _send_user_tickets_list(message, message.from_user.id)
 
     @router.message(F.chat.type == "private")

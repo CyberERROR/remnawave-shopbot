@@ -5,8 +5,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Any
 from urllib.parse import quote
 import re
-
 import httpx
+import asyncio
 
 from shop_bot.data_manager import remnawave_repository as rw_repo
 
@@ -152,27 +152,54 @@ async def _request(
     headers = _build_headers(config)
 
     async with httpx.AsyncClient(cookies=config["cookies"], timeout=30.0) as client:
+        max_retries = 3
+        last_exception = None
+        for attempt in range(max_retries):
+            try:
+                full_url = httpx.URL(url).copy_merge_params(params or {})
+                if attempt == 0:
+                    logger.info("➡️ Remnawave: %s %s", method.upper(), str(full_url))
+                else:
+                    logger.info("➡️ Remnawave (Attempt %d/%d): %s %s", attempt + 1, max_retries, method.upper(), str(full_url))
+            except Exception:
+                pass
+            
+            t0 = time.perf_counter()
+            try:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=json_payload,
+                    params=params,
+                )
+                dt_ms = int((time.perf_counter() - t0) * 1000)
+                try:
+                    status = response.status_code
+                    ok = "OK" if status in expected_status else "ERROR"
+                    logger.info("⬅️ Remnawave: %s %s — %s (%d мс)", method.upper(), path, f"{status} {ok}", dt_ms)
+                except Exception:
+                    pass
 
-        try:
-            full_url = httpx.URL(url).copy_merge_params(params or {})
-            logger.info("➡️ Remnawave: %s %s", method.upper(), str(full_url))
-        except Exception:
-            pass
-        t0 = time.perf_counter()
-        response = await client.request(
-            method=method,
-            url=url,
-            headers=headers,
-            json=json_payload,
-            params=params,
-        )
-        dt_ms = int((time.perf_counter() - t0) * 1000)
-        try:
-            status = response.status_code
-            ok = "OK" if status in expected_status else "ERROR"
-            logger.info("⬅️ Remnawave: %s %s — %s (%d мс)", method.upper(), path, f"{status} {ok}", dt_ms)
-        except Exception:
-            pass
+                # Успешный запрос или серверный ответ, выходим из цикла retry
+                break
+                
+            except httpx.ConnectError as e:
+                last_exception = e
+                logger.warning("Remnawave: ошибка соединения %s. Попытка %d из %d...", e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2) # Пауза перед следующей попыткой
+                continue
+            except httpx.TimeoutException as e:
+                last_exception = e
+                logger.warning("Remnawave: таймаут %s. Попытка %d из %d...", e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
+
+        if last_exception and 'response' not in locals():
+            logger.error("Remnawave API: исчерпаны попытки подключения: %s", last_exception)
+            raise RemnawaveAPIError(f"Connection failed after {max_retries} attempts: {last_exception}")
 
     if response.status_code not in expected_status:
         try:
@@ -199,27 +226,53 @@ async def _request_for_host(
     headers = _build_headers(config)
 
     async with httpx.AsyncClient(cookies=config["cookies"], timeout=30.0) as client:
+        max_retries = 3
+        last_exception = None
+        for attempt in range(max_retries):
+            try:
+                full_url = httpx.URL(url).copy_merge_params(params or {})
+                if attempt == 0:
+                    logger.info("➡️ Remnawave[%s]: %s %s", host_name, method.upper(), str(full_url))
+                else:
+                    logger.info("➡️ Remnawave[%s] (Attempt %d/%d): %s %s", host_name, attempt + 1, max_retries, method.upper(), str(full_url))
+            except Exception:
+                pass
+            
+            t0 = time.perf_counter()
+            try:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=json_payload,
+                    params=params,
+                )
+                dt_ms = int((time.perf_counter() - t0) * 1000)
+                try:
+                    status = response.status_code
+                    ok = "OK" if status in expected_status else "ERROR"
+                    logger.info("⬅️ Remnawave[%s]: %s %s — %s (%d мс)", host_name, method.upper(), path, f"{status} {ok}", dt_ms)
+                except Exception:
+                    pass
 
-        try:
-            full_url = httpx.URL(url).copy_merge_params(params or {})
-            logger.info("➡️ Remnawave[%s]: %s %s", host_name, method.upper(), str(full_url))
-        except Exception:
-            pass
-        t0 = time.perf_counter()
-        response = await client.request(
-            method=method,
-            url=url,
-            headers=headers,
-            json=json_payload,
-            params=params,
-        )
-        dt_ms = int((time.perf_counter() - t0) * 1000)
-        try:
-            status = response.status_code
-            ok = "OK" if status in expected_status else "ERROR"
-            logger.info("⬅️ Remnawave[%s]: %s %s — %s (%d мс)", host_name, method.upper(), path, f"{status} {ok}", dt_ms)
-        except Exception:
-            pass
+                break
+                
+            except httpx.ConnectError as e:
+                last_exception = e
+                logger.warning("Remnawave[%s]: ошибка соединения %s. Попытка %d из %d...", host_name, e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
+            except httpx.TimeoutException as e:
+                last_exception = e
+                logger.warning("Remnawave[%s]: таймаут %s. Попытка %d из %d...", host_name, e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
+
+        if last_exception and 'response' not in locals():
+            logger.error("Remnawave[%s] API: исчерпаны попытки подключения: %s", host_name, last_exception)
+            raise RemnawaveAPIError(f"Connection failed after {max_retries} attempts: {last_exception}")
 
     if response.status_code not in expected_status:
         try:

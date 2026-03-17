@@ -160,7 +160,6 @@ def create_webhook_app(bot_controller_instance):
 
     flask_app.config['SECRET_KEY'] = os.getenv('SHOPBOT_SECRET_KEY') or secrets.token_hex(32)
     flask_app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
-    # Increase max upload size to 500MB for video uploads
     flask_app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
     
     # Автоматическая перезагрузка HTML-шаблонов (TEMPLATES_AUTO_RELOAD).
@@ -484,8 +483,6 @@ def create_webhook_app(bot_controller_instance):
         all_settings_ok = all(settings.get(key) for key in required_for_start)
         support_settings_ok = all(settings.get(key) for key in required_support_for_start)
         try:
-            # OPTIMIZATION: Do not fetch ticket counts synchronously to speed up page load.
-            # Frontend will fetch these via AJAX.
             open_tickets_count = None 
             waiting_tickets_count = None
             closed_tickets_count = None
@@ -552,22 +549,13 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/dashboard')
     @login_required
     def dashboard_page():
-        # Optimization: Lazy loading enabled. 
-        # We only pass common data; heavyweight data is fetched via AJAX.
-        
-        # Determine total pages for pagination placeholders (optional, but better to load fully lazy)
-        # For true lazy loading, we don't even need counts here if the frontend handles "loading" state.
-        
-        # We'll pass minimal context to avoid Jinja errors if variables are expected.
-        # The frontend will be responsible to show loaders and fetch data.
-
         common_data = get_common_template_data()
         
         return render_template(
             'dashboard.html',
             hosts=[], 
             ssh_targets=[],
-            stats={}, # Stats are already lazy loaded via dashboard_stats_partial
+            stats={}, 
             chart_data={},
             transactions=[],
             recent_trials=[],
@@ -619,7 +607,6 @@ def create_webhook_app(bot_controller_instance):
                 "tonconnect_income": get_total_spent_by_method("TON Connect")
             })
         else:
-            # If hidden, provide zeros or None to skip DB queries
             stats.update({
                 "yookassa_income": 0.0,
                 "platega_income": 0.0,
@@ -630,8 +617,6 @@ def create_webhook_app(bot_controller_instance):
             })
             
         common_data = get_common_template_data()
-        # Explicitly fetch ticket count for the dashboard stats card, 
-        # as get_common_template_data returns None for optimization.
         try:
             common_data['open_tickets_count'] = get_open_tickets_count()
         except:
@@ -763,17 +748,14 @@ def create_webhook_app(bot_controller_instance):
             conn = sqlite3.connect(DB_FILE)
             cursor = conn.cursor()
             
-            # Delete resource_metrics
             cursor.execute("DELETE FROM resource_metrics")
             deleted_metrics = cursor.rowcount
             
-            # Delete host_speedtests
             cursor.execute("DELETE FROM host_speedtests")
             deleted_speedtests = cursor.rowcount
             
             conn.commit()
             
-            # Run VACUUM to reclaim space
             cursor.execute("VACUUM")
             
             conn.close()
@@ -891,9 +873,6 @@ def create_webhook_app(bot_controller_instance):
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 25, type=int)
         q = (request.args.get('q') or '').strip()
-
-        # OPTIMIZATION: Do not fetch users synchronously. Return empty list.
-        # Frontend will fetch content via /users/table.partial
         
         common_data = get_common_template_data()
         return render_template('users.html', users=[], current_page=page, total_pages=1, q=q, per_page=per_page, **common_data)
@@ -918,9 +897,7 @@ def create_webhook_app(bot_controller_instance):
             except Exception:
                 user['balance'] = 0.0
             user['keys_count'] = int(keys_counts.get(uid, 0) or 0)
-            # Добавляем total_months (приобретено месяцев)
             user['total_months'] = int(user.get('total_months') or 0)
-            # Добавляем количество рефералов
             try:
                 referrals = get_referrals_for_user(uid) or []
                 user['referral_count'] = len(referrals)
@@ -1008,8 +985,6 @@ def create_webhook_app(bot_controller_instance):
         try:
             with sqlite3.connect(DB_FILE) as conn:
                 cursor = conn.cursor()
-                # Удаляем пополнения (topup) и транзакции с оплатой с баланса (payment_method='balance')
-                # Используем LIKE для поиска в JSON metadata (метаданные могут содержать "action": "topup")
                 cursor.execute("""
                     DELETE FROM transactions 
                     WHERE user_id = ? 
@@ -1034,7 +1009,6 @@ def create_webhook_app(bot_controller_instance):
         try:
             with sqlite3.connect(DB_FILE) as conn:
                 cursor = conn.cursor()
-                # Удаляем транзакции, которые НЕ являются пополнениями и НЕ оплачены балансом
                 cursor.execute("""
                     DELETE FROM transactions 
                     WHERE user_id = ? 
@@ -1104,7 +1078,6 @@ def create_webhook_app(bot_controller_instance):
                         host_name = meta.get('host_name') or 'N/A'
                         plan_name = meta.get('plan_name') or 'N/A'
                         
-                        # Logic for Balance History: Top-ups OR Balance Payments
                         if action == 'topup':
                             balance_history.append({
                                 'date': row['created_date'],
@@ -1118,13 +1091,12 @@ def create_webhook_app(bot_controller_instance):
                             balance_history.append({
                                 'date': row['created_date'],
                                 'type': 'Оплата подписки',
-                                'amount': float(row['amount_rub'] or 0) * -1, # Show as negative for spending? Or just amount. User asked for "amount user topped up... and all transactions from balance". Usually spending is negative or just listed as type. Let's keep positive but type clarifies.
+                                'amount': float(row['amount_rub'] or 0) * -1,
                                 'status': row['status'],
                                 'plan': plan_name,
                                 'host': host_name
                             })
                             
-                        # Logic for Payment History: External Purchases (Not topup, Not balance)
                         if pm != 'balance' and action != 'topup':
                             payment_history.append({
                                 'date': row['created_date'],
@@ -1290,9 +1262,6 @@ def create_webhook_app(bot_controller_instance):
     def admin_keys_page():
         filter_mode = request.args.get('filter', 'general')
         q = request.args.get('q', '')
-
-        # OPTIMIZATION: Do not fetch keys synchronously. Return empty list.
-        # Frontend will fetch content via /admin/keys/table.partial
         
         paginated_keys = []
         total_pages = 1
@@ -1386,7 +1355,6 @@ def create_webhook_app(bot_controller_instance):
             key_email = (request.form.get('key_email') or '').strip()
             expiry = request.form.get('expiry_date') or ''
 
-            # Treat naive input as MSK (+3)
             expiry_dt = datetime.fromisoformat(expiry)
             msk_tz = timezone(timedelta(hours=3), name='MSK')
             if expiry_dt.tzinfo is None:
@@ -1469,7 +1437,6 @@ def create_webhook_app(bot_controller_instance):
         if expiry_str:
             try:
                 expiry_dt = datetime.fromisoformat(expiry_str)
-                # Treat naive input as MSK (+3)
                 msk_tz = timezone(timedelta(hours=3), name='MSK')
                 if expiry_dt.tzinfo is None:
                     expiry_dt = expiry_dt.replace(tzinfo=msk_tz)
@@ -1604,10 +1571,8 @@ def create_webhook_app(bot_controller_instance):
             if expiry_ms is None and days_total > 0:
                 expiry_ms = int((get_msk_time() + timedelta(days=days_total)).timestamp() * 1000)
 
-            # Email generation logic
             domain = "bot.local"
             if target_user:
-                # Logic matching admin_handlers.py / create_gift_key style
                 raw_username = (target_user.get('username') or f"user{user_id}").lower()
                 clean_username = re.sub(r"[^a-z0-9._-]", "_", raw_username).strip("_")[:20]
                 base_local = f"gift_{clean_username}"
@@ -1647,7 +1612,6 @@ def create_webhook_app(bot_controller_instance):
             if not key_id:
                 return jsonify({"ok": False, "error": "db_failed"}), 500
 
-            # Notify user if assigned
             if user_id and target_user:
                 try:
                     bot = _bot_controller.get_bot_instance()
@@ -1708,49 +1672,33 @@ def create_webhook_app(bot_controller_instance):
             was_corrected = False
             original_candidate = ""
 
-            # Check logic
             raw_username = ""
             if user:
                 raw_username = (user.get('username') or f'user{user_id}').lower()
 
             if mode == 'gift':
                 if user:
-                    # Gift WITH user
-                    # Naive attempt
                     naive_local = f"gift_{raw_username}"
                     naive_email = f"{naive_local}@bot.local"
                     
-                    # Normalize
-                    # We pass telegram_id=None here because we want to preserve 'gift_' prefix structure if possible,
-                    # rather than swapping to just 'user{id}'. 
-                    # But if it becomes bad, we handle it manually.
                     safe_email = remnawave_api._normalize_email_for_remnawave(naive_email)
                     
                     safe_local = safe_email.split('@')[0]
                     
-                    # If normalization degraded it to just "gift" or empty (bad chars), append user_id
-                    # Also check if it changed significantly
                     if safe_email != naive_email:
                         was_corrected = True
                     
                     if safe_local == 'gift' or len(safe_local) <= 5: 
-                         # 'gift_' is 5 chars. If we only have 'gift' or less, it means username was stripped.
-                         # Fallback to gift_user{id}
                          safe_local = f"gift_user{user_id}"
                          was_corrected = True
 
                     base_local = safe_local
                 else:
-                    # Gift WITHOUT user (random uuid)
                     base_local = f"gift-{uuid.uuid4().hex[:8]}"
-                    # No correction needed for UUID
             else:
-                # Personal (requires user)
-                # Naive generation
                 naive_local = f"{raw_username}"
                 naive_email = f"{naive_local}@bot.local"
                 
-                # Check with full normalization fallback to user{id}
                 safe_email = remnawave_api._normalize_email_for_remnawave(naive_email, telegram_id=user_id)
                 
                 if safe_email != naive_email:
@@ -1785,7 +1733,6 @@ def create_webhook_app(bot_controller_instance):
             seller_ref = float(request.form.get('seller_ref', 0))
             seller_uuid = request.form.get('seller_uuid', '0').strip()
             
-            # Update user table for active status
             with sqlite3.connect(DB_FILE) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -1794,7 +1741,6 @@ def create_webhook_app(bot_controller_instance):
                 )
                 conn.commit()
             
-            # Update seller_users table logic
             if seller_active == 1:
                 add_seller_user(user_id, seller_sale, seller_ref, seller_uuid)
             else:
@@ -2213,8 +2159,6 @@ def create_webhook_app(bot_controller_instance):
         page = request.args.get('page', 1, type=int)
         per_page = 12
 
-        # OPTIMIZATION: Do not fetch tickets synchronously.
-        # Front-end will call /support/table.partial
         tickets = []
         total_pages = 1
         
@@ -2351,10 +2295,7 @@ def create_webhook_app(bot_controller_instance):
 
         messages = get_ticket_messages(ticket_id)
         
-        # AJAX OPTIMIZATION: Return only messages part if requested
         if request.args.get('partial') == 'true':
-            # Чтобы не создавать файлы, рендерим фрагмент сообщения прямо здесь (через цикл в строке или мини-шаблон)
-            # Но у нас есть ticket.html, мы можем добавить туда заголовок-условие.
             return render_template('ticket.html', ticket=ticket, messages=messages, partial_mode=True)
 
         common_data = get_common_template_data()
@@ -2436,7 +2377,6 @@ def create_webhook_app(bot_controller_instance):
                 value = values[-1] if values else 'false'
                 update_setting(checkbox_key, value)
                 
-            # Обработка настройки автозапуска (хранится в 'other')
             as_values = request.form.getlist('auto_start_bot')
             auto_start_val = as_values[-1] if as_values else '0'
             update_other_setting('auto_start_bot', auto_start_val)
@@ -2448,16 +2388,12 @@ def create_webhook_app(bot_controller_instance):
                 if key in request.form:
                     update_setting(key, request.form.get(key))
 
-            # Обработка настроек комментариев платежей
-            # Если мы на вкладке payments или поля присутствуют (чекбоксы шлют значение только если checked, поэтому проверяем наличие хотя бы одного или контекст)
-            # Так как форма общая, просто собираем состояние
             pay_info = {
                 'id': 1 if request.form.get('pay_info_id') else 0,
                 'username': 1 if request.form.get('pay_info_username') else 0,
                 'first_name': 1 if request.form.get('pay_info_first_name') else 0,
                 'host_name': 1 if request.form.get('pay_info_host_name') else 0,
             }
-            # Сохраняем только если это сабмит формы настроек (а не partial update, хотя тут вроде все save)
             update_setting('pay_info_comment', json.dumps(pay_info))
 
             flash('Настройки сохранены.', 'success')
@@ -2467,7 +2403,6 @@ def create_webhook_app(bot_controller_instance):
 
         current_settings = get_all_settings()
         
-        # Загрузка настроек комментариев
         try:
             pay_info = json.loads(current_settings.get('pay_info_comment', '{}'))
         except (ValueError, TypeError):
@@ -3025,7 +2960,7 @@ def create_webhook_app(bot_controller_instance):
                     kb = InlineKeyboardBuilder().row(keyboards.get_main_menu_button()).as_markup()
                 else:
                     text = "🚫 Ваш аккаунт заблокирован администратором."
-                    kb = None # Or support link
+                    kb = None
                 loop = current_app.config.get('EVENT_LOOP')
                 if loop and loop.is_running():
                     asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=user_id, text=text, reply_markup=kb), loop)
@@ -3180,16 +3115,13 @@ def create_webhook_app(bot_controller_instance):
         }
         """
         try:
-            # 1. Получаем сырое тело и подпись
             raw_data = request.get_data()
             
-            # Логируем заголовки для отладки
             headers_dict = dict(request.headers)
             logger.info(f"Вебхук Heleket заголовки: {headers_dict}")
             
             signature = request.headers.get("sign") or request.headers.get("Sign") or request.headers.get("SIGN") or ""
             
-            # 2. Получаем API ключ из настроек
             api_key = (get_setting("heleket_api_key") or "").strip()
             if not api_key:
                 logger.error("Вебхук Heleket: API ключ не настроен")
@@ -3203,18 +3135,14 @@ def create_webhook_app(bot_controller_instance):
                 logger.warning("Вебхук Heleket: Проверка подписи отключена в конфигурации (для совместимости с прокси).")
                  
             
-            # 4. Парсим JSON
             try:
                 data = json.loads(raw_data)
             except json.JSONDecodeError:
                 logger.error("Вебхук Heleket: Некорректный JSON")
                 return jsonify({"error": "Invalid JSON"}), 400
                 
-            # 5. Проверяем статус
-            
             logger.info(f"Данные вебхука Heleket: {data}")
             
-            # Извлекаем метаданные из description
             description_raw = data.get("description", "")
             metadata = {}
             if description_raw:
@@ -3231,13 +3159,11 @@ def create_webhook_app(bot_controller_instance):
                     logger.warning(f"Вебхук Heleket: Платеж {payment_id} имеет статус '{status}' (не оплачен). Игнорируем.")
                     return jsonify({"state": 0, "message": "Ignored non-paid status"}), 200
 
-                # Обновляем статус транзакции
                 meta_from_db = find_and_complete_pending_transaction(payment_id)
                 
                 if meta_from_db:
                     logger.info(f"Вебхук Heleket: Транзакция {payment_id} найдена и завершена.")
                     
-                    # Обработка успешного платежа
                     bot = _bot_controller.get_bot_instance()
                     loop = current_app.config.get('EVENT_LOOP')
                     
@@ -3250,7 +3176,6 @@ def create_webhook_app(bot_controller_instance):
                     else:
                         logger.error("Вебхук Heleket: Цикл событий или экземпляр бота не готовы")
                         
-                    # Обработка промокода
                     _handle_promo_after_payment(meta_from_db)
                     
                 else:

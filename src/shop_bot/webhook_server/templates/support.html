@@ -446,14 +446,6 @@
         const updatePagination = async (currentUrl) => {
             const pagEl = document.getElementById('support-pagination');
             if (!pagEl) return;
-
-            // Нам нужен целый фрагмент с пагинацией. 
-            // В support_table_partial сейчас рендерится только tbody.
-            // Но мы можем использовать support_list_page с флагом или просто вырезать пагинатор.
-            // Однако, в support_table_partial нет пагинации.
-            // Я добавлю пагинатор в support_table_partial (в app.py) сейчас или изменю подход.
-            // Хотя подожди, в app.py support_table_partial возвращает только строки.
-            // Ок, я обновлю app.py чуть позже чтобы он возвращал и пагинатор или просто подгружал его.
         };
 
         // AJAX Навигация по фильтрам и пагинации
@@ -495,12 +487,10 @@
             await loadSupportTable();
         });
 
-        // Первичная загрузка
         loadSupportTable();
 
-        window.addEventListener('popstate', () => location.reload()); // Для простоты при возврате назад
+        window.addEventListener('popstate', () => location.reload());
 
-        // Relative time formatting
         window.updateRelativeTimes = function () {
             const fmt = (s) => {
                 if (!s) return '';
@@ -548,7 +538,6 @@
         }
 
         openModal('geminiModal');
-        // Animation in
         requestAnimationFrame(() => {
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
@@ -557,11 +546,9 @@
 
     function closeGeminiModal() {
         const content = document.getElementById('geminiModalContent');
-        // Animation out
         content.classList.remove('scale-100', 'opacity-100');
         content.classList.add('scale-95', 'opacity-0');
 
-        // Wait for animation to finish
         setTimeout(() => {
             closeModal('geminiModal');
         }, 300);

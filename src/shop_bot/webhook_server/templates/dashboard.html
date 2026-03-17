@@ -117,7 +117,6 @@
                             </button>
                             <div class="soft-select-menu" id="st_target_menu"></div>
                             <select id="st-target" class="hidden">
-                                <!-- Options loaded via JS -->
                             </select>
                         </div>
                     </div>
@@ -476,9 +475,6 @@
                     const html = await res.text();
                     if (isLoginPage(html)) { window.location.reload(); return; }
 
-                    // Для таблиц, если пришел пустой ответ или ответ без строк - надо обработать отдельно
-                    // Но здесь endpoint возвращает <tr>...</tr> или "ничего".
-
                     if (el.innerHTML !== html) {
                         el.style.opacity = '0.5';
                         setTimeout(() => {
@@ -496,11 +492,8 @@
                 const interval = parseInt(el.dataset.fetchInterval);
                 if (!id || !interval || autoRefreshRegistry[id]) return;
 
-                // Start auto-refresh interval
                 autoRefreshRegistry[id] = setInterval(() => refreshSection(id), interval);
 
-                // If this is the stats section (which is not handled by loadTableData), 
-                // trigger an immediate refresh to load initial data
                 if (id === 'dash-stats') {
                     refreshSection(id);
                 }
@@ -527,7 +520,6 @@
                     if (emptyEl) emptyEl.style.display = 'none';
                     updatePagUI(type, parseInt(data.current_page), parseInt(data.total_pages));
 
-                    // Start auto-refresh after successful load
                     if (!autoRefreshRegistry[`dash-${type}`] && cont.dataset.fetchInterval) {
                         autoRefreshRegistry[`dash-${type}`] = setInterval(() => refreshSection(`dash-${type}`), parseInt(cont.dataset.fetchInterval));
                     }
@@ -560,7 +552,7 @@
 
             if (data) {
                 cont.innerHTML = data.html;
-                cont.dataset.fetchUrl = `${url}?page=${page}`; // Update base URL for auto-refresh
+                cont.dataset.fetchUrl = `${url}?page=${page}`;
                 updatePagUI(type, parseInt(data.current_page), parseInt(data.total_pages));
                 history.pushState({}, '', link.href);
             }
@@ -572,7 +564,6 @@
             if (pag) {
                 pag.addEventListener('click', e => handlePag(e, t));
             }
-            // Initial Load
             loadTableData(t);
         });
 
@@ -840,7 +831,6 @@
             chart.update('none');
         };
 
-        // Initialize charts immediately
         refreshCharts();
 
         // Автообновление графиков раз в 2 минуты
@@ -857,19 +847,15 @@
             const data = await fetchJSON("{{ url_for('dashboard_ssh_targets_json') }}");
             if (data && data.targets) {
                 sshTargetsData = data.targets;
-                // Populate Select
                 targetSelect.innerHTML = data.targets.map(t => `<option value="${t.target_name}">${t.target_name}</option>`).join('');
 
-                // Restore cache choice
                 const cache = localStorage.getItem('st_target_cache');
                 if (cache && Array.from(targetSelect.options).some(o => o.value === cache)) {
                     targetSelect.value = cache;
                 }
 
-                // Init SoftSelect after population
                 window.initSoftSelect('st-target', 'Выберите SSH цель...');
 
-                // Add listener
                 targetSelect.addEventListener('change', () => {
                     localStorage.setItem('st_target_cache', targetSelect.value);
                     localStorage.setItem('st_target_time', Date.now());
@@ -883,7 +869,6 @@
                     loadTop();
                 });
 
-                // Load data immediately if value exists
                 if (targetSelect.value) {
                     const selected = sshTargetsData.find(t => t.target_name === targetSelect.value);
                     const ipSpan = document.getElementById('st-target-ip');
@@ -892,7 +877,6 @@
                     }
                     loadTop();
                 } else {
-                    // If no targets, show empty state
                     latestBox.textContent = 'Нет целей';
                 }
             }
@@ -942,7 +926,6 @@
             });
         };
 
-        // Trigger SSH target load
         if (targetSelect) loadSSHTargets();
 
 

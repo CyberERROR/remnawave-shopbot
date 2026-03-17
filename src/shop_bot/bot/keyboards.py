@@ -566,7 +566,6 @@ def get_declension(n, forms):
     return forms[2]
 
 def get_time_str(expiry_date: datetime) -> str:
-    # Ensure comparisons are done in naive MSK
     now = get_msk_time().replace(tzinfo=None)
     
     if expiry_date.tzinfo:

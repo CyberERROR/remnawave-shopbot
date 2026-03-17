@@ -3260,13 +3260,22 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                 traffic_limit_gb=tr_lim_gb,
                 external_squad_uuid=external_squad
             )
-            if not res: return await proc_msg.edit_text("❌ Ошибка на стороне VPN-сервера. Обратитесь в поддержку.")
+            if not res:
+                add_to_balance(uid, float(price))
+                logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка API VPN)")
+                return await proc_msg.edit_text("❌ <b>Ошибка на стороне VPN-сервера</b>\nКлюч не был выдан. Средства возвращены на ваш баланс в боте.")
 
             if action == "new":
                 kid = rw_repo.record_key_from_payload(user_id=uid, payload=res, host_name=host)
-                if not kid: return await proc_msg.edit_text("❌ Ошибка сохранения данных в БД.")
+                if not kid: 
+                    add_to_balance(uid, float(price))
+                    logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка БД нового ключа)")
+                    return await proc_msg.edit_text("❌ При сохранении ключа произошла системная ошибка. Средства возвращены на баланс.")
             else:
-                if not rw_repo.update_key(kid, remnawave_user_uuid=res['client_uuid'], expire_at_ms=res['expiry_timestamp_ms']): return await proc_msg.edit_text("❌ Ошибка обновления данных ключа.")
+                if not rw_repo.update_key(kid, remnawave_user_uuid=res['client_uuid'], expire_at_ms=res['expiry_timestamp_ms']): 
+                    add_to_balance(uid, float(price))
+                    logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка обновления БД)")
+                    return await proc_msg.edit_text("❌ Ошибка обновления данных ключа в системе. Средства возвращены на баланс.")
 
             # Реферальные начисления за покупку
             if (pay_method or '').lower() != 'balance':

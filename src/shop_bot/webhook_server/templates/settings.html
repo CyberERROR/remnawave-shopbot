@@ -22,40 +22,18 @@
     </div>
 
     <button type="button" id="save-all-settings-btn"
-        class="group relative z-0 px-5 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary font-semibold text-xs uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all flex items-center gap-2 overflow-hidden">
-        <div class="absolute inset-0 bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform">
-        </div>
-        <span class="material-symbols-outlined text-sm relative z-10">save</span>
-        <span class="relative z-10">Сохранить</span>
+        class="group relative px-6 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-white font-bold text-xs uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center gap-2 overflow-hidden">
+        <span class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">save</span>
+        <span>Сохранить изменения</span>
     </button>
 </div>
 <!-- ===== Конец заголовка страницы ===== -->
 
 
 <!-- ===== СТАТУС НАСТРОЕК ===== -->
-<!-- Уведомление о готовности ботов к работе -->
+{% if not (all_settings_ok and support_settings_ok) %}
 <div class="mb-8 p-1.5 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl">
     <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4 p-4 pr-6">
-        {% if all_settings_ok and support_settings_ok %}
-        <div
-            class="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary relative overflow-hidden group">
-            <div class="absolute inset-0 bg-primary/10 animate-pulse"></div>
-            <span class="material-symbols-outlined text-3xl relative z-10">check_circle</span>
-        </div>
-        <div class="flex-1">
-            <h4 class="text-white font-semibold text-sm tracking-tight">Боты готовы к запуску</h4>
-            <div class="flex items-center gap-4 mt-1.5">
-                <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10">
-                    <div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-                    <span class="text-[9px] font-semibold text-primary/80 uppercase tracking-widest">Основной бот</span>
-                </div>
-                <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10">
-                    <div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-                    <span class="text-[9px] font-semibold text-primary/80 uppercase tracking-widest">Support бот</span>
-                </div>
-            </div>
-        </div>
-        {% else %}
         <div
             class="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 relative">
             <span class="material-symbols-outlined text-3xl">warning</span>
@@ -79,21 +57,21 @@
                 </div>
             </div>
         </div>
-        {% endif %}
     </div>
 </div>
+{% endif %}
 <!-- ===== Конец статуса настроек ===== -->
 
 
 <!-- ===== НАВИГАЦИЯ ПО ВКЛАДКАМ ===== -->
 <!-- Верхнее меню управления разделами настроек -->
 <div class="relative mb-10">
-    <div
-        class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl overflow-x-auto no-scrollbar">
+    <div class="bg-white/5 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl overflow-x-auto no-scrollbar">
         <nav class="flex items-center gap-1 min-w-max" id="settings-nav">
             {% for item in [
             {'id': 'panel', 'label': 'Панель', 'icon': 'dashboard'},
-            {'id': 'bot', 'label': 'Боты', 'icon': 'smart_toy'},
+            {'id': 'bot', 'label': 'Настройка ботов' if not (all_settings_ok and support_settings_ok) else 'Боты',
+            'icon': 'smart_toy'},
             {'id': 'payments', 'label': 'Платежи', 'icon': 'payments'},
             {'id': 'hosts', 'label': 'Хосты', 'icon': 'dns'},
             {'id': 'ssh', 'label': 'SSH', 'icon': 'terminal'},
@@ -106,12 +84,6 @@
                 {{ item.label }}
             </button>
             {% endfor %}
-            <div class="w-px h-6 bg-white/10 mx-2"></div>
-            <a href="{{ url_for('button_constructor_page') }}"
-                class="px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest text-white/40 hover:text-white/80 hover:bg-white/5 transition-all flex items-center gap-2.5 no-underline">
-                <span class="material-symbols-outlined text-lg">construction</span>
-                Конструктор кнопок
-            </a>
         </nav>
     </div>
 </div>
@@ -582,6 +554,7 @@
 
     <section id="tab-bot" class="tab-content hidden">
         <div class="space-y-6">
+
             <div
                 class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
                 <div
@@ -599,6 +572,36 @@
                     </div>
                 </div>
             </div>
+
+            {% if all_settings_ok and support_settings_ok %}
+            <div class="p-1.5 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl mb-6">
+                <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4 p-4 pr-6">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-primary/10 animate-pulse"></div>
+                        <span class="material-symbols-outlined text-3xl relative z-10">check_circle</span>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-white font-semibold text-sm tracking-tight">Боты готовы к запуску</h4>
+                        <div class="flex items-center gap-4 mt-1.5">
+                            <div
+                                class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10">
+                                <div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                                <span
+                                    class="text-[9px] font-semibold text-primary/80 uppercase tracking-widest">Основной
+                                    бот</span>
+                            </div>
+                            <div
+                                class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10">
+                                <div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                                <span class="text-[9px] font-semibold text-primary/80 uppercase tracking-widest">Support
+                                    бот</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <!-- Main Bot Card -->
@@ -1229,13 +1232,14 @@
 
                     <div class="flex flex-wrap gap-3 pt-4 border-t border-white/5">
                         <a href="{{ url_for('yoomoney_connect_route') }}"
-                            class="px-5 py-2 rounded-xl bg-primary text-background-dark text-xs font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
-                            <span class="material-symbols-outlined text-sm">link</span>
+                            class="group px-5 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-white text-xs font-bold uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center gap-2">
+                            <span
+                                class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">link</span>
                             Подключить OAuth
                         </a>
                         <button type="submit" formmethod="post" formaction="{{ url_for('yoomoney_check_route') }}"
-                            class="px-5 py-2 rounded-xl bg-white/5 text-white/70 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all border border-white/10 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-sm">verified_user</span>
+                            class="px-5 py-2.5 rounded-xl bg-white/5 text-white/70 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all border border-white/10 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-xl">verified_user</span>
                             Проверить токен
                         </button>
                     </div>
@@ -1350,14 +1354,10 @@
                     </div>
                     <div class="mt-6 flex justify-end">
                         <button type="submit"
-                            class="group relative px-8 py-3 rounded-xl bg-primary text-background-dark font-bold overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]">
-                            <span class="relative z-10 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">add</span>
-                                Сохранить хост
-                            </span>
-                            <div
-                                class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                            </div>
+                            class="group px-8 py-3 rounded-xl bg-primary/10 border border-primary/20 text-white font-bold text-xs uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center gap-2">
+                            <span
+                                class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">add</span>
+                            Сохранить хост
                         </button>
                     </div>
                 </form>
@@ -1403,14 +1403,14 @@
                             {% if host.see is none or host.see == 1 %}
                             <input type="hidden" name="visible" value="0" />
                             <button type="submit"
-                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-500 text-xs font-bold hover:bg-yellow-500/20 transition-all">
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-yellow-500/60 text-xs font-bold hover:bg-yellow-500/20 hover:text-yellow-500 transition-all">
                                 <span class="material-symbols-outlined text-sm">visibility_off</span>
                                 Скрыть
                             </button>
                             {% else %}
                             <input type="hidden" name="visible" value="1" />
                             <button type="submit"
-                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-500 text-xs font-bold hover:bg-green-500/20 transition-all">
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-green-500/60 text-xs font-bold hover:bg-green-500/20 hover:text-green-500 transition-all">
                                 <span class="material-symbols-outlined text-sm">visibility</span>
                                 Показать
                             </button>
@@ -1420,7 +1420,7 @@
                             class="inline" data-confirm="Удалить хост {{ host.host_name }} и все его тарифы?">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                             <button type="submit"
-                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all">
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-red-500/60 text-xs font-bold hover:bg-red-500/20 hover:text-red-500 transition-all">
                                 <span class="material-symbols-outlined text-sm">delete</span>
                                 Удалить
                             </button>
@@ -1447,7 +1447,10 @@
                                     placeholder="https://panel.example.com"
                                     class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none transition-all" />
                                 <button type="submit"
-                                    class="w-full py-2 rounded-lg bg-white/5 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all">Сохранить</button>
+                                    class="group w-full py-2 rounded-lg bg-primary/10 border border-primary/20 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">save</span>
+                                    Сохранить
+                                </button>
                             </div>
                         </form>
 
@@ -1465,8 +1468,10 @@
                                 <input type="text" name="new_host_name" value="{{ host.host_name }}"
                                     class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none transition-all" />
                                 <button type="submit"
-                                    class="w-full py-2 rounded-lg bg-white/5 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all">Сменить
-                                    имя</button>
+                                    class="group w-full py-2 rounded-lg bg-primary/10 border border-primary/20 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">badge</span>
+                                    Сменить имя
+                                </button>
                             </div>
                         </form>
 
@@ -1485,7 +1490,10 @@
                                     value="{{ host.subscription_url or '' }}" placeholder="URL для подписки"
                                     class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none transition-all" />
                                 <button type="submit"
-                                    class="w-full py-2 rounded-lg bg-white/5 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all">Сохранить</button>
+                                    class="group w-full py-2 rounded-lg bg-primary/10 border border-primary/20 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">save</span>
+                                    Сохранить
+                                </button>
                             </div>
                         </form>
 
@@ -1529,7 +1537,10 @@
                                     </div>
                                 </div>
                                 <button type="submit"
-                                    class="w-full py-2 rounded-lg bg-white/5 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all">Применить</button>
+                                    class="group w-full py-2 rounded-lg bg-primary/10 border border-primary/20 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">save</span>
+                                    Применить
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -1639,8 +1650,7 @@
                                         class="w-full flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all font-mono resize-none">{{ host.description or '' }}</textarea>
                                     <div class="flex justify-end">
                                         <button type="submit"
-                                            class="px-4 py-1.5 rounded-lg bg-white/5 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all border border-white/10">Сохранить
-                                            описание</button>
+                                            class="px-4 py-1.5 rounded-lg bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary/30 transition-all border border-primary/20">Сохранить</button>
                                     </div>
                                 </form>
                             </div>
@@ -1826,16 +1836,16 @@
 
                                     <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/5">
                                         <button type="button"
-                                            class="px-2 py-2 rounded-xl bg-white/5 text-white/60 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
+                                            class="px-4 py-1.5 rounded-lg bg-white/5 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1 border border-white/10"
                                             onclick="document.getElementById('view-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('edit-plan-{{ plan.plan_id }}').classList.remove('hidden')">
-                                            Изменить
+                                            <span class="material-symbols-outlined text-sm">edit</span> Изменить
                                         </button>
                                         <form action="{{ url_for('delete_plan_route', plan_id=plan.plan_id) }}"
-                                            method="post">
+                                            method="post" class="w-full">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                             <button type="submit"
-                                                class="w-full px-2 py-2 rounded-xl bg-red-500/10 text-red-500/70 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 hover:text-red-500 transition-all">
-                                                Удалить
+                                                class="w-full px-4 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 transition-all flex items-center justify-center gap-1 border border-red-500/10">
+                                                <span class="material-symbols-outlined text-sm">delete</span> Удалить
                                             </button>
                                         </form>
                                     </div>
@@ -1870,9 +1880,9 @@
                                         </div>
                                         <div class="grid grid-cols-2 gap-2 mt-auto pt-2">
                                             <button type="submit"
-                                                class="py-1.5 rounded-lg bg-primary text-background-dark text-[10px] font-bold uppercase tracking-widest hover:scale-[1.02] transition-all">ОК</button>
+                                                class="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 hover:text-white hover:border-primary/30 transition-all">ОК</button>
                                             <button type="button"
-                                                class="py-1.5 rounded-lg bg-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-white/20 transition-all"
+                                                class="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
                                                 onclick="document.getElementById('edit-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('view-plan-{{ plan.plan_id }}').classList.remove('hidden')">Отмена</button>
                                         </div>
                                     </form>
@@ -1930,7 +1940,7 @@
                                 </div>
 
                                 <button type="submit"
-                                    class="h-[38px] px-6 rounded-xl bg-primary text-background-dark font-bold text-[10px] uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 whitespace-nowrap">
+                                    class="group py-2 px-6 rounded-lg bg-primary/10 border border-primary/20 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center gap-2 whitespace-nowrap">
                                     <span class="material-symbols-outlined text-sm">add</span>
                                     Добавить
                                 </button>
@@ -2085,14 +2095,12 @@
 
                         <div class="mt-6 flex justify-end">
                             <button type="submit"
-                                class="group relative px-8 py-3 rounded-xl bg-primary text-background-dark font-bold overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]">
-                                <span class="relative z-10 flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-lg">add</span>
-                                    Создать SSH-цель
-                                </span>
+                                class="group relative px-8 py-3 rounded-xl bg-primary/10 border border-primary/20 text-white font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all flex items-center gap-2 overflow-hidden">
                                 <div
-                                    class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                                    class="absolute inset-0 bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform">
                                 </div>
+                                <span class="material-symbols-outlined text-xl relative z-10">add</span>
+                                <span class="relative z-10">Создать SSH-цель</span>
                             </button>
                         </div>
                     </form>
@@ -2173,20 +2181,20 @@
                                 method="post" class="w-full">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                 <button type="submit"
-                                    class="speedtest-loading-btn w-full px-4 py-2 rounded-xl bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500/30 transition-all flex items-center justify-center gap-2 border border-blue-500/10"
+                                    class="speedtest-loading-btn w-full px-4 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500/30 transition-all flex items-center justify-center gap-2 border border-blue-500/10"
                                     data-label="Тест">
                                     <span class="material-symbols-outlined text-sm">speed</span>
-                                    Тест скорости
+                                    ТЕСТ СКОРОСТИ
                                 </button>
                             </form>
 
                             <div class="grid grid-cols-2 gap-1.5">
                                 <button type="button"
-                                    class="ssh-edit-btn px-3 py-1.5 rounded-xl bg-white/5 text-white/50 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5"
+                                    class="ssh-edit-btn px-4 py-1.5 rounded-lg bg-white/5 border border-white/5 text-white/50 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
                                     data-target="{{ t.target_name }}">
                                     <span class="flex items-center justify-center gap-1">
                                         <span class="material-symbols-outlined text-xs">edit</span>
-                                        Правка
+                                        ПРАВКА
                                     </span>
                                 </button>
                                 <form
@@ -2194,11 +2202,11 @@
                                     method="post">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                     <button type="submit"
-                                        class="speedtest-loading-btn w-full px-3 py-1.5 rounded-xl bg-white/5 text-white/40 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5"
+                                        class="speedtest-loading-btn w-full px-4 py-1.5 rounded-lg bg-white/5 border border-white/5 text-white/40 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
                                         data-label="Setup">
                                         <span class="flex items-center justify-center gap-1">
                                             <span class="material-symbols-outlined text-xs">settings</span>
-                                            Setup Seed
+                                            SETUP
                                         </span>
                                     </button>
                                 </form>
@@ -2517,9 +2525,9 @@
                                     class="block text-white/60 text-[10px] uppercase font-bold tracking-wider ml-1">Изображение
                                     меню</label>
                                 <button type="button"
-                                    class="text-white/30 hover:text-primary transition-colors btn-copy-text flex items-center gap-1"
+                                    class="text-white/20 hover:text-primary transition-colors btn-copy-text flex items-center gap-1.5"
                                     data-copy-text="ГЛАВНОЕ МЕНЮ">
-                                    <span class="material-symbols-outlined text-xs">content_copy</span>
+                                    <span class="material-symbols-outlined text-xl">content_copy</span>
                                     <span class="text-[9px] uppercase font-bold">Copy Tag</span>
                                 </button>
                             </div>
@@ -2529,14 +2537,18 @@
                                     class="w-full bg-black/50 border border-white/5 rounded-xl px-3 py-2 text-white/40 text-[10px] font-mono" />
                                 <div class="flex gap-2">
                                     <button type="button"
-                                        class="btn-upload-menu-image flex-1 py-2 rounded-xl bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary/30 transition-all border border-primary/10 flex items-center justify-center gap-2"
+                                        class="group btn-upload-menu-image flex-1 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-white font-bold text-[9px] uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2"
                                         data-section="main_menu">
-                                        <span class="material-symbols-outlined text-sm">upload</span> UP
+                                        <span
+                                            class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">upload</span>
+                                        ЗАГРУЗИТЬ
                                     </button>
                                     <button type="button"
-                                        class="btn-delete-menu-image flex-1 py-2 rounded-xl bg-red-500/10 text-red-500/70 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 transition-all border border-red-500/10 flex items-center justify-center gap-2"
+                                        class="group btn-delete-menu-image flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500/70 font-bold text-[9px] uppercase tracking-widest hover:bg-red-500/20 hover:text-red-500 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2"
                                         data-section="main_menu">
-                                        <span class="material-symbols-outlined text-sm">delete</span> DEL
+                                        <span
+                                            class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">delete</span>
+                                        УДАЛИТЬ
                                     </button>
                                 </div>
                                 <input type="file" id="main_menu_image_file" accept=".jpg,.jpeg,.png,.gif"
@@ -2657,9 +2669,9 @@
                                         </div>
                                     </div>
                                     <button type="button"
-                                        class="w-7 h-7 flex items-center justify-center rounded-lg text-white/20 hover:text-primary hover:bg-primary/10 transition-all btn-copy-text"
+                                        class="w-8 h-8 flex items-center justify-center rounded-lg text-white/20 hover:text-primary hover:bg-primary/10 transition-all btn-copy-text"
                                         data-copy-text="{{ item.tag }}" title="Копировать тег">
-                                        <span class="material-symbols-outlined text-sm">content_copy</span>
+                                        <span class="material-symbols-outlined text-xl">content_copy</span>
                                     </button>
                                 </div>
 
@@ -2693,13 +2705,13 @@
 
                                     <div class="grid grid-cols-2 gap-2 mt-auto">
                                         <button type="button"
-                                            class="btn-upload-menu-image py-2 rounded-xl bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/20 transition-all border border-primary/10 flex items-center justify-center gap-1.5"
+                                            class="group btn-upload-menu-image flex-1 py-2 rounded-lg bg-primary/10 border border-primary/20 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-1.5"
                                             data-section="{{ item.id }}">
                                             <span class="material-symbols-outlined text-sm">upload</span>
                                             Загрузить
                                         </button>
                                         <button type="button"
-                                            class="btn-delete-menu-image py-2 rounded-xl bg-white/5 text-white/30 text-[9px] font-bold uppercase tracking-wider hover:bg-red-500/10 hover:text-red-500 transition-all border border-white/10 flex items-center justify-center gap-1.5"
+                                            class="group btn-delete-menu-image flex-1 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500/70 font-bold text-[10px] uppercase tracking-widest hover:bg-red-500/20 hover:text-red-500 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-1.5"
                                             data-section="{{ item.id }}">
                                             <span class="material-symbols-outlined text-sm">delete</span>
                                             Удалить
@@ -2845,13 +2857,13 @@
         function switchTab(tabId) {
             tabs.forEach(btn => {
                 const isActive = btn.getAttribute('data-tab') === tabId;
-                if (isActive) {
-                    btn.classList.add('bg-primary', 'text-background-dark', 'shadow-[0_0_15px_rgba(var(--primary-rgb,14,165,233),0.3)]');
-                    btn.classList.remove('text-white/40', 'hover:bg-white/5');
-                } else {
-                    btn.classList.remove('bg-primary', 'text-background-dark', 'shadow-[0_0_15px_rgba(var(--primary-rgb,14,165,233),0.3)]');
-                    btn.classList.add('text-white/40', 'hover:bg-white/5');
-                }
+                btn.classList.toggle('bg-primary/20', isActive);
+                btn.classList.toggle('border-primary/30', isActive);
+                btn.classList.toggle('text-white', isActive);
+
+                btn.classList.toggle('text-white/70', !isActive);
+                btn.classList.toggle('hover:bg-white/5', !isActive);
+                btn.classList.toggle('border-transparent', !isActive);
             });
             contents.forEach(content => content.classList.toggle('hidden', content.id !== 'tab-' + tabId));
             if (hashInput) hashInput.value = tabId; if (hashInput2) hashInput2.value = tabId;
@@ -2861,7 +2873,6 @@
         tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'))));
         switchTab(location.hash.slice(1) || 'panel');
 
-        // New Host Handler function
         async function handleHostForm(form) {
             const formData = new FormData(form);
             const action = form.action;
@@ -2870,7 +2881,6 @@
                 const res = await sendRequest(action, 'POST', formData);
 
                 if (res.ok) {
-                    // Specific handling based on action
                     if (action.includes('/delete-host')) {
                         const hostName = decodeURIComponent(action.split('/delete-host/')[1]);
                         const card = document.querySelector(`.host-card[data-host-name="${hostName}"]`);
@@ -2878,7 +2888,6 @@
                             card.remove();
                             showToast('success', res.message || 'Хост удален');
                         } else {
-                            // If card not found (weird), reload
                             showToast('success', res.message || 'Хост удален');
                             setTimeout(() => window.location.reload(), 500);
                         }
@@ -2891,7 +2900,6 @@
                             const newVal = hiddenInput.value === '1' ? '0' : '1';
                             hiddenInput.value = newVal;
 
-                            // Update UI immediately
                             if (newVal === '1') {
                                 btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-500 text-xs font-bold hover:bg-green-500/20 transition-all";
                                 btn.innerHTML = '<span class="material-symbols-outlined text-sm">visibility</span> Показать';
@@ -2901,12 +2909,9 @@
                             }
                             showToast('success', res.message || 'Видимость обновлена');
                         } else {
-                            // Fallback
                             showToast('success', res.message || 'Видимость обновлена');
                         }
                     } else {
-                        // For updates (URL, Subscription, Traffic, Description, SSH, Speedtest) - Just Toast
-                        // This also now covers add-host and rename-host
                         showToast('success', res.message || 'Настройки сохранены');
                     }
                 } else {
@@ -2937,13 +2942,6 @@
             }
             // SSH Цели
             else if (form.action && (form.action.includes('/ssh-targets/create') || form.action.includes('/ssh-targets/') && (form.action.includes('/update') || form.action.includes('/delete')))) {
-                // Исключаем формы speedtest (они внутри action имеют speedtest, но URL может содержать update/delete если не аккуратно)
-                // Наши URL:
-                // /admin/ssh-targets/create
-                // /admin/ssh-targets/<name>/update
-                // /admin/ssh-targets/<name>/delete
-                // /admin/ssh-targets/<name>/speedtest/run -> тут нет update/delete
-                // /admin/ssh-targets/<name>/speedtest/install -> тут нет update/delete
 
                 e.preventDefault();
                 e.stopPropagation();
@@ -2959,7 +2957,6 @@
 
                 await handleSSHTargetForm(form, isUpdate, isDelete);
             }
-            // HOSTS (Added for fix)
             else if (form.action && (
                 form.action.includes('/add-host') ||
                 form.action.includes('/delete-host') ||
@@ -2981,7 +2978,7 @@
 
                 await handleHostForm(form);
             }
-        }, true); // true = capture phase (перехват до всплытия)
+        }, true);
 
         window.toggleAddHostForm = () => toggleElementState('add-host', 'addHostFormCollapsed');
         window.toggleHostContent = (name) => toggleElementState(name, 'hostCollapsed_' + name);
@@ -3431,58 +3428,65 @@
         <div id="plan-card-${plan.plan_id}" class="bg-black/30 border border-white/10 rounded-2xl p-4 group/plan relative overflow-hidden">
             <div id="view-plan-${plan.plan_id}" class="flex flex-col h-full relative z-10">
                 <div class="flex-1">
-                    <div class="flex items-center justify-between mb-2">
-                        <h4 class="text-white font-bold text-sm truncate pr-2">${plan.plan_name}</h4>
-                        <div class="flex items-center gap-1">
-                             <button type="button" 
-                                onclick="document.getElementById('edit-plan-${plan.plan_id}').classList.remove('hidden'); document.getElementById('view-plan-${plan.plan_id}').classList.add('hidden')"
-                                class="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-all">
-                                <span class="material-symbols-outlined text-[14px]">edit</span>
-                            </button>
-                            <form action="/delete-plan/${plan.plan_id}" method="post" data-confirm="Удалить тариф '${plan.plan_name}'?">
-                                <input type="hidden" name="csrf_token" value="${csrfToken}" />
-                                <button type="submit" class="w-6 h-6 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500/60 hover:text-red-500 flex items-center justify-center transition-all">
-                                    <span class="material-symbols-outlined text-[14px]">delete</span>
-                                </button>
-                            </form>
+                    <div class="flex justify-between items-center mb-3">
+                        <h6 class="text-white font-bold text-sm leading-tight pr-2 group-hover/plan:text-primary transition-colors">${plan.plan_name}</h6>
+                        <div class="px-2 py-1 rounded-lg bg-primary/10 text-primary font-bold text-xs ring-1 ring-primary/20">${price}₽</div>
+                    </div>
+                    <div class="flex flex-wrap gap-x-2 gap-y-1 justify-center">
+                        <div class="flex items-center gap-1 text-white/40 text-[10px] font-bold uppercase tracking-tight bg-white/5 px-1.5 py-0.5 rounded-md">
+                            <span class="material-symbols-outlined text-[12px]">calendar_today</span>
+                            ${plan.months} м
+                        </div>
+                        <div class="flex items-center gap-1 text-white/40 text-[10px] font-bold uppercase tracking-tight bg-white/5 px-1.5 py-0.5 rounded-md">
+                            <span class="material-symbols-outlined text-[12px]">data_usage</span>
+                            ${traffic} G
+                        </div>
+                        <div class="flex items-center gap-1 text-white/40 text-[10px] font-bold uppercase tracking-tight bg-white/5 px-1.5 py-0.5 rounded-md">
+                            <span class="material-symbols-outlined text-[12px]">devices</span>
+                            ${hwid} HWID
                         </div>
                     </div>
                 </div>
-                 <div class="space-y-1 mb-3">
-                    <div class="flex justify-between text-[10px] text-white/40">
-                        <span>Цена:</span>
-                        <span class="text-white font-mono">${price} ₽</span>
-                    </div>
-                     <div class="flex justify-between text-[10px] text-white/40">
-                        <span>Срок:</span>
-                        <span class="text-white font-mono">${plan.months} мес.</span>
-                    </div>
-                    <div class="flex justify-between text-[10px] text-white/40">
-                        <span>Трафик:</span>
-                        <span class="text-white font-mono">${traffic} GB</span>
-                    </div>
-                     <div class="flex justify-between text-[10px] text-white/40">
-                        <span>Лимит:</span>
-                        <span class="text-white font-mono">${hwid} dev</span>
-                    </div>
+                <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/5">
+                    <button type="button"
+                        onclick="document.getElementById('view-plan-${plan.plan_id}').classList.add('hidden'); document.getElementById('edit-plan-${plan.plan_id}').classList.remove('hidden')"
+                        class="px-4 py-1.5 rounded-lg bg-white/5 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1 border border-white/10">
+                        <span class="material-symbols-outlined text-sm">edit</span> Изменить
+                    </button>
+                    <form action="/delete-plan/${plan.plan_id}" method="post" data-confirm="Удалить тариф '${plan.plan_name}'?" class="w-full">
+                        <input type="hidden" name="csrf_token" value="${csrfToken}" />
+                        <button type="submit"
+                            class="w-full px-4 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 transition-all flex items-center justify-center gap-1 border border-red-500/10">
+                            <span class="material-symbols-outlined text-sm">delete</span> Удалить
+                        </button>
+                    </form>
                 </div>
             </div>
-             <!-- Edit Form -->
-            <div id="edit-plan-${plan.plan_id}" class="hidden absolute inset-0 bg-black/90 z-20 p-4 flex flex-col justify-center">
-                 <form action="/update-plan/${plan.plan_id}" method="post" class="space-y-2">
+            <div id="edit-plan-${plan.plan_id}" class="hidden flex flex-col h-full relative z-10">
+                <form action="/update-plan/${plan.plan_id}" method="post" class="flex flex-col h-full gap-2">
                     <input type="hidden" name="csrf_token" value="${csrfToken}" />
-                    <input type="text" name="plan_name" value="${plan.plan_name}" required class="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" placeholder="Name">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="number" name="months" value="${plan.months}" required class="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" placeholder="Months">
-                         <input type="number" name="price" value="${price}" required class="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" placeholder="Price">
+                    <div class="space-y-1">
+                        <input type="text" name="plan_name" value="${plan.plan_name}" placeholder="Название" required
+                            class="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                         <input type="number" name="traffic_limit_gb" value="${plan.traffic_limit_gb || ''}" class="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" placeholder="Traffic">
-                        <input type="number" name="hwid_limit" value="${plan.hwid_limit || ''}" class="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs" placeholder="HWID">
+                        <input type="number" name="months" value="${plan.months}" placeholder="Мес." required
+                            class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                        <input type="number" name="price" value="${price}" placeholder="Цена" required
+                            class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                     </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="submit" class="py-1.5 rounded-lg bg-primary text-background-dark text-[10px] font-bold uppercase tracking-widest hover:scale-[1.02] transition-all flex-1">Save</button>
-                        <button type="button" onclick="document.getElementById('edit-plan-${plan.plan_id}').classList.add('hidden'); document.getElementById('view-plan-${plan.plan_id}').classList.remove('hidden')" class="py-1.5 rounded-lg bg-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-white/20 transition-all flex-1">Cancel</button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" name="traffic_limit_gb" value="${plan.traffic_limit_gb || ''}" placeholder="GB (0=∞)"
+                            class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                        <input type="number" name="hwid_limit" value="${plan.hwid_limit || ''}" placeholder="HWID"
+                            class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-auto pt-2">
+                        <button type="submit"
+                            class="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 hover:text-white hover:border-primary/30 transition-all">ОК</button>
+                        <button type="button"
+                            onclick="document.getElementById('edit-plan-${plan.plan_id}').classList.add('hidden'); document.getElementById('view-plan-${plan.plan_id}').classList.remove('hidden')"
+                            class="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all">Отмена</button>
                     </div>
                 </form>
             </div>
@@ -3503,10 +3507,7 @@
             try {
                 data = await res.json();
             } catch (e) {
-                // Если сервер вернул не JSON (например редирект), считаем что все ок, но без данных
                 if (res.ok && res.redirected) {
-                    // Fallback: если редирект, придется перезагрузить, но это именно то что мы хотели избежать.
-                    // Но мы обновили сервер, так что он должен вернуть JSON.
                     console.warn('SSH Target response was a redirect, expected JSON.');
                     window.location.reload();
                     return;
@@ -3534,24 +3535,19 @@
                         ssh_user: formData.get('ssh_user'),
                         ssh_password: formData.get('ssh_password'),
                         description: formData.get('description'),
-                        // Для сохранения старого имени при переименовании
                         old_target_name: isUpdate ? decodeURIComponent(form.action.split('/ssh-targets/')[1].split('/')[0]) : null
                     };
 
-                    // Если update и имя изменилось, старая карточка не найдет по новому имени.
                     const cardHtml = renderSSHTargetCard(targetData, csrfToken);
 
                     if (isUpdate) {
-                        // Находим по старому имени
                         const oldName = targetData.old_target_name;
                         const oldCard = document.querySelector(`.ssh-target-card[data-target-name="${oldName}"]`);
                         if (oldCard) {
                             oldCard.outerHTML = cardHtml;
-                            // Re-init events for the new card if needed (drag and drop etc is global, but buttons need handlers)
                             initInteractiveElements();
                         }
                     } else {
-                        // Create
                         let grid = document.getElementById('ssh-targets-grid-container');
                         if (!grid) {
                             const emptyDiv = document.querySelector('#tab-hosts .bg-white\\/5.text-center'); // roughly searching for empty state
@@ -3577,7 +3573,6 @@
     }
 
     function renderSSHTargetCard(t, csrfToken) {
-        // Construct URL for actions
         const deleteUrl = `/admin/ssh-targets/${t.target_name}/delete`;
         const testUrl = `/admin/ssh-targets/${t.target_name}/speedtest/run`;
         const updateUrl = `/admin/ssh-targets/${t.target_name}/update`;
@@ -3638,14 +3633,14 @@
                         <div class="space-y-1.5 pt-4 mt-auto">
                             <form action="${testUrl}" method="post" class="w-full">
                                 <input type="hidden" name="csrf_token" value="${csrfToken}" />
-                                <button type="submit" class="speedtest-loading-btn w-full px-4 py-2 rounded-xl bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500/30 transition-all flex items-center justify-center gap-2 border border-blue-500/10" data-label="Тест">
+                                <button type="submit" class="speedtest-loading-btn w-full px-4 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500/30 transition-all flex items-center justify-center gap-2 border border-blue-500/10" data-label="Тест">
                                     <span class="material-symbols-outlined text-sm">speed</span>
                                     Тест скорости
                                 </button>
                             </form>
 
                             <div class="grid grid-cols-2 gap-1.5">
-                                <button type="button" class="ssh-edit-btn px-3 py-1.5 rounded-xl bg-white/5 text-white/50 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5" data-target="${t.target_name}">
+                                <button type="button" class="ssh-edit-btn px-4 py-1.5 rounded-lg bg-white/5 text-white/50 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5" data-target="${t.target_name}">
                                     <span class="flex items-center justify-center gap-1">
                                         <span class="material-symbols-outlined text-xs">edit</span>
                                         Правка
@@ -3653,7 +3648,7 @@
                                 </button>
                                 <form action="${installUrl}" method="post">
                                     <input type="hidden" name="csrf_token" value="${csrfToken}" />
-                                    <button type="submit" class="speedtest-loading-btn w-full px-3 py-1.5 rounded-xl bg-white/5 text-white/40 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5" data-label="Setup">
+                                    <button type="submit" class="speedtest-loading-btn w-full px-4 py-1.5 rounded-lg bg-white/5 text-white/40 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/5" data-label="Setup">
                                         <span class="flex items-center justify-center gap-1">
                                             <span class="material-symbols-outlined text-xs">settings</span>
                                             Setup Seed

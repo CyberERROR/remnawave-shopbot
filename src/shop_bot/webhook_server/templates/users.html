@@ -627,7 +627,8 @@
                         class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
                         <span id="udm-action-ban-icon"
                             class="material-symbols-outlined text-white/50 group-hover:text-red-500 transition-colors">block</span>
-                        <span id="udm-action-ban-text" class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Бан</span>
+                        <span id="udm-action-ban-text"
+                            class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Бан</span>
                     </button>
                     <button id="udm-action-revoke-all"
                         class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
@@ -843,14 +844,13 @@
         });
         toggleClearBtn();
 
-        // ===== LAZY LOAD LOGIC =====
         const loadUsersTable = async () => {
             const url = new URL(tbody.dataset.fetchUrl, location.origin);
             try {
                 const resp = await fetch(url, { headers: { 'Accept': 'text/html' } });
                 if (resp.ok) {
                     tbody.innerHTML = await resp.text();
-                    updatePagination(url); // Helper to reload pagination if needed
+                    updatePagination(url);
                 }
             } catch (e) {
                 console.error("Failed to load users:", e);
@@ -862,7 +862,6 @@
             const pagEl = document.getElementById('users-pagination');
             if (pagEl) {
                 const pagUrl = new URL(pagEl.dataset.src, location.origin);
-                // Copy params from current table url (like q, page) to pagination url
                 currentUrl.searchParams.forEach((v, k) => pagUrl.searchParams.set(k, v));
                 try {
                     const resp = await fetch(pagUrl, { headers: { 'Accept': 'text/html' } });
@@ -871,10 +870,8 @@
             }
         };
 
-        // Загружаем сразу
         loadUsersTable();
 
-        // Автообновление (если нужно)
         if (tbody.dataset.fetchInterval) {
             setInterval(loadUsersTable, parseInt(tbody.dataset.fetchInterval));
         }
@@ -960,10 +957,8 @@
                     const resp = await fetch(url, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
                     if (resp.ok) {
                         tbody.innerHTML = await resp.text();
-                        // Важно: обновляем data-fetch-url для будущих AJAX рефрешей
                         tbody.setAttribute('data-fetch-url', url.toString());
 
-                        // Также обновляем URL в пагинации если она есть
                         const pagEl = document.getElementById('users-pagination');
                         if (pagEl) {
                             const pagUrl = new URL(pagEl.getAttribute('data-src'), location.origin);
@@ -971,7 +966,6 @@
                             pagUrl.searchParams.set('page', '1');
                             pagEl.setAttribute('data-src', pagUrl.toString());
 
-                            // Загружаем актуальную пагинацию
                             const pResp = await fetch(pagUrl, { headers: { 'Accept': 'text/html' } });
                             if (pResp.ok) pagEl.innerHTML = await pResp.text();
                         }
@@ -997,7 +991,6 @@
             }
         });
 
-        // Reusable function to open balance modal
         async function openBalanceModalForUser(uid, uname, balance, sign = '') {
             let refs = [];
             try {
@@ -1031,7 +1024,6 @@
             openBalanceModalForUser(uid, uname, balance, sign);
         });
 
-        // Reusable function to open message modal
         function openMessageModalForUser(uid, uname) {
             document.getElementById('mm-user').textContent = `@${uname} (#${uid})`;
             document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0', `/${uid}`);
@@ -1039,7 +1031,6 @@
             openModal('messageModal');
         }
 
-        // Reusable function to revoke all keys
         async function revokeAllKeys(uid, uname) {
             const confirmBtn = document.getElementById('revokeAllConfirmBtn');
             confirmBtn.onclick = async () => {
@@ -1096,12 +1087,10 @@
         // Оставляем только специфичную логику если нужно, но AJAX формы теперь в base.html
 
         document.addEventListener('submit', (e) => {
-            const form = e.target.closest('#commentForm, #expiryForm, #revokeKeyInternalForm'); // Для внутренних форм модалок если они есть
+            const form = e.target.closest('#commentForm, #expiryForm, #revokeKeyInternalForm');
             if (!form) return;
-            // Здесь можно оставить специфичную логику для модалок ключей
         });
 
-        // ===== AJAX НАВИГАЦИЯ =====
         document.addEventListener('click', async (e) => {
             const link = e.target.closest('.ajax-nav');
             if (!link) return;
@@ -1145,15 +1134,14 @@
                     const html = await tableResp.text();
                     if (isLoginPage(html)) { window.location.reload(); return; }
                     tbody.innerHTML = html;
-                    tbody.setAttribute('data-fetch-url', tableUrl); // Синхронизируем URL для рефреша
-                    restoreOpenedKeys(); // Restore opened key rows state
+                    tbody.setAttribute('data-fetch-url', tableUrl);
+                    restoreOpenedKeys();
                 }
 
                 if (pagResp && pagResp.ok && pagEl) {
                     const html = await pagResp.text();
                     if (isLoginPage(html)) { window.location.reload(); return; }
                     pagEl.innerHTML = html;
-                    // Update data-src for next usage
                     pagEl.setAttribute('data-src', pagUrl);
                 }
             } catch (err) {
@@ -1185,12 +1173,10 @@
                 if (typeof data === 'string' && isLoginPage(data)) { window.location.reload(); return; }
 
                 if (data && data.ok) {
-                    // Seller Settings Logic
                     const sellerInfo = data.seller_info || { active: false, settings: {} };
                     const sellerActive = sellerInfo.active;
                     const sellerSettings = sellerInfo.settings || { seller_sale: 0, seller_ref: 0, seller_uuid: "0" };
 
-                    // Elements
                     const sellerToggle = document.getElementById('udm-seller-active');
                     const sellerContainer = document.getElementById('udm-seller-settings');
                     const sellerSaleInput = document.getElementById('udm-seller-sale');
@@ -1198,7 +1184,6 @@
                     const sellerUuidInput = document.getElementById('udm-seller-uuid');
                     const sellerSaveBtn = document.getElementById('udm-save-seller-btn');
 
-                    // Init State
                     if (sellerToggle) {
                         sellerToggle.checked = sellerActive;
                         if (sellerActive) {
@@ -1211,7 +1196,6 @@
                         sellerRefInput.value = sellerSettings.seller_ref || 0;
                         sellerUuidInput.value = sellerSettings.seller_uuid || "0";
 
-                        // Handlers
                         const saveSellerSettings = async () => {
                             const payload = new FormData();
                             payload.append('seller_active', sellerToggle.checked ? 1 : 0);
@@ -1282,7 +1266,7 @@
                     const pinBadge = document.getElementById('udm-pinned-badge');
                     if (pinBadge) {
                         pinBadge.classList.toggle('hidden', !data.user.is_pinned);
-                        pinBadge.style.color = '#22c55e'; // Ярко-зеленый (green-500)
+                        pinBadge.style.color = '#22c55e';
                     }
 
                     const pinText = document.getElementById('udm-action-pin-text');
@@ -1320,7 +1304,6 @@
                     subsStats.textContent = data.subs_stats ?
                         `(Всего: ${data.subs_stats.total}, Активно: ${data.subs_stats.active}, Истекло: ${data.subs_stats.expired})` : '';
                     subsList.innerHTML = data.subscriptions?.length ? data.subscriptions.map(sub => {
-                        // Duration Helper
                         function formatDuration(dateStr) {
                             if (!dateStr || sub.is_expired) return '';
                             const d = new Date(dateStr);
@@ -1334,7 +1317,6 @@
                             return '';
                         }
                         const durationText = formatDuration(sub.expire_date);
-                        // Extract local part of email
                         const emailDisp = sub.email ? sub.email.split('@')[0] : 'N/A';
 
                         return `
@@ -1424,7 +1406,6 @@
                             else if (diffDays < 365) rel = `(${Math.round(diffDays / 30)}мес)`;
                             else rel = `(${Math.round(diffDays / 365)}г)`;
 
-                            // Format YYYY-MM-DD HH:MM:SS
                             const Y = d.getFullYear();
                             const M = String(d.getMonth() + 1).padStart(2, '0');
                             const D = String(d.getDate()).padStart(2, '0');
@@ -1467,7 +1448,6 @@
                     closeModal('userDetailsModal');
                 }
 
-                // Fetch Referrals
                 try {
                     const refResp = await fetch(`{{ url_for('user_referrals_json', user_id=0) }}`.replace('/0', `/${uid}`), {
                         headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
@@ -1504,7 +1484,6 @@
                         const next = sorted.slice(renderedCount, renderedCount + (count || 0));
                         next.forEach(r => {
                             const datePart = (r.registration_date || '').split(' ')[0];
-                            // Calculate relative time
                             let relTime = '';
                             try {
                                 const d = new Date(r.registration_date);
@@ -1544,14 +1523,12 @@
                         });
                         renderedCount += next.length;
 
-                        // Toggle load more button
                         if (renderedCount < refs.length) {
                             loadMoreBtn.classList.remove('hidden');
                         } else {
                             loadMoreBtn.classList.add('hidden');
                         }
 
-                        // Update counter
                         const countBadge = document.getElementById('udm-ref-count');
                         if (countBadge) countBadge.textContent = renderedCount;
                     }
@@ -1568,8 +1545,6 @@
                         renderRefs(currentCount, true);
                     });
 
-                    // Remove old listener to avoid duplicates if any (simple way: clone node or just reassign onclick)
-                    // Better: define handler outside or use a property.
                     loadMoreBtn.onclick = (e) => {
                         e.preventDefault();
                         renderRefs(BATCH_SIZE_MORE);
@@ -1593,7 +1568,6 @@
             await fetchUserDetails(uid);
         });
 
-        // Quick Action Handlers (Delegated)
         document.getElementById('userDetailsModal').addEventListener('click', function (e) {
             const btn = e.target.closest('button[id^="udm-action-"]');
             if (!btn) return;
@@ -1606,14 +1580,13 @@
 
             const action = btn.id.replace('udm-action-', '');
 
-            // Re-use Logic from Table Buttons
             if (action === 'add-bal' || action === 'sub-bal') {
                 const isAdd = action === 'add-bal';
                 document.getElementById('bm-user').textContent = `@${uname} (#${uid})`;
                 document.getElementById('bm-balance').textContent = balance;
                 document.getElementById('bm-form').action = `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0', `/${uid}`);
                 document.getElementById('bm-refcount').textContent = document.getElementById('udm-ref-count').textContent;
-                document.getElementById('bm-reflist').innerHTML = ''; // Simplified, or fetch again
+                document.getElementById('bm-reflist').innerHTML = '';
 
                 const deltaInput = document.querySelector('#bm-form input[name="delta"]');
                 if (deltaInput) {
@@ -1634,7 +1607,6 @@
                 apiRequest(`{{ url_for('toggle_pin_user_route', user_id=0) }}`.replace('/0', `/${uid}`), 'POST', {}, 'Статус закрепа изменен')
                     .then(d => {
                         if (d) {
-                            // Локальное обновление БЕЗ перерисовки всей модалки
                             const pinBadge = document.getElementById('udm-pinned-badge');
                             const pinText = document.getElementById('udm-action-pin-text');
                             const pinIcon = document.getElementById('udm-action-pin-icon');
@@ -1656,7 +1628,6 @@
                                 }
                             }
 
-                            // Обновляем таблицу в фоне
                             const tbody = document.getElementById('users-tbody');
                             if (tbody) {
                                 const urlStr = tbody.getAttribute('data-fetch-url');
@@ -1682,8 +1653,7 @@
                         const isBannedNow = data.is_banned;
                         const banText = document.getElementById('udm-action-ban-text');
                         const banIcon = document.getElementById('udm-action-ban-icon');
-                        
-                        // Локальное обновление БЕЗ перерисовки всей модалки
+
                         if (banText) banText.textContent = isBannedNow ? 'Раз Бан' : 'Бан';
                         if (banIcon) {
                             if (isBannedNow) {
@@ -1699,7 +1669,6 @@
                             }
                         }
 
-                        // Обновляем таблицу в фоне
                         const tbody = document.getElementById('users-tbody');
                         if (tbody) {
                             const urlStr = tbody.getAttribute('data-fetch-url');
@@ -1740,20 +1709,13 @@
             }
         });
 
-        // ========= Subscription Actions =========
-        let currentUserDetailsId = null; // Store user ID to refresh modal after update
+        let currentUserDetailsId = null;
 
-        // --- Expiry ---
         let expiryKeyId = null;
         document.addEventListener('click', e => {
             const btn = e.target.closest('.btn-user-edit-expiry');
             if (!btn) return;
             expiryKeyId = btn.getAttribute('data-key-id');
-            // Assuming this button is inside the modal, we can get current user ID from somewhere or store it differently
-            // But actually we have data-user-id on trial toggle or we can just look at modal content attributes if we added them.
-            // For now, let's rely on refreshContainerById NOT working for modal content directly, 
-            // instead we should re-fetch user details.
-            // Let's store uid in a global var when modal opens.
             currentUserDetailsId = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
 
             document.getElementById('expiryDelta').value = '';
@@ -1765,20 +1727,18 @@
             if (!expiryKeyId || !delta) { showToast('warning', 'Введите количество дней'); return; }
             try {
                 const fd = new FormData();
-                fd.append('csrf_token', '{{ csrf_token() }}'); // Using template var since JS is in template
+                fd.append('csrf_token', '{{ csrf_token() }}');
                 fd.append('delta_days', delta);
                 const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0', `/${expiryKeyId}`);
                 const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
                 if (resp.ok) {
                     showToast('success', 'Срок обновлён');
                     closeModal('expiryModal');
-                    // Refresh User Details Modal
                     if (currentUserDetailsId) refreshUserDetails(currentUserDetailsId);
                 } else { showToast('danger', 'Ошибка'); }
             } catch (_) { showToast('danger', 'Ошибка сети'); }
         });
 
-        // --- Comment ---
         let commentKeyId = null;
         document.addEventListener('click', e => {
             const btn = e.target.closest('.btn-user-edit-comment');
@@ -1807,7 +1767,6 @@
             } catch (_) { showToast('danger', 'Ошибка сети'); }
         });
 
-        // --- Revoke ---
         let revokeKeyId = null;
         document.addEventListener('click', e => {
             const btn = e.target.closest('.btn-user-revoke-key');
@@ -1834,7 +1793,6 @@
             } catch (_) { showToast('danger', 'Ошибка сети'); }
         });
 
-        // Helper to refresh modal content
         async function refreshUserDetails(uid) {
             const btn = document.querySelector(`.btn-user-details[data-uid="${uid}"]`);
             if (btn) btn.click();

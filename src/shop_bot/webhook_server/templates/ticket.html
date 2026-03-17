@@ -22,10 +22,6 @@
 
 {% block content %}
 <style>
-    /* ... existing styles ... */
-    /* (Styles remain same, I skip it in diff for brevity or include if needed) */
-</style>
-<style>
     /* ========== DESKTOP VIEW ========== */
     @media (min-width: 769px) {
         .desktop-chat-view {
@@ -347,7 +343,7 @@
             if (res.ok) {
                 textarea.value = '';
                 textarea.style.height = 'auto';
-                await loadMessages(true); // Передаем флаг принудительной прокрутки
+                await loadMessages(true); // Принудительная прокрутка
             }
         } catch (e) {
             console.error(e);
@@ -356,7 +352,7 @@
         }
     }
 
-    // ===== LAZY LOAD MESSAGES =====
+    // ===== ЗАГРУЗКА СООБЩЕНИЙ =====
     const loadMessages = async (forceScroll = false) => {
         try {
             const res = await fetch(window.location.pathname + '?partial=true');
@@ -417,9 +413,8 @@
             return 'только что';
         }
 
-        // Initial load
         loadMessages();
-        // 10s auto-refresh for chat
+        // 10s автообновление чата
         setInterval(loadMessages, 10000);
     });
 

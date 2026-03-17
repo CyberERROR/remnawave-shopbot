@@ -757,7 +757,7 @@
 
                     <div class="grid grid-cols-2 gap-2 sidebar-bottom-grid">
                         <div
-                            class="flex items-center justify-between px-2.5 py-2.5 rounded-xl bg-white/5 border border-white/5 sidebar-bottom-status">
+                            class="flex items-center justify-between px-2.5 h-9 rounded-xl bg-white/5 border border-white/5 sidebar-bottom-status">
                             <div class="flex items-center gap-1.5">
                                 {% if main_running and support_running %}
                                 <span class="relative flex h-2 w-2">
@@ -789,14 +789,9 @@
 
                         <button type="button" id="about-info-btn-mobile" onclick="openModal('aboutModal')"
                             title="О проекте"
-                            class="flex items-center justify-center py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all group border border-white/5 relative overflow-hidden">
+                            class="flex items-center justify-center px-2.5 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all group border border-white/5 relative overflow-hidden">
                             <span id="about-info-icon-mobile"
                                 class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">info</span>
-                            <div id="about-new-badge-mobile"
-                                class="hidden absolute inset-0 items-center justify-center bg-red-500/20 group-hover:bg-red-500/30 transition-colors">
-                                <span
-                                    class="px-1.5 py-0.5 rounded bg-red-500 text-[9px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse">NEW</span>
-                            </div>
                         </button>
                     </div>
                 </div>

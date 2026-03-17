@@ -4,7 +4,7 @@
 {% set cf = current_filter or 'general' %}
 {% set ns = namespace(last_m=1, last_d=1) %}
 {% if tp > 1 %}
-<div class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 shadow-lg backdrop-blur-sm">
+<div class="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/10 shadow-lg backdrop-blur-sm">
     {% if cp > 1 %}
     <a class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all transform hover:-translate-x-0.5 ajax-nav"
         href="{{ url_for('admin_keys_page', page=cp-1, q=query, filter=cf) }}" title="Назад">

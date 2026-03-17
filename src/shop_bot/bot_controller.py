@@ -148,7 +148,6 @@ class BotController:
             handlers.TELEGRAM_BOT_USERNAME = bot_username
             handlers.ADMIN_ID = admin_id
 
-            # Webapp Launch Logic
             webapp_settings = rw_repo.get_webapp_settings()
             if webapp_app and webapp_settings.get("webapp_enable"):
                 logger.info("Запуск Webapp сервера...")
@@ -181,12 +180,9 @@ class BotController:
 
         logger.info("Отправляю сигнал на корректную остановку...")
         
-        # Stop Webapp
         if self._webapp_server:
             logger.info("Остановка Webapp сервера...")
             self._webapp_server.should_exit = True
-            # Не ждем join долго, чтобы не блокировать основной поток, 
-            # так как uvicorn работает в треде
             self._webapp_server = None
             self._webapp_thread = None
 

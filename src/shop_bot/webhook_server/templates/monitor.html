@@ -630,7 +630,7 @@
                             position: 'top',
                             align: 'end',
                             labels: {
-                                color: '#9ca3af', // Gray-400
+                                color: '#9ca3af',
                                 usePointStyle: true,
                                 boxWidth: 6,
                                 padding: 20,
@@ -638,10 +638,10 @@
                             }
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)', // Gray-800
-                            titleColor: '#f3f4f6', // Gray-100
-                            bodyColor: '#d1d5db', // Gray-300
-                            borderColor: 'rgba(255,255,255,0.1)', // Gray-700
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#f3f4f6',
+                            bodyColor: '#d1d5db',
+                            borderColor: 'rgba(255,255,255,0.1)',
                             borderWidth: 1,
                             cornerRadius: 8,
                             padding: 10,
@@ -654,7 +654,7 @@
                     scales: {
                         x: {
                             ticks: {
-                                color: '#6b7280', // Gray-500
+                                color: '#6b7280',
                                 font: { size: 9, family: "'Inter', sans-serif" },
                                 maxRotation: 0,
                                 autoSkip: true,
@@ -669,7 +669,7 @@
                             min: 0,
                             max: 100,
                             ticks: {
-                                color: '#6b7280', // Gray-500
+                                color: '#6b7280',
                                 font: { size: 9, family: "'Inter', sans-serif" },
                                 callback: v => v + '%',
                                 stepSize: 20
@@ -842,7 +842,6 @@
                 if (typeof initSoftSelect === 'function') {
                     initSoftSelect('server-selector', 'Локальная');
                 } else {
-                    // Fallback to basic select functionality if initSoftSelect is not available
                     const sel = document.getElementById('server-selector');
                     const menus = document.querySelectorAll('.soft-select-item');
                     const toggle = document.querySelector('.soft-select-toggle span:first-child');

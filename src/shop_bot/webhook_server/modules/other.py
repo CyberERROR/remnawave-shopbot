@@ -486,49 +486,47 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     @login_required
     def broadcast_stats():
         try:
-            all_users = rw_repo.get_all_users() or []
-            total_users = len(all_users)
-            users_with_active_keys, users_with_expired_keys, users_without_trial = 0, 0, 0
+            db_stats = rw_repo.database.get_admin_stats()
+            total_keys_all = db_stats.get('total_keys', 0)
             
+          
+            all_keys = rw_repo.database.get_all_keys() or []
+            total_keys_active, total_keys_expired = 0, 0
             expiring_counts = {1: 0, 3: 0, 5: 0, 10: 0}
-
-            for user in all_users:
-                user_id = user.get('telegram_id')
-                keys = rw_repo.get_keys_for_user(user_id) or []
-                has_active_key, has_expired_key = False, False
-                min_days_remaining = None
-
-                for key in keys:
-                    expire_dt = parse_expire_dt(key.get('expire_at'))
-                    if expire_dt:
-                        now = get_msk_time()
-                        if expire_dt > now:
-                            has_active_key = True
-                            days_rem = (expire_dt - now).days
-                            if min_days_remaining is None or days_rem < min_days_remaining:
-                                min_days_remaining = days_rem
-                        else:
-                            has_expired_key = True
+            now = get_msk_time()
+            
+            for key in all_keys:
+                expire_at_val = key.get('expire_at')
+                expire_dt = parse_expire_dt(expire_at_val)
                 
-                if has_active_key: 
-                    users_with_active_keys += 1
-                    if min_days_remaining is not None:
+                if not expire_at_val:
+                    total_keys_active += 1
+                elif expire_dt:
+                    if expire_dt > now:
+                        total_keys_active += 1
+                        days_rem = (expire_dt - now).days
                         for day_limit in [1, 3, 5, 10]:
-                            if min_days_remaining <= day_limit:
+                            if days_rem <= day_limit:
                                 expiring_counts[day_limit] += 1
-
-                if has_expired_key: users_with_expired_keys += 1
-                if not user.get('trial_used', 0): users_without_trial += 1
+                    else:
+                        total_keys_expired += 1
+                else:
+                    total_keys_active += 1
+            
+            all_users = rw_repo.database.get_all_users() or []
+            total_users = len(all_users)
+            users_without_trial = sum(1 for u in all_users if not u.get('trial_used', 0))
             
             last_results = load_broadcast_results()
-            
-            # Получаем количество забаненных (failed list)
             banned_data = get_banned_users_data()
             banned_count = banned_data.get('count', 0)
             
             return jsonify({
-                'ok': True, 'total_users': total_users, 'users_with_keys': users_with_active_keys,
-                'users_with_expired_keys': users_with_expired_keys, 'users_without_trial': users_without_trial,
+                'ok': True, 
+                'total_users': total_users, 
+                'users_with_keys': total_keys_active,
+                'users_with_expired_keys': total_keys_expired, 
+                'users_without_trial': users_without_trial,
                 'expiring_counts': expiring_counts,
                 'last_results': last_results,
                 'banned_count': banned_count

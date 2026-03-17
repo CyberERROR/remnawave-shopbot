@@ -1247,7 +1247,7 @@ class CreatePaymentRequest(BaseModel):
     action: str
     key_id: int | None = None
     promo_code: str | None = None
-    tier_device_count: int = 1
+    tier_device_count: int | None = None
     tier_price: float = 0
 
 class ApplyPromoRequest(BaseModel):
@@ -1475,6 +1475,9 @@ async def api_create_payment(req: CreatePaymentRequest):
         
         tier_device_count = req.tier_device_count
         tier_price_per_month = req.tier_price
+        
+        if tier_price_per_month == 0:
+            tier_device_count = None
         
         if req.action == 'extend' and req.key_id:
             host_data = get_host(req.host_name) if req.host_name else None
