@@ -13,11 +13,9 @@ NC='\033[0m'
 REPO_URL="https://github.com/CyberERROR/remnawave-shopbot.git"
 PROJECT_NAME="remnawave-shopbot"
 
-# === ИСПРАВЛЕНИЕ ПУТИ ===
-# Скрипт теперь всегда ищет папку в домашней директории пользователя (/root/remnawave-shopbot),
-# даже если вы запускаете установщик из другого места.
+# === ИСПРАВЛЕНИЕ ПУТИ === 
 PROJECT_DIR="$HOME/$PROJECT_NAME"
-
+    
 # На всякий случай проверяем текущую папку, если вдруг установили в нестандартное место
 if [[ ! -d "$PROJECT_DIR" ]] && [[ -d "./$PROJECT_NAME" ]]; then
     PROJECT_DIR="$(pwd)/$PROJECT_NAME"
