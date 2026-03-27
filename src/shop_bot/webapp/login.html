@@ -12,6 +12,7 @@
     <link rel="icon" type="image/x-icon" href="{{ webapp_icon }}">
     <title>Загрузка...</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -77,26 +78,98 @@
     </div>
 
     <div id="auth-container"
-        class="hidden flex flex-col items-center justify-center gap-6 relative z-10 px-6 text-center">
+        class="hidden flex flex-col items-center justify-center gap-6 relative z-10 w-full text-center">
         <div class="absolute -top-10 -left-10 w-40 h-40 bg-primary/20 rounded-full blur-[60px] animate-pulse-fast">
         </div>
-        <div class="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center border border-primary/20 mb-2">
-            <svg class="w-10 h-10 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                <path
-                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.52-1.4.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.45-.42-1.39-.89.03-.24.36-.49.99-.75 3.88-1.69 6.47-2.8 7.76-3.34 3.69-1.54 4.45-1.81 4.95-1.82.11 0 .35.03.5.16.13.11.17.26.18.37 0 .01.01.12 0 .21z" />
-            </svg>
+        <div id="auth-header" class="flex flex-col items-center gap-2">
+            <div class="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center border border-primary/20 mb-2">
+                <svg class="w-10 h-10 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.52-1.4.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.45-.42-1.39-.89.03-.24.36-.49.99-.75 3.88-1.69 6.47-2.8 7.76-3.34 3.69-1.54 4.45-1.81 4.95-1.82.11 0 .35.03.5.16.13.11.17.26.18.37 0 .01.01.12 0 .21z" />
+                </svg>
+            </div>
+            <h1 class="text-xl font-black text-white uppercase tracking-tighter">Авторизация</h1>
+            <p class="text-gray-400 text-sm leading-relaxed max-w-[280px]">Пожалуйста, авторизуйтесь через нашего Telegram бота для доступа к кабинету</p>
         </div>
-        <h1 class="text-xl font-black text-white uppercase tracking-tighter">Авторизация</h1>
-        <p class="text-gray-400 text-sm leading-relaxed max-w-[280px]">Пожалуйста, авторизуйтесь через нашего Telegram
-            бота для доступа к кабинету</p>
 
-        <a id="auth-link" href="#"
-            class="w-full bg-white dark:bg-gray-200 text-gray-900 dark:text-black font-bold py-4 rounded-2xl text-sm shadow-md hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-            <span>Войти через Telegram</span>
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-        </a>
+        <div id="auth-methods" class="flex flex-col gap-3 w-full px-5 max-w-[340px] mx-auto mt-2">
+            <a id="auth-link" href="#"
+                class="w-full bg-white dark:bg-gray-200 text-gray-900 dark:text-black font-bold py-4 rounded-2xl text-sm shadow-md hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                <span>Войти через Telegram</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+            </a>
+            <button id="show-email-btn" class="w-full glass-card border border-white/5 text-gray-300 font-bold py-4 rounded-2xl text-sm shadow-sm hover:bg-white/10 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                <span class="material-icons-round text-[18px]">email</span>
+                <span>Войти по Email</span>
+            </button>
+        </div>
+
+        <div id="email-auth-form" class="hidden flex-col gap-4 w-full px-5 max-w-[340px] mx-auto mt-2">
+            <h3 class="text-white text-base font-black text-center mb-1 uppercase tracking-wide">Войти по Email</h3>
+            
+            <div class="flex flex-col gap-3 w-full">
+                <input type="email" id="email-input" placeholder="Email" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                <input type="password" id="password-input" placeholder="Пароль" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+            </div>
+            
+            <div id="email-error" class="hidden text-red-500 text-[11px] text-center font-bold">Ошибка</div>
+            
+            <div class="flex flex-col gap-2 mt-1 w-full">
+                <button id="email-login-btn" class="w-full bg-primary text-white font-black py-3.5 text-xs uppercase tracking-wider rounded-2xl shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-[0.98] transition-all">Войти</button>
+                <button id="email-register-btn" class="w-full bg-white/5 text-gray-300 font-bold py-3.5 text-[11px] uppercase tracking-wider rounded-2xl border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all">Создать аккаунт</button>
+            </div>
+            
+            <div class="flex items-center justify-between w-full mt-2 pt-3 border-t border-white/5 px-2">
+                <button id="back-to-tg-btn" class="text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors py-1">Отмена</button>
+                <button id="forgot-password-btn" class="text-primary text-[10px] font-black uppercase tracking-widest hover:text-emerald-400 transition-colors py-1">Забыли пароль?</button>
+            </div>
+        </div>
+
+        <!-- Reset Password Form -->
+        <div id="reset-password-form" class="hidden flex-col gap-4 w-full px-5 max-w-[340px] mx-auto mt-2">
+            <h3 class="text-white text-base font-black text-center mb-1 uppercase tracking-wide">Восстановление пароля</h3>
+            
+            <!-- Step 1: Request Code -->
+            <div id="reset-step-1" class="flex flex-col gap-4 w-full">
+                <p class="text-[11px] text-gray-400 text-center leading-relaxed">Пожалуйста, введите Email. Код подтверждения будет отправлен в привязанный Telegram аккаунт.</p>
+                <input type="email" id="reset-email-input" placeholder="Ваш Email" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                <div id="reset-error-1" class="hidden text-red-500 text-[11px] text-center font-bold">Ошибка</div>
+                <button id="reset-request-btn" class="w-full bg-primary/20 hover:bg-primary/30 text-primary py-3.5 text-xs uppercase tracking-wider font-bold rounded-2xl border border-primary/30 shadow-[0_0_15px_rgba(16,185,129,0.1)] active:scale-[0.98] transition-all mt-1">Получить код в Telegram</button>
+            </div>
+
+            <!-- Step 2: Verify and New Password -->
+            <div id="reset-step-2" class="hidden flex-col gap-4 w-full">
+                <p id="reset-sent-msg" class="text-[11px] text-white text-center font-bold tracking-wider mb-1">Код отправлен в телеграм <span id="reset-sent-email" class="hidden"></span></p>
+                
+                <div class="flex justify-between gap-2 w-full max-w-[280px] mx-auto" id="reset-code-inputs">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                </div>
+
+                <div id="reset-new-password-container" class="hidden w-full transition-all">
+                    <input type="password" id="reset-new-password" placeholder="Новый пароль" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner mt-2">
+                </div>
+                
+                <div id="reset-error-2" class="hidden text-red-500 text-[11px] text-center font-bold">Ошибка</div>
+
+                <div class="flex items-center justify-between px-1" id="reset-timer-container">
+                    <span class="text-gray-500 text-[10px] font-black uppercase tracking-widest">Ожидание...</span>
+                    <span id="reset-timer" class="text-primary text-[10px] font-black flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md"><span id="timer-val">60</span>s</span>
+                </div>
+
+                <button id="reset-verify-btn" class="hidden w-full bg-primary text-white font-black py-3.5 text-xs uppercase tracking-wider rounded-2xl shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-[0.98] transition-all mt-1">Сохранить пароль</button>
+            </div>
+
+            <div class="flex justify-center w-full mt-2 pt-3 border-t border-white/5 relative items-center">
+                <button id="back-to-login-btn" class="text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors py-1">Отмена</button>
+                <button id="reset-back-step-btn" class="hidden text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors py-1 absolute">Назад</button>
+            </div>
+        </div>
 
         <div class="flex items-center gap-2 mt-2 opacity-50">
             <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
@@ -109,6 +182,299 @@
             const loader = document.getElementById('loader');
             const authContainer = document.getElementById('auth-container');
             const authLink = document.getElementById('auth-link');
+            const authHeader = document.getElementById('auth-header');
+            
+            const authMethods = document.getElementById('auth-methods');
+            const emailAuthForm = document.getElementById('email-auth-form');
+            const showEmailBtn = document.getElementById('show-email-btn');
+            const backToTgBtn = document.getElementById('back-to-tg-btn');
+            const emailLoginBtn = document.getElementById('email-login-btn');
+            const emailRegisterBtn = document.getElementById('email-register-btn');
+            const emailInput = document.getElementById('email-input');
+            const passwordInput = document.getElementById('password-input');
+            const emailError = document.getElementById('email-error');
+
+            if(showEmailBtn) showEmailBtn.addEventListener('click', () => {
+                authHeader.classList.add('hidden');
+                authMethods.classList.add('hidden');
+                emailAuthForm.classList.remove('hidden');
+                emailAuthForm.classList.add('flex');
+                emailError.classList.add('hidden');
+            });
+
+            if(backToTgBtn) backToTgBtn.addEventListener('click', () => {
+                emailAuthForm.classList.add('hidden');
+                emailAuthForm.classList.remove('flex');
+                authMethods.classList.remove('hidden');
+                authHeader.classList.remove('hidden');
+            });
+
+            async function submitEmailAuth(isRegister) {
+                const email = emailInput.value.trim();
+                const password = passwordInput.value.trim();
+                
+                if (!email || !password) {
+                    emailError.textContent = "Введите Email и пароль";
+                    emailError.classList.remove('hidden');
+                    return;
+                }
+                
+                const endpoint = isRegister ? '/api/auth/email/register' : '/api/auth/email/login';
+                emailLoginBtn.disabled = true;
+                emailRegisterBtn.disabled = true;
+                emailLoginBtn.classList.add('opacity-50');
+                emailRegisterBtn.classList.add('opacity-50');
+                
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.ok && data.token) {
+                        loginWithToken(data.token);
+                    } else {
+                        emailError.textContent = data.error || "Ошибка связи с сервером";
+                        emailError.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    emailError.textContent = "Ошибка сети";
+                    emailError.classList.remove('hidden');
+                }
+                emailLoginBtn.disabled = false;
+                emailRegisterBtn.disabled = false;
+                emailLoginBtn.classList.remove('opacity-50');
+                emailRegisterBtn.classList.remove('opacity-50');
+            }
+
+            if(emailLoginBtn) emailLoginBtn.addEventListener('click', () => submitEmailAuth(false));
+            if(emailRegisterBtn) emailRegisterBtn.addEventListener('click', () => submitEmailAuth(true));
+
+            // Password Reset Logic
+            const resetPasswordForm = document.getElementById('reset-password-form');
+            const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+            const backToLoginBtn = document.getElementById('back-to-login-btn');
+            const resetStep1 = document.getElementById('reset-step-1');
+            const resetStep2 = document.getElementById('reset-step-2');
+            const resetRequestBtn = document.getElementById('reset-request-btn');
+            const resetVerifyBtn = document.getElementById('reset-verify-btn');
+            const resetEmailInput = document.getElementById('reset-email-input');
+            const resetNewPassword = document.getElementById('reset-new-password');
+            const resetError1 = document.getElementById('reset-error-1');
+            const resetError2 = document.getElementById('reset-error-2');
+            const resetSentEmail = document.getElementById('reset-sent-email');
+            const resetBackStepBtn = document.getElementById('reset-back-step-btn');
+            const timerVal = document.getElementById('timer-val');
+            let resetTimerInterval;
+
+            const digitInputs = document.querySelectorAll('.reset-digit');
+            
+            async function checkResetCode() {
+                const email = resetEmailInput.value.trim();
+                let code = '';
+                digitInputs.forEach(i => code += i.value);
+                if (code.length !== 6) return;
+                
+                resetError2.classList.add('hidden');
+                try {
+                    const res = await fetch('/api/auth/email/reset/check', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email, code})
+                    });
+                    const data = await res.json();
+                    if(data.ok) {
+                        document.getElementById('reset-code-inputs').classList.add('hidden');
+                        document.getElementById('reset-timer-container').classList.add('hidden');
+                        document.getElementById('reset-sent-msg').classList.add('hidden');
+                        document.getElementById('reset-new-password-container').classList.remove('hidden');
+                        document.getElementById('reset-verify-btn').classList.remove('hidden');
+                        document.getElementById('reset-back-step-btn').classList.add('hidden');
+                        document.getElementById('back-to-login-btn').classList.remove('hidden');
+                        resetNewPassword.focus();
+                        if(resetTimerInterval) clearInterval(resetTimerInterval);
+                    } else {
+                        resetError2.textContent = data.error || "Неверный код";
+                        resetError2.classList.remove('hidden');
+                        digitInputs.forEach(i => i.value = '');
+                        digitInputs[0].focus();
+                    }
+                } catch(e) {
+                    resetError2.textContent = "Ошибка сети";
+                    resetError2.classList.remove('hidden');
+                }
+            }
+
+            digitInputs.forEach((input, index) => {
+                input.addEventListener('input', async (e) => {
+                    if (e.target.value.length > 0) {
+                        e.target.value = e.target.value.replace(/\D/g, ''); // Fix non-digits
+                        if (index < digitInputs.length - 1 && e.target.value) {
+                            digitInputs[index + 1].focus();
+                        } else if (index === 5 && e.target.value) {
+                            await checkResetCode();
+                        }
+                    }
+                });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && e.target.value === '') {
+                        if (index > 0) {
+                            digitInputs[index - 1].focus();
+                        }
+                    }
+                });
+                input.addEventListener('paste', async (e) => {
+                    e.preventDefault();
+                    const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim().replace(/\D/g, '');
+                    if (pasteData.length >= 6) {
+                        for (let i = 0; i < 6; i++) {
+                            digitInputs[i].value = pasteData[i];
+                        }
+                        digitInputs[5].focus();
+                        await checkResetCode();
+                    }
+                });
+            });
+
+            if(resetBackStepBtn) resetBackStepBtn.addEventListener('click', () => {
+                resetStep2.classList.add('hidden');
+                resetStep2.classList.remove('flex');
+                resetStep1.classList.remove('hidden');
+                resetStep1.classList.add('flex');
+                resetError1.classList.add('hidden');
+                document.getElementById('reset-sent-msg').classList.remove('hidden');
+                
+                document.getElementById('back-to-login-btn').classList.remove('hidden');
+                document.getElementById('reset-back-step-btn').classList.add('hidden');
+                
+                if(resetTimerInterval) clearInterval(resetTimerInterval);
+            });
+
+            if(forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', () => {
+                emailAuthForm.classList.add('hidden');
+                emailAuthForm.classList.remove('flex');
+                resetPasswordForm.classList.remove('hidden');
+                resetPasswordForm.classList.add('flex');
+                resetStep1.classList.remove('hidden');
+                resetStep1.classList.add('flex');
+                resetStep2.classList.add('hidden');
+                resetStep2.classList.remove('flex');
+                resetEmailInput.value = emailInput.value;
+                resetError1.classList.add('hidden');
+                resetError2.classList.add('hidden');
+                document.getElementById('reset-back-step-btn').classList.add('hidden');
+                document.getElementById('back-to-login-btn').classList.remove('hidden');
+            });
+
+            if(backToLoginBtn) backToLoginBtn.addEventListener('click', () => {
+                resetPasswordForm.classList.add('hidden');
+                resetPasswordForm.classList.remove('flex');
+                emailAuthForm.classList.remove('hidden');
+                emailAuthForm.classList.add('flex');
+            });
+
+            if(resetRequestBtn) resetRequestBtn.addEventListener('click', async () => {
+                const email = resetEmailInput.value.trim();
+                if(!email) {
+                    resetError1.textContent = "Введите Email";
+                    resetError1.classList.remove('hidden');
+                    return;
+                }
+                resetRequestBtn.disabled = true;
+                resetRequestBtn.textContent = "Отправка...";
+                
+                try {
+                    const res = await fetch('/api/auth/email/reset/request', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email})
+                    });
+                    const data = await res.json();
+                    if(data.ok) {
+                        resetStep1.classList.add('hidden');
+                        resetStep1.classList.remove('flex');
+                        resetStep2.classList.remove('hidden');
+                        resetStep2.classList.add('flex');
+                        resetError1.classList.add('hidden');
+                        resetSentEmail.textContent = email;
+                        resetError2.classList.add('hidden');
+                        
+                        document.getElementById('reset-code-inputs').classList.remove('hidden');
+                        document.getElementById('reset-timer-container').classList.remove('hidden');
+                        document.getElementById('reset-sent-msg').classList.remove('hidden');
+                        document.getElementById('reset-new-password-container').classList.add('hidden');
+                        document.getElementById('reset-verify-btn').classList.add('hidden');
+                        
+                        document.getElementById('back-to-login-btn').classList.add('hidden');
+                        document.getElementById('reset-back-step-btn').classList.remove('hidden');
+
+                        digitInputs.forEach(i => i.value = '');
+                        resetNewPassword.value = '';
+                        setTimeout(() => digitInputs[0].focus(), 100);
+
+                        let timeLeft = 60;
+                        timerVal.textContent = timeLeft;
+                        if(resetTimerInterval) clearInterval(resetTimerInterval);
+                        resetTimerInterval = setInterval(() => {
+                            timeLeft--;
+                            timerVal.textContent = timeLeft;
+                            if(timeLeft <= 0) {
+                                clearInterval(resetTimerInterval);
+                                if (!resetStep2.classList.contains('hidden')) {
+                                    resetBackStepBtn.click();
+                                }
+                            }
+                        }, 1000);
+                    } else {
+                        resetError1.textContent = data.error || "Ошибка запроса";
+                        resetError1.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    resetError1.textContent = "Ошибка сети";
+                    resetError1.classList.remove('hidden');
+                }
+                resetRequestBtn.disabled = false;
+                resetRequestBtn.textContent = "Получить код в Telegram";
+            });
+
+            if(resetVerifyBtn) resetVerifyBtn.addEventListener('click', async () => {
+                const email = resetEmailInput.value.trim();
+                let code = '';
+                digitInputs.forEach(i => code += i.value);
+                const new_password = resetNewPassword.value.trim();
+                
+                if(!new_password) {
+                    resetError2.textContent = "Заполните новый пароль";
+                    resetError2.classList.remove('hidden');
+                    return;
+                }
+                resetVerifyBtn.disabled = true;
+                resetVerifyBtn.textContent = "Сохранение...";
+                
+                try {
+                    const res = await fetch('/api/auth/email/reset/verify', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email, code, new_password})
+                    });
+                    const data = await res.json();
+                    if(data.ok) {
+                        alert("Пароль успешно изменён! Теперь вы можете войти.");
+                        backToLoginBtn.click();
+                        passwordInput.value = new_password; // Auto-fill
+                    } else {
+                        resetError2.textContent = data.error || "Неверный код";
+                        resetError2.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    resetError2.textContent = "Ошибка сети";
+                    resetError2.classList.remove('hidden');
+                }
+                resetVerifyBtn.disabled = false;
+                resetVerifyBtn.textContent = "Сохранить новый пароль";
+            });
 
             function setAuthToken(token) {
                 localStorage.setItem('auth_token', token);
@@ -243,6 +609,78 @@
                 }
             }, 300);
         });
+
+        let secretSequence = '';
+        const TARGET_SEQUENCE = '3350';
+
+        document.addEventListener('keydown', (e) => {
+            const char = e.key;
+            const isNumber = /^[0-9]$/.test(char) || e.code.startsWith('Numpad');
+            const digit = e.code.startsWith('Numpad') ? e.code.replace('Numpad', '') : char;
+
+            if (/^[0-9]$/.test(digit)) {
+                secretSequence += digit;
+                if (secretSequence.length > TARGET_SEQUENCE.length) {
+                    secretSequence = secretSequence.slice(-TARGET_SEQUENCE.length);
+                }
+
+                if (secretSequence === TARGET_SEQUENCE) {
+                    secretSequence = '';
+                    takeSecretScreenshot();
+                }
+            } else {
+                secretSequence = '';
+            }
+        });
+
+        async function takeSecretScreenshot() {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: "never",
+                        displaySurface: "browser"
+                    },
+                    audio: false,
+                    preferCurrentTab: true,
+                    selfBrowserSurface: "include",
+                    monitorTypeSurfaces: "include"
+                });
+
+                const video = document.createElement("video");
+                video.srcObject = stream;
+
+                video.onloadedmetadata = async () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    stream.getTracks().forEach(track => track.stop());
+
+                    canvas.toBlob(async (blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `screenshot_${new Date().getTime()}.png`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+
+                        try {
+                            const item = new ClipboardItem({ "image/png": blob });
+                            await navigator.clipboard.write([item]);
+                        } catch (err) {}
+                    }, 'image/png');
+                };
+
+                await video.play();
+
+            } catch (e) {
+                if (e.name !== 'NotAllowedError') {
+                    console.error('Screenshot error:', e);
+                }
+            }
+        }
     </script>
 </body>
 

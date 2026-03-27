@@ -235,7 +235,9 @@ def initialize_db():
                     referral_start_bonus_received BOOLEAN DEFAULT 0,
                     is_pinned BOOLEAN DEFAULT 0,
                     seller_active INTEGER DEFAULT 0,
-                    auth_token TEXT
+                    auth_token TEXT,
+                    auth_email TEXT,
+                    auth_pass TEXT
                 )
             ''')
 
@@ -634,6 +636,8 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
         "is_pinned": "BOOLEAN DEFAULT 0",
         "seller_active": "INTEGER DEFAULT 0",
         "auth_token": "TEXT",
+        "auth_email": "TEXT",
+        "auth_pass": "TEXT",
     }
     for column, definition in mapping.items():
         _ensure_table_column(cursor, "users", column, definition)
@@ -2658,6 +2662,99 @@ def get_user(telegram_id: int):
     row = _fetch_row("SELECT * FROM users WHERE telegram_id = ?", (telegram_id,), f"Не удалось получить пользователя {telegram_id}")
     return dict(row) if row else None
 # ==================
+
+# ===== GET_USER_BY_EMAIL =====
+def get_user_by_email(email: str):
+    row = _fetch_row("SELECT * FROM users WHERE LOWER(auth_email) = ?", (email.lower().strip(),), f"Не удалось получить пользователя {email}")
+    return dict(row) if row else None
+# ==================
+
+# ===== CREATE_USER_BY_EMAIL =====
+def create_user_by_email(email: str, password_hash: str) -> dict | None:
+    import random
+    while True:
+        telegram_id = int(f"999{random.randint(1000000, 9999999)}")
+        if not get_user(telegram_id):
+            break
+            
+    cursor = _exec(
+        "INSERT INTO users (telegram_id, username, registration_date, auth_email, auth_pass) VALUES (?, ?, ?, ?, ?)",
+        (telegram_id, "", get_msk_time().replace(tzinfo=None).replace(microsecond=0), email.strip(), password_hash),
+        f"Не удалось зарегистрировать пользователя {email}"
+    )
+    if cursor:
+        return get_user(telegram_id)
+    return None
+# =================================
+
+# ===== UPDATE_USER_PASSWORD =====
+def update_user_password(email: str, new_password_hash: str) -> bool:
+    cursor = _exec("UPDATE users SET auth_pass = ? WHERE LOWER(auth_email) = ?", (new_password_hash, email.lower().strip()), f"Не удалось обновить пароль для {email}")
+    return cursor is not None and cursor.rowcount > 0
+# =================================
+
+# ===== UPDATE_USER_AUTH_TOKEN =====
+def update_user_auth_token(telegram_id: int, token: str) -> bool:
+    cursor = _exec("UPDATE users SET auth_token = ? WHERE telegram_id = ?", (token, telegram_id), f"Не удалось обновить токен {telegram_id}")
+    return cursor is not None and cursor.rowcount > 0
+# ==================================
+
+# ===== LINK_TELEGRAM_TO_EMAIL_USER =====
+def link_telegram_to_email_user(old_telegram_id: int, new_telegram_id: int, new_username: str):
+    old_user = get_user(old_telegram_id)
+    if not old_user:
+        return "Ошибка: веб-аккаунт не найден."
+
+    existing = get_user(new_telegram_id)
+        
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            if existing:
+                cursor.execute("UPDATE vpn_keys SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE transactions SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE pending_transactions SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE support_tickets SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE seller_users SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE users SET referred_by = ? WHERE referred_by = ?", (new_telegram_id, old_telegram_id))
+                
+                old_bal = old_user.get('balance', 0)
+                old_ref_bal = old_user.get('referral_balance', 0)
+                old_ref_all = old_user.get('referral_balance_all', 0)
+                old_spent = old_user.get('total_spent', 0)
+                old_months = old_user.get('total_months', 0)
+                
+                cursor.execute("""
+                    UPDATE users 
+                    SET balance = balance + ?, 
+                        referral_balance = referral_balance + ?,
+                        referral_balance_all = referral_balance_all + ?,
+                        total_spent = total_spent + ?,
+                        total_months = total_months + ?,
+                        auth_email = ?,
+                        auth_pass = ?,
+                        auth_token = ?
+                    WHERE telegram_id = ?
+                """, (old_bal, old_ref_bal, old_ref_all, old_spent, old_months, 
+                      old_user.get('auth_email'), old_user.get('auth_pass'), old_user.get('auth_token'),
+                      new_telegram_id))
+                
+                cursor.execute("DELETE FROM users WHERE telegram_id = ?", (old_telegram_id,))
+            else:
+                cursor.execute("UPDATE users SET telegram_id = ?, username = ? WHERE telegram_id = ?", (new_telegram_id, new_username, old_telegram_id))
+                cursor.execute("UPDATE vpn_keys SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE transactions SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE pending_transactions SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE support_tickets SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE seller_users SET user_id = ? WHERE user_id = ?", (new_telegram_id, old_telegram_id))
+                cursor.execute("UPDATE users SET referred_by = ? WHERE referred_by = ?", (new_telegram_id, old_telegram_id))
+            
+            conn.commit()
+            return True
+    except sqlite3.Error as e:
+        logging.error(f"Failed to link telegram {new_telegram_id} to {old_telegram_id}: {e}")
+        return "Ошибка базы данных."
+# =======================================
 
 
 # ===== GET_TRANSACTION =====

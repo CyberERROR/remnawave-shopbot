@@ -84,8 +84,13 @@ def create_admins_menu_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="➕ Добавить админа", callback_data="admin_add_admin")
     builder.button(text="➖ Снять админа", callback_data="admin_remove_admin")
     builder.button(text="📋 Список админов", callback_data="admin_view_admins")
+    
+    stealth_enabled = (get_setting("stealth_login_enabled") or "0") == "1"
+    stealth_text = "Скрыта" if stealth_enabled else "Видна"
+    builder.button(text=f"🖥 Скрыть вход: {stealth_text}", callback_data="admin_toggle_stealth_login")
+    
     builder.button(text="⬅️ В админ-меню", callback_data="admin_menu")
-    builder.adjust(2, 2)
+    builder.adjust(2, 1, 1, 1)
     return builder.as_markup()
 
 def create_admin_users_keyboard(users: list[dict], page: int = 0, page_size: int = 10) -> InlineKeyboardMarkup:
@@ -105,6 +110,8 @@ def create_admin_users_keyboard(users: list[dict], page: int = 0, page_size: int
         builder.button(text="⬅️ Назад", callback_data=f"admin_users_page_{page-1}")
     if have_next:
         builder.button(text="Вперёд ➡️", callback_data=f"admin_users_page_{page+1}")
+        
+    builder.button(text="🔍 Поиск по ID или @", callback_data="admin_search_user")
     builder.button(text="⬅️ В админ-меню", callback_data="admin_menu")
 
     rows = [1] * len(users[start:end])
@@ -112,7 +119,12 @@ def create_admin_users_keyboard(users: list[dict], page: int = 0, page_size: int
     if have_prev or have_next:
         tail.append(2 if (have_prev and have_next) else 1)
     tail.append(1)
-    builder.adjust(*(rows + tail if rows else ([2] if (have_prev or have_next) else []) + [1]))
+    tail.append(1)
+    
+    if rows:
+        builder.adjust(*(rows + tail))
+    else:
+        builder.adjust(*(( [2] if (have_prev and have_next) else ([1] if (have_prev or have_next) else []) ) + [1, 1]))
     return builder.as_markup()
 
 def create_admin_user_actions_keyboard(user_id: int, is_banned: bool | None = None) -> InlineKeyboardMarkup:
@@ -184,6 +196,14 @@ def create_admin_promo_menu_keyboard() -> InlineKeyboardMarkup:
     builder.adjust(1)
     return builder.as_markup()
 
+def create_admin_promo_type_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="📉 Скидка", callback_data="admin_promo_type_discount")
+    builder.button(text="⏳ Дни", callback_data="admin_promo_type_days")
+    builder.button(text="💰 Баланс", callback_data="admin_promo_type_balance")
+    builder.button(text="❌ Отмена", callback_data="admin_promo_menu")
+    builder.adjust(3, 1)
+    return builder.as_markup()
 
 def create_admin_promo_discount_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -766,13 +786,21 @@ def create_admin_users_pick_keyboard(users: list[dict], page: int = 0, page_size
         builder.button(text="⬅️ Назад", callback_data=f"admin_{action}_pick_user_page_{page-1}")
     if have_next:
         builder.button(text="Вперёд ➡️", callback_data=f"admin_{action}_pick_user_page_{page+1}")
+        
+    builder.button(text="🔍 Поиск по ID или @", callback_data=f"admin_search_pick_user_{action}")
+    
     builder.button(text="⬅️ В админ-меню", callback_data="admin_menu")
     rows = [1] * len(users[start:end])
     tail = []
     if have_prev or have_next:
         tail.append(2 if (have_prev and have_next) else 1)
     tail.append(1)
-    builder.adjust(*(rows + tail if rows else ([2] if (have_prev or have_next) else []) + [1]))
+    tail.append(1)
+    
+    if rows:
+        builder.adjust(*(rows + tail))
+    else:
+        builder.adjust(*(( [2] if (have_prev and have_next) else ([1] if (have_prev or have_next) else []) ) + [1, 1]))
     return builder.as_markup()
 
 def create_admin_hosts_pick_keyboard(hosts: list[dict], action: str = "gift") -> InlineKeyboardMarkup:

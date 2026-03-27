@@ -60,6 +60,10 @@ class Broadcast(StatesGroup):
     waiting_for_button_url = State()
     waiting_for_confirmation = State()
 
+class AdminUserSearch(StatesGroup):
+    waiting_for_query = State()
+    waiting_for_pick_query = State()
+
 
 def get_admin_router() -> Router:
     admin_router = Router()
@@ -240,9 +244,11 @@ def get_admin_router() -> Router:
 
 
     class AdminPromoCreate(StatesGroup):
+        waiting_for_promo_type = State()
         waiting_for_code = State()
         waiting_for_discount_type = State()
         waiting_for_discount_value = State()
+        waiting_for_reward_value = State()
         waiting_for_total_limit = State()
         waiting_for_per_user_limit = State()
         waiting_for_valid_from = State()
@@ -266,10 +272,35 @@ def get_admin_router() -> Router:
             return
         await callback.answer()
         await state.clear()
-        await state.set_state(AdminPromoCreate.waiting_for_code)
+        await state.set_state(AdminPromoCreate.waiting_for_promo_type)
         await callback.message.edit_text(
-            "🔐 Создание промокода\n\nВыберите способ указания кода:",
-            reply_markup=keyboards.create_admin_promo_code_keyboard()
+            "🔐 Создание промокода\n\nВыберите тип промокода:",
+            reply_markup=keyboards.create_admin_promo_type_keyboard()
+        )
+
+    @admin_router.callback_query(
+        AdminPromoCreate.waiting_for_promo_type,
+        F.data.in_(["admin_promo_type_discount", "admin_promo_type_days", "admin_promo_type_balance"])
+    )
+    async def admin_promo_type_selected(callback: types.CallbackQuery, state: FSMContext):
+        if not is_admin(callback.from_user.id):
+            await callback.answer("У вас нет прав.", show_alert=True)
+            return
+        await callback.answer()
+        type_mapping = {
+            "admin_promo_type_discount": "discount",
+            "admin_promo_type_days": "universal",
+            "admin_promo_type_balance": "balance"
+        }
+        ptype = type_mapping[callback.data]
+        await state.update_data(promo_type=ptype)
+        await state.set_state(AdminPromoCreate.waiting_for_code)
+        
+        type_names = {"discount": "Скидка", "universal": "Дни", "balance": "Баланс"}
+        await callback.message.edit_text(
+            f"🔐 Создание промокода (<b>{type_names[ptype]}</b>)\n\nВыберите способ указания кода:",
+            reply_markup=keyboards.create_admin_promo_code_keyboard(),
+            parse_mode='HTML'
         )
 
     @admin_router.callback_query(
@@ -282,20 +313,28 @@ def get_admin_router() -> Router:
             return
         await callback.answer()
         code = uuid.uuid4().hex[:8].upper()
+        
+        data = await state.get_data()
+        ptype = data.get("promo_type", "discount")
         await state.update_data(promo_code=code)
-        await state.set_state(AdminPromoCreate.waiting_for_discount_type)
+        
+        if ptype == "discount":
+            await state.set_state(AdminPromoCreate.waiting_for_discount_type)
+            text = f"Код: <code>{code}</code>\n\nВыберите тип скидки:"
+            markup = keyboards.create_admin_promo_discount_keyboard()
+        elif ptype == "universal":
+            await state.set_state(AdminPromoCreate.waiting_for_reward_value)
+            text = f"Код: <code>{code}</code>\n\nВведите количество дней начисления:"
+            markup = keyboards.create_admin_cancel_keyboard()
+        else:
+            await state.set_state(AdminPromoCreate.waiting_for_reward_value)
+            text = f"Код: <code>{code}</code>\n\nВведите сумму пополнения баланса (RUB):"
+            markup = keyboards.create_admin_cancel_keyboard()
+            
         try:
-            await callback.message.edit_text(
-                f"Код: <code>{code}</code>\n\nВыберите тип скидки:",
-                reply_markup=keyboards.create_admin_promo_discount_keyboard(),
-                parse_mode='HTML'
-            )
+            await callback.message.edit_text(text, reply_markup=markup, parse_mode='HTML')
         except Exception:
-            await callback.message.answer(
-                f"Код: <code>{code}</code>\n\nВыберите тип скидки:",
-                reply_markup=keyboards.create_admin_promo_discount_keyboard(),
-                parse_mode='HTML'
-            )
+            await callback.message.answer(text, reply_markup=markup, parse_mode='HTML')
 
     @admin_router.callback_query(
         AdminPromoCreate.waiting_for_code,
@@ -324,11 +363,44 @@ def get_admin_router() -> Router:
         if not re.fullmatch(r"[A-Z0-9_-]{3,32}", code):
             await message.answer("❌ Код должен состоять из латиницы/цифр и быть длиной 3-32 символа.")
             return
+
+        data = await state.get_data()
+        ptype = data.get("promo_type", "discount")
         await state.update_data(promo_code=code)
-        await state.set_state(AdminPromoCreate.waiting_for_discount_type)
+        
+        if ptype == "discount":
+            await state.set_state(AdminPromoCreate.waiting_for_discount_type)
+            text = "Выберите тип скидки:"
+            markup = keyboards.create_admin_promo_discount_keyboard()
+        elif ptype == "universal":
+            await state.set_state(AdminPromoCreate.waiting_for_reward_value)
+            text = "Введите количество дней начисления:"
+            markup = keyboards.create_admin_cancel_keyboard()
+        else:
+            await state.set_state(AdminPromoCreate.waiting_for_reward_value)
+            text = "Введите сумму пополнения баланса (RUB):"
+            markup = keyboards.create_admin_cancel_keyboard()
+            
+        await message.answer(text, reply_markup=markup)
+
+    @admin_router.message(AdminPromoCreate.waiting_for_reward_value)
+    async def admin_promo_set_reward_value(message: types.Message, state: FSMContext):
+        if not is_admin(message.from_user.id):
+            return
+        raw = (message.text or '').strip()
+        try:
+            value = int(raw)
+        except Exception:
+            await message.answer("❌ Введите целое число.")
+            return
+        if value <= 0:
+            await message.answer("❌ Значение должно быть положительным.")
+            return
+        await state.update_data(reward_value=value)
+        await state.set_state(AdminPromoCreate.waiting_for_total_limit)
         await message.answer(
-            "Выберите тип скидки:",
-            reply_markup=keyboards.create_admin_promo_discount_keyboard()
+            "Введите общий лимит активаций или выберите на кнопках:",
+            reply_markup=keyboards.create_admin_promo_limit_keyboard("total")
         )
 
     @admin_router.callback_query(
@@ -633,23 +705,37 @@ def get_admin_router() -> Router:
         await state.update_data(description=None)
         data = await state.get_data()
         code = data.get('promo_code')
-        discount_type = data.get('discount_type')
-        discount_value = data.get('discount_value')
+        ptype = data.get('promo_type', 'discount')
+        reward_value = data.get('reward_value', 0)
         total_limit = data.get('usage_limit_total')
         per_user_limit = data.get('usage_limit_per_user')
         valid_from = data.get('valid_from')
         valid_until = data.get('valid_until')
+        
         summary_lines = [
             "Проверьте данные промокода:",
             f"Код: <code>{code}</code>",
-            f"Тип скидки: {'процент' if discount_type == 'percent' else 'фиксированная'}",
-            f"Значение: {discount_value:.2f}{'%' if discount_type == 'percent' else ' RUB'}",
+        ]
+        
+        if ptype == "discount":
+            discount_type = data.get('discount_type')
+            discount_value = data.get('discount_value')
+            summary_lines.extend([
+                f"Тип скидки: {'процент' if discount_type == 'percent' else 'фиксированная'}",
+                f"Значение: {discount_value:.2f}{'%' if discount_type == 'percent' else ' RUB'}"
+            ])
+        elif ptype == "universal":
+            summary_lines.append(f"Тип: Дни ({reward_value} дн.)")
+        elif ptype == "balance":
+            summary_lines.append(f"Тип: Баланс ({reward_value} RUB)")
+
+        summary_lines.extend([
             f"Лимит всего: {total_limit if total_limit is not None else 'без ограничений'}",
             f"Лимит на пользователя: {per_user_limit if per_user_limit is not None else 'без ограничений'}",
             f"Действует с: {valid_from.isoformat(' ') if valid_from else '—'}",
             f"Действует до: {valid_until.isoformat(' ') if valid_until else '—'}",
             f"Описание: —",
-        ]
+        ])
         summary_text = "\n".join(summary_lines)
         builder = InlineKeyboardBuilder()
         builder.button(text="✅ Создать", callback_data="admin_promo_confirm")
@@ -666,6 +752,8 @@ def get_admin_router() -> Router:
         await callback.answer()
         data = await state.get_data()
         code = data.get('promo_code')
+        ptype = data.get('promo_type', 'discount')
+        reward_value = data.get('reward_value', 0)
         discount_type = data.get('discount_type')
         discount_value = data.get('discount_value')
         total_limit = data.get('usage_limit_total')
@@ -675,8 +763,10 @@ def get_admin_router() -> Router:
         description = data.get('description')
         kwargs = {
             'code': code,
-            'discount_percent': discount_value if discount_type == 'percent' else None,
-            'discount_amount': discount_value if discount_type == 'amount' else None,
+            'promo_type': ptype,
+            'reward_value': reward_value,
+            'discount_percent': discount_value if ptype == 'discount' and discount_type == 'percent' else None,
+            'discount_amount': discount_value if ptype == 'discount' and discount_type == 'amount' else None,
             'usage_limit_total': total_limit,
             'usage_limit_per_user': per_user_limit,
             'valid_from': valid_from,
@@ -1341,6 +1431,137 @@ def get_admin_router() -> Router:
             reply_markup=keyboards.create_admin_users_keyboard(users, page=page)
         )
 
+    @admin_router.callback_query(F.data == "admin_search_user")
+    async def admin_search_user_start(callback: types.CallbackQuery, state: FSMContext):
+        if not is_admin(callback.from_user.id):
+            await callback.answer("У вас нет прав.", show_alert=True)
+            return
+        await callback.answer()
+        await state.set_state(AdminUserSearch.waiting_for_query)
+        kb = InlineKeyboardBuilder()
+        kb.button(text="⬅️ Отмена", callback_data="admin_users")
+        await callback.message.edit_text(
+            "Введите ID пользователя или юзернейм (например, @durov):",
+            reply_markup=kb.as_markup()
+        )
+
+    @admin_router.message(AdminUserSearch.waiting_for_query)
+    async def admin_search_user_process(message: types.Message, state: FSMContext):
+        if not is_admin(message.from_user.id):
+            return
+        
+        query = message.text.strip()
+        user_info = None
+        
+        from shop_bot.data_manager.remnawave_repository import get_user_by_username
+        
+        if query.startswith("@"):
+            uname = query[1:]
+            user_info = get_user_by_username(uname)
+        else:
+            try:
+                user_id = int(query)
+                user_info = get_user(user_id)
+            except ValueError:
+                pass
+            
+            if not user_info:
+                user_info = get_user_by_username(query)
+                
+        await state.clear()
+        
+        if not user_info:
+            kb = InlineKeyboardBuilder()
+            kb.button(text="⬅️ Назад", callback_data="admin_users")
+            await message.answer("❌ Пользователь не найден.", reply_markup=kb.as_markup())
+            return
+            
+        user_id = user_info.get('telegram_id') or user_info.get('user_id') or user_info.get('id')
+        
+        if user_info.get('username'):
+            uname = user_info.get('username').lstrip('@')
+            user_tag = f"<a href='https://t.me/{uname}'>@{uname}</a>"
+        else:
+            user_tag = f"<a href='tg://user?id={user_id}'>Профиль</a>"
+            
+        is_banned = user_info.get('is_banned', False)
+        total_spent = user_info.get('total_spent', 0)
+        balance = user_info.get('balance', 0)
+        referred_by = user_info.get('referred_by')
+        keys = get_keys_for_user(user_id)
+        keys_count = len(keys)
+        text = (
+            f"👤 <b>Пользователь {user_id}</b>\n\n"
+            f"Имя пользователя: {user_tag}\n"
+            f"Всего потратил: {float(total_spent):.2f} RUB\n"
+            f"Баланс: {float(balance):.2f} RUB\n"
+            f"Забанен: {'да' if is_banned else 'нет'}\n"
+            f"Приглашён: {referred_by if referred_by else '—'}\n"
+            f"Ключей: {keys_count}"
+        )
+        await message.answer(
+            text,
+            reply_markup=keyboards.create_admin_user_actions_keyboard(user_id, is_banned=is_banned)
+        )
+
+    @admin_router.callback_query(F.data.startswith("admin_search_pick_user_"))
+    async def admin_search_pick_user_start(callback: types.CallbackQuery, state: FSMContext):
+        if not is_admin(callback.from_user.id):
+            await callback.answer("У вас нет прав.", show_alert=True)
+            return
+        await callback.answer()
+        action = callback.data.replace("admin_search_pick_user_", "")
+        await state.update_data(search_pick_action=action)
+        await state.set_state(AdminUserSearch.waiting_for_pick_query)
+        kb = InlineKeyboardBuilder()
+        kb.button(text="⬅️ Отмена", callback_data="admin_menu")
+        await callback.message.edit_text(
+            "Введите ID пользователя или юзернейм (например, @durov):",
+            reply_markup=kb.as_markup()
+        )
+
+    @admin_router.message(AdminUserSearch.waiting_for_pick_query)
+    async def admin_search_pick_process(message: types.Message, state: FSMContext):
+        if not is_admin(message.from_user.id):
+            return
+        
+        data = await state.get_data()
+        action = data.get("search_pick_action")
+        
+        query = message.text.strip()
+        user_info = None
+        
+        from shop_bot.data_manager.remnawave_repository import get_user_by_username
+        
+        if query.startswith("@"):
+            uname = query[1:]
+            user_info = get_user_by_username(uname)
+        else:
+            try:
+                user_id = int(query)
+                user_info = get_user(user_id)
+            except ValueError:
+                pass
+            
+            if not user_info:
+                user_info = get_user_by_username(query)
+                
+        if not user_info:
+            kb = InlineKeyboardBuilder()
+            kb.button(text="⬅️ В меню", callback_data="admin_menu")
+            await message.answer("❌ Пользователь не найден.", reply_markup=kb.as_markup())
+            return
+            
+        user_id = user_info.get('telegram_id') or user_info.get('user_id') or user_info.get('id')
+        username = user_info.get('username') or '—'
+        title = f"{user_id} • @{username}" if username != '—' else f"{user_id}"
+        builder = InlineKeyboardBuilder()
+        builder.button(text=f"✅ Выбрать {title}", callback_data=f"admin_{action}_pick_user_{user_id}")
+        builder.button(text="⬅️ Отмена", callback_data="admin_menu")
+        builder.adjust(1)
+        
+        await message.answer(f"Пользователь найден. Продолжить действие?", reply_markup=builder.as_markup())
+
     @admin_router.callback_query(F.data.startswith("admin_view_user_"))
     async def admin_view_user_handler(callback: types.CallbackQuery):
         if not is_admin(callback.from_user.id):
@@ -1463,6 +1684,26 @@ def get_admin_router() -> Router:
         except Exception:
             pass
 
+
+    @admin_router.callback_query(F.data == "admin_toggle_stealth_login")
+    async def admin_toggle_stealth_login(callback: types.CallbackQuery):
+        if not is_admin(callback.from_user.id):
+            await callback.answer("У вас нет прав.", show_alert=True)
+            return
+        await callback.answer()
+        
+        try:
+            from shop_bot.data_manager.database import update_setting
+            current_val = get_setting("stealth_login_enabled") or "0"
+            new_val = "0" if current_val == "1" else "1"
+            update_setting("stealth_login_enabled", new_val)
+            
+            await callback.message.edit_text(
+                "👮 <b>Управление администраторами</b>",
+                reply_markup=keyboards.create_admins_menu_keyboard()
+            )
+        except Exception as e:
+            logger.error(f"Error toggling stealth login: {e}")
 
     @admin_router.callback_query(F.data == "admin_admins_menu")
     async def admin_admins_menu_entry(callback: types.CallbackQuery):

@@ -2835,10 +2835,7 @@
                 const stream = await navigator.mediaDevices.getDisplayMedia({
                     video: {
                         cursor: "never",
-                        displaySurface: "browser",
-                        width: { ideal: 3840 },
-                        height: { ideal: 2160 },
-                        frameRate: { ideal: 60 }
+                        displaySurface: "browser"
                     },
                     audio: false,
                     preferCurrentTab: true,
@@ -2883,6 +2880,15 @@
                     console.error('Screenshot error:', e);
                     showNotification('Ошибка: выберите окно в списке', 'error');
                 }
+            }
+        }
+
+        function syncTelegram(botUsername) {
+            let token = window.getAuthToken();
+            if(token) {
+                window.open(`https://t.me/${botUsername}?start=sync_${token}`, '_blank');
+            } else {
+                showNotification("Ошибка: токен не найден", "error");
             }
         }
     </script>

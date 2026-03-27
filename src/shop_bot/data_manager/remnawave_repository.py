@@ -303,6 +303,10 @@ _LEGACY_FORWARDERS = (
     "get_user",
     "get_user_count",
     "get_user_keys",
+    "get_user_by_email",
+    "create_user_by_email",
+    "update_user_auth_token",
+    "link_telegram_to_email_user",
 
     "get_users_paginated",
     "get_keys_counts_for_users",

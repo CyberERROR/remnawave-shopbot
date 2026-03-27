@@ -469,6 +469,16 @@ def _get_profile_card_html(user: dict | None, referral_count: int, keys_count: i
         except:
              pass
 
+    sync_btn_html = ""
+    if isinstance(user_id, int) and str(user_id).startswith("999"):
+         bot_username = get_setting("telegram_bot_username") or "bot"
+         sync_btn_html = f'''
+                    <button onclick="syncTelegram('{bot_username}')" class="mt-2 w-full bg-[#0088cc]/20 hover:bg-[#0088cc]/30 text-[#00aaff] border border-[#0088cc]/30 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm">
+                        <span class="material-icons-round text-base">sync</span>
+                        <span>Синхронизовать с Telegram</span>
+                    </button>
+         '''
+
     return f"""
             <!-- Modern Balanced User Card -->
             <div class="glass-card border border-white/10 rounded-[2rem] p-6 relative overflow-hidden shadow-xl">
@@ -524,6 +534,7 @@ def _get_profile_card_html(user: dict | None, referral_count: int, keys_count: i
                             регистрации:</span>
                         <span class="text-[10px] text-gray-300 font-black">{reg_date_str} ({time_since_str})</span>
                     </div>
+                    {sync_btn_html}
                 </div>
             </div>
     """
@@ -1236,6 +1247,30 @@ class TokenRequest(BaseModel):
 class TelegramDirectAuthRequest(BaseModel):
     user_id: int
 
+class EmailAuthRequest(BaseModel):
+    email: str
+    password: str
+
+class PasswordResetRequest(BaseModel):
+    email: str
+
+class PasswordResetCheckRequest(BaseModel):
+    email: str
+    code: str
+
+class PasswordResetVerifyRequest(BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+# Stores dict: { "email@bot.local": {"code": "123456", "expires": float_timestamp} }
+PASSWORD_RESET_TOKENS = {}
+
+class SyncTgRequest(BaseModel):
+    token: str
+    init_data: str
+
+
 class DeviceTiersRequest(BaseModel):
     host_name: str
 
@@ -1387,6 +1422,131 @@ async def api_telegram_direct_auth(req: TelegramDirectAuthRequest):
     except Exception as e:
         logger.error(f"Telegram direct auth error: {e}")
         return {"ok": False, "error": "Auth error"}
+
+@app.post("/api/auth/email/register")
+async def api_email_register(req: EmailAuthRequest):
+    from shop_bot.data_manager import database
+    existing = database.get_user_by_email(req.email)
+    if existing:
+        return {"ok": False, "error": "Email уже зарегистрирован"}
+        
+    user = database.create_user_by_email(req.email, req.password)
+    if not user:
+        return {"ok": False, "error": "Ошибка при регистрации"}
+        
+    token = str(uuid.uuid4())
+    database.update_user_auth_token(user['telegram_id'], token)
+    return {"ok": True, "token": token}
+
+@app.post("/api/auth/email/login")
+async def api_email_login(req: EmailAuthRequest):
+    from shop_bot.data_manager import database
+    user = database.get_user_by_email(req.email)
+    if not user or user.get('auth_pass') != req.password:
+        return {"ok": False, "error": "Неверный email или пароль"}
+        
+    if user.get('is_banned'):
+        return {"ok": False, "error": "Аккаунт заблокирован"}
+
+    token = str(uuid.uuid4())
+    database.update_user_auth_token(user['telegram_id'], token)
+    return {"ok": True, "token": token}
+
+@app.post("/api/auth/email/reset/request")
+async def api_email_reset_request(req: PasswordResetRequest):
+    from shop_bot.data_manager import database
+    user = database.get_user_by_email(req.email)
+    if not user:
+        return {"ok": False, "error": "Email не найден"}
+        
+    if str(user['telegram_id']).startswith("999"):
+        return {"ok": False, "error": "Аккаунт не синхронизирован с Telegram.\nОтправить сообщение невозможно!"}
+
+    import random
+    import time
+    code = str(random.randint(100000, 999999))
+    PASSWORD_RESET_TOKENS[req.email.lower().strip()] = {
+        "code": code,
+        "expires": time.time() + 600
+    }
+    
+    try:
+        success = await _send_telegram_message(
+            user['telegram_id'], 
+            f"🔐 <b>Восстановление пароля</b>\n\nВаш код для сброса безопасности:\n<code>{code}</code>\n\n<i>Код действителен 10 минут. Если вы не запрашивали сброс пароля, проигнорируйте это сообщение.</i>"
+        )
+        if not success:
+            return {"ok": False, "error": "Ошибка при отправке в Telegram. Возможно, вы заблокировали бота."}
+    except Exception as e:
+        logger.error(f"Failed to call _send_telegram_message: {e}")
+        return {"ok": False, "error": "Ошибка при отправке в Telegram. Возможно, вы заблокировали бота."}
+
+    return {"ok": True}
+
+@app.post("/api/auth/email/reset/check")
+async def api_email_reset_check(req: PasswordResetCheckRequest):
+    import time
+    email_lower = req.email.lower().strip()
+    if email_lower not in PASSWORD_RESET_TOKENS:
+        return {"ok": False, "error": "Код не запрашивался или истёк"}
+        
+    token_data = PASSWORD_RESET_TOKENS[email_lower]
+    if time.time() > token_data["expires"]:
+        return {"ok": False, "error": "Код устарел"}
+        
+    if token_data["code"] != req.code:
+        return {"ok": False, "error": "Неверный код"}
+        
+    return {"ok": True}
+
+@app.post("/api/auth/email/reset/verify")
+async def api_email_reset_verify(req: PasswordResetVerifyRequest):
+    import time
+    email_lower = req.email.lower().strip()
+    if email_lower not in PASSWORD_RESET_TOKENS:
+        return {"ok": False, "error": "Код не запрашивался или истёк"}
+        
+    token_data = PASSWORD_RESET_TOKENS[email_lower]
+    if time.time() > token_data["expires"]:
+        del PASSWORD_RESET_TOKENS[email_lower]
+        return {"ok": False, "error": "Код устарел"}
+        
+    if token_data["code"] != req.code:
+        return {"ok": False, "error": "Неверный код"}
+        
+    from shop_bot.data_manager import database
+    if not database.update_user_password(req.email, req.new_password):
+        return {"ok": False, "error": "Ошибка базы данных"}
+        
+    del PASSWORD_RESET_TOKENS[email_lower]
+    return {"ok": True}
+
+@app.post("/api/auth/sync-tg")
+async def api_sync_tg(req: SyncTgRequest):
+    from shop_bot.data_manager import database
+    user = database.get_user_by_auth_token(req.token)
+    if not user:
+        return {"ok": False, "error": "Не авторизован"}
+        
+    token_str = get_setting("telegram_bot_token")
+    if not token_str:
+         return {"ok": False, "error": "Server configuration error"}
+         
+    tg_data = validate_telegram_data(req.init_data, token_str)
+    if not tg_data or not tg_data.get('id'):
+         return {"ok": False, "error": "Invalid Telegram data"}
+         
+    tg_id = tg_data.get('id')
+    tg_username = tg_data.get('username') or ''
+    
+    if user['telegram_id'] > 0:
+         return {"ok": False, "error": "Telegram уже привязан"}
+         
+    res = database.link_telegram_to_email_user(user['telegram_id'], tg_id, tg_username)
+    if res is True:
+         return {"ok": True}
+    else:
+         return {"ok": False, "error": str(res)}
 
 
 @app.post("/api/device-tiers")

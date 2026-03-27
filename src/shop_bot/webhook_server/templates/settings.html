@@ -723,9 +723,7 @@
 
 
     <section id="tab-payments" class="tab-content hidden">
-        {% set base_url = ('https://' + settings.domain) if settings.domain else request.url_root.replace('http://',
-        'https://') %}
-        {% set base_url = base_url.rstrip('/') %}
+        <!-- Base URL is processed dynamically on client side -->
         <div class="space-y-6">
             <div
                 class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
@@ -908,6 +906,67 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="bg-black/20 rounded-lg px-3 py-2 border border-white/5 mt-auto">
+                            <p class="text-[9px] text-white/40 uppercase tracking-widest leading-tight">Webhook URL:</p>
+                            <p class="text-[10px] text-primary/80 font-mono mt-0.5 truncate webhook-display"
+                                data-endpoint="/yookassa-webhook"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Heleket -->
+                <div
+                    class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col h-full">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-lg">payments</span>
+                        </div>
+                        <h4 class="text-white font-bold text-sm">Heleket</h4>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Merchant
+                                    ID</label>
+                                <div class="relative group">
+                                    <span
+                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">pin</span>
+                                    <input type="text" name="heleket_merchant_id"
+                                        value="{{ settings.heleket_merchant_id or '' }}"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                                </div>
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">API
+                                    Key</label>
+                                <div class="relative group">
+                                    <span
+                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">key</span>
+                                    <input type="password" name="heleket_api_key"
+                                        value="{{ settings.heleket_api_key or '' }}"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Ваш
+                                домен</label>
+                            <div class="relative group">
+                                <span
+                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">link</span>
+                                <input type="text" name="domain" value="{{ settings.domain or '' }}"
+                                    placeholder="my-shop.com"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                        </div>
+                        <div class="bg-black/20 rounded-lg px-3 py-2 border border-white/5 mt-auto">
+                            <p class="text-[9px] text-white/40 uppercase tracking-widest leading-tight">Webhook URL:</p>
+                            <p class="text-[10px] text-primary/80 font-mono mt-0.5 truncate webhook-display"
+                                data-endpoint="/heleket-webhook"></p>
+                        </div>
                     </div>
                 </div>
 
@@ -977,60 +1036,9 @@
                             </div>
                         </div>
                         <div class="bg-black/20 rounded-lg px-3 py-2 border border-white/5">
-                            <p class="text-[9px] text-white/40 uppercase tracking-widest leading-tight">Callback:</p>
-                            <p class="text-[10px] text-primary/80 font-mono mt-0.5 truncate">{{ base_url
-                                }}/platega-webhook</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Heleket -->
-                <div
-                    class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col h-full">
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                            <span class="material-symbols-outlined text-lg">payments</span>
-                        </div>
-                        <h4 class="text-white font-bold text-sm">Heleket</h4>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label
-                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Merchant
-                                    ID</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">pin</span>
-                                    <input type="text" name="heleket_merchant_id"
-                                        value="{{ settings.heleket_merchant_id or '' }}"
-                                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
-                                </div>
-                            </div>
-                            <div>
-                                <label
-                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">API
-                                    Key</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">key</span>
-                                    <input type="password" name="heleket_api_key"
-                                        value="{{ settings.heleket_api_key or '' }}"
-                                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <label
-                                class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Ваш
-                                домен</label>
-                            <div class="relative group">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">link</span>
-                                <input type="text" name="domain" value="{{ settings.domain or '' }}"
-                                    placeholder="my-shop.com"
-                                    class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
-                            </div>
+                            <p class="text-[9px] text-white/40 uppercase tracking-widest leading-tight">Webhook URL:</p>
+                            <p class="text-[10px] text-primary/80 font-mono mt-0.5 truncate webhook-display"
+                                data-endpoint="/platega-webhook"></p>
                         </div>
                     </div>
                 </div>
@@ -1045,28 +1053,35 @@
                         <h4 class="text-white font-bold text-sm">TonConnect</h4>
                     </div>
                     <div class="space-y-4">
-                        <div>
-                            <label
-                                class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Ton
-                                Wallet Address</label>
-                            <div class="relative group">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">wallet</span>
-                                <input type="text" name="ton_wallet_address"
-                                    value="{{ settings.ton_wallet_address or '' }}"
-                                    class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Ton
+                                    Wallet Address</label>
+                                <div class="relative group">
+                                    <span
+                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">wallet</span>
+                                    <input type="text" name="ton_wallet_address"
+                                        value="{{ settings.ton_wallet_address or '' }}"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                                </div>
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">TonAPI
+                                    Key</label>
+                                <div class="relative group">
+                                    <span
+                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">key</span>
+                                    <input type="password" name="tonapi_key" value="{{ settings.tonapi_key or '' }}"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label
-                                class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">TonAPI
-                                Key</label>
-                            <div class="relative group">
-                                <span
-                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">key</span>
-                                <input type="password" name="tonapi_key" value="{{ settings.tonapi_key or '' }}"
-                                    class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
-                            </div>
+                        <div class="bg-black/20 rounded-lg px-3 py-2 border border-white/5 mt-auto">
+                            <p class="text-[9px] text-white/40 uppercase tracking-widest leading-tight">Webhook URL:</p>
+                            <p class="text-[10px] text-primary/80 font-mono mt-0.5 truncate webhook-display"
+                                data-endpoint="/ton-webhook"></p>
                         </div>
                     </div>
                 </div>
@@ -1128,6 +1143,11 @@
                             <input type="password" name="cryptobot_token" value="{{ settings.cryptobot_token or '' }}"
                                 class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
                         </div>
+                    </div>
+                    <div class="bg-black/20 rounded-lg px-3 py-2 border border-white/5 mt-auto">
+                        <p class="text-[9px] text-white/40 uppercase tracking-widest leading-tight">Webhook URL:</p>
+                        <p class="text-[10px] text-primary/80 font-mono mt-0.5 truncate webhook-display"
+                            data-endpoint="/cryptobot-webhook"></p>
                     </div>
                 </div>
 
@@ -3975,6 +3995,18 @@
                 document.removeEventListener('keydown', onKey, true);
             }
             document.addEventListener('keydown', onKey, true);
+        });
+    })();
+    (function () {
+        // Динамическое заполнение Webhook URL
+        const domainSetting = "{{ settings.domain or '' }}";
+        const baseWebhookUrl = domainSetting ? "https://" + domainSetting : window.location.protocol + "//" + window.location.host;
+
+        document.querySelectorAll('.webhook-display').forEach(function (el) {
+            const endpoint = el.getAttribute('data-endpoint');
+            if (endpoint) {
+                el.textContent = baseWebhookUrl + endpoint;
+            }
         });
     })();
 </script>

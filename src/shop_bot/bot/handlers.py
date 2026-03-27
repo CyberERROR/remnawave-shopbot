@@ -593,6 +593,23 @@ def get_user_router() -> Router:
                 await message.answer("✅ <b>Авторизация успешна!</b>\n\nМожете вернуться в браузер — страница обновится автоматически.")
                 return
 
+        if command.args and command.args.startswith('sync_'):
+            sync_token = command.args.replace('sync_', '')
+            from shop_bot.data_manager import database
+            user_by_token = database.get_user_by_auth_token(sync_token)
+            if user_by_token:
+                 if str(user_by_token['telegram_id']).startswith("999"):
+                      res = database.link_telegram_to_email_user(user_by_token['telegram_id'], user_id, message.from_user.username or "")
+                      if res is True:
+                           await message.answer("✅ <b>Аккаунт успешно синхронизирован!</b>\nВаш веб-аккаунт привязан к этому Telegram-профилю.")
+                      else:
+                           await message.answer(f"❌ Ошибка синхронизации: {res}")
+                 else:
+                      await message.answer("⚠️ Этот аккаунт уже привязан к Telegram.")
+            else:
+                 await message.answer("❌ Токен синхронизации не найден или устарел.")
+            return
+
         if command.args and command.args.startswith('promo:'):
             code = command.args[6:].upper()
             promo, err_msg = check_promo_code_available(code, user_id)
@@ -1662,14 +1679,19 @@ def get_user_router() -> Router:
             except Exception: last = None
             
             if not last:
-                lines.append(f"• <b>{name}</b>: 🚫 Нет данных")
+                lines.append(f"<b>🛰 {name} — 🚫</b>\n<blockquote>Нет данных</blockquote>")
                 continue
             
             ping, down, up = last.get('ping_ms'), last.get('download_mbps'), last.get('upload_mbps')
             badge = '✅' if last.get('ok') else '❌'
             ping_s = f"{float(ping):.1f}" if isinstance(ping, (int, float)) else '—'
-            down_s = f"{float(down):.0f}" if isinstance(down, (int, float)) else '—'
-            up_s = f"{float(up):.0f}" if isinstance(up, (int, float)) else '—'
+            
+            def format_sp(val):
+                if not isinstance(val, (int, float)): return "—"
+                return f"{val * 1000:.0f}Kb/s" if 0 < val < 1 else f"{val:.0f}Mb/s"
+                
+            down_s = format_sp(down)
+            up_s = format_sp(up)
             
             ts_s = ""
             if last.get('created_at'):
@@ -1680,9 +1702,14 @@ def get_user_router() -> Router:
                     ts_s = ts_dt.strftime('%d.%m %H:%M')
                 except: ts_s = str(last['created_at'])
             
-            lines.append(f"• <b>{name}</b> — {badge} ⏱{ping_s}ms | ↓{down_s} | ↑{up_s} | 🕒{ts_s}")
+            lines.append(f"<b>🛰 {name} — {badge}</b>\n<blockquote>↓{down_s} | ↑{up_s}\n⏱️{ping_s}ms | 🕒{ts_s}</blockquote>")
 
-        text = "⚡ <b>Актуальные показатели серверов:</b>\n\n" + ("\n\n".join(lines) if lines else "⚠️ Серверы для проверки не настроены.")
+        if lines:
+            rendered_lines = "\n➖➖➖➖➖\n".join(lines) + "\n➖➖➖➖➖"
+            text = f"⚡ <b>Актуальные показатели серверов:</b>\n\n{rendered_lines}"
+        else:
+            text = "⚡ <b>Актуальные показатели серверов:</b>\n\n⚠️ Серверы для проверки не настроены."
+            
         speedtest_image = get_setting("speedtest_image")
         await smart_edit_message(callback.message, text, keyboards.create_back_to_menu_keyboard(), speedtest_image)
     # ===== Конец функции user_speedtest_last_handler =====
@@ -3199,7 +3226,9 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                             except: pass
 
             balance = get_balance(uid)
-            await bot.send_message(uid, f"✅ <b>Баланс пополнен!</b>\nСумма: <code>{float(price):.2f} RUB</code>\nТекущий баланс: <code>{balance:.2f} RUB</code>", reply_markup=keyboards.create_profile_keyboard())
+            if not str(uid).startswith("999"):
+                try: await bot.send_message(uid, f"✅ <b>Баланс пополнен!</b>\nСумма: <code>{float(price):.2f} RUB</code>\nТекущий баланс: <code>{balance:.2f} RUB</code>", reply_markup=keyboards.create_profile_keyboard())
+                except Exception: pass
             
             admins = [u for u in (get_all_users() or []) if is_admin(u.get('telegram_id') or 0)]
             
@@ -3222,7 +3251,10 @@ async def process_successful_payment(bot: Bot, metadata: dict):
             return
 
         # --- ВЫДАЧА ИЛИ ПРОДЛЕНИЕ КЛЮЧА ---
-        proc_msg = await bot.send_message(uid, f"⏳ <b>Оплата принята!</b>\nФормируем конфигурацию на сервере «{host}»...")
+        proc_msg = None
+        if not str(uid).startswith("999"):
+            try: proc_msg = await bot.send_message(uid, f"⏳ <b>Оплата принята!</b>\nФормируем конфигурацию на сервере «{host}»...")
+            except Exception: pass
         
         try:
             if action == "new":
@@ -3233,7 +3265,9 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                 c_email = f"{cand}@bot.local"
             else:
                 key = rw_repo.get_key_by_id(kid)
-                if not key: return await proc_msg.edit_text("❌ Ключ для продления не найден.")
+                if not key:
+                    if proc_msg: await proc_msg.edit_text("❌ Ключ для продления не найден.")
+                    return
                 c_email = key['key_email']
 
             hw_lim, tr_lim_gb, days = None, None, int(months * 30)
@@ -3263,19 +3297,22 @@ async def process_successful_payment(bot: Bot, metadata: dict):
             if not res:
                 add_to_balance(uid, float(price))
                 logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка API VPN)")
-                return await proc_msg.edit_text("❌ <b>Ошибка на стороне VPN-сервера</b>\nКлюч не был выдан. Средства возвращены на ваш баланс в боте.")
+                if proc_msg: await proc_msg.edit_text("❌ <b>Ошибка на стороне VPN-сервера</b>\nКлюч не был выдан. Средства возвращены на ваш баланс в боте.")
+                return
 
             if action == "new":
                 kid = rw_repo.record_key_from_payload(user_id=uid, payload=res, host_name=host)
                 if not kid: 
                     add_to_balance(uid, float(price))
                     logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка БД нового ключа)")
-                    return await proc_msg.edit_text("❌ При сохранении ключа произошла системная ошибка. Средства возвращены на баланс.")
+                    if proc_msg: await proc_msg.edit_text("❌ При сохранении ключа произошла системная ошибка. Средства возвращены на баланс.")
+                    return
             else:
                 if not rw_repo.update_key(kid, remnawave_user_uuid=res['client_uuid'], expire_at_ms=res['expiry_timestamp_ms']): 
                     add_to_balance(uid, float(price))
                     logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка обновления БД)")
-                    return await proc_msg.edit_text("❌ Ошибка обновления данных ключа в системе. Средства возвращены на баланс.")
+                    if proc_msg: await proc_msg.edit_text("❌ Ошибка обновления данных ключа в системе. Средства возвращены на баланс.")
+                    return
 
             # Реферальные начисления за покупку
             if (pay_method or '').lower() != 'balance':
@@ -3321,22 +3358,30 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                         update_promo_code_status(promo_val, is_active=False)
                 except: pass
             
-            await proc_msg.delete()
+            if proc_msg:
+                try: await proc_msg.delete()
+                except Exception: pass
+                
             msk_tz = timezone(timedelta(hours=3))
             conn, exp = res.get('connection_string'), datetime.fromtimestamp(res['expiry_timestamp_ms'] / 1000, tz=msk_tz)
             u_keys = get_user_keys(uid); k_num = next((i + 1 for i, k in enumerate(u_keys) if k['key_id'] == kid), len(u_keys))
             txt = get_purchase_success_text(action=("extend" if action == "extend" else "new"), key_number=k_num, expiry_date=exp, connection_string=(conn or ""), email=c_email)
             
-            ready_img = get_setting("key_ready_image")
-            if ready_img and os.path.exists(ready_img):
-                from aiogram.types import FSInputFile
-                await bot.send_photo(chat_id=uid, photo=FSInputFile(ready_img), caption=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
-            else: await bot.send_message(chat_id=uid, text=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
+            if not str(uid).startswith("999"):
+                try:
+                    ready_img = get_setting("key_ready_image")
+                    if ready_img and os.path.exists(ready_img):
+                        from aiogram.types import FSInputFile
+                        await bot.send_photo(chat_id=uid, photo=FSInputFile(ready_img), caption=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
+                    else: await bot.send_message(chat_id=uid, text=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
+                except Exception: pass
 
             try: await notify_admin_of_purchase(bot, metadata)
             except: pass
         except Exception as e:
             logger.error(f"Ошибка логики VPN ({uid}): {e}", exc_info=True)
-            await bot.send_message(uid, "❌ <b>Ошибка при выдаче ключа</b>\nВаша оплата зафиксирована, но произошел сбой при создании конфигурации. Свяжитесь с поддержкой.")
+            if not str(uid).startswith("999"):
+                try: await bot.send_message(uid, "❌ <b>Ошибка при выдаче ключа</b>\nВаша оплата зафиксирована, но произошел сбой при создании конфигурации. Свяжитесь с поддержкой.")
+                except Exception: pass
     except Exception as e: logger.error(f"Глобальная ошибка обработки платежа: {e}", exc_info=True)
 # ===== Конец функции process_successful_payment =====
