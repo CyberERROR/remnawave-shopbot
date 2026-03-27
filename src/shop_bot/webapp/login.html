@@ -219,6 +219,12 @@
                     return;
                 }
 
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    emailError.textContent = "Введите корректный Email (например: user@mail.ru)";
+                    emailError.classList.remove('hidden');
+                    return;
+                }
+
                 if (isRegister) {
                     if (password.length < 5) {
                         emailError.textContent = "Пароль должен содержать минимум 5 символов";
@@ -397,6 +403,11 @@
                 const email = resetEmailInput.value.trim();
                 if(!email) {
                     resetError1.textContent = "Введите Email";
+                    resetError1.classList.remove('hidden');
+                    return;
+                }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    resetError1.textContent = "Введите корректный Email (например: user@mail.ru)";
                     resetError1.classList.remove('hidden');
                     return;
                 }
