@@ -1423,6 +1423,15 @@ async def api_telegram_direct_auth(req: TelegramDirectAuthRequest):
         logger.error(f"Telegram direct auth error: {e}")
         return {"ok": False, "error": "Auth error"}
 
+def _validate_password(password: str) -> str | None:
+    if len(password) < 5:
+        return "Пароль должен содержать минимум 5 символов"
+    if password.isdigit():
+        return "Пароль не должен состоять только из цифр"
+    if len(set(password)) < 2:
+        return "Пароль слишком простой — используйте разные символы"
+    return None
+
 @app.post("/api/auth/email/register")
 async def api_email_register(req: EmailAuthRequest):
     from shop_bot.data_manager import database
@@ -1430,6 +1439,9 @@ async def api_email_register(req: EmailAuthRequest):
     if existing:
         return {"ok": False, "error": "Email уже зарегистрирован"}
         
+    pw_err = _validate_password(req.password)
+    if pw_err:
+        return {"ok": False, "error": pw_err}
     user = database.create_user_by_email(req.email, req.password)
     if not user:
         return {"ok": False, "error": "Ошибка при регистрации"}
@@ -1515,6 +1527,9 @@ async def api_email_reset_verify(req: PasswordResetVerifyRequest):
         return {"ok": False, "error": "Неверный код"}
         
     from shop_bot.data_manager import database
+    pw_err = _validate_password(req.new_password)
+    if pw_err:
+        return {"ok": False, "error": pw_err}
     if not database.update_user_password(req.email, req.new_password):
         return {"ok": False, "error": "Ошибка базы данных"}
         

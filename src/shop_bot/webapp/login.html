@@ -218,6 +218,24 @@
                     emailError.classList.remove('hidden');
                     return;
                 }
+
+                if (isRegister) {
+                    if (password.length < 5) {
+                        emailError.textContent = "Пароль должен содержать минимум 5 символов";
+                        emailError.classList.remove('hidden');
+                        return;
+                    }
+                    if (/^\d+$/.test(password)) {
+                        emailError.textContent = "Пароль не должен состоять только из цифр";
+                        emailError.classList.remove('hidden');
+                        return;
+                    }
+                    if (new Set(password).size < 2) {
+                        emailError.textContent = "Пароль слишком простой — используйте разные символы";
+                        emailError.classList.remove('hidden');
+                        return;
+                    }
+                }
                 
                 const endpoint = isRegister ? '/api/auth/email/register' : '/api/auth/email/login';
                 emailLoginBtn.disabled = true;
