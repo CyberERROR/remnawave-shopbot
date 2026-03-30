@@ -65,14 +65,14 @@ def create_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: 
 def create_admin_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="👥 Пользователи", callback_data="admin_users")
-    builder.button(text="🎁 Выдать ключ", callback_data="admin_gift_key")
-    builder.button(text="⚡ Тест скорости", callback_data="admin_speedtest")
-    builder.button(text="🗄 Бэкап БД", callback_data="admin_backup_db")
-    builder.button(text="👮 Администраторы", callback_data="admin_admins_menu")
     builder.button(text="🌍 Ключи на хосте", callback_data="admin_host_keys")
+    builder.button(text="🎁 Выдать ключ", callback_data="admin_gift_key")
     builder.button(text="🎟 Промокоды", callback_data="admin_promo_menu")
+    builder.button(text="⚡ Тест скорости", callback_data="admin_speedtest")
     builder.button(text="📊 Мониторинг", callback_data="admin_monitor")
+    builder.button(text="🗄 Бэкап БД", callback_data="admin_backup_db")
     builder.button(text="♻️ Восстановить БД", callback_data="admin_restore_db")
+    builder.button(text="👮 Администраторы", callback_data="admin_admins_menu")
     builder.button(text="📢 Рассылка", callback_data="start_broadcast")
     builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
 
@@ -345,10 +345,16 @@ def create_support_menu_keyboard(has_external: bool = False) -> InlineKeyboardMa
     builder = InlineKeyboardBuilder()
     builder.button(text="✍️ Новое обращение", callback_data="support_new_ticket")
     builder.button(text="📨 Мои обращения", callback_data="support_my_tickets")
+    
+    layout = [2]
     if has_external:
         builder.button(text="🆘 Внешняя поддержка", callback_data="support_external")
+        layout.append(1)
+        
     builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
-    builder.adjust(1)
+    layout.append(1)
+    
+    builder.adjust(*layout)
     return builder.as_markup()
 
 def create_tickets_list_keyboard(tickets: list[dict]) -> InlineKeyboardMarkup:
@@ -645,15 +651,27 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
 
 def create_key_info_keyboard(key_id: int, connection_string: str | None = None) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    layout = []
+    
     if connection_string:
         builder.button(text="📲 Подключиться", web_app=WebAppInfo(url=connection_string))
-    builder.button(text="➕ Продлить этот ключ", callback_data=f"extend_key_{key_id}")
-    builder.button(text="📱 Показать QR-код", callback_data=f"show_qr_{key_id}")
+        layout.append(1)
+        
+    builder.button(text="➕ Продлить ключ", callback_data=f"extend_key_{key_id}")
+    layout.append(1)
+    
     builder.button(text="📱 Устройства", callback_data=f"key_devices_{key_id}")
+    builder.button(text="📱 QR-код", callback_data=f"show_qr_{key_id}")
+    layout.append(2)
+    
     builder.button(text="📖 Инструкция", callback_data=f"howto_vless_{key_id}")
-    builder.button(text="📝 Комментарии к ключу", callback_data=f"key_comments_{key_id}")
+    builder.button(text="📝 Комментарий", callback_data=f"key_comments_{key_id}")
+    layout.append(2)
+    
     builder.button(text="⬅️ Назад к списку ключей", callback_data="manage_keys")
-    builder.adjust(1, 1, 2, 1, 1, 1) 
+    layout.append(1)
+    
+    builder.adjust(*layout) 
     return builder.as_markup()
 
 def create_qr_keyboard(key_id: int) -> InlineKeyboardMarkup:
@@ -728,9 +746,10 @@ def create_profile_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text=(get_setting("btn_topup_text") or "💳 Пополнить баланс"), callback_data="top_up_start")
     builder.button(text=(get_setting("btn_referral_text") or "🤝 Реферальная программа"), callback_data="show_referral_program")
+    builder.button(text="🛠 Подключиться", callback_data="howto_vless")
     builder.button(text="🎁 Ввести промокод", callback_data="promo_uni")
     builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
-    builder.adjust(1)
+    builder.adjust(1, 1, 2, 1)
     return builder.as_markup()
 
 def create_uni_promo_keys_keyboard(keys: list, code: str) -> InlineKeyboardMarkup:

@@ -3218,15 +3218,15 @@ def get_admin_router() -> Router:
             if hosts and len(hosts) > 0:
 
                 current_host = hosts[0]
-                data = resource_monitor.get_remote_metrics_for_host(current_host.get('host_name'))
+                data = await asyncio.to_thread(resource_monitor.get_remote_metrics_for_host, current_host.get('host_name'))
                 is_remote = True
             else:
 
-                data = resource_monitor.get_local_metrics()
+                data = await asyncio.to_thread(resource_monitor.get_local_metrics)
                 is_remote = False
         except Exception:
 
-            data = resource_monitor.get_local_metrics()
+            data = await asyncio.to_thread(resource_monitor.get_local_metrics)
             is_remote = False
         
         try:
@@ -3383,7 +3383,7 @@ def get_admin_router() -> Router:
         
         host_name = (callback.data or '').split(':',1)[1]
         await callback.answer("🔄 Подключение к хосту...")
-        data = resource_monitor.get_remote_metrics_for_host(host_name)
+        data = await asyncio.to_thread(resource_monitor.get_remote_metrics_for_host, host_name)
         
         try:
             mem_p = (data.get('memory') or {}).get('percent')
@@ -3513,7 +3513,7 @@ def get_admin_router() -> Router:
             return
         
         await callback.answer("🔄 Подключение по SSH...")
-        data = resource_monitor.get_remote_metrics_for_target(tname)
+        data = await asyncio.to_thread(resource_monitor.get_remote_metrics_for_target, tname)
         
         try:
             mem_p = (data.get('memory') or {}).get('percent')
@@ -3620,7 +3620,7 @@ def get_admin_router() -> Router:
             return
         
         await callback.answer("🔄 Получение детальной статистики...")
-        data = resource_monitor.get_local_metrics()
+        data = await asyncio.to_thread(resource_monitor.get_local_metrics)
         
         if not data.get('ok'):
             txt = [

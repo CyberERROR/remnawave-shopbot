@@ -608,7 +608,7 @@ async def _maybe_collect_resource_metrics(bot: Bot | None):
 
 
         try:
-            local = resource_monitor.get_local_metrics()
+            local = await asyncio.to_thread(resource_monitor.get_local_metrics)
             cpu_p = (local.get('cpu') or {}).get('percent')
             mem_p = (local.get('memory') or {}).get('percent')
             disks = local.get('disks') or []
@@ -636,7 +636,7 @@ async def _maybe_collect_resource_metrics(bot: Bot | None):
             if not (h.get('ssh_host') and h.get('ssh_user')):
                 continue
             try:
-                rm = resource_monitor.get_remote_metrics_for_host(name)
+                rm = await asyncio.to_thread(resource_monitor.get_remote_metrics_for_host, name)
                 mem_p = (rm.get('memory') or {}).get('percent')
                 disks = rm.get('disks') or []
                 disk_p = max((d.get('percent') or 0) for d in disks) if disks else None

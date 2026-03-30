@@ -469,7 +469,7 @@ def initialize_db():
                     ssh_host TEXT NOT NULL,
                     ssh_port INTEGER DEFAULT 22,
                     ssh_user TEXT,
-                    ssh_password TEXT,
+                    ssh_password TEXT, 
                     ssh_key_path TEXT,
                     description TEXT,
                     is_active INTEGER DEFAULT 1,
@@ -1069,65 +1069,68 @@ def _ensure_default_button_configs(cursor: sqlite3.Cursor) -> None:
 
     if not menu_has_buttons("admin_menu"):
         admin_menu_buttons = [
-            ("users", "👥 Пользователи", "admin_users", 0, 0, 0),
-            ("host_keys", "🌍 Ключи на хосте", "admin_host_keys", 0, 1, 1),
-            ("gift_key", "🎁 Выдать ключ", "admin_gift_key", 1, 0, 2),
-            ("promo", "🎟 Промокоды", "admin_promo_menu", 1, 1, 3),
-            ("speedtest", "⚡ Тест скорости", "admin_speedtest", 2, 0, 4),
-            ("monitor", "📊 Мониторинг", "admin_monitor", 2, 1, 5),
-            ("backup", "🗄 Бэкап БД", "admin_backup_db", 3, 0, 6),
-            ("restore", "♻️ Восстановить БД", "admin_restore_db", 3, 1, 7),
-            ("admins", "👮 Администраторы", "admin_admins_menu", 4, 0, 8),
-            ("broadcast", "📢 Рассылка", "start_broadcast", 4, 1, 9),
-            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 5, 0, 10),
+            ("users", "👥 Пользователи", "admin_users", 0, 0, 0, 1),
+            ("host_keys", "🌍 Ключи на хосте", "admin_host_keys", 0, 1, 1, 1),
+            ("gift_key", "🎁 Выдать ключ", "admin_gift_key", 1, 0, 2, 1),
+            ("promo", "🎟 Промокоды", "admin_promo_menu", 1, 1, 3, 1),
+            ("speedtest", "⚡ Тест скорости", "admin_speedtest", 2, 0, 4, 1),
+            ("monitor", "📊 Мониторинг", "admin_monitor", 2, 1, 5, 1),
+            ("backup", "🗄 Бэкап БД", "admin_backup_db", 3, 0, 6, 1),
+            ("restore", "♻️ Восстановить БД", "admin_restore_db", 3, 1, 7, 1),
+            ("admins", "👮 Администраторы", "admin_admins_menu", 4, 0, 8, 1),
+            ("broadcast", "📢 Рассылка", "start_broadcast", 4, 1, 9, 1),
+            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 5, 0, 10, 3),
         ]
         
-        for button_id, text, callback_data, row_pos, col_pos, sort_order in admin_menu_buttons:
+        for button_id, text, callback_data, row_pos, col_pos, sort_order, button_width in admin_menu_buttons:
             cursor.execute("""
                 INSERT INTO button_configs 
-                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-            """, ("admin_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+            """, ("admin_menu", button_id, text, callback_data, row_pos, col_pos, sort_order, button_width))
     
 
     if not menu_has_buttons("profile_menu"):
         profile_menu_buttons = [
-            ("topup", "💳 Пополнить баланс", "top_up_start", 0, 0, 0),
-            ("referral", "🤝 Реферальная программа", "show_referral_program", 1, 0, 1),
-            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 2, 0, 2),
+            ("topup", "💳 Пополнить баланс", "top_up_start", 0, 0, 0, 2),
+            ("referral", "🤝 Реферальная программа", "show_referral_program", 1, 0, 1, 2),
+            ("howto", "🛠 Подключиться", "howto_vless", 2, 0, 2, 1),
+            ("promo_uni", "🎁 Ввести промокод", "promo_uni", 2, 1, 3, 1),
+            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 3, 0, 4, 3),
         ]
         
-        for button_id, text, callback_data, row_pos, col_pos, sort_order in profile_menu_buttons:
+        for button_id, text, callback_data, row_pos, col_pos, sort_order, button_width in profile_menu_buttons:
             cursor.execute("""
                 INSERT INTO button_configs 
-                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-            """, ("profile_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+            """, ("profile_menu", button_id, text, callback_data, row_pos, col_pos, sort_order, button_width))
     
 
     if not menu_has_buttons("support_menu"):
         support_menu_buttons = [
-            ("new_ticket", "✍️ Новое обращение", "support_new_ticket", 0, 0, 0),
-            ("my_tickets", "📨 Мои обращения", "support_my_tickets", 1, 0, 1),
-            ("external", "🆘 Внешняя поддержка", "support_external", 2, 0, 2),
-            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 3, 0, 3),
+            ("new_ticket", "✍️ Новое обращение", "support_new_ticket", 0, 0, 0, 1),
+            ("my_tickets", "📨 Мои обращения", "support_my_tickets", 0, 1, 1, 1),
+            ("external", "🆘 Внешняя поддержка", "support_external", 1, 0, 2, 2),
+            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 2, 0, 3, 2),
         ]
         
-        for button_id, text, callback_data, row_pos, col_pos, sort_order in support_menu_buttons:
+        for button_id, text, callback_data, row_pos, col_pos, sort_order, button_width in support_menu_buttons:
             cursor.execute("""
                 INSERT INTO button_configs 
-                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, is_active)
+                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-            """, ("support_menu", button_id, text, callback_data, row_pos, col_pos, sort_order))
+            """, ("support_menu", button_id, text, callback_data, row_pos, col_pos, sort_order, button_width))
 
     if not menu_has_buttons("key_info_menu"):
         key_info_menu_buttons = [
-            ("connect", "📲 Подключиться", None, "{connection_string}", 0, 0, 0, 1),
-            ("extend", "➕ Продлить этот ключ", "extend_key_{key_id}", None, 1, 0, 1, 1),
-            ("qr", "📱 Показать QR-код", "show_qr_{key_id}", None, 2, 0, 2, 2),
-            ("howto", "📖 Инструкция", "howto_vless_{key_id}", None, 2, 1, 3, 1),
-            ("comments", "📝 Комментарии", "key_comments_{key_id}", None, 3, 0, 4, 1),
-            ("back", "⬅️ Назад к списку ключей", "manage_keys", None, 4, 0, 5, 1),
+            ("connect", "📲 Подключиться", None, "{connection_string}", 0, 0, 0, 2),
+            ("extend", "➕ Продлить ключ", "extend_key_{key_id}", None, 1, 0, 1, 2),
+            ("key_devices", "📱 Устройства", "key_devices_{key_id}", None, 2, 0, 2, 1),
+            ("qr", "📱 QR-код", "show_qr_{key_id}", None, 2, 1, 3, 1),
+            ("howto", "📖 Инструкция", "howto_vless_{key_id}", None, 3, 0, 4, 1),
+            ("comment_key", "📝 Комментарий", "key_comments_{key_id}", None, 3, 1, 5, 1),
+            ("back", "⬅️ Назад к списку ключей", "manage_keys", None, 4, 0, 6, 2),
         ]
 
         for button_id, text, callback_data, url, row_pos, col_pos, sort_order, width in key_info_menu_buttons:
@@ -2331,6 +2334,19 @@ def get_button_configs(menu_type: str, include_inactive: bool = False) -> list[d
         """
         
     rows = _fetch_list(query, (menu_type,), f"Не удалось получить конфиг кнопок для {menu_type}")
+    
+    if not rows and menu_type in ("main_menu", "admin_menu", "profile_menu", "support_menu", "key_info_menu"):
+        try:
+            count = _get_count_stat("SELECT COUNT(*) as c FROM button_configs")
+            if count == 0:
+                with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+                    cursor = conn.cursor()
+                    _ensure_default_button_configs(cursor)
+                    conn.commit()
+                rows = _fetch_list(query, (menu_type,), f"Не удалось получить конфиг кнопок для {menu_type}")
+        except Exception as e:
+            logging.error(f"Не удалось инициализировать дефолтные кнопки: {e}")
+            
     return [dict(r) for r in rows]
 # ============================
 

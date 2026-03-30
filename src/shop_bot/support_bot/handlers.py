@@ -591,16 +591,19 @@ def get_support_router() -> Router:
             return
 
         support_text = get_setting("support_text") or "<b>👨‍💻 Поддержка</b>\n\nЗдесь вы можете создать обращение или посмотреть историю своих заявок."
-        await message.answer(
-            support_text,
-            reply_markup=types.ReplyKeyboardMarkup(
-                keyboard=[
-                    [types.KeyboardButton(text="✍️ Новое обращение")],
-                    [types.KeyboardButton(text="📨 Мои обращения")],
-                ],
-                resize_keyboard=True
-            ),
-        )
+        try:
+            await message.answer(
+                support_text,
+                reply_markup=types.ReplyKeyboardMarkup(
+                    keyboard=[
+                        [types.KeyboardButton(text="✍️ Новое обращение")],
+                        [types.KeyboardButton(text="📨 Мои обращения")],
+                    ],
+                    resize_keyboard=True
+                ),
+            )
+        except Exception as e:
+            logger.debug(f"Не удалось отправить приветственное сообщение: {e}")
 
     @router.callback_query(F.data == "support_new_ticket")
     async def support_new_ticket_handler(callback: types.CallbackQuery, state: FSMContext):

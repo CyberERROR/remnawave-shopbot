@@ -596,12 +596,14 @@
         { m: 'admin_menu', id: 'restore', t: '♻️ Восстановить БД', c: 'admin_restore_db', u: '' },
         { m: 'admin_menu', id: 'speedtest', t: '⚡ Тест скорости', c: 'admin_speedtest', u: '' },
         { m: 'admin_menu', id: 'users', t: '👥 Пользователи', c: 'admin_users', u: '' },
-        { m: 'key_info_menu', id: 'comment_key', t: '📝 Комментарии к ключу', c: 'key_comments_{key_id}', u: '' },
+        { m: 'admin_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' },
         { m: 'key_info_menu', id: 'connect', t: '📲 Подключиться', c: '', u: '{connection_string}' },
-        { m: 'key_info_menu', id: 'extend', t: '➕ Продлить этот ключ', c: 'extend_key_{key_id}', u: '' },
-        { m: 'key_info_menu', id: 'howto', t: '📖 Инструкция', c: 'howto_vless_{key_id}', u: '' },
-        { m: 'key_info_menu', id: 'devices', t: '💻 Устройства', c: 'key_devices_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'extend', t: '➕ Продлить ключ', c: 'extend_key_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'key_devices', t: '📱 Устройства', c: 'key_devices_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'qr', t: '📱 QR-код', c: 'show_qr_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'howto', t: '📖 Инструкция', c: 'howto_vless_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'comment_key', t: '📝 Комментарий', c: 'key_comments_{key_id}', u: '' },
+        { m: 'key_info_menu', id: 'back', t: '⬅️ Назад к списку ключей', c: 'manage_keys', u: '' },
         { m: 'main_menu', id: 'about', t: 'ℹ️ О проекте', c: 'show_about', u: '' },
         { m: 'main_menu', id: 'admin', t: '⚙️ Админка', c: 'admin_menu', u: '' },
         { m: 'main_menu', id: 'buy_key', t: '🛒 Купить', c: 'buy_new_key', u: '' },
@@ -613,12 +615,15 @@
         { m: 'main_menu', id: 'support', t: '💌 Поддержка', c: 'show_help', u: '' },
         { m: 'main_menu', id: 'topup', t: '💳 Баланс ({balance}₽)', c: 'top_up_start', u: '' },
         { m: 'main_menu', id: 'trial', t: '🎁 Попробовать бесплатно', c: 'get_trial', u: '' },
-        { m: 'profile_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' },
         { m: 'profile_menu', id: 'topup', t: '💳 Пополнить баланс', c: 'top_up_start', u: '' },
-        { m: 'profile_menu', id: 'promo', t: '🎁 Ввести промокод', c: 'promo_uni', u: '' },
-        { m: 'support_menu', id: 'external', t: '🆘 Внешняя поддержка', c: 'support_external', u: '' },
+        { m: 'profile_menu', id: 'referral', t: '🤝 Реферальная программа', c: 'show_referral_program', u: '' },
+        { m: 'profile_menu', id: 'howto', t: '🛠 Подключиться', c: 'howto_vless', u: '' },
+        { m: 'profile_menu', id: 'promo_uni', t: '🎁 Ввести промокод', c: 'promo_uni', u: '' },
+        { m: 'profile_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' },
+        { m: 'support_menu', id: 'new_ticket', t: '✍️ Новое обращение', c: 'support_new_ticket', u: '' },
         { m: 'support_menu', id: 'my_tickets', t: '📨 Мои обращения', c: 'support_my_tickets', u: '' },
-        { m: 'support_menu', id: 'new_ticket', t: '✍️ Новое обращение', c: 'support_new_ticket', u: '' }
+        { m: 'support_menu', id: 'external', t: '🆘 Внешняя поддержка', c: 'support_external', u: '' },
+        { m: 'support_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' }
     ];
 
     const MENU_NAME_MAP = {
