@@ -825,6 +825,16 @@
             } catch (e) { return dateString; }
         }
 
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function renderMessages(messages) {
             const container = document.getElementById('support-messages-container');
             if (messages.length === lastMessageCount) return; // No new messages
@@ -840,7 +850,7 @@
                     html += `
                         <div class="flex justify-end w-full mb-3 animate-in fade-in slide-in-from-right-2 duration-300">
                             <div class="max-w-[85%] w-fit bg-primary/20 border border-primary/30 text-white rounded-2xl rounded-br-sm px-3 pt-2 pb-1.5 shadow-lg flex items-end gap-2">
-                                <span class="text-[14px] leading-snug break-words whitespace-pre-wrap">${msg.content}</span>
+                                <span class="text-[14px] leading-snug break-words whitespace-pre-wrap">${escapeHTML(msg.content)}</span>
                                 <span class="text-[10px] text-primary/80 font-bold leading-none shrink-0 mb-0.5">${timeStr}</span>
                             </div>
                         </div>
@@ -854,7 +864,7 @@
                                 </div>
                             ` : `<div class="w-8 shrink-0"></div>`}
                             <div class="max-w-[85%] w-fit bg-white/5 border border-white/10 text-gray-100 rounded-2xl rounded-bl-sm px-3 pt-2 pb-1.5 shadow-lg flex items-end gap-2">
-                                <span class="text-[14px] leading-snug break-words whitespace-pre-wrap">${msg.content}</span>
+                                <span class="text-[14px] leading-snug break-words whitespace-pre-wrap">${escapeHTML(msg.content)}</span>
                                 <span class="text-[10px] text-gray-500 font-bold leading-none shrink-0 mb-0.5">${timeStr}</span>
                             </div>
                         </div>

@@ -622,6 +622,22 @@ def create_webhook_app(bot_controller_instance):
         except:
             common_data['open_tickets_count'] = 0
 
+        try:
+            from shop_bot.data_manager.database import get_dashboard_user_groups
+            groups = get_dashboard_user_groups()
+            stats["no_purchases_count"] = len(groups["no_purchases"])
+            stats["inactive_buyers_count"] = len(groups["inactive_buyers"])
+            stats["trials_count"] = len(groups["trials"])
+            stats["active_buyers_count"] = len(groups["active_buyers"])
+            stats["active_keys_count"] = len(groups["active_keys"])
+        except Exception as e:
+            logger.error(f"Failed to get user groups stats: {e}")
+            stats["no_purchases_count"] = 0
+            stats["inactive_buyers_count"] = 0
+            stats["trials_count"] = 0
+            stats["active_buyers_count"] = 0
+            stats["active_keys_count"] = 0
+
         return render_template('partials/dashboard_stats.html', stats=stats, **common_data)
 
     @flask_app.route('/dashboard/transactions.partial')
@@ -676,6 +692,17 @@ def create_webhook_app(bot_controller_instance):
         days = mapping.get(period, 30)
         data = get_daily_stats_for_charts(days=days)
         return jsonify(data)
+
+    @flask_app.route('/dashboard/user_groups.json')
+    @login_required
+    def dashboard_user_groups_json():
+        try:
+            from shop_bot.data_manager.database import get_dashboard_user_groups
+            groups = get_dashboard_user_groups()
+            return jsonify({"ok": True, "groups": groups})
+        except Exception as e:
+            logger.error(f"Error fetching user groups: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
 
 
     @flask_app.route('/monitor')

@@ -1882,26 +1882,48 @@ async def api_create_payment(req: CreatePaymentRequest):
         elif method_id == "pay_balance":
             if not deduct_from_balance(user_id, float(final_price)):
                 return {"ok": False, "error": "Недостаточно средств"}
+                
+            p_log_id = str(uuid.uuid4())
             meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "Balance", "promo_code": "", "promo_discount": 0,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count,
+                "payment_id": p_log_id
             }
             token = get_setting("telegram_bot_token")
-            if not token: return {"ok": False, "error": "Бот не настроен (нет токена)"}
+            bot = Bot(token=token) if token else None
             
-            bot = Bot(token=token)
-            try:
-                # process_successful_payment is imported at module level now
-                await process_successful_payment(bot, meta)
-            except Exception as e:
-                # Refund if processing failed?
-                add_to_balance(user_id, float(final_price))
-                logger.error(f"Balance payment processing error: {e}")
-                return {"ok": False, "error": f"Ошибка обработки: {e}"}
-            finally:
+            success = False
+            if bot:
+                try:
+                    res = await asyncio.wait_for(process_successful_payment(bot, meta), timeout=15.0)
+                    if res is True or check_transaction_exists(p_log_id):
+                        success = True
+                except asyncio.TimeoutError:
+                    logger.warning("Способ 1: Таймаут бота")
+                    if check_transaction_exists(p_log_id):
+                        success = True
+                except Exception as e:
+                    logger.error(f"Способ 1 ошибка: {e}")
+                    if check_transaction_exists(p_log_id):
+                        success = True
+            
+            if not success and not check_transaction_exists(p_log_id):
+                logger.info("Способ 2: Создаем ключ независимо от бота")
+                try:
+                    res = await process_successful_payment(None, meta)
+                    if res is True or check_transaction_exists(p_log_id):
+                        success = True
+                except Exception as e:
+                    logger.error(f"Способ 2 ошибка: {e}")
+                    
+            if bot:
                 await bot.session.close()
+                
+            if not success and not check_transaction_exists(p_log_id):
+                return {"ok": False, "error": "Ошибка обработки платежа"}
+                
             return {"ok": True, "message": "Оплачено с баланса!", "paid": True}
 
         return {"ok": False, "error": "Метод не поддерживается"}
@@ -2167,11 +2189,12 @@ async def api_support_create(req: SupportTicketCreateRequest):
                 except Exception:
                     username_display = f"ID {req.user_id}"
                     
+                import html
                 notification_text = (
                     f"🆕 <b>Новое обращение (WebApp)!</b>\n\n"
-                    f"👤 <b>USER:</b> (<code>{req.user_id}</code> - {username_display})\n"
+                    f"👤 <b>USER:</b> (<code>{req.user_id}</code> - {html.escape(username_display)})\n"
                     f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n"
-                    f"💬 <b>Тема:</b> <i>{subject_text}</i>\n\n"
+                    f"💬 <b>Тема:</b> <i>{html.escape(subject_text)}</i>\n\n"
                     f"💌 Сообщения:\n"
                     f"<blockquote>Тикет открыт через веб-приложение.</blockquote>"
                 )
@@ -2222,13 +2245,14 @@ async def api_support_send(req: SupportMessageSendRequest):
                 except Exception:
                     username_display = f"ID {req.user_id}"
                     
+                import html
                 notification_text = (
                     f"📨 <b>Новое сообщение (WebApp)!</b>\n\n"
-                    f"👤 <b>USER:</b> (<code>{req.user_id}</code> - {username_display})\n"
+                    f"👤 <b>USER:</b> (<code>{req.user_id}</code> - {html.escape(username_display)})\n"
                     f"📝 <b>ID тикета:</b> <code>#{req.ticket_id}</code>\n"
-                    f"💬 <b>Тема:</b> <i>{ticket.get('subject', 'Без темы')}</i>\n\n"
+                    f"💬 <b>Тема:</b> <i>{html.escape(ticket.get('subject', 'Без темы'))}</i>\n\n"
                     f"💌 Сообщения:\n"
-                    f"<blockquote>{req.message}</blockquote>"
+                    f"<blockquote>{html.escape(req.message)}</blockquote>"
                 )
                 
                 forum_chat_id = ticket.get('forum_chat_id')

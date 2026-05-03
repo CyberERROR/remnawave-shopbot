@@ -2575,7 +2575,35 @@
         function appendLog(text) {
             if (!logsContainer) return;
             const line = createLogLine(text);
+            line.classList.remove('log-line-cr');
             logsContainer.appendChild(line);
+
+            if (isAutoScrolling) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+
+            if (logsContainer.children.length > 200) {
+                logsContainer.removeChild(logsContainer.firstChild);
+            }
+        }
+
+        function appendLogCR(text) {
+            if (!logsContainer) return;
+            const lastChild = logsContainer.lastElementChild;
+            if (lastChild && lastChild.classList.contains('log-line-cr')) {
+                lastChild.textContent = text;
+                if (text.includes('[ERROR]') || text.includes('ERROR')) {
+                    lastChild.className = 'log-line-cr whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-red-500/20 bg-red-500/10 transition-colors px-1 text-red-300';
+                } else if (text.includes('[WARNING]') || text.includes('WARNING')) {
+                    lastChild.className = 'log-line-cr whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-white/5 transition-colors px-1 text-yellow-300';
+                } else {
+                    lastChild.className = 'log-line-cr whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-white/5 transition-colors px-1 text-white/80';
+                }
+            } else {
+                const line = createLogLine(text);
+                line.classList.add('log-line-cr');
+                logsContainer.appendChild(line);
+            }
 
             if (isAutoScrolling) {
                 logsContainer.scrollTop = logsContainer.scrollHeight;
@@ -2728,7 +2756,12 @@
             logEventSource = new EventSource('/other/logs/stream');
 
             logEventSource.onmessage = function (event) {
-                appendLog(event.data);
+                const data = event.data;
+                if (data.startsWith('\x01CR\x01')) {
+                    appendLogCR(data.substring(4));
+                } else {
+                    appendLog(data);
+                }
             };
 
             logEventSource.onerror = function (err) {
@@ -5668,7 +5701,11 @@
             const count = terminalBuffer.length;
             for (let i = 0; i < count; i++) {
                 const item = terminalBuffer.shift();
-                if (item.cr) {
+                if (item.replace) {
+                    for (let j = 0; j < item.replace && outputEl.lastElementChild; j++) {
+                        outputEl.removeChild(outputEl.lastElementChild);
+                    }
+                } else if (item.cr) {
                     const lastChild = outputEl.lastElementChild;
                     if (lastChild && lastChild.classList.contains('term-line-cr')) {
                         lastChild.innerHTML = item.html;
@@ -5701,6 +5738,14 @@
 
         function appendTerminalLine(html, cr = false) {
             terminalBuffer.push({ html, cr });
+            if (!isTerminalFlushing) {
+                isTerminalFlushing = true;
+                requestAnimationFrame(flushTerminalBuffer);
+            }
+        }
+
+        function removeLastTerminalLines(count) {
+            terminalBuffer.push({ replace: count });
             if (!isTerminalFlushing) {
                 isTerminalFlushing = true;
                 requestAnimationFrame(flushTerminalBuffer);
@@ -5920,6 +5965,15 @@
                         if (line.startsWith('data: ')) {
                             let data = line.substring(6);
                             if (data === '[DONE]') {
+                                continue;
+                            }
+
+                            if (data.startsWith('\x01REPLACE:')) {
+                                const endIdx = data.indexOf('\x01', 9);
+                                const cnt = parseInt(data.substring(9, endIdx));
+                                if (!isNaN(cnt) && cnt > 0) {
+                                    removeLastTerminalLines(cnt);
+                                }
                                 continue;
                             }
 

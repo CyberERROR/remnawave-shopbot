@@ -285,3 +285,99 @@
         }
     </script>
 </div>
+
+<!-- НОВЫЕ БЛОКИ: СТАТИСТИКА ПО ГРУППАМ -->
+<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
+    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gray-500/5 rounded-full blur-2xl group-hover:bg-gray-500/10 transition-colors"></div>
+    <div class="relative z-10 flex items-start justify-between">
+        <div>
+            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Не купили ключ</p>
+            <h4 class="text-3xl font-bold text-white tracking-tight">
+                {% if stats.get('no_purchases_count') is not none %}
+                {{ stats.no_purchases_count }}
+                {% else %}
+                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                {% endif %}
+            </h4>
+        </div>
+        <button onclick="openUserGroupModal('no_purchases', 'Не купили ключ')" class="w-10 h-10 rounded-xl bg-gray-500/10 flex items-center justify-center text-gray-400 border border-gray-500/10 shadow-[0_0_15px_rgba(156,163,175,0.2)] hover:bg-gray-500/20 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-xl">person_off</span>
+        </button>
+    </div>
+</div>
+
+<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
+    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors"></div>
+    <div class="relative z-10 flex items-start justify-between">
+        <div>
+            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Нет активных</p>
+            <h4 class="text-3xl font-bold text-white tracking-tight">
+                {% if stats.get('inactive_buyers_count') is not none %}
+                {{ stats.inactive_buyers_count }}
+                {% else %}
+                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                {% endif %}
+            </h4>
+        </div>
+        <button onclick="openUserGroupModal('inactive_buyers', 'Нет активных (Покупали)')" class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)] hover:bg-orange-500/20 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-xl">history</span>
+        </button>
+    </div>
+</div>
+
+<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
+    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-pink-500/5 rounded-full blur-2xl group-hover:bg-pink-500/10 transition-colors"></div>
+    <div class="relative z-10 flex items-start justify-between">
+        <div>
+            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">На триале</p>
+            <h4 class="text-3xl font-bold text-white tracking-tight">
+                {% if stats.get('trials_count') is not none %}
+                {{ stats.trials_count }}
+                {% else %}
+                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                {% endif %}
+            </h4>
+        </div>
+        <button onclick="openUserGroupModal('trials', 'Пользователи на триале')" class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-400 border border-pink-500/10 shadow-[0_0_15px_rgba(236,72,153,0.2)] hover:bg-pink-500/20 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-xl">card_giftcard</span>
+        </button>
+    </div>
+</div>
+
+<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
+    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/10 transition-colors"></div>
+    <div class="relative z-10 flex items-start justify-between">
+        <div>
+            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Купили ключ</p>
+            <h4 class="text-3xl font-bold text-white tracking-tight">
+                {% if stats.get('active_buyers_count') is not none %}
+                {{ stats.active_buyers_count }}
+                {% else %}
+                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                {% endif %}
+            </h4>
+        </div>
+        <button onclick="openUserGroupModal('active_buyers', 'Покупатели с активным ключом')" class="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400 border border-teal-500/10 shadow-[0_0_15px_rgba(20,184,166,0.2)] hover:bg-teal-500/20 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-xl">verified_user</span>
+        </button>
+    </div>
+</div>
+
+<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
+    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-fuchsia-500/5 rounded-full blur-2xl group-hover:bg-fuchsia-500/10 transition-colors"></div>
+    <div class="relative z-10 flex items-start justify-between">
+        <div>
+            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Активные ключи</p>
+            <h4 class="text-3xl font-bold text-white tracking-tight">
+                {% if stats.get('active_keys_count') is not none %}
+                {{ stats.active_keys_count }}
+                {% else %}
+                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                {% endif %}
+            </h4>
+        </div>
+        <button onclick="openUserGroupModal('active_keys', 'Все активные ключи')" class="w-10 h-10 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400 border border-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.2)] hover:bg-fuchsia-500/20 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-xl">vpn_key</span>
+        </button>
+    </div>
+</div>

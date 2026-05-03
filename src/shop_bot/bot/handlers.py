@@ -3172,13 +3172,13 @@ async def notify_admin_of_purchase(bot: Bot, metadata: dict):
 
 # ===== ФИНАЛЬНАЯ ОБРАБОТКА УСПЕШНОГО ПЛАТЕЖА =====
 # Маршрутизирует выполнение заказа: пополнение баланса, создание нового ключа или продление существующего
-async def process_successful_payment(bot: Bot, metadata: dict):
+async def process_successful_payment(bot: Bot | None, metadata: dict) -> bool:
     logger.info(f"💳 Обработка платежа: {metadata.get('user_id')} | {metadata.get('action')}")
     
     pay_id = metadata.get('payment_id')
     if pay_id and check_transaction_exists(pay_id):
         logger.warning(f"Повторная попытка обработки платежа {pay_id}. Операция отклонена.")
-        return
+        return True
 
     try:
         action, uid, price = metadata.get('action'), int(metadata.get('user_id')), float(metadata.get('price'))
@@ -3190,14 +3190,15 @@ async def process_successful_payment(bot: Bot, metadata: dict):
         pay_method = metadata.get('payment_method')
         
         if metadata.get('chat_id') and metadata.get('message_id'):
-            try: await bot.delete_message(chat_id=metadata['chat_id'], message_id=metadata['message_id'])
+            try:
+                if bot: await bot.delete_message(chat_id=metadata['chat_id'], message_id=metadata['message_id'])
             except: pass
 
         # --- ПОПОЛНЕНИЕ БАЛАНСА ---
         if action == "top_up":
             if not add_to_balance(uid, float(price)):
                 logger.error(f"Ошибка баланса: Не удалось пополнить счет для {uid}")
-                return
+                return False
             
             user_info = get_user(uid); username = (user_info.get('username') if user_info else '') or f"@{uid}"
             log_transaction(username=username, transaction_id=None, payment_id=str(uuid.uuid4()), user_id=uid, status='paid', amount_rub=float(price), amount_currency=None, currency_name=None, payment_method=pay_method or 'Unknown', metadata=json.dumps({"action": "top_up"}))
@@ -3222,12 +3223,14 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                     if float(reward) > 0:
                         if add_to_balance(int(ref_id), float(reward)):
                             add_to_referral_balance_all(int(ref_id), float(reward))
-                            try: await bot.send_message(int(ref_id), f"💰 <b>Реферальный бонус!</b>\nПользователь {username} пополнил баланс.\nВам начислено: <code>{float(reward):.2f} RUB</code>")
+                            try:
+                                if bot: await bot.send_message(int(ref_id), f"💰 <b>Реферальный бонус!</b>\nПользователь {username} пополнил баланс.\nВам начислено: <code>{float(reward):.2f} RUB</code>")
                             except: pass
 
             balance = get_balance(uid)
             if not str(uid).startswith("999"):
-                try: await bot.send_message(uid, f"✅ <b>Баланс пополнен!</b>\nСумма: <code>{float(price):.2f} RUB</code>\nТекущий баланс: <code>{balance:.2f} RUB</code>", reply_markup=keyboards.create_profile_keyboard())
+                try:
+                    if bot: await bot.send_message(uid, f"✅ <b>Баланс пополнен!</b>\nСумма: <code>{float(price):.2f} RUB</code>\nТекущий баланс: <code>{balance:.2f} RUB</code>", reply_markup=keyboards.create_profile_keyboard())
                 except Exception: pass
             
             admins = [u for u in (get_all_users() or []) if is_admin(u.get('telegram_id') or 0)]
@@ -3239,7 +3242,7 @@ async def process_successful_payment(bot: Bot, metadata: dict):
 
             for a in admins:
                 try: 
-                    await bot.send_message(a['telegram_id'], 
+                    if bot: await bot.send_message(a['telegram_id'], 
                         f"📥 <b>Пополнение баланса</b>\n"
                         f"👤 Пользователь: <code>{uid}</code>\n"
                         f"💌 Username: {username_display_str}\n"
@@ -3248,12 +3251,13 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                         f"⚙️ Тип: ➕ Баланс ‼️"
                     )
                 except: pass
-            return
+            return True
 
         # --- ВЫДАЧА ИЛИ ПРОДЛЕНИЕ КЛЮЧА ---
         proc_msg = None
         if not str(uid).startswith("999"):
-            try: proc_msg = await bot.send_message(uid, f"⏳ <b>Оплата принята!</b>\nФормируем конфигурацию на сервере «{host}»...")
+            try:
+                if bot: proc_msg = await bot.send_message(uid, f"⏳ <b>Оплата принята!</b>\nФормируем конфигурацию на сервере «{host}»...")
             except Exception: pass
         
         try:
@@ -3266,8 +3270,8 @@ async def process_successful_payment(bot: Bot, metadata: dict):
             else:
                 key = rw_repo.get_key_by_id(kid)
                 if not key:
-                    if proc_msg: await proc_msg.edit_text("❌ Ключ для продления не найден.")
-                    return
+                    if proc_msg and bot: await proc_msg.edit_text("❌ Ключ для продления не найден.")
+                    return False
                 c_email = key['key_email']
 
             hw_lim, tr_lim_gb, days = None, None, int(months * 30)
@@ -3297,22 +3301,22 @@ async def process_successful_payment(bot: Bot, metadata: dict):
             if not res:
                 add_to_balance(uid, float(price))
                 logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка API VPN)")
-                if proc_msg: await proc_msg.edit_text("❌ <b>Ошибка на стороне VPN-сервера</b>\nКлюч не был выдан. Средства возвращены на ваш баланс в боте.")
-                return
+                if proc_msg and bot: await proc_msg.edit_text("❌ <b>Ошибка на стороне VPN-сервера</b>\nКлюч не был выдан. Средства возвращены на ваш баланс в боте.")
+                return False
 
             if action == "new":
                 kid = rw_repo.record_key_from_payload(user_id=uid, payload=res, host_name=host)
                 if not kid: 
                     add_to_balance(uid, float(price))
                     logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка БД нового ключа)")
-                    if proc_msg: await proc_msg.edit_text("❌ При сохранении ключа произошла системная ошибка. Средства возвращены на баланс.")
-                    return
+                    if proc_msg and bot: await proc_msg.edit_text("❌ При сохранении ключа произошла системная ошибка. Средства возвращены на баланс.")
+                    return False
             else:
                 if not rw_repo.update_key(kid, remnawave_user_uuid=res['client_uuid'], expire_at_ms=res['expiry_timestamp_ms']): 
                     add_to_balance(uid, float(price))
                     logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка обновления БД)")
-                    if proc_msg: await proc_msg.edit_text("❌ Ошибка обновления данных ключа в системе. Средства возвращены на баланс.")
-                    return
+                    if proc_msg and bot: await proc_msg.edit_text("❌ Ошибка обновления данных ключа в системе. Средства возвращены на баланс.")
+                    return False
 
             # Реферальные начисления за покупку
             if (pay_method or '').lower() != 'balance':
@@ -3334,14 +3338,15 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                     if float(reward) > 0:
                         if add_to_balance(int(ref_id), float(reward)):
                             add_to_referral_balance_all(int(ref_id), float(reward))
-                            try: await bot.send_message(int(ref_id), f"💰 <b>Реферальный бонус!</b>\nВаш реферал совершил покупку.\nВам начислено: <code>{float(reward):.2f} RUB</code>")
+                            try:
+                                if bot: await bot.send_message(int(ref_id), f"💰 <b>Реферальный бонус!</b>\nВаш реферал совершил покупку.\nВам начислено: <code>{float(reward):.2f} RUB</code>")
                             except: pass
 
             update_user_stats(uid, (0.0 if (pay_method or '').lower() == 'balance' else price), months)
             
             p_log_id = metadata.get('payment_id') or str(uuid.uuid4())
             # Подготовка метаданных для истории
-            tx_meta = {"plan_id": plan_id, "host": host, "host_name": host}
+            tx_meta = {"plan_id": plan_id, "host": host, "host_name": host, "months": months}
             if plan_id:
                 p_obj = get_plan_by_id(plan_id)
                 if p_obj:
@@ -3358,7 +3363,7 @@ async def process_successful_payment(bot: Bot, metadata: dict):
                         update_promo_code_status(promo_val, is_active=False)
                 except: pass
             
-            if proc_msg:
+            if proc_msg and bot:
                 try: await proc_msg.delete()
                 except Exception: pass
                 
@@ -3370,18 +3375,26 @@ async def process_successful_payment(bot: Bot, metadata: dict):
             if not str(uid).startswith("999"):
                 try:
                     ready_img = get_setting("key_ready_image")
-                    if ready_img and os.path.exists(ready_img):
+                    if ready_img and os.path.exists(ready_img) and bot:
                         from aiogram.types import FSInputFile
                         await bot.send_photo(chat_id=uid, photo=FSInputFile(ready_img), caption=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
-                    else: await bot.send_message(chat_id=uid, text=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
+                    elif bot:
+                        await bot.send_message(chat_id=uid, text=txt, reply_markup=keyboards.create_dynamic_key_info_keyboard(kid, conn), parse_mode="HTML")
                 except Exception: pass
 
-            try: await notify_admin_of_purchase(bot, metadata)
+            try:
+                if bot: await notify_admin_of_purchase(bot, metadata)
             except: pass
+            
+            return True
         except Exception as e:
             logger.error(f"Ошибка логики VPN ({uid}): {e}", exc_info=True)
             if not str(uid).startswith("999"):
-                try: await bot.send_message(uid, "❌ <b>Ошибка при выдаче ключа</b>\nВаша оплата зафиксирована, но произошел сбой при создании конфигурации. Свяжитесь с поддержкой.")
+                try:
+                    if bot: await bot.send_message(uid, "❌ <b>Ошибка при выдаче ключа</b>\nВаша оплата зафиксирована, но произошел сбой при создании конфигурации. Свяжитесь с поддержкой.")
                 except Exception: pass
-    except Exception as e: logger.error(f"Глобальная ошибка обработки платежа: {e}", exc_info=True)
+            return False
+    except Exception as e:
+        logger.error(f"Глобальная ошибка обработки платежа: {e}", exc_info=True)
+        return False
 # ===== Конец функции process_successful_payment =====

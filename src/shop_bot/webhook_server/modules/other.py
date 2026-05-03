@@ -1346,9 +1346,31 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if cli_cmd and os.path.exists('/root/remnawave-shopbot'):
                 yield f"data: [INFO] Docker CLI найден. Попытка стриминга через команду...\n\n"
                 try:
-                    process = subprocess.Popen(cli_cmd, cwd='/root/remnawave-shopbot', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, bufsize=1)
-                    for line in iter(process.stdout.readline, ''):
-                        if line: yield f"data: {line.rstrip()}\n\n"
+                    process = subprocess.Popen(cli_cmd, cwd='/root/remnawave-shopbot', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
+                    buf = b''
+                    while True:
+                        chunk = process.stdout.read(1)
+                        if not chunk:
+                            if buf:
+                                text = buf.decode('utf-8', errors='replace')
+                                cleaned = clean_ansi(text)
+                                if cleaned.rstrip():
+                                    yield f"data: {cleaned.rstrip()}\n\n"
+                            break
+                        if chunk == b'\n':
+                            text = buf.decode('utf-8', errors='replace')
+                            buf = b''
+                            cleaned = clean_ansi(text)
+                            if cleaned.rstrip():
+                                yield f"data: {cleaned.rstrip()}\n\n"
+                        elif chunk == b'\r':
+                            text = buf.decode('utf-8', errors='replace')
+                            buf = b''
+                            cleaned = clean_ansi(text)
+                            if cleaned.rstrip():
+                                yield f"data: \x01CR\x01{cleaned.rstrip()}\n\n"
+                        else:
+                            buf += chunk
                     process.stdout.close()
                     yield f"data: [EXIT] Процесс CLI завершен.\n\n"
                     return 
@@ -1380,7 +1402,17 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                             if not payload: break
                             try:
                                 text = payload.decode('utf-8', errors='replace')
-                                for line in text.splitlines(): yield f"data: {line}\n\n"
+                                cleaned = clean_ansi(text)
+                                cleaned = cleaned.replace('\r\n', '\n')
+                                segments = cleaned.split('\n')
+                                for seg in segments:
+                                    if '\r' in seg:
+                                        parts = seg.split('\r')
+                                        last_part = parts[-1]
+                                        if last_part.rstrip():
+                                            yield f"data: \x01CR\x01{last_part.rstrip()}\n\n"
+                                    elif seg.rstrip():
+                                        yield f"data: {seg.rstrip()}\n\n"
                             except: pass
                     sock.close()
                     yield f"data: [EXIT] Стрим через сокет завершен.\n\n"
@@ -1998,22 +2030,29 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     while True:
                         try:
                             if channel.recv_ready():
-                                data = channel.recv(4096)
+                                data = channel.recv(65536)
                                 if data:
                                     idle_count = 0
                                     try:
                                         decoded = data.decode('utf-8', errors='replace')
+                                        cursor_up_re = re.compile(r'\x1b\[(\d+)A')
+                                        up_matches = cursor_up_re.findall(decoded)
+                                        max_up = max((int(x) for x in up_matches), default=0)
                                         cleaned = clean_ansi(decoded)
                                         cleaned = cleaned.replace('\r\n', '\n')
-                                        segments = cleaned.split('\n')
-                                        for seg in segments:
+                                        result_lines = []
+                                        for seg in cleaned.split('\n'):
                                             if '\r' in seg:
                                                 parts = seg.split('\r')
                                                 last_part = parts[-1]
                                                 if last_part.rstrip():
-                                                    yield f"data: \x01CR\x01{last_part.rstrip()}\n\n"
+                                                    result_lines.append(last_part.rstrip())
                                             elif seg.rstrip():
-                                                yield f"data: {seg.rstrip()}\n\n"
+                                                result_lines.append(seg.rstrip())
+                                        if max_up > 0 and result_lines:
+                                            yield f"data: \x01REPLACE:{max_up}\x01\n\n"
+                                        for line in result_lines:
+                                            yield f"data: {line}\n\n"
                                     except Exception as ex: logger.error(f"Ошибка декодирования вывода: {ex}")
                             else: idle_count += 1
                             

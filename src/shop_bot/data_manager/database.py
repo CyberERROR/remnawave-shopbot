@@ -3760,3 +3760,95 @@ def get_user_by_auth_token(token: str) -> dict | None:
 def get_auth_token_by_user_id(user_id: int) -> str | None:
     row = _fetch_row("SELECT auth_token FROM users WHERE telegram_id = ?", (user_id,), "Failed to get auth_token by user_id")
     return row["auth_token"] if row else None
+
+# ===== ДАШБОРД: СТАТИСТИКА ГРУПП ПОЛЬЗОВАТЕЛЕЙ =====
+def get_dashboard_user_groups() -> dict:
+    groups = {
+        "no_purchases": [],
+        "inactive_buyers": [],
+        "trials": [],
+        "active_buyers": [],
+        "active_keys": []
+    }
+    
+    # 1. Не купил ключ (нет транзакций 'paid' и нет ключей)
+    q_no = """
+    SELECT u.telegram_id, u.username, u.balance,
+           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+    FROM users u
+    WHERE NOT EXISTS (SELECT 1 FROM vpn_keys k WHERE k.user_id = u.telegram_id)
+      AND NOT EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.telegram_id AND t.status = 'paid')
+    """
+    groups["no_purchases"] = _fetch_list(q_no, (), "Ошибка получения no_purchases")
+    
+    # 2. Покупали, но сейчас нет активных (истекли или нет ключей, но есть транзакции)
+    q_inactive = """
+    SELECT u.telegram_id, u.username, u.balance,
+           (SELECT SUM(COALESCE(
+               CAST(json_extract(t2.metadata, '$.months') AS INTEGER),
+               (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t2.metadata, '$.plan_id') AS INTEGER)),
+               0
+           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as months_bought,
+           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+    FROM users u
+    WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.telegram_id AND t.status = 'paid')
+      AND NOT EXISTS (
+          SELECT 1 FROM vpn_keys k 
+          WHERE k.user_id = u.telegram_id 
+            AND (k.expire_at IS NULL OR k.expire_at > datetime('now', '+3 hours'))
+      )
+    """
+    groups["inactive_buyers"] = _fetch_list(q_inactive, (), "Ошибка получения inactive_buyers")
+    
+    # 3. Используют триал (есть активный триальный ключ)
+    q_trials = """
+    SELECT u.telegram_id, u.username, u.balance, k.key_id, k.expire_at,
+           (SELECT SUM(COALESCE(
+               CAST(json_extract(t2.metadata, '$.months') AS INTEGER),
+               (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t2.metadata, '$.plan_id') AS INTEGER)),
+               0
+           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as months_bought,
+           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+    FROM users u
+    JOIN vpn_keys k ON k.user_id = u.telegram_id
+    WHERE k.key_email LIKE 'trial_%' 
+      AND (k.expire_at IS NULL OR k.expire_at > datetime('now', '+3 hours'))
+    GROUP BY u.telegram_id
+    """
+    groups["trials"] = _fetch_list(q_trials, (), "Ошибка получения trials")
+    
+    # 4. Купили ключ (есть активный нетриальный ключ)
+    q_active_buyers = """
+    SELECT u.telegram_id, u.username, u.balance, k.key_id, k.expire_at,
+           (SELECT SUM(COALESCE(
+               CAST(json_extract(t2.metadata, '$.months') AS INTEGER),
+               (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t2.metadata, '$.plan_id') AS INTEGER)),
+               0
+           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as months_bought,
+           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+    FROM users u
+    JOIN vpn_keys k ON k.user_id = u.telegram_id
+    WHERE k.key_email NOT LIKE 'trial_%' 
+      AND (k.expire_at IS NULL OR k.expire_at > datetime('now', '+3 hours'))
+    GROUP BY u.telegram_id
+    """
+    groups["active_buyers"] = _fetch_list(q_active_buyers, (), "Ошибка получения active_buyers")
+    
+    # 5. Всего активных ключей (действующих)
+    q_active_keys = """
+    SELECT k.key_id, k.user_id as telegram_id, k.host_name, k.expire_at, u.username, u.balance,
+           (SELECT SUM(COALESCE(
+               CAST(json_extract(t2.metadata, '$.months') AS INTEGER),
+               (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t2.metadata, '$.plan_id') AS INTEGER)),
+               0
+           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as months_bought,
+           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+    FROM vpn_keys k
+    LEFT JOIN users u ON k.user_id = u.telegram_id
+    WHERE (k.expire_at IS NULL OR k.expire_at > datetime('now', '+3 hours'))
+      AND k.key_email NOT LIKE 'trial_%'
+    """
+    groups["active_keys"] = _fetch_list(q_active_keys, (), "Ошибка получения active_keys")
+    
+    return groups
+# ===================================================

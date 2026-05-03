@@ -380,11 +380,14 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
 <!-- ===== окончание внешних библиотек ===== -->
 
+<script id="users-data" type="application/json">
+{{ users | tojson | safe }}
+</script>
 <script>
     (function () {
         // ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЕЙ =====
         // Загрузка и маппинг пользователей для автодополнения
-        const USERS = JSON.parse(String.raw`{{ users | tojson | safe }}`);
+        const USERS = JSON.parse(document.getElementById('users-data').textContent || '[]');
         const USER_MAP = {};
         try { (USERS || []).forEach(u => { if (u && u.username) USER_MAP['@' + String(u.username).toLowerCase()] = u.telegram_id; }); } catch (_) { }
         // ===== окончание функции пользователей =====

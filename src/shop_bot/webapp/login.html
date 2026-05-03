@@ -179,6 +179,16 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            function escapeHTML(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
             const loader = document.getElementById('loader');
             const authContainer = document.getElementById('auth-container');
             const authLink = document.getElementById('auth-link');
@@ -210,34 +220,37 @@
             });
 
             async function submitEmailAuth(isRegister) {
-                const email = emailInput.value.trim();
+                let email = emailInput.value.trim();
                 const password = passwordInput.value.trim();
                 
+                // Санитизация email-поля: удаление тегов
+                email = email.replace(/[<>]/g, '');
+                
                 if (!email || !password) {
-                    emailError.textContent = "Введите Email и пароль";
+                    emailError.innerHTML = escapeHTML("Введите Email и пароль");
                     emailError.classList.remove('hidden');
                     return;
                 }
 
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                    emailError.textContent = "Введите корректный Email (например: user@mail.ru)";
+                    emailError.innerHTML = escapeHTML("Введите корректный Email (например: user@mail.ru)");
                     emailError.classList.remove('hidden');
                     return;
                 }
 
                 if (isRegister) {
                     if (password.length < 5) {
-                        emailError.textContent = "Пароль должен содержать минимум 5 символов";
+                        emailError.innerHTML = escapeHTML("Пароль должен содержать минимум 5 символов");
                         emailError.classList.remove('hidden');
                         return;
                     }
                     if (/^\d+$/.test(password)) {
-                        emailError.textContent = "Пароль не должен состоять только из цифр";
+                        emailError.innerHTML = escapeHTML("Пароль не должен состоять только из цифр");
                         emailError.classList.remove('hidden');
                         return;
                     }
                     if (new Set(password).size < 2) {
-                        emailError.textContent = "Пароль слишком простой — используйте разные символы";
+                        emailError.innerHTML = escapeHTML("Пароль слишком простой — используйте разные символы");
                         emailError.classList.remove('hidden');
                         return;
                     }
@@ -260,11 +273,11 @@
                     if (data.ok && data.token) {
                         loginWithToken(data.token);
                     } else {
-                        emailError.textContent = data.error || "Ошибка связи с сервером";
+                        emailError.innerHTML = escapeHTML(data.error || "Ошибка связи с сервером");
                         emailError.classList.remove('hidden');
                     }
                 } catch (e) {
-                    emailError.textContent = "Ошибка сети";
+                    emailError.innerHTML = escapeHTML("Ошибка сети");
                     emailError.classList.remove('hidden');
                 }
                 emailLoginBtn.disabled = false;
@@ -296,7 +309,9 @@
             const digitInputs = document.querySelectorAll('.reset-digit');
             
             async function checkResetCode() {
-                const email = resetEmailInput.value.trim();
+                let email = resetEmailInput.value.trim();
+                email = email.replace(/[<>]/g, '');
+                
                 let code = '';
                 digitInputs.forEach(i => code += i.value);
                 if (code.length !== 6) return;
@@ -320,13 +335,13 @@
                         resetNewPassword.focus();
                         if(resetTimerInterval) clearInterval(resetTimerInterval);
                     } else {
-                        resetError2.textContent = data.error || "Неверный код";
+                        resetError2.innerHTML = escapeHTML(data.error || "Неверный код");
                         resetError2.classList.remove('hidden');
                         digitInputs.forEach(i => i.value = '');
                         digitInputs[0].focus();
                     }
                 } catch(e) {
-                    resetError2.textContent = "Ошибка сети";
+                    resetError2.innerHTML = escapeHTML("Ошибка сети");
                     resetError2.classList.remove('hidden');
                 }
             }
@@ -400,14 +415,16 @@
             });
 
             if(resetRequestBtn) resetRequestBtn.addEventListener('click', async () => {
-                const email = resetEmailInput.value.trim();
+                let email = resetEmailInput.value.trim();
+                email = email.replace(/[<>]/g, '');
+                
                 if(!email) {
-                    resetError1.textContent = "Введите Email";
+                    resetError1.innerHTML = escapeHTML("Введите Email");
                     resetError1.classList.remove('hidden');
                     return;
                 }
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                    resetError1.textContent = "Введите корректный Email (например: user@mail.ru)";
+                    resetError1.innerHTML = escapeHTML("Введите корректный Email (например: user@mail.ru)");
                     resetError1.classList.remove('hidden');
                     return;
                 }
@@ -427,7 +444,7 @@
                         resetStep2.classList.remove('hidden');
                         resetStep2.classList.add('flex');
                         resetError1.classList.add('hidden');
-                        resetSentEmail.textContent = email;
+                        resetSentEmail.innerHTML = escapeHTML(email);
                         resetError2.classList.add('hidden');
                         
                         document.getElementById('reset-code-inputs').classList.remove('hidden');
@@ -457,11 +474,11 @@
                             }
                         }, 1000);
                     } else {
-                        resetError1.textContent = data.error || "Ошибка запроса";
+                        resetError1.innerHTML = escapeHTML(data.error || "Ошибка запроса");
                         resetError1.classList.remove('hidden');
                     }
                 } catch (e) {
-                    resetError1.textContent = "Ошибка сети";
+                    resetError1.innerHTML = escapeHTML("Ошибка сети");
                     resetError1.classList.remove('hidden');
                 }
                 resetRequestBtn.disabled = false;
@@ -469,13 +486,15 @@
             });
 
             if(resetVerifyBtn) resetVerifyBtn.addEventListener('click', async () => {
-                const email = resetEmailInput.value.trim();
+                let email = resetEmailInput.value.trim();
+                email = email.replace(/[<>]/g, '');
+                
                 let code = '';
                 digitInputs.forEach(i => code += i.value);
                 const new_password = resetNewPassword.value.trim();
                 
                 if(!new_password) {
-                    resetError2.textContent = "Заполните новый пароль";
+                    resetError2.innerHTML = escapeHTML("Заполните новый пароль");
                     resetError2.classList.remove('hidden');
                     return;
                 }
@@ -494,11 +513,11 @@
                         backToLoginBtn.click();
                         passwordInput.value = new_password; // Auto-fill
                     } else {
-                        resetError2.textContent = data.error || "Неверный код";
+                        resetError2.innerHTML = escapeHTML(data.error || "Неверный код");
                         resetError2.classList.remove('hidden');
                     }
                 } catch (e) {
-                    resetError2.textContent = "Ошибка сети";
+                    resetError2.innerHTML = escapeHTML("Ошибка сети");
                     resetError2.classList.remove('hidden');
                 }
                 resetVerifyBtn.disabled = false;

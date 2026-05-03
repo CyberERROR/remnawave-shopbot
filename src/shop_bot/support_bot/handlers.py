@@ -78,11 +78,11 @@ def _build_notification_text(ticket_id: int, user_id: int, username_display: str
     header = "🆘 <b>Новое обращение:</b>\n\n" if created_new else "✅ <b>Сообщение добавлено в тикет</b>\n\n"
     return (
         f"{header}"
-        f"👤 <b>USER:</b> (<code>{user_id}</code> - {username_display})\n"
+        f"👤 <b>USER:</b> (<code>{user_id}</code> - {html.quote(username_display)})\n"
         f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n"
-        f"💬 <b>Тема:</b> <i>{subj_display}</i>\n\n"
+        f"💬 <b>Тема:</b> <i>{html.quote(subj_display)}</i>\n\n"
         f"💌 Сообщения:\n"
-        f"<blockquote>{message_content}</blockquote>"
+        f"<blockquote>{html.quote(message_content)}</blockquote>"
     )
 
 
@@ -308,8 +308,8 @@ def get_support_router() -> Router:
             text = (
                 f"✅ <b>Обращение #{ticket_id} создано!</b>\n\n"
                 f"📝 <b>Сообщения:</b>\n"
-                f"💬 <b>Тема:</b> <i>{subject}</i>\n"
-                f"<blockquote>{content_text}</blockquote>\n\n"
+                f"💬 <b>Тема:</b> <i>{html.quote(subject)}</i>\n"
+                f"<blockquote>{html.quote(content_text)}</blockquote>\n\n"
                 f"💌 Ожидайте ответа поддержки. Мы скоро свяжемся с вами."
             )
         else:
@@ -317,7 +317,7 @@ def get_support_router() -> Router:
                 f"✅ <b>Сообщение добавлено в ваш открытый тикет</b>\n\n"
                 f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
                 f"✉️ Сообщения:\n"
-                f"<blockquote>{content_text}</blockquote>\n\n"
+                f"<blockquote>{html.quote(content_text)}</blockquote>\n\n"
                 f"💌 Ожидайте ответа поддержки. Мы скоро свяжемся с вами."
             )
         try:
@@ -348,7 +348,7 @@ def get_support_router() -> Router:
             f"💬 <b>Ответ от технической поддержки.</b>\n"
             f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
             f"💌 <b>Ответ на ваше обращение:</b>\n"
-            f"<blockquote>{content}</blockquote>" 
+            f"<blockquote>{html.quote(content)}</blockquote>" 
         )
         try:
             if message.text:
@@ -710,7 +710,7 @@ def get_support_router() -> Router:
         parts = [
             f"<b>🧾 Тикет #{ticket_id}</b>",
             f"<b>Статус:</b> {human_status}",
-            f"<b>Тема:</b> <i>{ticket.get('subject') or '—'}</i>",
+            f"<b>Тема:</b> <i>{html.quote(ticket.get('subject') or '—')}</i>",
             f"<b>Важность:</b> {star_line}",
             ""
         ]
@@ -725,7 +725,7 @@ def get_support_router() -> Router:
             content = m.get('content', '')
             
             parts.append(f"{icon} {who} ({created}):")
-            parts.append(f"<blockquote>{content}</blockquote>")
+            parts.append(f"<blockquote>{html.quote(content)}</blockquote>")
             
         final_text = "\n".join(parts)
         is_open = (ticket.get('status') == 'open')

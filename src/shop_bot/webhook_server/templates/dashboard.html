@@ -353,6 +353,38 @@
         </div>
     </div>
 </div>
+
+<div id="userGroupModal" class="modal-overlay modal-xl">
+    <div class="modal-content">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold text-lg" id="userGroupModalTitle">Пользователи</h5>
+            <div class="flex items-center gap-2">
+                <button onclick="copyUserGroupIds()" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors" title="Скопировать Telegram ID пользователей">
+                    <span class="material-symbols-outlined text-sm">content_copy</span>
+                </button>
+                <button onclick="closeModal('userGroupModal')" class="text-white/50 hover:text-white transition-colors"><span class="material-symbols-outlined">close</span></button>
+            </div>
+        </div>
+        <div class="p-6">
+            <p id="userGroupModalDesc" class="text-white/50 text-xs mb-4"></p>
+            <div id="userGroupModalContent" class="overflow-x-auto rounded-xl border border-white/5 bg-black/20 max-h-[60vh] overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-[#102219] dark:bg-black border-b border-white/10 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Пользователь</th>
+                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Баланс</th>
+                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Ключ / Срок</th>
+                            <th id="th_months_bought" class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-center hidden">Куплено мес.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userGroupModalBody" class="divide-y divide-white/5">
+                        <tr><td colspan="4" class="p-8 text-center text-white/30">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -971,6 +1003,173 @@
         ['st-metric', 'st-range', 'st-refresh'].forEach(id => {
             const el = document.getElementById(id); el?.addEventListener(el.tagName === 'BUTTON' ? 'click' : 'change', drawDetail);
         });
+
+        // ===== МОДАЛЬНОЕ ОКНО ГРУПП ПОЛЬЗОВАТЕЛЕЙ =====
+        window.currentUserGroupIds = [];
+        window.copySingleId = function(event, id) {
+            event.stopPropagation();
+            const el = event.currentTarget;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(id).then(() => {
+                    const original = el.textContent;
+                    el.textContent = 'Скопировано!';
+                    el.classList.add('text-primary');
+                    setTimeout(() => {
+                        el.textContent = original;
+                        el.classList.remove('text-primary');
+                    }, 1000);
+                }).catch(err => console.error(err));
+            }
+        };
+
+        window.copyUserGroupIds = function() {
+            if (!window.currentUserGroupIds || window.currentUserGroupIds.length === 0) return;
+            const uniqueIds = [...new Set(window.currentUserGroupIds)];
+            const text = uniqueIds.join('\n');
+            
+            const btn = document.querySelector('#userGroupModal button[onclick="copyUserGroupIds()"]');
+            const icon = btn ? btn.querySelector('.material-symbols-outlined') : null;
+            
+            const setSuccess = () => {
+                if (icon) {
+                    const oldText = icon.textContent;
+                    icon.textContent = 'check';
+                    icon.classList.add('text-primary');
+                    setTimeout(() => {
+                        icon.textContent = oldText;
+                        icon.classList.remove('text-primary');
+                    }, 2000);
+                }
+            };
+
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(setSuccess).catch(err => {
+                    console.error('Ошибка копирования:', err);
+                });
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                setSuccess();
+            }
+        };
+
+        window.openUserGroupModal = async function(groupKey, title) {
+            const modal = document.getElementById('userGroupModal');
+            const titleEl = document.getElementById('userGroupModalTitle');
+            const descEl = document.getElementById('userGroupModalDesc');
+            const bodyEl = document.getElementById('userGroupModalBody');
+            const thMonths = document.getElementById('th_months_bought');
+            
+            if (!modal || !titleEl || !bodyEl) return;
+            
+            const groupDescriptions = {
+                'no_purchases': 'Пользователи, которые зарегистрировались, но ни разу не покупали подписку.',
+                'inactive_buyers': 'Пользователи, которые когда-то покупали ключ, но сейчас у них нет активных подписок.',
+                'trials': 'Пользователи, которые в данный момент используют бесплатный пробный период.',
+                'active_buyers': 'Пользователи с активной купленной подпиской.',
+                'active_keys': 'Все действующие ключи в системе, включая триалы и купленные.'
+            };
+            
+            titleEl.textContent = title;
+            if (descEl) descEl.textContent = groupDescriptions[groupKey] || '';
+            
+            const showMonths = ['inactive_buyers', 'active_buyers', 'active_keys'].includes(groupKey);
+            if (showMonths) {
+                thMonths.classList.remove('hidden');
+            } else {
+                thMonths.classList.add('hidden');
+            }
+            
+            const colCount = showMonths ? 4 : 3;
+            bodyEl.innerHTML = `<tr><td colspan="${colCount}" class="p-8 text-center"><div class="flex flex-col items-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mb-2"></div><span class="text-xs text-white/30">Загрузка...</span></div></td></tr>`;
+            
+            window.currentUserGroupIds = [];
+            openModal('userGroupModal');
+            
+            try {
+                const data = await fetchJSON('{{ url_for("dashboard_user_groups_json") }}');
+                if (data && data.ok && data.groups && data.groups[groupKey]) {
+                    const list = data.groups[groupKey];
+                    if (list.length === 0) {
+                        bodyEl.innerHTML = `<tr><td colspan="${colCount}" class="p-8 text-center text-white/30 text-sm">Список пуст</td></tr>`;
+                        return;
+                    }
+                    
+                    let html = '';
+                    list.forEach(item => {
+                        if (item.telegram_id) {
+                            window.currentUserGroupIds.push(item.telegram_id);
+                        }
+                        let username = item.username ? '@' + item.username : 'User #' + item.telegram_id;
+                        
+                        let curBal = item.balance !== undefined ? parseFloat(item.balance) : 0;
+                        let totSp = item.total_spent !== undefined && item.total_spent !== null ? parseFloat(item.total_spent) : 0;
+                        let balanceHTML = `<span class="cursor-help border-b border-dashed border-white/30" title="сейчас на балансе (${curBal}р) всего в общем патратил (${totSp}р)">${curBal}р / ${totSp}р</span>`;
+                        
+                        let keyInfo = '—';
+                        if (item.key_id || item.host_name) {
+                            if (item.host_name && !item.telegram_id) {
+                                username = item.username ? '@' + item.username : 'User #' + item.user_id;
+                                balanceHTML = `<span class="text-xs text-white/50">${item.host_name}</span>`; // для active_keys
+                            }
+                            
+                            let expText = '';
+                            if (item.expire_at) {
+                                let expDate = new Date(item.expire_at.replace(' ', 'T'));
+                                let now = new Date();
+                                let diffTime = expDate - now;
+                                if (diffTime > 0) {
+                                    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    expText = `(осталось ${diffDays} дн.)`;
+                                } else {
+                                    expText = `(истек)`;
+                                }
+                                keyInfo = `<span class="text-white/80 font-mono text-xs">id ${item.key_id}</span><br><span class="text-xs text-white/50">${item.expire_at} ${expText}</span>`;
+                            } else {
+                                keyInfo = `<span class="text-white/80 font-mono text-xs">id ${item.key_id}</span><br><span class="text-xs text-white/50">(Безлимит)</span>`;
+                            }
+                        }
+
+                        let charLetter = username.startsWith('@') ? username.charAt(1) : username.charAt(0);
+                        
+                        let monthsTd = '';
+                        if (showMonths) {
+                            let monthsBought = item.months_bought || 0;
+                            monthsTd = `<td class="px-5 py-3 text-sm text-center font-bold text-emerald-400">${monthsBought}</td>`;
+                        }
+                        
+                        html += `
+                            <tr class="hover:bg-white/5 transition-colors">
+                                <td class="px-5 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase shadow-sm flex-shrink-0">
+                                            ${charLetter}
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-medium text-white">${username}</span>
+                                            <span class="text-[10px] text-white/40 cursor-pointer hover:text-primary transition-colors" onclick="copySingleId(event, '${item.telegram_id}')">tg id: ${item.telegram_id}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-3 text-sm text-white/70">${balanceHTML}</td>
+                                <td class="px-5 py-3 text-sm">${keyInfo}</td>
+                                ${monthsTd}
+                            </tr>
+                        `;
+                    });
+                    bodyEl.innerHTML = html;
+                } else {
+                    bodyEl.innerHTML = `<tr><td colspan="${colCount}" class="p-8 text-center text-red-400 text-sm">Ошибка загрузки данных или нет доступа</td></tr>`;
+                }
+            } catch (e) {
+                console.error(e);
+                bodyEl.innerHTML = `<tr><td colspan="${colCount}" class="p-8 text-center text-red-400 text-sm">Ошибка сети</td></tr>`;
+            }
+        };
 
         initAutoRefresh();
     });
