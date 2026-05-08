@@ -337,14 +337,15 @@
             {{ server_plans_grid }}
         </main>
 
-        <footer class="py-6 relative z-10">
-            <button id="pay-button"
-                class="w-full bg-white/5 text-gray-500 py-4 px-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 pointer-events-none"
-                disabled>
-                <span class="material-icons-round text-lg">bolt</span>
-                <span id="pay-button-text">Выберите тариф</span>
-            </button>
-            <!-- <p class="text-[8px] text-center text-gray-500 mt-4 px-6">Нажимая кнопку, вы соглашаетесь с условиями оферты и правилами сервиса</p> -->
+        <footer class="py-6 relative z-10 flex justify-center">
+            <div class="fixed bottom-0 left-0 w-full p-4 bg-black/0 backdrop-blur-lg z-50 flex justify-center">
+                <button id="pay-button"
+                    class="w-full max-w-[416px] mx-auto bg-white/5 text-gray-500 py-4 px-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 pointer-events-none"
+                    disabled>
+                    <span class="material-icons-round text-lg">bolt</span>
+                    <span id="pay-button-text">Выберите тариф</span>
+                </button>
+            </div>
         </footer>
     </div>
     <!-- ======== Конец Страница покупки ======== -->
@@ -443,13 +444,15 @@
             </div>
         </main>
 
-        <footer class="py-6 relative z-10">
-            <button id="renew-pay-button"
-                class="w-full bg-white/5 text-gray-500 py-4 px-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 pointer-events-none"
-                disabled>
-                <span class="material-icons-round text-lg">update</span>
-                <span id="renew-pay-button-text">Выберите тариф</span>
-            </button>
+        <footer class="py-6 relative z-10 flex justify-center">
+            <div class="fixed bottom-0 left-0 w-full p-4 bg-black/0 backdrop-blur-lg z-50 flex justify-center">
+                <button id="renew-pay-button"
+                    class="w-[200px] mx-auto bg-white/5 text-gray-500 py-4 px-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 pointer-events-none"
+                    disabled>
+                    <span class="material-icons-round text-lg">update</span>
+                    <span id="renew-pay-button-text">Выберите тариф</span>
+                </button>
+            </div>
         </footer>
     </div>
     <!-- ======== Конец Страница продления ======== -->
@@ -1733,6 +1736,29 @@
             }, 3000);
         }
 
+        async function copyReferralLink(button) {
+            const link = button?.dataset?.refLink;
+            if (!link) return;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(link);
+                } else {
+                    const input = document.createElement('input');
+                    input.value = link;
+                    input.style.position = 'fixed';
+                    input.style.opacity = '0';
+                    document.body.appendChild(input);
+                    input.focus();
+                    input.select();
+                    document.execCommand('copy');
+                    input.remove();
+                }
+                showNotification('Реферальная ссылка скопирована!', 'success');
+            } catch (e) {
+                showNotification('Не удалось скопировать ссылку', 'error');
+            }
+        }
+
         let activeTierData = { purchase: { tiers: [], selected: 0, deviceCount: 1, tierPrice: 0 }, renew: { tiers: [], selected: 0, deviceCount: 1, tierPrice: 0 } };
         let tierCache = {};
 
@@ -2895,7 +2921,7 @@
 
         function syncTelegram(botUsername) {
             let token = window.getAuthToken();
-            if(token) {
+            if (token) {
                 window.open(`https://t.me/${botUsername}?start=sync_${token}`, '_blank');
             } else {
                 showNotification("Ошибка: токен не найден", "error");

@@ -669,7 +669,7 @@
                                 <div>
                                     <h4 class="text-white font-bold text-sm uppercase tracking-wide">История платежей
                                     </h4>
-                                    <p class="text-white/40 text-[10px] font-medium">Транзакции покупки подписок</p>
+                                    <p class="text-white/40 text-[10px] font-medium">Платежи, касса, ID и метаданные</p>
                                 </div>
                             </div>
                             <button id="udm-clear-payment-history"
@@ -679,25 +679,15 @@
                                 Очистить всё
                             </button>
                         </div>
-                        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+                        <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
                             <table class="w-full text-sm">
                                 <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
                                     <tr>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Дата</th>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Тариф</th>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Хост</th>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Тип</th>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Сумма</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Дата / ID</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Событие</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Детали</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Метод / статус</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Сумма</th>
                                     </tr>
                                 </thead>
                                 <tbody id="udm-payment-history" class="divide-y divide-white/5"></tbody>
@@ -718,7 +708,7 @@
                                 <div>
                                     <h4 class="text-white font-bold text-sm uppercase tracking-wide">История баланса
                                     </h4>
-                                    <p class="text-white/40 text-[10px] font-medium">Пополнения и списания</p>
+                                    <p class="text-white/40 text-[10px] font-medium">Движения баланса, рефералка и ручные правки</p>
                                 </div>
                             </div>
                             <button id="udm-clear-balance-history"
@@ -728,25 +718,15 @@
                                 Очистить всё
                             </button>
                         </div>
-                        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+                        <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
                             <table class="w-full text-sm">
                                 <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
                                     <tr>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Дата</th>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Тариф</th>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Хост</th>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Тип</th>
-                                        <th
-                                            class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">
-                                            Сумма</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Дата / ID</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Событие</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Детали</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Метод / статус</th>
+                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Сумма</th>
                                     </tr>
                                 </thead>
                                 <tbody id="udm-balance-history" class="divide-y divide-white/5"></tbody>
@@ -1419,27 +1399,85 @@
                         }
                     }
 
+                    function escapeHtml(value) {
+                        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                            '&': '&amp;',
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            '"': '&quot;',
+                            "'": '&#39;'
+                        }[ch]));
+                    }
+
+                    function formatMoney(value, signed = false) {
+                        const num = Number(value || 0);
+                        const sign = signed && num > 0 ? '+' : '';
+                        return `${sign}${num.toFixed(2)} ₽`;
+                    }
+
+                    function statusBadge(status) {
+                        const s = String(status || 'unknown').toLowerCase();
+                        const cls = ['paid', 'completed', 'success'].includes(s)
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : s === 'pending'
+                                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                : 'bg-red-500/10 text-red-400 border-red-500/20';
+                        return `<span class="inline-flex px-2 py-0.5 rounded-md border ${cls} text-[9px] font-black uppercase tracking-wider">${escapeHtml(status || 'N/A')}</span>`;
+                    }
+
+                    function renderTxDetails(tx) {
+                        const parts = Array.isArray(tx.details) ? tx.details : [];
+                        const chips = parts.map(item => `<span class="inline-flex px-2 py-1 rounded-lg bg-white/5 border border-white/5 text-white/60 text-[10px]">${escapeHtml(item)}</span>`).join('');
+                        const metadata = tx.metadata && Object.keys(tx.metadata).length
+                            ? `<details class="mt-2"><summary class="cursor-pointer text-[10px] text-primary/80 hover:text-primary font-bold uppercase tracking-wider">metadata JSON</summary><pre class="mt-2 max-w-[520px] whitespace-pre-wrap break-all rounded-xl bg-black/30 border border-white/5 p-3 text-[10px] text-white/50">${escapeHtml(JSON.stringify(tx.metadata, null, 2))}</pre></details>`
+                            : '';
+                        return `<div class="min-w-[320px] max-w-[620px]"><div class="flex flex-wrap gap-1.5">${chips || '<span class="text-white/30">Нет деталей</span>'}</div>${metadata}</div>`;
+                    }
+
+                    function renderTxRow(tx, isBalance = false) {
+                        const amount = Number(tx.amount || 0);
+                        const amountClass = amount < 0 ? 'text-red-400' : amount > 0 ? 'text-emerald-400' : 'text-white';
+                        const payId = tx.payment_id || '—';
+                        const shortPayId = payId.length > 18 ? `${payId.slice(0, 8)}…${payId.slice(-6)}` : payId;
+                        const currencyLine = tx.amount_currency || tx.currency_name
+                            ? `<div class="text-[10px] text-white/35 mt-1">${escapeHtml(tx.amount_currency || '—')} ${escapeHtml(tx.currency_name || '')}</div>`
+                            : '';
+                        return `
+                    <tr class="hover:bg-white/5 transition-colors group align-top">
+                        <td class="px-5 py-3 text-xs text-white/70 whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">
+                            <div>${formatWithRelative(tx.date)}</div>
+                            <div class="mt-2 space-y-1">
+                                <div class="text-[10px] text-white/35">TX: <span class="text-white/60">#${escapeHtml(tx.transaction_id || '—')}</span></div>
+                                <button type="button" data-copy="${escapeHtml(payId)}" onclick="copyToClipboard(this.dataset.copy, this)" class="text-left text-[10px] text-primary/80 hover:text-primary" title="${escapeHtml(payId)}">PAY: ${escapeHtml(shortPayId)}</button>
+                            </div>
+                        </td>
+                        <td class="px-5 py-3 text-xs border-b border-dashed border-white/5 group-last:border-none">
+                            <div class="font-bold text-white">${escapeHtml(tx.type || tx.action_label || 'Событие')}</div>
+                            <div class="mt-1 text-[10px] text-white/35 font-mono">${escapeHtml(tx.action || 'no_action')}</div>
+                        </td>
+                        <td class="px-5 py-3 text-xs border-b border-dashed border-white/5 group-last:border-none">${renderTxDetails(tx)}</td>
+                        <td class="px-5 py-3 text-xs border-b border-dashed border-white/5 group-last:border-none whitespace-nowrap">
+                            <div class="font-bold text-white/70">${escapeHtml(tx.method_label || tx.payment_method || 'N/A')}</div>
+                            <div class="mt-1">${statusBadge(tx.status)}</div>
+                        </td>
+                        <td class="px-5 py-3 text-xs font-bold whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono ${amountClass}">
+                            ${formatMoney(amount, isBalance)}
+                            ${currencyLine}
+                        </td>
+                    </tr>`;
+                    }
+
+                    const emptyHistoryRow = '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
+
                     const paymentHistory = document.getElementById('udm-payment-history');
-                    paymentHistory.innerHTML = data.payment_history?.length ? data.payment_history.map(p => `
-                    <tr class="hover:bg-white/5 transition-colors group">
-                        <td class="px-5 py-2.5 text-xs font-medium text-white/70 whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">${formatWithRelative(p.date)}</td>
-                        <td class="px-5 py-2.5 text-xs font-medium text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none">${p.plan || 'N/A'}</td>
-                        <td class="px-5 py-2.5 text-xs font-medium text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none">${p.host || 'N/A'}</td>
-                        <td class="px-5 py-2.5 text-xs font-bold text-white/60 uppercase tracking-wider whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none text-[10px]">${p.type || 'N/A'}</td>
-                        <td class="px-5 py-2.5 text-xs font-bold text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">${(p.amount || 0).toFixed(2)} ₽</td>
-                    </tr>
-                `).join('') : '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
+                    paymentHistory.innerHTML = data.payment_history?.length
+                        ? data.payment_history.map(tx => renderTxRow(tx, false)).join('')
+                        : emptyHistoryRow;
 
                     const balanceHistory = document.getElementById('udm-balance-history');
-                    balanceHistory.innerHTML = data.balance_history?.length ? data.balance_history.map(t => `
-                    <tr class="hover:bg-white/5 transition-colors group">
-                        <td class="px-5 py-2.5 text-xs font-medium text-white/70 whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">${formatWithRelative(t.date)}</td>
-                        <td class="px-5 py-2.5 text-xs font-medium text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none">${t.plan || '—'}</td>
-                        <td class="px-5 py-2.5 text-xs font-medium text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none">${t.host || '—'}</td>
-                        <td class="px-5 py-2.5 text-xs font-bold text-white/60 uppercase tracking-wider whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none text-[10px]">${t.type || 'N/A'}</td>
-                        <td class="px-5 py-2.5 text-xs font-bold text-white whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">${(t.amount || 0).toFixed(2)} ₽</td>
-                    </tr>
-                `).join('') : '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
+                    balanceHistory.innerHTML = data.balance_history?.length
+                        ? data.balance_history.map(tx => renderTxRow(tx, true)).join('')
+                        : emptyHistoryRow;
 
                     document.getElementById('udm-loading').classList.add('hidden');
                     document.getElementById('udm-content').classList.remove('hidden');

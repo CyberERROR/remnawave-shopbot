@@ -1,253 +1,214 @@
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl group-hover:bg-sky-500/10 transition-colors">
-    </div>
+﻿<!-- Пользователей -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-sky-500/[0.07] rounded-full blur-2xl group-hover:bg-sky-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Пользователей</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Пользователей</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('user_count') is not none %}
                 {{ stats.user_count }}
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-sky-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-sky-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400 border border-sky-500/10 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-            <span class="material-symbols-outlined text-xl">group</span>
+        <div class="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/15 flex items-center justify-center text-sky-400 shadow-lg shadow-sky-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">group</span>
         </div>
     </div>
 </div>
 
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors">
-    </div>
+<!-- Ключей -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-blue-500/[0.07] rounded-full blur-2xl group-hover:bg-blue-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Ключей</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Ключей</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('total_keys') is not none %}
                 {{ stats.total_keys }}
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-blue-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-blue-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-            <span class="material-symbols-outlined text-xl">vpn_key</span>
+        <div class="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">vpn_key</span>
         </div>
     </div>
 </div>
 
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-green-500/5 rounded-full blur-2xl group-hover:bg-green-500/10 transition-colors">
-    </div>
+<!-- Заработано -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-green-500/[0.07] rounded-full blur-2xl group-hover:bg-green-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Заработано</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Заработано</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('total_spent') is not none %}
                 {{ "{:,.0f}".format(stats.total_spent).replace(",", " ") }} ₽
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-green-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-green-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
-            <span class="material-symbols-outlined text-xl">payments</span>
+        <div class="w-8 h-8 rounded-xl bg-green-500/10 border border-green-500/15 flex items-center justify-center text-green-400 shadow-lg shadow-green-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">payments</span>
         </div>
     </div>
 </div>
 
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl group-hover:bg-yellow-500/10 transition-colors">
-    </div>
+<!-- Серверов -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-yellow-500/[0.07] rounded-full blur-2xl group-hover:bg-yellow-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Серверов</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Серверов</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('host_count') is not none %}
                 {{ stats.host_count }}
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-yellow-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-yellow-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 border border-yellow-500/10 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
-            <span class="material-symbols-outlined text-xl">dns</span>
+        <div class="w-8 h-8 rounded-xl bg-yellow-500/10 border border-yellow-500/15 flex items-center justify-center text-yellow-400 shadow-lg shadow-yellow-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">dns</span>
         </div>
     </div>
 </div>
 
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors">
-    </div>
+<!-- Тикеты -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-red-500/[0.07] rounded-full blur-2xl group-hover:bg-red-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Тикеты</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Тикеты</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if open_tickets_count is not none %}
                 {{ open_tickets_count }}
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-red-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-red-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 border border-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-            <span class="material-symbols-outlined text-xl">confirmation_number</span>
+        <div class="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center text-red-400 shadow-lg shadow-red-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">confirmation_number</span>
         </div>
     </div>
 </div>
 
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300 payment-stat-block">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors">
-    </div>
+<!-- YooKassa -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-indigo-500/[0.07] rounded-full blur-2xl group-hover:bg-indigo-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">YooKassa</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">YooKassa</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('yookassa_income') is not none %}
                 {{ "{:,.0f}".format(stats.get('yookassa_income', 0)).replace(",", " ") }} ₽
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-indigo-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-indigo-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-            <span class="material-symbols-outlined text-xl">account_balance_wallet</span>
+        <div class="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/15 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">account_balance_wallet</span>
         </div>
     </div>
 </div>
 
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300 payment-stat-block">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-colors">
-    </div>
+<!-- Platega -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-cyan-500/[0.07] rounded-full blur-2xl group-hover:bg-cyan-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Platega</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Platega</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('platega_income') is not none %}
                 {{ "{:,.0f}".format(stats.get('platega_income', 0)).replace(",", " ") }} ₽
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-cyan-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-cyan-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-            <span class="material-symbols-outlined text-xl">credit_card</span>
+        <div class="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">credit_card</span>
         </div>
     </div>
 </div>
 
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300 payment-stat-block">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-colors">
-    </div>
+<!-- TG Stars -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-amber-500/[0.07] rounded-full blur-2xl group-hover:bg-amber-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">TG Stars</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">TG Stars</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('stars_income') is not none %}
                 {{ "{:,.0f}".format(stats.get('stars_income', 0)).replace(",", " ") }} ₽
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-amber-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-amber-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-            <span class="material-symbols-outlined text-xl">grade</span>
+        <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">grade</span>
         </div>
     </div>
 </div>
 
-<div
-    class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300 payment-stat-block">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-violet-500/5 rounded-full blur-2xl group-hover:bg-violet-500/10 transition-colors">
-    </div>
+<!-- CryptoBot -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-violet-500/[0.07] rounded-full blur-2xl group-hover:bg-violet-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">CryptoBot</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">CryptoBot</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('cryptobot_income') is not none %}
                 {{ "{:,.0f}".format(stats.get('cryptobot_income', 0)).replace(",", " ") }} ₽
                 {% else %}
-                <span
-                    class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-violet-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-violet-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <div
-            class="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 border border-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
-            <span class="material-symbols-outlined text-xl">currency_bitcoin</span>
+        <div class="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center text-violet-400 shadow-lg shadow-violet-500/5 shrink-0">
+            <span class="material-symbols-outlined text-base">currency_bitcoin</span>
         </div>
     </div>
 </div>
 
-<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300 payment-stat-block"
+<!-- Heleket / TonConnect toggle -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block"
     id="toggle-stats-card">
-    <div
-        class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors">
-    </div>
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-emerald-500/[0.07] rounded-full blur-2xl group-hover:bg-emerald-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex flex-col h-full">
         <div class="flex items-start justify-between">
             <div id="view-stat-heleket" class="stat-view">
-                <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-1">Heleket</p>
-                <h4 class="text-2xl font-bold text-white tracking-tight">
+                <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Heleket</p>
+                <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                     {% if stats.get('heleket_income') is not none %}
                     {{ "{:,.0f}".format(stats.get('heleket_income', 0)).replace(",", " ") }} ₽
                     {% else %}
-                    <span
-                        class="animate-spin inline-block h-4 w-4 border-2 border-white/20 border-t-white rounded-full"></span>
+                    <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-emerald-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-emerald-400 animate-spin"></div></div>
                     {% endif %}
                 </h4>
             </div>
 
             <div id="view-stat-ton" class="stat-view hidden">
-                <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-1">TonConnect</p>
-                <h4 class="text-2xl font-bold text-white tracking-tight text-emerald-400">
+                <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">TonConnect</p>
+                <h4 class="text-xl sm:text-[22px] font-black text-emerald-300 tracking-tight leading-none tabular-nums">
                     {% if stats.get('tonconnect_income') is not none %}
                     {{ "{:,.0f}".format(stats.get('tonconnect_income', 0)).replace(",", " ") }} ₽
                     {% else %}
-                    <span
-                        class="animate-spin inline-block h-4 w-4 border-2 border-white/20 border-t-white rounded-full"></span>
+                    <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-emerald-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-emerald-400 animate-spin"></div></div>
                     {% endif %}
                 </h4>
             </div>
 
             <button onclick="toggleStat(event)"
-                class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:bg-emerald-500/20 transition-all duration-300">
-                <span class="material-symbols-outlined text-xl" id="toggle-stat-icon">payments</span>
+                class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/5 hover:bg-emerald-500/20 transition-all duration-300 shrink-0">
+                <span class="material-symbols-outlined text-base" id="toggle-stat-icon">payments</span>
             </button>
         </div>
     </div>
@@ -286,98 +247,104 @@
     </script>
 </div>
 
-<!-- НОВЫЕ БЛОКИ: СТАТИСТИКА ПО ГРУППАМ -->
-<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gray-500/5 rounded-full blur-2xl group-hover:bg-gray-500/10 transition-colors"></div>
+<!-- БЛОКИ: СТАТИСТИКА ПО ГРУППАМ -->
+
+<!-- Не купили ключ -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-gray-500/[0.07] rounded-full blur-2xl group-hover:bg-gray-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Не купили ключ</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Не купили ключ</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('no_purchases_count') is not none %}
                 {{ stats.no_purchases_count }}
                 {% else %}
-                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-gray-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-gray-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <button onclick="openUserGroupModal('no_purchases', 'Не купили ключ')" class="w-10 h-10 rounded-xl bg-gray-500/10 flex items-center justify-center text-gray-400 border border-gray-500/10 shadow-[0_0_15px_rgba(156,163,175,0.2)] hover:bg-gray-500/20 transition-all cursor-pointer">
-            <span class="material-symbols-outlined text-xl">person_off</span>
+        <button onclick="openUserGroupModal('no_purchases', 'Не купили ключ')" class="w-8 h-8 rounded-xl bg-gray-500/10 border border-gray-500/15 flex items-center justify-center text-gray-400 shadow-lg shadow-gray-500/5 hover:bg-gray-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+            <span class="material-symbols-outlined text-base">person_off</span>
         </button>
     </div>
 </div>
 
-<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors"></div>
+<!-- Нет активных -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-orange-500/[0.07] rounded-full blur-2xl group-hover:bg-orange-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Нет активных</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Нет активных</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('inactive_buyers_count') is not none %}
                 {{ stats.inactive_buyers_count }}
                 {% else %}
-                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-orange-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-orange-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <button onclick="openUserGroupModal('inactive_buyers', 'Нет активных (Покупали)')" class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 border border-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)] hover:bg-orange-500/20 transition-all cursor-pointer">
-            <span class="material-symbols-outlined text-xl">history</span>
+        <button onclick="openUserGroupModal('inactive_buyers', 'Нет активных (Покупали)')" class="w-8 h-8 rounded-xl bg-orange-500/10 border border-orange-500/15 flex items-center justify-center text-orange-400 shadow-lg shadow-orange-500/5 hover:bg-orange-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+            <span class="material-symbols-outlined text-base">history</span>
         </button>
     </div>
 </div>
 
-<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-pink-500/5 rounded-full blur-2xl group-hover:bg-pink-500/10 transition-colors"></div>
+<!-- На триале -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-pink-500/[0.07] rounded-full blur-2xl group-hover:bg-pink-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">На триале</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">На триале</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('trials_count') is not none %}
                 {{ stats.trials_count }}
                 {% else %}
-                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-pink-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-pink-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <button onclick="openUserGroupModal('trials', 'Пользователи на триале')" class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-400 border border-pink-500/10 shadow-[0_0_15px_rgba(236,72,153,0.2)] hover:bg-pink-500/20 transition-all cursor-pointer">
-            <span class="material-symbols-outlined text-xl">card_giftcard</span>
+        <button onclick="openUserGroupModal('trials', 'Пользователи на триале')" class="w-8 h-8 rounded-xl bg-pink-500/10 border border-pink-500/15 flex items-center justify-center text-pink-400 shadow-lg shadow-pink-500/5 hover:bg-pink-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+            <span class="material-symbols-outlined text-base">card_giftcard</span>
         </button>
     </div>
 </div>
 
-<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/10 transition-colors"></div>
+<!-- Купили ключ -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-teal-500/[0.07] rounded-full blur-2xl group-hover:bg-teal-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Купили ключ</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Купили ключ</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('active_buyers_count') is not none %}
                 {{ stats.active_buyers_count }}
                 {% else %}
-                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-teal-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-teal-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <button onclick="openUserGroupModal('active_buyers', 'Покупатели с активным ключом')" class="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400 border border-teal-500/10 shadow-[0_0_15px_rgba(20,184,166,0.2)] hover:bg-teal-500/20 transition-all cursor-pointer">
-            <span class="material-symbols-outlined text-xl">verified_user</span>
+        <button onclick="openUserGroupModal('active_buyers', 'Покупатели с активным ключом')" class="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/15 flex items-center justify-center text-teal-400 shadow-lg shadow-teal-500/5 hover:bg-teal-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+            <span class="material-symbols-outlined text-base">verified_user</span>
         </button>
     </div>
 </div>
 
-<div class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-5 group hover:border-white/20 transition-all duration-300">
-    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-fuchsia-500/5 rounded-full blur-2xl group-hover:bg-fuchsia-500/10 transition-colors"></div>
+<!-- Активные ключи -->
+<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
+    <div class="absolute -top-6 -right-6 w-20 h-20 bg-fuchsia-500/[0.07] rounded-full blur-2xl group-hover:bg-fuchsia-500/[0.12] transition-colors pointer-events-none"></div>
     <div class="relative z-10 flex items-start justify-between">
         <div>
-            <p class="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Активные ключи</p>
-            <h4 class="text-3xl font-bold text-white tracking-tight">
+            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Активные ключи</p>
+            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
                 {% if stats.get('active_keys_count') is not none %}
                 {{ stats.active_keys_count }}
                 {% else %}
-                <span class="animate-spin inline-block h-6 w-6 border-2 border-white/20 border-t-white rounded-full"></span>
+                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-fuchsia-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-fuchsia-400 animate-spin"></div></div>
                 {% endif %}
             </h4>
         </div>
-        <button onclick="openUserGroupModal('active_keys', 'Все активные ключи')" class="w-10 h-10 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400 border border-fuchsia-500/10 shadow-[0_0_15px_rgba(217,70,239,0.2)] hover:bg-fuchsia-500/20 transition-all cursor-pointer">
-            <span class="material-symbols-outlined text-xl">vpn_key</span>
+        <button onclick="openUserGroupModal('active_keys', 'Все активные ключи')" class="w-8 h-8 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 shadow-lg shadow-fuchsia-500/5 hover:bg-fuchsia-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+            <span class="material-symbols-outlined text-base">vpn_key</span>
         </button>
     </div>
 </div>

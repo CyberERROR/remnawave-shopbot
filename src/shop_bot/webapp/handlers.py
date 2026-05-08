@@ -58,28 +58,32 @@ def get_transaction_comment(user_data: dict, action_type: str, value: any, host_
 
 def calculate_webapp_price(price: float, user_id: int) -> float:
     try:
+        if not user_id or int(user_id) == 0:
+            return round(price, 2)
+
         user = get_user(user_id)
-        if not user: return price
+        if not user:
+            return price
         
-        # 1. Seller Discount
         if user.get('seller_active'):
             seller = get_seller_user(user_id)
             if seller and seller.get('seller_sale'):
                 discount_percent = float(seller['seller_sale'])
                 price -= price * (discount_percent / 100)
+                logger.info(f"[WEBAPP] - Применена скидка продавца {discount_percent}% для {user_id}")
         
-        # 2. Referral Discount (First purchase)
-        if user.get('referred_by') and user.get('total_spent', 0) == 0:
+        if user.get('referred_by') and user.get('total_spent', 0) == 0 and not get_user_keys(user_id):
             ref_discount = get_setting("referral_discount")
             if ref_discount:
                 try:
                     d_val = float(ref_discount)
                     if d_val > 0:
                         price -= price * (d_val / 100)
+                        logger.info(f"[WEBAPP] - Применена реферальная скидка {d_val}% для {user_id}")
                 except: pass
                 
     except Exception as e:
-        logger.error(f"Error calculating price: {e}")
+        logger.error(f"[WEBAPP] - Ошибка расчета цены для {user_id}: {e}")
         
     return round(price, 2)
 
@@ -94,23 +98,28 @@ async def process_successful_payment(bot: Bot, metadata: dict):
 
 async def _send_telegram_message(user_id: int, text: str, reply_markup=None, photo=None):
     token = get_setting("telegram_bot_token")
-    if not token: return False
+    if not token:
+        logger.error("[WEBAPP] - Токен бота не найден в настройках")
+        return False
     bot = Bot(token=token)
     try:
         if photo:
             await bot.send_photo(chat_id=user_id, photo=photo, caption=text, reply_markup=reply_markup, parse_mode="HTML")
         else:
             await bot.send_message(chat_id=user_id, text=text, reply_markup=reply_markup, parse_mode="HTML")
+        logger.info(f"[WEBAPP] - Сообщение успешно отправлено пользователю {user_id}")
         return True
     except Exception as e:
-        logger.error(f"Error sending telegram message: {e}")
+        logger.error(f"[WEBAPP] - Ошибка отправки сообщения {user_id}: {e}")
         return False
     finally:
         await bot.session.close()
 
 async def _send_invoice_stars(user_id: int, title: str, description: str, payload: str, amount: int):
     token = get_setting("telegram_bot_token")
-    if not token: return False
+    if not token:
+        logger.error("[WEBAPP] - Токен бота не найден для Stars")
+        return False
     bot = Bot(token=token)
     try:
         await bot.send_invoice(
@@ -122,9 +131,10 @@ async def _send_invoice_stars(user_id: int, title: str, description: str, payloa
             currency="XTR",
             prices=[LabeledPrice(label=title, amount=amount)]
         )
+        logger.info(f"[WEBAPP] - Счет Stars отправлен пользователю {user_id} на сумму {amount}")
         return True
     except Exception as e:
-        logger.error(f"Error sending Stars invoice: {e}")
+        logger.error(f"[WEBAPP] - Ошибка отправки счета Stars {user_id}: {e}")
         return False
     finally:
         await bot.session.close()
@@ -430,6 +440,9 @@ def _get_profile_card_html(user: dict | None, referral_count: int, keys_count: i
     # Format currency: 1 240,50 ₽
     balance_str = f"{balance:,.2f}".replace(",", " ").replace(".", ",") + " ₽"
     earned_str = f"{referral_earned:,.2f}".replace(",", " ").replace(".", ",") + " ₽"
+    bot_username_raw = (get_setting("telegram_bot_username") or "bot").strip().lstrip("@")
+    bot_username = re.sub(r"[^A-Za-z0-9_]", "", bot_username_raw) or "bot"
+    referral_link = f"https://t.me/{bot_username}?start=ref_{user_id}"
     
     # Format date and calculate time since
     reg_date_str = "Unknown"
@@ -481,58 +494,68 @@ def _get_profile_card_html(user: dict | None, referral_count: int, keys_count: i
 
     return f"""
             <!-- Modern Balanced User Card -->
-            <div class="glass-card border border-white/10 rounded-[2rem] p-6 relative overflow-hidden shadow-xl">
+            <div class="glass-card border border-white/10 rounded-[1.6rem] p-4 relative overflow-hidden shadow-xl">
                 <!-- Decoration -->
                 <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
 
-                <div class="flex flex-col gap-5 relative z-10">
+                <div class="flex flex-col gap-3.5 relative z-10">
                     <!-- Top: ID and Status -->
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
                             <div
-                                class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
-                                <span class="material-icons-round text-primary">person</span>
+                                class="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20 shrink-0">
+                                <span class="material-icons-round text-primary text-[19px]">person</span>
                             </div>
-                            <div>
-                                <div class="text-[10px] text-gray-500 uppercase font-black tracking-widest">ID
+                            <div class="min-w-0">
+                                <div class="text-[9px] text-gray-500 uppercase font-black tracking-widest">ID
                                     пользователя</div>
-                                <div class="text-base font-black text-white tracking-tight">#{user_id}</div>
+                                <div class="text-sm font-black text-white tracking-tight truncate">#{user_id}</div>
                             </div>
                         </div>
                         <div class="text-right">
-                            <div class="text-[10px] text-gray-500 uppercase font-black tracking-widest">Баланс</div>
-                            <div class="text-lg font-black text-primary tracking-tighter">{balance_str}</div>
+                            <div class="text-[9px] text-gray-500 uppercase font-black tracking-widest">Баланс</div>
+                            <div class="text-base font-black text-primary tracking-tighter">{balance_str}</div>
                         </div>
                     </div>
 
                     <!-- Middle: Main Stats -->
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-3 gap-1.5">
                         <div
-                            class="bg-white/5 border border-white/5 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
-                            <span class="material-icons-round text-emerald-400 text-sm mb-1 opacity-80">group</span>
-                            <div class="text-[9px] text-gray-400 uppercase font-black tracking-tight leading-none mb-1">Рефералы</div>
-                            <div class="text-[11px] font-black text-white">{referral_count} чел.</div>
+                            class="bg-white/5 border border-white/5 rounded-xl p-2 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
+                            <span class="material-icons-round text-emerald-400 text-[13px] mb-0.5 opacity-80">group</span>
+                            <div class="text-[8px] text-gray-400 uppercase font-black tracking-tight leading-none mb-0.5">Рефералы</div>
+                            <div class="text-[10px] font-black text-white">{referral_count} чел.</div>
                         </div>
                         <div
-                            class="bg-white/5 border border-white/5 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
-                            <span class="material-icons-round text-yellow-400 text-sm mb-1 opacity-80">payments</span>
-                            <div class="text-[9px] text-gray-400 uppercase font-black tracking-tight leading-none mb-1">Доход</div>
-                            <div class="text-[11px] font-black text-white truncate w-full px-1">{earned_str}</div>
+                            class="bg-white/5 border border-white/5 rounded-xl p-2 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
+                            <span class="material-icons-round text-yellow-400 text-[13px] mb-0.5 opacity-80">payments</span>
+                            <div class="text-[8px] text-gray-400 uppercase font-black tracking-tight leading-none mb-0.5">Доход</div>
+                            <div class="text-[10px] font-black text-white truncate w-full px-1">{earned_str}</div>
                         </div>
                         <div
-                            class="bg-white/5 border border-white/5 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
-                            <span class="material-icons-round text-primary text-sm mb-1 opacity-80">vpn_key</span>
-                            <div class="text-[9px] text-gray-400 uppercase font-black tracking-tight leading-none mb-1">Ключи</div>
-                            <div class="text-[11px] font-black text-white">{keys_count} шт.</div>
+                            class="bg-white/5 border border-white/5 rounded-xl p-2 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
+                            <span class="material-icons-round text-primary text-[13px] mb-0.5 opacity-80">vpn_key</span>
+                            <div class="text-[8px] text-gray-400 uppercase font-black tracking-tight leading-none mb-0.5">Ключи</div>
+                            <div class="text-[10px] font-black text-white">{keys_count} шт.</div>
                         </div>
                     </div>
 
                     <!-- Bottom: Meta Info -->
-                    <div class="flex items-center justify-center gap-2 pt-1">
-                        <span class="material-icons-round text-[12px] text-gray-600">calendar_today</span>
-                        <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Дата
+                    <button type="button" data-ref-link="{referral_link}" onclick="copyReferralLink(this)"
+                        class="w-full bg-primary/5 border border-primary/10 rounded-xl p-2 flex items-center gap-2 hover:bg-primary/10 active:scale-[0.99] transition-all">
+                        <span class="material-icons-round text-[15px] text-primary shrink-0">ios_share</span>
+                        <div class="min-w-0 flex-1 text-left">
+                            <div class="text-[8px] text-gray-500 uppercase font-black tracking-widest">Реферальная ссылка</div>
+                            <div class="text-[10px] text-gray-300 font-mono truncate">{referral_link}</div>
+                        </div>
+                        <span class="material-icons-round text-[14px] text-gray-500 shrink-0">content_copy</span>
+                    </button>
+
+                    <div class="flex items-center justify-center gap-1.5">
+                        <span class="material-icons-round text-[11px] text-gray-600">calendar_today</span>
+                        <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Дата
                             регистрации:</span>
-                        <span class="text-[10px] text-gray-300 font-black">{reg_date_str} ({time_since_str})</span>
+                        <span class="text-[9px] text-gray-300 font-black">{reg_date_str} ({time_since_str})</span>
                     </div>
                     {sync_btn_html}
                 </div>
@@ -1123,7 +1146,7 @@ async def _render_main_page(user_id: int):
                                    k['used_ips'] = int(devs['total'])
                          except: pass
             except Exception as e:
-                logger.error(f"Error fetching live stats: {e}")
+                logger.error(f"[WEBAPP] - Ошибка получения живой статистики для {user_id}: {e}")
 
         # --- CALCULATE MIN PRICE ---
         min_price_val = 0.0
@@ -1142,7 +1165,7 @@ async def _render_main_page(user_id: int):
             if prices:
                 min_price_val = min(prices)
         except Exception as e:
-            logger.error(f"Error calculating min price: {e}")
+            logger.error(f"[WEBAPP] - Ошибка расчета мин. цены для {user_id}: {e}")
 
         # --- GENERATE SECTIONS ---
         if keys:
@@ -1328,7 +1351,7 @@ def validate_telegram_data(init_data: str, bot_token: str) -> dict | None:
             logger.warning(f"Telegram auth: hash mismatch. Expected={calculated_hash[:16]}... Got={received_hash[:16]}...")
         return None
     except Exception as e:
-        logger.error(f"Telegram auth validation error: {e}")
+        logger.error(f"[WEBAPP] - Ошибка валидации данных Telegram: {e}")
         return None
 
 @app.get("/api/auth/request-token")
@@ -1420,7 +1443,7 @@ async def api_telegram_direct_auth(req: TelegramDirectAuthRequest):
         database.update_user_auth_token(req.user_id, token)
         return {"ok": True, "token": token}
     except Exception as e:
-        logger.error(f"Telegram direct auth error: {e}")
+        logger.error(f"[WEBAPP] - Ошибка прямой авторизации Telegram для {req.user_id}: {e}")
         return {"ok": False, "error": "Auth error"}
 
 def _validate_password(password: str) -> str | None:
@@ -1490,7 +1513,7 @@ async def api_email_reset_request(req: PasswordResetRequest):
         if not success:
             return {"ok": False, "error": "Ошибка при отправке в Telegram. Возможно, вы заблокировали бота."}
     except Exception as e:
-        logger.error(f"Failed to call _send_telegram_message: {e}")
+        logger.error(f"[WEBAPP] - Ошибка вызова _send_telegram_message для {req.email}: {e}")
         return {"ok": False, "error": "Ошибка при отправке в Telegram. Возможно, вы заблокировали бота."}
 
     return {"ok": True}
@@ -1580,7 +1603,7 @@ async def api_device_tiers(req: DeviceTiersRequest):
             tiers = [{"tier_id": t["tier_id"], "device_count": t["device_count"], "price": float(t["price"])} for t in raw]
         return {"ok": True, "device_mode": mode, "tiers": tiers, "tier_lock_extend": lock, "base_device_count": base_devices}
     except Exception as e:
-        logger.error(f"API device-tiers error: {e}")
+        logger.error(f"[WEBAPP] - Ошибка API device-tiers для {req.host_name}: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/payment-methods")
@@ -1638,10 +1661,14 @@ async def api_create_payment(req: CreatePaymentRequest):
         
         plan = get_plan_by_id(plan_id)
         if not plan:
+            logger.warning(f"[WEBAPP] - Тариф {plan_id} не найден для пользователя {user_id}")
             return {"ok": False, "error": "Тариф не найден"}
+
+        logger.info(f"[WEBAPP] - Начало создания платежа: User={user_id}, Plan={plan_id}, Method={method_id}")
 
         user = get_user(user_id)
         if not user:
+            logger.warning(f"[WEBAPP] - Пользователь {user_id} не найден при создании платежа")
             return {"ok": False, "error": "Пользователь не найден (ID: " + str(user_id) + ")"}
         
         final_price = calculate_webapp_price(float(plan['price']), user_id) 
@@ -1657,26 +1684,50 @@ async def api_create_payment(req: CreatePaymentRequest):
         if req.action == 'extend' and req.key_id:
             host_data = get_host(req.host_name) if req.host_name else None
             if host_data and host_data.get('device_mode') == 'tiers' and int(host_data.get('tier_lock_extend', 0) or 0):
-                if not tier_price_per_month: 
-                    key = get_key_by_id(req.key_id)
-                    if key and key.get('remnawave_user_uuid'):
-                        try:
-                            user_info = await remnawave_api.get_user_by_uuid(key['remnawave_user_uuid'], host_name=req.host_name)
-                            if user_info:
-                                hwid = int(user_info.get('hwidDeviceLimit') or 1)
-                                if hwid > 1:
+                key = get_key_by_id(req.key_id)
+                if key and key.get('remnawave_user_uuid'):
+                    try:
+                        user_info = await remnawave_api.get_user_by_uuid(key['remnawave_user_uuid'], host_name=req.host_name)
+                        if user_info:
+                            old_hwid = int(user_info.get('hwidDeviceLimit') or 1)
+                            if not tier_price_per_month:
+                                if old_hwid > 1:
                                     from shop_bot.data_manager import database
                                     base_devices = int(database.get_setting(f"base_device_{req.host_name}", "1"))
                                     tiers = get_device_tiers(req.host_name)
                                     for t in tiers:
-                                        if t['device_count'] == hwid:
-                                            tier_device_count = hwid
-                                            diff = hwid - base_devices
+                                        if t['device_count'] == old_hwid:
+                                            tier_device_count = old_hwid
+                                            diff = old_hwid - base_devices
                                             if diff < 0: diff = 0
                                             tier_price_per_month = float(diff * t['price'])
                                             break
-                        except Exception as e:
-                            logger.error(f"Auto-detect hwid error: {e}")
+                            elif tier_device_count and int(tier_device_count) > old_hwid:
+                                from shop_bot.data_manager import database
+                                base_devices = int(database.get_setting(f"base_device_{req.host_name}", "1"))
+                                tiers = get_device_tiers(req.host_name)
+                                old_tier_price = 0.0
+                                new_tier_price = 0.0
+                                for t in tiers:
+                                    if t['device_count'] == old_hwid:
+                                        old_tier_price = float(t['price'])
+                                    if t['device_count'] == int(tier_device_count):
+                                        new_tier_price = float(t['price'])
+                                old_diff = max(0, old_hwid - base_devices)
+                                new_diff = max(0, int(tier_device_count) - base_devices)
+                                old_total_tier_price = old_diff * old_tier_price
+                                new_total_tier_price = new_diff * new_tier_price
+                                monthly_diff_price = max(0.0, new_total_tier_price - old_total_tier_price)
+                                if key.get('expiry_date') and monthly_diff_price > 0:
+                                    expire_dt = datetime.strptime(key['expiry_date'], "%Y-%m-%d %H:%M:%S")
+                                    now = get_msk_time().replace(tzinfo=None)
+                                    days_left = (expire_dt - now).days
+                                    if days_left > 0:
+                                        remaining_months = float(days_left) / 30.0
+                                        device_surcharge = monthly_diff_price * remaining_months
+                                        final_price += device_surcharge
+                    except Exception as e:
+                        logger.error(f"[WEBAPP] - Ошибка HWID: {e}")
         
         if tier_price_per_month > 0:
             final_price += tier_price_per_month * months
@@ -1720,9 +1771,10 @@ async def api_create_payment(req: CreatePaymentRequest):
                 kb = create_payment_keyboard(pay_url)
                 await _send_telegram_message(user_id, f"<b>Оплата через ЮKassa</b>\n\nСумма: <b>{final_price:.2f} RUB</b>\n\n<i>Вы можете оплатить счет здесь или в WebApp.</i>", kb)
                 
+                logger.info(f"[WEBAPP] - Успешно создан счет YooKassa для {user_id}: {pid}")
                 return {"ok": True, "payment_url": pay_url, "payment_id": pid, "message": "Счёт создан"}
             except Exception as e:
-                logger.error(f"YooKassa error: {e}")
+                logger.error(f"[WEBAPP] - Ошибка YooKassa для {user_id}: {e}")
                 return {"ok": False, "error": f"Ошибка YooKassa: {e}"}
 
         # --- Platega ---
@@ -1794,7 +1846,9 @@ async def api_create_payment(req: CreatePaymentRequest):
                      # res[0] is url, res[1] is invoice_id
                      kb = create_cryptobot_payment_keyboard(res[0], res[1])
                      await _send_telegram_message(user_id, f"<b>Оплата через CryptoBot</b>\n\nСумма: <b>{final_price:.2f} RUB</b>\n\n<i>Счет также доступен в WebApp.</i>", kb)
+                     logger.info(f"[WEBAPP] - Успешно создан счет CryptoBot для {user_id}: {pid}")
                      return {"ok": True, "payment_url": res[0], "payment_id": pid, "message": "Счёт создан"}
+                 logger.error(f"[WEBAPP] - Ошибка API CryptoBot для {user_id}")
                  return {"ok": False, "error": "Ошибка API CryptoBot"}
              except Exception as e:
                  return {"ok": False, "error": f"Ошибка CryptoBot: {e}"}
@@ -1829,7 +1883,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                      return {"ok": False, "error": "Ошибка создания платежа Heleket"}
 
             except Exception as e:
-                logger.error(f"Heleket error: {e}")
+                logger.error(f"[WEBAPP] - Ошибка Heleket для {user_id}: {e}")
                 return {"ok": False, "error": f"Ошибка Heleket: {e}"}
                 
         # --- YooMoney ---
@@ -1876,6 +1930,7 @@ async def api_create_payment(req: CreatePaymentRequest):
              desc = get_transaction_comment({"id": user_id, "username": user.get("username")}, action_name, months, req.host_name)
              await _send_invoice_stars(user_id, title, desc, pid, stars_amount)
              bot_username = get_setting('telegram_bot_username')
+             logger.info(f"[WEBAPP] - Успешно отправлен счет Stars для {user_id} на {stars_amount} звезд")
              return {"ok": True, "message": "Счёт Stars отправлен в бот", "payment_url": f"tg://resolve?domain={bot_username}"}
 
         # --- Balance ---
@@ -1922,13 +1977,15 @@ async def api_create_payment(req: CreatePaymentRequest):
                 await bot.session.close()
                 
             if not success and not check_transaction_exists(p_log_id):
+                logger.error(f"[WEBAPP] - Критическая ошибка списания с баланса для {user_id}")
                 return {"ok": False, "error": "Ошибка обработки платежа"}
                 
+            logger.info(f"[WEBAPP] - Успешная оплата с баланса: User={user_id}, Sum={final_price}")
             return {"ok": True, "message": "Оплачено с баланса!", "paid": True}
 
         return {"ok": False, "error": "Метод не поддерживается"}
     except Exception as e:
-        logger.error(f"API Create Payment Error: {e}")
+        logger.error(f"[WEBAPP] - Ошибка API создания платежа: {e}")
         return {"ok": False, "error": str(e), "details": traceback.format_exc()}
 
 @app.post("/api/apply-promo")
@@ -2007,7 +2064,7 @@ async def api_apply_promo(req: ApplyPromoRequest):
                 return {"ok": False, "error": "Ошибка активации на стороне сервера"}
 
     except Exception as e:
-        logger.error(f"API apply-promo error: {e}")
+        logger.error(f"[WEBAPP] - Ошибка API apply-promo для {user_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 class CheckPaymentRequest(BaseModel):
@@ -2029,7 +2086,7 @@ async def api_check_payment(req: CheckPaymentRequest):
             "message": "Оплата успешно подтверждена"
         }
     except Exception as e:
-        logger.error(f"Check payment error: {e}")
+        logger.error(f"[WEBAPP] - Ошибка проверки платежа {req.payment_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 class KeyActionRequest(BaseModel):
@@ -2072,7 +2129,7 @@ async def api_key_devices(req: KeyActionRequest):
             
         return {"ok": True, "devices": []}
     except Exception as e:
-        logger.error(f"Error fetching devices: {e}")
+        logger.error(f"[WEBAPP] - Ошибка получения устройств для ключа {req.key_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/key/device/delete")
@@ -2098,7 +2155,7 @@ async def api_key_device_delete(req: DeleteDeviceRequest):
             return {"ok": True}
         return {"ok": False, "error": "Не удалось удалить устройство"}
     except Exception as e:
-        logger.error(f"Error deleting device: {e}")
+        logger.error(f"[WEBAPP] - Ошибка удаления устройства для ключа {req.key_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/key/comment")
@@ -2116,7 +2173,7 @@ async def api_key_comment(req: CommentRequest):
         update_key(req.key_id, comment_key=req.comment)
         return {"ok": True}
     except Exception as e:
-        logger.error(f"Error updating comment: {e}")
+        logger.error(f"[WEBAPP] - Ошибка обновления комментария для ключа {req.key_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/support/status")
@@ -2154,7 +2211,7 @@ async def api_support_status(req: SupportStatusRequest):
             "messages": formatted_messages
         }
     except Exception as e:
-        logger.error(f"Error in support status: {e}")
+        logger.error(f"[WEBAPP] - Ошибка статуса поддержки для {req.user_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/support/create")
@@ -2217,7 +2274,7 @@ async def api_support_create(req: SupportTicketCreateRequest):
                     
         return {"ok": True, "ticket_id": ticket_id}
     except Exception as e:
-        logger.error(f"Error in support create: {e}")
+        logger.error(f"[WEBAPP] - Ошибка создания тикета поддержки для {req.user_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/support/send")
@@ -2286,7 +2343,7 @@ async def api_support_send(req: SupportMessageSendRequest):
                         
         return {"ok": True}
     except Exception as e:
-        logger.error(f"Error in support send: {e}")
+        logger.error(f"[WEBAPP] - Ошибка отправки сообщения в поддержку для {req.user_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.get("/api/user-status")
@@ -2305,7 +2362,7 @@ async def api_user_status(user_id: int):
         
         return {"ok": True, "keys": formatted_keys}
     except Exception as e:
-        logger.error(f"User status error: {e}")
+        logger.error(f"[WEBAPP] - Ошибка статуса пользователя {user_id}: {e}")
         return {"ok": False, "error": str(e)}
 
 @app.get("/{path_param}")
@@ -2340,5 +2397,5 @@ async def dynamic_route(request: Request, path_param: str):
         # Pass through to 404 naturally or handle other dynamic routes
         return HTMLResponse(content="<h1>404 Not Found</h1>", status_code=404)
     except Exception as e:
-        logger.error(f"Dynamic route error: {e}")
+        logger.error(f"[WEBAPP] - Ошибка динамического маршрута: {e}")
         return HTMLResponse(content="<h1>Error</h1>", status_code=500)

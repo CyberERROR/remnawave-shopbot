@@ -130,6 +130,28 @@
                     <input type="number" id="sort-order" min="0" value="0"
                         class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white" />
                 </div>
+                <div>
+                    <label class="block text-white/70 text-sm mb-2">Цвет кнопки:</label>
+                    <div class="flex flex-wrap gap-2" id="color-picker">
+                        <button type="button" data-color="" class="color-swatch active" title="По умолчанию">
+                            <span class="material-symbols-outlined text-xs">block</span>
+                        </button>
+                        <button type="button" data-color="red" class="color-swatch" title="Красный (danger)"
+                            style="background:#ef5350"></button>
+                        <button type="button" data-color="green" class="color-swatch" title="Зелёный (success)"
+                            style="background:#66bb6a"></button>
+                        <button type="button" data-color="blue" class="color-swatch" title="Синий (primary)"
+                            style="background:#42a5f5"></button>
+                    </div>
+                    <input type="hidden" id="button-color" value="" />
+                    <p class="text-white/40 text-xs mt-1">danger / success / primary</p>
+                </div>
+                <div>
+                    <label class="block text-white/70 text-sm mb-2">Premium Emoji ID:</label>
+                    <input type="text" id="emoji-id" placeholder="Например: 5368324170671202286"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    <p class="text-white/40 text-xs mt-1">icon_custom_emoji_id — иконка в кнопке</p>
+                </div>
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" id="is-active" checked
                         class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
@@ -228,6 +250,26 @@
                         <option value="3">3 колонки (очень широкая)</option>
                     </select>
                 </div>
+            </div>
+            <div>
+                <label class="block text-white/70 text-sm mb-2">Цвет кнопки:</label>
+                <div class="flex flex-wrap gap-2" id="new-color-picker">
+                    <button type="button" data-color="" class="color-swatch active" title="По умолчанию">
+                        <span class="material-symbols-outlined text-xs">block</span>
+                    </button>
+                    <button type="button" data-color="red" class="color-swatch" title="Красный (danger)"
+                        style="background:#ef5350"></button>
+                    <button type="button" data-color="green" class="color-swatch" title="Зелёный (success)"
+                        style="background:#66bb6a"></button>
+                    <button type="button" data-color="blue" class="color-swatch" title="Синий (primary)"
+                        style="background:#42a5f5"></button>
+                </div>
+                <input type="hidden" id="new-button-color" value="" />
+            </div>
+            <div>
+                <label class="block text-white/70 text-sm mb-2">Premium Emoji ID:</label>
+                <input type="text" id="new-emoji-id" placeholder="Например: 5368324170671202286"
+                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
             </div>
         </div>
         <div class="p-4 border-t border-white/10 flex justify-end gap-2">
@@ -564,6 +606,31 @@
         }
     }
 
+    .color-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .color-swatch:hover {
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: scale(1.15);
+    }
+
+    .color-swatch.active {
+        border-color: var(--primary);
+        box-shadow: 0 0 8px rgba(19, 236, 128, 0.4);
+        transform: scale(1.15);
+    }
+
     .soft-select-item {
         padding: 0.625rem 1rem;
         color: white;
@@ -743,13 +810,31 @@
                 this.saveButtonProperties(true);
             });
 
-            // Автосохранение для остальных полей (текст, позиция, сортировка)
-            const autoSaveIds = ['button-text', 'row-position', 'column-position', 'sort-order'];
+            // Автосохранение для остальных полей (текст, позиция, сортировка, emoji)
+            const autoSaveIds = ['button-text', 'row-position', 'column-position', 'sort-order', 'emoji-id'];
             autoSaveIds.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     el.addEventListener('input', () => this.debouncedSave());
                 }
+            });
+
+            // Color picker for properties panel
+            this.initColorPicker('color-picker', 'button-color', true);
+            // Color picker for add modal
+            this.initColorPicker('new-color-picker', 'new-button-color', false);
+        }
+
+        initColorPicker(pickerId, hiddenInputId, autoSave) {
+            const picker = document.getElementById(pickerId);
+            if (!picker) return;
+            picker.addEventListener('click', (e) => {
+                const swatch = e.target.closest('.color-swatch');
+                if (!swatch) return;
+                picker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+                swatch.classList.add('active');
+                document.getElementById(hiddenInputId).value = swatch.dataset.color || '';
+                if (autoSave) this.debouncedSave();
             });
         }
 
@@ -811,10 +896,16 @@
             div.classList.add(`width-${width}`);
             if (this.selectedButton && this.selectedButton.id === btn.id) div.classList.add('selected');
 
+            const colorBadge = btn.button_color ? `<span class="inline-block w-3 h-3 rounded-full mr-1 pointer-events-none" style="background:${this.getColorHex(btn.button_color)}"></span>` : '';
+            const emojiTag = btn.emoji_id ? `<span class="text-[9px] text-yellow-400/70 pointer-events-none">✨ emoji</span>` : '';
+
             div.innerHTML = `
-            <div class="button-text text-white font-medium mb-1 pointer-events-none">${btn.text || btn.button_id}</div>
+            <div class="button-text text-white font-medium mb-1 pointer-events-none">${colorBadge}${btn.text || btn.button_id}</div>
             <div class="button-id text-white/50 text-xs pointer-events-none">${btn.button_id}</div>
-            <div class="button-width-indicator text-primary text-xs mt-1 pointer-events-none">${width}×</div>
+            <div class="flex items-center gap-1 mt-1 pointer-events-none">
+                <span class="button-width-indicator text-primary text-xs">${width}×</span>
+                ${emojiTag}
+            </div>
             <div class="button-actions">
                 <button type="button" class="p-1 rounded bg-white/10 hover:bg-white/20 text-white/70" onclick="buttonConstructor.editButton(${btn.id})">
                     <span class="material-symbols-outlined text-sm">edit</span>
@@ -1014,6 +1105,14 @@
             document.getElementById('button-width').value = btn.button_width || 1;
             document.getElementById('sort-order').value = btn.sort_order || 0;
             document.getElementById('is-active').checked = btn.is_active === 1 || btn.is_active === true;
+            document.getElementById('emoji-id').value = btn.emoji_id || '';
+
+            // Set color picker
+            const colorVal = btn.button_color || '';
+            document.getElementById('button-color').value = colorVal;
+            document.querySelectorAll('#color-picker .color-swatch').forEach(s => {
+                s.classList.toggle('active', (s.dataset.color || '') === colorVal);
+            });
 
             this.toggleActionFields(btn.url ? 'url' : 'callback');
             document.getElementById('delete-button-btn').classList.remove('hidden');
@@ -1040,7 +1139,9 @@
                 column_position: parseInt(document.getElementById('column-position').value) || 0,
                 button_width: parseInt(document.getElementById('button-width').value) || 1,
                 sort_order: parseInt(document.getElementById('sort-order').value) || 0,
-                is_active: document.getElementById('is-active').checked
+                is_active: document.getElementById('is-active').checked,
+                button_color: document.getElementById('button-color').value || '',
+                emoji_id: document.getElementById('emoji-id').value.trim() || ''
             };
 
             try {
@@ -1073,6 +1174,11 @@
             document.getElementById('new-button-url').value = '';
             document.getElementById('new-action-type').value = 'callback';
             document.getElementById('new-button-width').value = '1';
+            document.getElementById('new-button-color').value = '';
+            document.getElementById('new-emoji-id').value = '';
+            document.querySelectorAll('#new-color-picker .color-swatch').forEach(s => {
+                s.classList.toggle('active', !s.dataset.color);
+            });
             this.toggleNewActionFields('callback');
             openModal('addButtonModal');
         }
@@ -1090,7 +1196,9 @@
                 url: document.getElementById('new-action-type').value === 'url' ? document.getElementById('new-button-url').value : null,
                 row_position: 0,
                 column_position: 0,
-                button_width: parseInt(document.getElementById('new-button-width').value) || 1
+                button_width: parseInt(document.getElementById('new-button-width').value) || 1,
+                button_color: document.getElementById('new-button-color').value || '',
+                emoji_id: document.getElementById('new-emoji-id').value.trim() || ''
             };
 
             try {
@@ -1175,12 +1283,17 @@
                     rows[row].sort((a, b) => (a.column_position || 0) - (b.column_position || 0)).forEach(btn => {
                         const width = btn.button_width || 1;
                         const flexStyle = width === 1 ? 'flex: 1;' : `flex: ${Math.min(width, 2)};`;
+                        const colorHex = btn.button_color ? this.getColorHex(btn.button_color) : null;
+                        const bgStyle = colorHex ? `background: ${colorHex}; border-color: ${colorHex};` : '';
+                        const textColor = (btn.button_color === 'white') ? 'color: #1a1a1a;' : '';
+                        const emojiHtml = btn.emoji_id ? `<span style="font-size:11px;opacity:0.7;">✨</span>` : '';
 
                         html += `
-                            <div class="telegram-button" style="${flexStyle} min-width: 0;" 
+                            <div class="telegram-button" style="${flexStyle} min-width: 0; ${bgStyle}" 
                                  onclick="buttonConstructor.handlePreviewClick('${btn.callback_data || ''}', '${btn.url || ''}', '${btn.text}')">
                                 <div class="telegram-button-content">
-                                    <span class="telegram-button-text">${btn.text || btn.button_id}</span>
+                                    ${emojiHtml}
+                                    <span class="telegram-button-text" style="${textColor}">${btn.text || btn.button_id}</span>
                                     ${btn.url ? '<span class="telegram-button-url">🔗</span>' : ''}
                                     ${width > 1 ? `<span class="telegram-button-width">${width}×</span>` : ''}
                                 </div>
@@ -1239,6 +1352,15 @@
             }
 
             return `Callback: ${callbackData}`;
+        }
+
+        getColorHex(color) {
+            const map = {
+                'red': '#ef5350',
+                'green': '#66bb6a',
+                'blue': '#42a5f5'
+            };
+            return map[color] || '#3a3a3c';
         }
 
         clearPreview() {

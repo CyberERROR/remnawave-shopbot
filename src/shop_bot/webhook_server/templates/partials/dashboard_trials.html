@@ -1,36 +1,32 @@
 {% for trial in recent_trials %}
-<tr class="transition-colors border-b border-white/5 last:border-0 group">
-    <td class="px-5 py-4 whitespace-nowrap">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40">
-                <span class="material-symbols-outlined text-sm">timer</span>
+<tr class="transition-all duration-200 hover:bg-white/[0.03] group">
+    <td class="px-4 py-3 whitespace-nowrap">
+        <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500/20 to-white/5 border border-orange-500/15 flex items-center justify-center text-orange-400 text-[10px] font-black uppercase shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+                {% if trial.username %}{{ trial.username[0] | upper }}{% else %}U{% endif %}
             </div>
-            <div>
-                <div class="text-sm font-bold text-white">
-                    {% if trial.username %}
-                    {{ trial.username }}
-                    {% else %}
-                    User {{ trial.telegram_id }}
-                    {% endif %}
+            <div class="min-w-0">
+                <div class="text-xs font-bold text-white truncate max-w-[110px]">
+                    {% if trial.username %}{{ trial.username }}{% else %}User {{ trial.telegram_id }}{% endif %}
                 </div>
-                <div class="text-[10px] text-white/50 font-mono tracking-wide">{{ trial.telegram_id }}</div>
+                <button type="button" class="text-[9px] text-white/25 hover:text-orange-400 transition-colors font-mono tracking-wider" onclick="copySingleId(event, '{{ trial.telegram_id }}')" title="Скопировать ID">{{ trial.telegram_id }}</button>
             </div>
         </div>
     </td>
-    <td class="px-5 py-4 whitespace-nowrap">
+    <td class="px-4 py-3 whitespace-nowrap">
         {% if trial.created_at %}
         {% set d_parts = trial.created_at.split(' ')[0].split('-') %}
-        <div class="text-sm text-white">{{ d_parts[1] }}.{{ d_parts[2] }}<br><span class="text-white/50 text-xs">{{
-                trial.created_at | relative_time }}</span></div>
+        <div class="text-[11px] font-bold text-white/60 tabular-nums">{{ d_parts[2] }}.{{ d_parts[1] }}</div>
+        <div class="text-[9px] text-white/25 font-bold mt-0.5">{{ trial.created_at | relative_time }}</div>
         {% else %}
-        <div class="text-sm text-white">N/A</div>
+        <div class="text-[11px] text-white/30">—</div>
         {% endif %}
     </td>
-    <td class="px-5 py-4 whitespace-nowrap text-right">
+    <td class="px-4 py-3 whitespace-nowrap text-right">
         <a href="{{ url_for('users_page', q=trial.telegram_id) }}"
-            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 text-white/30 hover:bg-primary/20 hover:text-primary transition-all duration-300"
+            class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/20 hover:bg-orange-500/10 hover:border-orange-500/20 hover:text-orange-400 transition-all duration-200"
             title="Профиль">
-            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
         </a>
     </td>
 </tr>

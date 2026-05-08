@@ -10,22 +10,8 @@ from werkzeug.utils import secure_filename
 from aiogram.types import FSInputFile
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, TelegramAPIError
 from shop_bot.data_manager import remnawave_repository as rw_repo
-from shop_bot.data_manager import speedtest_runner
-from . import server_plan
 
 logger = logging.getLogger(__name__)
-
-import re
-
-def clean_ansi(text):
-    if not text: return ""
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])|\x1B\(B|\x1B\][0-2];[^\x07]*\x07')
-    return ansi_escape.sub('', text)
-
-
-# ===== НАСТРОЙКИ И ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
-# Конфигурация путей, расширений файлов и глобальных объектов
-# ===== Конец настроек =====
 
 def get_msk_time() -> datetime:
     return datetime.now(timezone(timedelta(hours=3)))
@@ -57,9 +43,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 broadcast_progress = {}
 broadcast_lock = threading.Lock()
 scheduler = None
-
-ssh_sessions = {}
-ssh_sessions_lock = threading.Lock()
 
 # ===== ПРОВЕРКА ДОПУСТИМОГО ФАЙЛА =====
 # Проверяет, имеет ли файл разрешенное расширение
@@ -433,16 +416,10 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
         'blocked_bot': blocked_bot, 'deactivated': deactivated,
         'added_to_banned': added_to_banned, 'removed_from_banned': removed_from_banned
     }
-# ===== Конец функции send_broadcast_async =====
 
 # ===== РЕГИСТРАЦИЯ РОУТОВ МОДУЛЯ =====
-# Инициализирует планировщик и подключает Flask-эндпоинты
+# Подключает Flask-эндпоинты раздела Прочее
 def register_other_routes(flask_app, login_required, get_common_template_data):
-    global scheduler
-    if scheduler is None:
-        scheduler = server_plan.ServerScheduler(ssh_executor=execute_ssh_command, log_func=lambda msg: logger.info(msg))
-        scheduler.start()
-
     # ===== СТРАНИЦА "ПРОЧЕЕ" =====
     # Отображает основной интерфейс раздела дополнительных функций
     @flask_app.route('/other')
@@ -1017,7 +994,9 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     uptime_parts = parts[0].strip().split()
                     uptime_seconds = float(uptime_parts[0]) if (uptime_parts and uptime_parts[0]) else 0
                     
-                    cpu_str = parts[1].strip().replace(',', '.').replace('%', '') 
+                    cpu_str = parts[1].strip().replace(',', '.')
+                    import re
+                    cpu_str = re.sub(r'[^0-9.]', '', cpu_str)
                     cpu_usage = float(cpu_str) if (cpu_str and cpu_str != '') else 0.0
                     
                     cpu_cores = int(parts[2].strip()) if parts[2].strip().isdigit() else 1
@@ -1337,7 +1316,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if os.name == 'nt':
                 yield f"data: [INFO] --- Windows Logs Simulation Mode ---\n\n"
                 while True:
-                    yield f"data: [INFO] {get_msk_time().isoformat()} - Heartbeat\n\n"
+                    yield f": heartbeat {get_msk_time().isoformat()}\n\n"
                     time.sleep(2)
                 return
 
@@ -1434,7 +1413,8 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                             while True:
                                 line = f.readline()
                                 if not line:
-                                    time.sleep(0.5)
+                                    yield f": heartbeat {get_msk_time().isoformat()}\n\n"
+                                    time.sleep(5)
                                     continue
                                 yield f"data: {line.strip()}\n\n"
                     except Exception as e: yield f"data: [ERROR] Ошибка чтения файла: {e}\n\n"
@@ -1444,6 +1424,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
 
         response = current_app.response_class(generate(), mimetype='text/event-stream')
         response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/event-stream; charset=utf-8'
         response.headers['X-Accel-Buffering'] = 'no'
         response.headers['Connection'] = 'keep-alive'
         return response

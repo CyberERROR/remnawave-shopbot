@@ -106,7 +106,7 @@
         /* ========================================== */
 
         .max-w-7xl {
-            max-width: 90rem !important;
+            max-width: 100rem !important;
         }
 
         .material-symbols-outlined {
@@ -624,6 +624,8 @@
                         <div class="space-y-1">
                             {{ nav_link('settings_page', 'Настройки', 'settings') }}
                             {{ nav_link('monitor_page', 'Мониторинг', 'monitoring') }}
+                            {{ nav_link('node_page', 'Ноды', 'dns') }}
+
 
 
                             {% set is_other_active = request.endpoint == 'other_page' %}
@@ -674,8 +676,6 @@
                                         'broadcast') }}
                                         {{ accordion_link(url_for('other_page') ~ '?tab=promo', 'Промо коды',
                                         'confirmation_number', 'promo') }}
-                                        {{ accordion_link(url_for('other_page') ~ '?tab=servers', 'Сервера', 'dns',
-                                        'servers') }}
                                         {{ accordion_link(url_for('other_page') ~ '?tab=logs', 'Логи Бота', 'article',
                                         'logs') }}
                                         {% if webapp_exists %}
@@ -793,8 +793,10 @@
                             <span id="about-info-icon-mobile"
                                 class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">info</span>
                             <span id="about-new-badge-mobile" class="hidden relative flex items-center justify-center">
-                                <span class="animate-ping absolute inline-flex text-[10px] font-black text-red-500 blur-[2px] opacity-70 tracking-wider">NEW</span>
-                                <span class="relative inline-flex text-[10px] font-black text-red-500 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)] tracking-wider">NEW</span>
+                                <span
+                                    class="animate-ping absolute inline-flex text-[10px] font-black text-red-500 blur-[2px] opacity-70 tracking-wider">NEW</span>
+                                <span
+                                    class="relative inline-flex text-[10px] font-black text-red-500 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)] tracking-wider">NEW</span>
                             </span>
                         </button>
                     </div>
@@ -848,9 +850,12 @@
                                         class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
                                         title="О проекте">
                                         <span id="about-info-icon" class="material-symbols-outlined text-xl">info</span>
-                                        <span id="about-new-badge" class="hidden relative flex items-center justify-center">
-                                            <span class="animate-ping absolute inline-flex text-[10px] font-black text-red-500 blur-[2px] opacity-70 tracking-wider">NEW</span>
-                                            <span class="relative inline-flex text-[10px] font-black text-red-500 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)] tracking-wider">NEW</span>
+                                        <span id="about-new-badge"
+                                            class="hidden relative flex items-center justify-center">
+                                            <span
+                                                class="animate-ping absolute inline-flex text-[10px] font-black text-red-500 blur-[2px] opacity-70 tracking-wider">NEW</span>
+                                            <span
+                                                class="relative inline-flex text-[10px] font-black text-red-500 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)] tracking-wider">NEW</span>
                                         </span>
                                     </button>
                                 </div>
@@ -1301,11 +1306,15 @@
             // ===== ФУНКЦИЯ: Асинхронное обновление бейджей =====
             // Загружает количество тикетов без перезагрузки всей страницы
             const updateGlobalBadges = async () => {
+                let controller = null;
+                let timeoutId = null;
                 try {
                     const badge = document.getElementById('sidebar-support-badge');
                     if (!badge) return;
 
-                    const res = await fetch("{{ url_for('support_badge_counts_json') }}");
+                    controller = new AbortController();
+                    timeoutId = setTimeout(() => controller.abort(), 8000);
+                    const res = await fetch("{{ url_for('support_badge_counts_json') }}", { signal: controller.signal });
 
                     if (res.ok) {
                         const data = await res.json();
@@ -1326,8 +1335,10 @@
                         }
                     }
                 } catch (e) {
-                    if (e.name === 'TypeError') return;
+                    if (e.name === 'AbortError' || e.name === 'TypeError') return;
                     console.error('Badge update error:', e);
+                } finally {
+                    if (timeoutId) clearTimeout(timeoutId);
                 }
             };
 

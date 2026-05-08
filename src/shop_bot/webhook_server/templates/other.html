@@ -22,7 +22,6 @@
             {% for item in [
             {'id': 'broadcast', 'label': 'Рассылка', 'icon': 'send'},
             {'id': 'promo', 'label': 'Промо коды', 'icon': 'confirmation_number'},
-            {'id': 'servers', 'label': 'Сервера', 'icon': 'dns'},
             {'id': 'logs', 'label': 'Логи Бота', 'icon': 'article'},
             {'id': 'webapp', 'label': 'WebApp', 'icon': 'language'} if webapp_exists else none,
             {'id': 'remnawave', 'label': 'Remnawave', 'icon': 'graphic_eq'}
@@ -1607,98 +1606,7 @@
         </div>
 </section>
 
-<section id="tab-servers" class="tab-content hidden">
-    <div class="space-y-6">
-        <div
-            class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-            <div
-                class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
-            </div>
-            <div class="relative flex items-center gap-4">
-                <div
-                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
-                    <span class="material-symbols-outlined text-3xl">dns</span>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">Управление серверами</h3>
-                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Контроль ресурсов и
-                        сетевые настройки</p>
-                </div>
-            </div>
-        </div>
 
-        <!-- Remnawave Section -->
-        <div class="bg-white/5 border border-white/10 rounded-2xl p-1 shadow-2xl backdrop-blur-xl">
-            <div class="p-4">
-                <div id="remna-hosts-header"
-                    class="flex items-center justify-between cursor-pointer select-none rounded-xl px-2.5 py-1.5 hover:bg-white/5 transition-all group">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
-                            <span class="material-symbols-outlined text-lg">hub</span>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-white tracking-tight">Серверы Remnawave</h3>
-                            <p class="text-[9px] text-white/30 uppercase tracking-wider font-semibold">Хосты панели</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span
-                            class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/20"
-                            id="remna-hosts-count">0</span>
-                        <div id="btn-toggle-remna-hosts"
-                            class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/40 group-hover:text-white transition-all">
-                            <span class="material-symbols-outlined text-lg">expand_more</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="remna-hosts-list" class="hidden animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div class="text-center py-10 text-white/20">
-                        <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">dns</span>
-                        <p class="text-xs uppercase tracking-widest font-bold">Загрузка данных...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- SSH Section -->
-        <div class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl">
-            <div class="p-5">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-4">
-                        <div
-                            class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                            <span class="material-symbols-outlined text-xl">terminal</span>
-                        </div>
-                        <div>
-                            <h3 class="text-base font-bold text-white tracking-tight">SSH-цели</h3>
-                            <p class="text-[10px] text-white/40 uppercase tracking-widest font-medium mt-0.5">Удаленное
-                                управление нодами</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <button onclick="clearServersCache()" id="btn-clear-servers-cache"
-                            class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 hover:text-white text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all">
-                            <span class="material-symbols-outlined text-sm">delete_history</span>
-                            Сбросить кеш (0)
-                        </button>
-                        <span
-                            class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20"
-                            id="ssh-targets-count">0</span>
-                    </div>
-                </div>
-
-                <div id="ssh-targets-list" class="animate-in fade-in duration-500">
-                    <div class="text-center py-12 text-white/20">
-                        <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">terminal</span>
-                        <p class="text-xs uppercase tracking-widest font-bold">Синхронизация...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
 
 <section id="tab-logs" class="tab-content hidden">
     <div class="space-y-6">
@@ -2413,6 +2321,23 @@
     let sshTargetsData = [];
     let currentSchedulerTarget = null;
     let serversAutoRefresh = null;
+    let currentExecServer = null;
+    let currentExecServerType = null;
+    let currentExecEventSource = null;
+    let currentExecAbortController = null;
+    let currentExecReader = null;
+    let terminalBuffer = [];
+    let isTerminalFlushing = false;
+    const MAX_TERMINAL_LINES = 300;
+
+    function closeExecuteCommandModal() {
+        if (typeof window.closeExecuteCommandModal === 'function' && window.closeExecuteCommandModal !== closeExecuteCommandModal) {
+            return window.closeExecuteCommandModal();
+        }
+
+        const modal = document.getElementById('executeCommandModal');
+        if (modal) modal.style.display = 'none';
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
 
@@ -2456,6 +2381,8 @@
         let logsOffset = 0;
         let isLoadingHistory = false;
         let isAutoScrolling = true;
+        let logReconnectTimer = null;
+        let logReconnectDelay = 5000;
 
         window.showConfirm = function ({
             title = 'Подтверждение',
@@ -2749,6 +2676,10 @@
 
         function startLogStream() {
             if (logEventSource) logEventSource.close();
+            if (logReconnectTimer) {
+                clearTimeout(logReconnectTimer);
+                logReconnectTimer = null;
+            }
 
             if (logsContainer) logsContainer.innerHTML = '';
             updateLogStatus(true);
@@ -2756,6 +2687,7 @@
             logEventSource = new EventSource('/other/logs/stream');
 
             logEventSource.onmessage = function (event) {
+                logReconnectDelay = 5000;
                 const data = event.data;
                 if (data.startsWith('\x01CR\x01')) {
                     appendLogCR(data.substring(4));
@@ -2765,14 +2697,16 @@
             };
 
             logEventSource.onerror = function (err) {
-                console.error("EventSource failed:", err);
+                console.warn("Log stream disconnected. Reconnecting...");
                 logEventSource.close();
                 logEventSource = null;
                 updateLogStatus(false);
-                appendLog("[System] Connection lost. Reconnecting in 5s...");
-                setTimeout(() => {
+                appendLog(`[System] Connection lost. Reconnecting in ${Math.round(logReconnectDelay / 1000)}s...`);
+                logReconnectTimer = setTimeout(() => {
+                    logReconnectTimer = null;
+                    logReconnectDelay = Math.min(logReconnectDelay * 2, 60000);
                     if (location.hash === '#logs') startLogStream();
-                }, 5000);
+                }, logReconnectDelay);
             };
         }
 
@@ -2989,32 +2923,6 @@
             });
         }
 
-        const btnToggleRemnaHosts = document.getElementById('btn-toggle-remna-hosts');
-        const remnaHostsHeader = document.getElementById('remna-hosts-header');
-        const remnaHostsList = document.getElementById('remna-hosts-list');
-
-        function toggleRemnaHosts() {
-            if (!remnaHostsList) return;
-
-            remnaHostsList.classList.toggle('hidden');
-            const icon = btnToggleRemnaHosts?.querySelector('.material-symbols-outlined');
-            if (icon) {
-                if (remnaHostsList.classList.contains('hidden')) {
-                    icon.textContent = 'expand_more';
-                } else {
-                    icon.textContent = 'expand_less';
-                }
-            }
-        }
-
-        if (btnToggleRemnaHosts) {
-            btnToggleRemnaHosts.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleRemnaHosts();
-            });
-        }
-
-        // Инициализация активной вкладки
         const urlParams = new URLSearchParams(window.location.search);
         const queryTab = urlParams.get('tab');
         const hashTab = window.location.hash.substring(1);
@@ -3023,16 +2931,12 @@
         const activeTab = queryTab || hashTab || savedTab || 'broadcast';
         window.switchTab(activeTab);
 
-        if (remnaHostsHeader) {
-            remnaHostsHeader.addEventListener('click', toggleRemnaHosts);
-        }
-
         let initialTab = location.hash.slice(1);
         if (!initialTab) {
             initialTab = localStorage.getItem('remnawave_other_active_tab');
         }
 
-        const validTabs = ['broadcast', 'promo', 'servers', 'logs', 'webapp', 'remnawave'];
+        const validTabs = ['broadcast', 'promo', 'logs', 'webapp', 'remnawave'];
         if (!validTabs.includes(initialTab)) {
             initialTab = 'broadcast';
         }
@@ -3975,1021 +3879,6 @@
             }
         };
 
-        const promoTab = document.querySelector('[data-tab="promo"]');
-        if (promoTab) {
-            promoTab.addEventListener('click', () => {
-                loadPromos();
-            });
-        }
-
-
-
-        async function loadServers() {
-            const cachedData = localStorage.getItem('remnawave_servers_cache');
-            if (cachedData) {
-                try {
-                    const data = JSON.parse(cachedData);
-                    sshTargetsData = data.ssh_targets || [];
-                    renderHosts(data.hosts || [], true);
-                    renderSshTargets(data.ssh_targets || [], true);
-                    updateClearCacheBtn();
-
-                    setTimeout(() => refreshAllServersWithDelay(), 500);
-                    return;
-                } catch (e) {
-                    console.error('Failed to parse servers cache:', e);
-                }
-            }
-
-            try {
-                const resp = await fetch('/other/servers/list');
-                const data = await resp.json();
-
-                if (data.ok) {
-                    localStorage.setItem('remnawave_servers_cache', JSON.stringify(data));
-                    updateClearCacheBtn();
-                    sshTargetsData = data.ssh_targets || [];
-                    renderHosts(data.hosts || []);
-                    renderSshTargets(data.ssh_targets || []);
-
-                    setTimeout(() => refreshAllServersWithDelay(), 500);
-                }
-            } catch (e) {
-                console.error('Failed to load servers:', e);
-            }
-        }
-
-        async function refreshAllServersWithDelay() {
-            const hostCards = document.querySelectorAll('.host-card');
-            const targetCards = document.querySelectorAll('.ssh-target-card');
-
-            let delay = 0;
-
-            hostCards.forEach((card, idx) => {
-                const name = card.dataset.hostName;
-                if (name) {
-                    setTimeout(() => loadUptime('host', name, idx), delay);
-                    delay += 100;
-                }
-            });
-
-            targetCards.forEach((card, idx) => {
-                const name = card.dataset.targetName;
-                if (name) {
-                    setTimeout(() => loadUptime('ssh', name, idx), delay);
-                    delay += 100;
-                }
-            });
-        }
-
-        setInterval(() => {
-            const activeTab = document.querySelector('.tab-btn.bg-primary');
-            if (activeTab && activeTab.getAttribute('data-tab') === 'servers') {
-                refreshAllServersWithDelay();
-            }
-        }, 300000);
-
-        function renderHosts(hosts, fromCache = false) {
-            const listEl = document.getElementById('remna-hosts-list');
-            const countEl = document.getElementById('remna-hosts-count');
-
-            countEl.textContent = hosts.length;
-
-            if (hosts.length === 0) {
-                listEl.innerHTML = `
-                    <div class="text-center py-6 text-blue-300/40">
-                        <span class="material-symbols-outlined text-3xl mb-2">dns</span>
-                        <p class="text-sm">Хосты не добавлены</p>
-                    </div>
-                `;
-                return;
-            }
-
-            listEl.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    ${hosts.map((host, idx) => `
-                        <div class="rounded-xl bg-white/5 border border-white/10 overflow-hidden host-card transition-transform duration-200" draggable="true" data-host-name="${host.host_name}">
-                            <div class="p-4">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="flex items-center gap-2.5">
-                                        <div class="cursor-grab active:cursor-grabbing text-white/20 hover:text-white transition-colors drag-handle -ml-1">
-                                            <span class="material-symbols-outlined">drag_indicator</span>
-                                        </div>
-                                        <div class="relative">
-                                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/10 flex items-center justify-center border border-blue-500/20">
-                                                <span class="material-symbols-outlined text-blue-400 text-lg">dns</span>
-                                            </div>
-                                            <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-blue-400 shadow-lg shadow-blue-500/50" id="host-status-${idx}"></div>
-                                        </div>
-                                        <div class="min-w-0">
-                                            <div class="text-white font-semibold text-sm truncate max-w-[140px]">${host.host_name}</div>
-                                            <div class="text-white/40 text-[10px] font-mono truncate">${host.ssh_host || 'N/A'}:${host.ssh_port || 22}</div>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-1">
-                                        <button onclick="refreshHostUptime('${host.host_name}', ${idx})" 
-                                            class="w-7 h-7 rounded-lg bg-white/5 hover:border-white/30 border border-transparent flex items-center justify-center text-white/50 hover:text-white transition-all" title="Обновить">
-                                            <span class="material-symbols-outlined text-sm">refresh</span>
-                                        </button>
-                                        <div class="relative" id="host-menu-${idx}">
-                                            <button onclick="toggleHostMenu(${idx})" 
-                                                class="w-7 h-7 rounded-lg bg-white/5 hover:border-white/30 border border-transparent flex items-center justify-center text-white/50 hover:text-white transition-all">
-                                                <span class="material-symbols-outlined text-sm">more_vert</span>
-                                            </button>
-                                            <div id="host-dropdown-${idx}" class="hidden absolute right-0 top-full mt-1 w-44 bg-[#0d1f17] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
-                                                <button onclick="rebootServer('host', '${host.host_name}'); toggleHostMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-all">
-                                                    <span class="material-symbols-outlined text-sm">restart_alt</span>
-                                                    Перезагрузить
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="rounded-lg bg-black/20 border border-white/[0.04] p-3 mb-3" id="host-uptime-${idx}">
-                                    ${host.uptime_data
-                    ? getUptimeHTML(host.uptime_data)
-                    : `<div class="flex items-center justify-center gap-2 text-white/40 py-2">
-                                            <span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                                            <span class="text-xs">Загрузка...</span>
-                                           </div>`
-                }
-                                </div>
-                                
-                                <div class="flex gap-2">
-                                    <button onclick="window.openExecuteCommandModal('host', '${host.host_name}')" 
-                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
-                                        <span class="material-symbols-outlined text-sm">terminal</span>
-                                        Терминал
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-
-            if (!fromCache) {
-                hosts.forEach((host, idx) => {
-                    loadUptime('host', host.host_name, idx);
-                });
-            }
-
-            initHostsDragAndDrop();
-        }
-
-        function initHostsDragAndDrop() {
-            const listEl = document.getElementById('remna-hosts-list');
-            const container = listEl.querySelector('.grid');
-            if (!container) return;
-
-            let draggedItem = null;
-
-            container.addEventListener('dragstart', (e) => {
-                const card = e.target.closest('.host-card');
-                if (!card) return;
-
-                draggedItem = card;
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', card.dataset.hostName);
-
-                setTimeout(() => {
-                    card.classList.add('opacity-50', 'scale-95');
-                }, 0);
-            });
-
-            container.addEventListener('dragend', (e) => {
-                if (draggedItem) {
-                    draggedItem.classList.remove('opacity-50', 'scale-95');
-                    draggedItem = null;
-                    saveHostsSortOrder();
-                }
-            });
-
-            container.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                if (!draggedItem) return;
-
-                const targetCard = e.target.closest('.host-card');
-                if (targetCard && targetCard !== draggedItem) {
-                    const siblings = Array.from(container.children);
-                    const draggedIndex = siblings.indexOf(draggedItem);
-                    const targetIndex = siblings.indexOf(targetCard);
-
-                    if (draggedIndex < targetIndex) {
-                        container.insertBefore(draggedItem, targetCard.nextSibling);
-                    } else {
-                        container.insertBefore(draggedItem, targetCard);
-                    }
-                }
-            });
-        }
-
-        async function saveHostsSortOrder() {
-            const cards = document.querySelectorAll('.host-card');
-            const order = Array.from(cards).map(card => card.dataset.hostName);
-
-            try {
-                await fetch('/other/servers/hosts/reorder', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': window.getCsrfToken()
-                    },
-                    body: JSON.stringify({ order: order })
-                });
-            } catch (e) {
-                console.error('Failed to save sort order:', e);
-                window.showToast('danger', 'Ошибка сохранения порядка');
-            }
-        }
-
-        window.toggleHostMenu = function (idx) {
-            const dropdown = document.getElementById(`host-dropdown-${idx}`);
-            const allDropdowns = document.querySelectorAll('[id^="host-dropdown-"]');
-            allDropdowns.forEach(d => {
-                if (d !== dropdown) d.classList.add('hidden');
-            });
-            dropdown.classList.toggle('hidden');
-        };
-
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('[id^="host-menu-"]')) {
-                document.querySelectorAll('[id^="host-dropdown-"]').forEach(d => d.classList.add('hidden'));
-            }
-        });
-
-        function renderSshTargets(targets, fromCache = false) {
-            const listEl = document.getElementById('ssh-targets-list');
-            const countEl = document.getElementById('ssh-targets-count');
-
-            countEl.textContent = targets.length;
-
-            if (targets.length === 0) {
-                listEl.innerHTML = `
-                    <div class="text-center py-8 text-yellow-300/40">
-                        <span class="material-symbols-outlined text-4xl mb-2">terminal</span>
-                        <p class="text-sm">SSH-цели не добавлены</p>
-                    </div>
-                `;
-                return;
-            }
-
-            listEl.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    ${targets.map((target, idx) => `
-                        <div class="rounded-xl bg-white/5 border border-white/10 overflow-hidden ssh-target-card transition-transform duration-200" draggable="true" data-target-name="${target.target_name}">
-                            
-                            <div class="relative p-4">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="flex items-center gap-2.5">
-                                        <div class="cursor-grab active:cursor-grabbing text-white/20 hover:text-white transition-colors drag-handle -ml-1">
-                                            <span class="material-symbols-outlined">drag_indicator</span>
-                                        </div>
-                                        <div class="relative">
-                                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/10 flex items-center justify-center border border-yellow-500/20">
-                                                <span class="material-symbols-outlined text-yellow-400 text-lg">dns</span>
-                                            </div>
-                                            <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-yellow-400 shadow-lg shadow-yellow-500/50" id="target-status-${idx}"></div>
-                                        </div>
-                                        <div class="min-w-0">
-                                            <div class="text-white font-semibold text-sm truncate max-w-[140px]">${target.target_name}</div>
-                                            <div class="text-white/40 text-[10px] font-mono truncate">${target.ssh_host}:${target.ssh_port || 22}</div>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-1">
-                                        <button onclick="refreshTargetUptime('${target.target_name}', ${idx})" 
-                                            class="w-7 h-7 rounded-lg bg-white/5 hover:border-white/30 border border-transparent flex items-center justify-center text-white/50 hover:text-white transition-all" title="Обновить">
-                                            <span class="material-symbols-outlined text-sm">refresh</span>
-                                        </button>
-                                        <div class="relative" id="target-menu-${idx}">
-                                            <button onclick="toggleTargetMenu(${idx})" 
-                                                class="w-7 h-7 rounded-lg bg-white/5 hover:border-white/30 border border-transparent flex items-center justify-center text-white/50 hover:text-white transition-all">
-                                                <span class="material-symbols-outlined text-sm">more_vert</span>
-                                            </button>
-                                            <div id="target-dropdown-${idx}" class="hidden absolute right-0 top-full mt-1 w-44 bg-[#0d1f17] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
-                                                <button onclick="rebootServer('ssh', '${target.target_name}'); toggleTargetMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-all">
-                                                    <span class="material-symbols-outlined text-sm">restart_alt</span>
-                                                    Перезагрузить
-                                                </button>
-                                                <button onclick="openSchedulerModal('${target.target_name}'); toggleTargetMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-cyan-400 hover:bg-cyan-500/10 flex items-center gap-2 transition-all">
-                                                    <span class="material-symbols-outlined text-sm">schedule</span>
-                                                    Планировщик
-                                                </button>
-                                                <div class="border-t border-white/5"></div>
-                                                <button onclick="openWarpWizard('${target.target_name}'); toggleTargetMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-blue-400 hover:bg-blue-500/10 flex items-center gap-2 transition-all">
-                                                    <span class="material-symbols-outlined text-sm">vpn_lock</span>
-                                                    WARP
-                                                </button>
-                                                <button onclick="openSwapModal('${target.target_name}'); toggleTargetMenu(${idx})" 
-                                                    class="w-full px-3 py-2 text-left text-xs text-purple-400 hover:bg-purple-500/10 flex items-center gap-2 transition-all">
-                                                    <span class="material-symbols-outlined text-sm">memory</span>
-                                                    SWAP
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="rounded-lg bg-black/20 border border-white/[0.04] p-3 mb-3" id="target-uptime-${idx}">
-                                    ${target.uptime_data
-                    ? getUptimeHTML(target.uptime_data)
-                    : `<div class="flex items-center justify-center gap-2 text-white/40 py-2">
-                                            <span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                                            <span class="text-xs">Загрузка...</span>
-                                           </div>`
-                }
-                                </div>
-                                
-                                <div class="flex gap-2">
-                                    <button onclick="deployNodeWizard('${target.target_name}')" 
-                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
-                                        <span class="material-symbols-outlined text-sm">rocket_launch</span>
-                                        Развернуть
-                                    </button>
-                                    <button onclick="window.openExecuteCommandModal('ssh', '${target.target_name}')" 
-                                        class="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:border-white/30 border border-white/10 text-white/80 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
-                                        <span class="material-symbols-outlined text-sm">terminal</span>
-                                        Терминал
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-
-            if (!fromCache) {
-                targets.forEach((target, idx) => {
-                    loadUptime('ssh', target.target_name, idx);
-                });
-            }
-
-            initSshDragAndDrop();
-        }
-
-        window.toggleTargetMenu = function (idx) {
-            const dropdown = document.getElementById(`target-dropdown-${idx}`);
-            const allDropdowns = document.querySelectorAll('[id^="target-dropdown-"]');
-            allDropdowns.forEach(d => {
-                if (d !== dropdown) d.classList.add('hidden');
-            });
-            dropdown.classList.toggle('hidden');
-        };
-
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('[id^="target-menu-"]')) {
-                document.querySelectorAll('[id^="target-dropdown-"]').forEach(d => d.classList.add('hidden'));
-            }
-        });
-
-        function getUptimeHTML(data) {
-            const uptimeSeconds = data.uptime_seconds || 0;
-            const isUptimeLong = uptimeSeconds >= 864000;
-
-            const cpuPercent = data.cpu_percent || 0;
-            const ramPercent = data.ram_percent || 0;
-            const swapPercent = data.swap_percent || 0;
-
-            let cpuBarColor = 'from-emerald-500 to-emerald-400';
-            let cpuTextColor = 'text-emerald-400';
-            if (cpuPercent > 70) { cpuBarColor = 'from-red-500 to-red-400'; cpuTextColor = 'text-red-400'; }
-            else if (cpuPercent > 40) { cpuBarColor = 'from-amber-500 to-yellow-400'; cpuTextColor = 'text-amber-400'; }
-
-            let ramBarColor = 'from-emerald-500 to-emerald-400';
-            let ramTextColor = 'text-emerald-400';
-            if (ramPercent > 85) { ramBarColor = 'from-red-500 to-red-400'; ramTextColor = 'text-red-400'; }
-            else if (ramPercent > 55) { ramBarColor = 'from-amber-500 to-yellow-400'; ramTextColor = 'text-amber-400'; }
-
-            let swapBarColor = 'from-emerald-500 to-emerald-400';
-            let swapTextColor = 'text-emerald-400';
-            if (swapPercent > 85) { swapBarColor = 'from-red-500 to-red-400'; swapTextColor = 'text-red-400'; }
-            else if (swapPercent > 65) { swapBarColor = 'from-amber-500 to-yellow-400'; swapTextColor = 'text-amber-400'; }
-
-            return `
-                <div class="space-y-3 animate-in fade-in duration-300">
-                    <div class="flex items-center justify-between pb-2 border-b border-white/[0.04]">
-                        <div class="flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-white/30" style="font-size: 14px">schedule</span>
-                            <span class="text-[11px] text-white/70 font-medium">Uptime</span>
-                        </div>
-                        <span class="text-[11px] ${isUptimeLong ? 'text-emerald-400' : 'text-white'} font-semibold">${data.uptime_formatted}</span>
-                    </div>
-                    
-                    <div class="space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-1.5">
-                                <span class="material-symbols-outlined ${cpuTextColor}" style="font-size: 13px">memory</span>
-                                <span class="text-[11px] text-white/70">CPU</span>
-                            </div>
-                            <span class="text-[11px] ${cpuTextColor} font-semibold">${cpuPercent}% <span class="text-white/40 font-normal">(${data.cpu_cores} ядер${data.cpu_cores > 1 && data.cpu_cores < 5 ? 'а' : ''})</span></span>
-                        </div>
-                        <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r ${cpuBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${cpuPercent}%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-1.5">
-                                <span class="material-symbols-outlined ${ramTextColor}" style="font-size: 13px">developer_board</span>
-                                <span class="text-[11px] text-white/70">RAM</span>
-                            </div>
-                            <span class="text-[11px] ${ramTextColor} font-semibold">${ramPercent}% <span class="text-white/40 font-normal">(${data.ram_used} / ${data.ram_total} МБ)</span></span>
-                        </div>
-                        <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r ${ramBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${ramPercent}%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-1.5">
-                                <span class="material-symbols-outlined ${data.swap_total > 0 ? swapTextColor : 'text-white/30'}" style="font-size: 13px">swap_horiz</span>
-                                <span class="text-[11px] text-white/70">SWAP</span>
-                            </div>
-                            ${data.swap_total > 0
-                    ? `<span class="text-[11px] ${swapTextColor} font-semibold">${swapPercent}% <span class="text-white/40 font-normal">(${data.swap_used} / ${data.swap_total} МБ) от ${data.swappiness}%</span></span>`
-                    : `<span class="text-[11px] text-white/30 font-medium">НЕТ</span>`
-                }
-                        </div>
-                        ${data.swap_total > 0
-                    ? `<div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div class="h-full bg-gradient-to-r ${swapBarColor} rounded-full transition-all duration-500 shadow-sm" style="width: ${swapPercent}%"></div>
-                               </div>`
-                    : `<div class="h-1.5 bg-white/5 rounded-full overflow-hidden"></div>`
-                }
-                    </div>
-                    
-                    <div class="flex items-center justify-around pt-2 border-t border-white/[0.04]">
-                        <div class="flex items-center gap-1.5" title="${data.net_rx_mbps} Mbps">
-                            <span class="material-symbols-outlined text-blue-400" style="font-size: 14px">download</span>
-                            <span class="text-[10px] text-white/90 font-mono">${data.net_rx_mbs} MB/s</span>
-                        </div>
-                        <div class="flex items-center gap-1.5" title="${data.net_tx_mbps} Mbps">
-                            <span class="material-symbols-outlined text-orange-400" style="font-size: 14px">upload</span>
-                            <span class="text-[10px] text-white/90 font-mono">${data.net_tx_mbs} MB/s</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        window.clearServersCache = function () {
-            localStorage.removeItem('remnawave_servers_cache');
-            updateClearCacheBtn();
-            window.showToast('success', 'Кеш серверов очищен');
-            loadServers();
-        };
-
-        function updateClearCacheBtn() {
-            const btn = document.getElementById('btn-clear-servers-cache');
-            if (!btn) return;
-            const cachedStr = localStorage.getItem('remnawave_servers_cache');
-            let count = 0;
-            if (cachedStr) {
-                try {
-                    const cachedObj = JSON.parse(cachedStr);
-                    count = (cachedObj.hosts?.length || 0) + (cachedObj.ssh_targets?.length || 0);
-                } catch (e) { }
-            }
-            btn.innerHTML = `<span class="material-symbols-outlined text-sm">delete_history</span> Сбросить кеш (${count})`;
-        }
-
-        async function loadUptime(type, name, idx) {
-            const uptimeEl = type === 'host' ? document.getElementById(`host-uptime-${idx}`) : document.getElementById(`target-uptime-${idx}`);
-            const statusEl = type === 'host' ? document.getElementById(`host-status-${idx}`) : document.getElementById(`target-status-${idx}`);
-
-            try {
-                const resp = await fetch(`/other/servers/uptime/${type}/${encodeURIComponent(name)}`);
-                const data = await resp.json();
-
-                if (data.ok) {
-                    if (uptimeEl) {
-                        uptimeEl.innerHTML = getUptimeHTML(data);
-                    }
-                    if (statusEl) {
-                        statusEl.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-emerald-500 shadow-lg shadow-emerald-500/50';
-                    }
-
-                    const cachedStr = localStorage.getItem('remnawave_servers_cache');
-                    if (cachedStr) {
-                        try {
-                            const cachedObj = JSON.parse(cachedStr);
-                            if (type === 'host') {
-                                const hIdx = cachedObj.hosts.findIndex(h => h.host_name === name);
-                                if (hIdx !== -1) cachedObj.hosts[hIdx].uptime_data = data;
-                            } else {
-                                const tIdx = cachedObj.ssh_targets.findIndex(t => t.target_name === name);
-                                if (tIdx !== -1) cachedObj.ssh_targets[tIdx].uptime_data = data;
-                            }
-                            localStorage.setItem('remnawave_servers_cache', JSON.stringify(cachedObj));
-                            updateClearCacheBtn();
-                        } catch (err) { }
-                    }
-                } else {
-                    if (uptimeEl) {
-                        uptimeEl.innerHTML = `<div class="flex items-center justify-center gap-2 text-red-400 py-2"><span class="material-symbols-outlined text-sm">error</span><span class="text-xs">${data.error || 'Недоступен'}</span></div>`;
-                    }
-                    if (statusEl) {
-                        statusEl.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-red-500 shadow-lg shadow-red-500/50';
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to load uptime:', e);
-                if (uptimeEl) {
-                    uptimeEl.innerHTML = '<div class="flex items-center justify-center gap-2 text-red-400 py-2"><span class="material-symbols-outlined text-sm">error</span><span class="text-xs">Ошибка загрузки</span></div>';
-                }
-                if (statusEl) {
-                    statusEl.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-red-500 shadow-lg shadow-red-500/50';
-                }
-            }
-        }
-
-        window.refreshHostUptime = function (name, idx) {
-            loadUptime('host', name, idx);
-        };
-
-        window.refreshTargetUptime = function (name, idx) {
-            loadUptime('ssh', name, idx);
-        };
-
-        window.rebootServer = async function (type, name) {
-            const typeName = type === 'host' ? 'сервер' : 'SSH-цель';
-
-            const confirmed = await window.showConfirm({
-                title: 'Перезагрузка сервера',
-                message: `Вы уверены, что хотите перезагрузить ${typeName} "${name}"?\n\nЭто действие приведет к перезапуску системы.`,
-                type: 'warning',
-                confirmText: 'Перезагрузить',
-                cancelText: 'Отмена'
-            });
-            if (!confirmed) return;
-
-            try {
-                const resp = await fetch(`/other/servers/reboot/${type}/${encodeURIComponent(name)}`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': window.getCsrfToken()
-                    }
-                });
-                const data = await resp.json();
-
-                if (data.ok) {
-                    window.showToast('success', `Команда перезагрузки отправлена на ${name}`);
-
-                    setTimeout(() => {
-                        loadServers();
-                    }, 5000);
-                } else {
-                    window.showToast('danger', data.error || 'Ошибка перезагрузки');
-                }
-            } catch (e) {
-                console.error(e);
-                window.showToast('danger', 'Ошибка перезагрузки сервера');
-            }
-        };
-
-        const serversTab = document.querySelector('[data-tab="servers"]');
-        if (serversTab) {
-            serversTab.addEventListener('click', () => {
-                loadServers();
-
-                if (serversAutoRefresh) {
-                    clearInterval(serversAutoRefresh);
-                }
-                serversAutoRefresh = setInterval(() => {
-                    loadServers();
-                }, 300000);
-            });
-        }
-
-        let currentDeployTarget = null;
-        let currentDeployStep = 1;
-
-        window.deployNodeWizard = async function (targetName) {
-            currentDeployTarget = targetName;
-            currentDeployStep = 1;
-
-            document.getElementById('deploy-target-name').textContent = targetName;
-            document.getElementById('deploy-output').textContent = 'Проверка состояния...';
-            document.getElementById('docker-compose-content').value = '';
-
-            for (let i = 1; i <= 5; i++) {
-                document.getElementById(`deploy-step-${i}`).classList.add('hidden');
-            }
-
-            updateDeployStep(1);
-            openModal('deployNodeModal');
-
-            setupDeployHandlers();
-
-            // Показываем кнопки в состоянии проверки
-            setDockerButtonsCheckingState(true);
-
-            try {
-                appendDeployOutput('[INFO] Проверка текущего состояния развертывания...');
-
-                const resp = await fetch(`/other/servers/deploy/check-status/${encodeURIComponent(targetName)}`);
-                if (!resp.ok) {
-                    appendDeployOutput('[WARNING] Не удалось проверить состояние. Начинаем с шага 1.');
-                    setDockerButtonsCheckingState(false, false);
-                    return;
-                }
-
-                const data = await resp.json();
-                if (data.ok && data.status) {
-                    const status = data.status;
-
-                    if (status.docker_installed) {
-                        appendDeployOutput('[✓] Docker установлен');
-                        setDockerButtonsCheckingState(false, true);
-                    } else {
-                        appendDeployOutput('[✗] Docker не установлен');
-                        setDockerButtonsCheckingState(false, false);
-                    }
-
-                    if (status.directory_exists) {
-                        appendDeployOutput('[✓] Директория /opt/remnanode существует');
-                    } else if (status.docker_installed) {
-                        appendDeployOutput('[✗] Директория /opt/remnanode не найдена');
-                    }
-
-                    if (status.compose_file_exists) {
-                        appendDeployOutput('[✓] Файл docker-compose.yml существует');
-                    } else if (status.directory_exists) {
-                        appendDeployOutput('[✗] Файл docker-compose.yml не найден');
-                    }
-
-                    const suggestedStep = status.suggested_step || 1;
-                    appendDeployOutput(`[INFO] Переход к шагу ${suggestedStep}...`);
-
-                    if (suggestedStep === 5) {
-                        appendDeployOutput('[SUCCESS] Нода уже развернута! Можете управлять ею.');
-                        try {
-                            const composeResp = await fetch(`/other/servers/deploy/view-compose/${encodeURIComponent(targetName)}`);
-                            if (composeResp.ok) {
-                                const composeData = await composeResp.json();
-                                if (composeData.ok) {
-                                    document.getElementById('docker-compose-content').value = composeData.content;
-                                }
-                            }
-                        } catch (e) {
-                            console.error('Failed to load docker-compose.yml:', e);
-                        }
-                    }
-
-                    updateDeployStep(suggestedStep);
-                } else {
-                    appendDeployOutput('[WARNING] Не удалось проверить состояние. Начинаем с шага 1.');
-                    setDockerButtonsCheckingState(false, false);
-                }
-            } catch (e) {
-                console.error('Status check error:', e);
-                appendDeployOutput('[WARNING] Ошибка проверки состояния. Начинаем с шага 1.');
-                setDockerButtonsCheckingState(false, false);
-            }
-        };
-
-        // Функция для установки состояния кнопок Docker
-        function setDockerButtonsCheckingState(isChecking, dockerInstalled = false) {
-            const installButtons = document.querySelectorAll('.install-docker-btn');
-
-            installButtons.forEach(btn => {
-                const iconEl = btn.querySelector('.btn-icon');
-                const textSpan = btn.querySelector('.btn-text');
-
-                if (isChecking) {
-                    // Состояние проверки
-                    btn.disabled = true;
-                    if (textSpan) textSpan.textContent = 'Идет проверка...';
-                } else {
-                    // Проверка завершена
-                    if (dockerInstalled) {
-                        // Docker установлен - показываем что установлен
-                        btn.disabled = true;
-                        if (iconEl && iconEl.tagName === 'svg') {
-                            iconEl.outerHTML = '<span class="material-symbols-outlined text-sm btn-icon">check_circle</span>';
-                        }
-                        if (textSpan) textSpan.textContent = 'Установлен';
-                    } else {
-                        // Docker не установлен - включаем кнопку установки
-                        btn.disabled = false;
-                        if (iconEl && iconEl.tagName === 'svg') {
-                            iconEl.outerHTML = '<span class="material-symbols-outlined text-sm btn-icon">download</span>';
-                        }
-                        if (textSpan) textSpan.textContent = 'Установить';
-                    }
-                }
-            });
-        }
-
-        function setupDeployHandlers() {
-
-            // Обработчик для установки Docker на Ubuntu
-            document.getElementById('btn-install-docker-ubuntu').onclick = async function () {
-                await executeDeployStep('install-docker', this, async () => {
-                    const formData = new FormData();
-                    formData.append('csrf_token', window.getCsrfToken());
-                    formData.append('os_type', 'ubuntu');
-
-                    const resp = await fetch(`/other/servers/deploy/install-docker/${encodeURIComponent(currentDeployTarget)}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!resp.ok) {
-                        if (resp.status === 504) {
-                            throw new Error('TIMEOUT_504: Установка Docker занимает 2-5 минут. Операция может продолжаться на сервере.');
-                        }
-                        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-                    }
-
-                    return await resp.json();
-                }, 2);
-            };
-
-            // Обработчик для установки Docker на Debian
-            document.getElementById('btn-install-docker-debian').onclick = async function () {
-                await executeDeployStep('install-docker', this, async () => {
-                    const formData = new FormData();
-                    formData.append('csrf_token', window.getCsrfToken());
-                    formData.append('os_type', 'debian');
-
-                    const resp = await fetch(`/other/servers/deploy/install-docker/${encodeURIComponent(currentDeployTarget)}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!resp.ok) {
-                        if (resp.status === 504) {
-                            throw new Error('TIMEOUT_504: Установка Docker занимает 2-5 минут. Операция может продолжаться на сервере.');
-                        }
-                        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-                    }
-
-                    return await resp.json();
-                }, 2);
-            };
-
-            document.getElementById('btn-create-directory').onclick = async function () {
-                await executeDeployStep('create-directory', this, async () => {
-                    const resp = await fetch(`/other/servers/deploy/create-directory/${encodeURIComponent(currentDeployTarget)}`, {
-                        method: 'POST',
-                        headers: { 'X-CSRFToken': window.getCsrfToken() }
-                    });
-
-                    if (!resp.ok) {
-                        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-                    }
-
-                    return await resp.json();
-                }, 3);
-            };
-
-            document.getElementById('btn-save-compose').onclick = async function () {
-                const content = document.getElementById('docker-compose-content').value.trim();
-                if (!content) {
-                    window.showToast('warning', 'Введите содержимое файла docker-compose.yml');
-                    return;
-                }
-
-                await executeDeployStep('save-compose', this, async () => {
-                    const formData = new FormData();
-                    formData.append('csrf_token', window.getCsrfToken());
-                    formData.append('content', content);
-
-                    const resp = await fetch(`/other/servers/deploy/save-compose/${encodeURIComponent(currentDeployTarget)}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!resp.ok) {
-                        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-                    }
-
-                    return await resp.json();
-                }, 4);
-            };
-
-            document.getElementById('btn-start-containers').onclick = async function () {
-                await executeDeployStep('start-containers', this, async () => {
-                    const formData = new FormData();
-                    formData.append('csrf_token', window.getCsrfToken());
-                    formData.append('action', 'start');
-
-                    const resp = await fetch(`/other/servers/deploy/manage-containers/${encodeURIComponent(currentDeployTarget)}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!resp.ok) {
-                        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-                    }
-
-                    return await resp.json();
-                }, 5);
-            };
-
-            document.getElementById('btn-view-compose').onclick = async function () {
-                try {
-                    const resp = await fetch(`/other/servers/deploy/view-compose/${encodeURIComponent(currentDeployTarget)}`);
-                    const data = await resp.json();
-
-                    if (data.ok) {
-                        document.getElementById('docker-compose-content').value = data.content;
-                        updateDeployStep(3);
-                        window.showToast('success', 'Содержимое файла загружено');
-                    } else {
-                        window.showToast('danger', data.error || 'Ошибка чтения файла');
-                    }
-                } catch (e) {
-                    console.error(e);
-                    window.showToast('danger', 'Ошибка загрузки файла');
-                }
-            };
-
-            document.getElementById('btn-cancel-compose').onclick = function () {
-                updateDeployStep(5);
-                window.showToast('info', 'Изменения не сохранены');
-            };
-
-            document.getElementById('btn-restart-node').onclick = async function () {
-                const confirmed = await window.showConfirm({
-                    title: 'Перезапуск ноды',
-                    message: 'Вы уверены, что хотите перезапустить ноду Remnawave?',
-                    type: 'warning',
-                    confirmText: 'Перезапустить',
-                    cancelText: 'Отмена'
-                });
-                if (!confirmed) return;
-
-                const btn = this;
-                btn.disabled = true;
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<svg class="animate-spin h-4 w-4 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Перезапуск...';
-
-                try {
-                    const formData = new FormData();
-                    formData.append('csrf_token', window.getCsrfToken());
-                    formData.append('action', 'restart');
-
-                    const resp = await fetch(`/other/servers/deploy/manage-containers/${encodeURIComponent(currentDeployTarget)}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await resp.json();
-
-                    if (data.ok) {
-                        appendDeployOutput('[SUCCESS] ' + data.message);
-                        if (data.output) appendDeployOutput(data.output);
-                        window.showToast('success', 'Нода перезапущена');
-                    } else {
-                        appendDeployOutput('[ERROR] ' + (data.error || 'Ошибка перезапуска'));
-                        if (data.output) appendDeployOutput(data.output);
-                        window.showToast('danger', data.error || 'Ошибка перезапуска');
-                    }
-                } catch (e) {
-                    console.error(e);
-                    window.showToast('danger', 'Ошибка перезапуска ноды');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                }
-            };
-
-            document.getElementById('btn-view-logs').onclick = async function () {
-                const btn = this;
-                btn.disabled = true;
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<svg class="animate-spin h-4 w-4 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Загрузка...';
-
-                try {
-                    const formData = new FormData();
-                    formData.append('csrf_token', window.getCsrfToken());
-                    formData.append('action', 'logs');
-
-                    const resp = await fetch(`/other/servers/deploy/manage-containers/${encodeURIComponent(currentDeployTarget)}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await resp.json();
-
-                    if (data.ok) {
-                        appendDeployOutput('[LOGS]\n' + data.output);
-                        window.showToast('success', 'Логи загружены');
-                    } else {
-                        appendDeployOutput('[ERROR] ' + (data.error || 'Ошибка получения логов'));
-                        window.showToast('danger', data.error || 'Ошибка получения логов');
-                    }
-                } catch (e) {
-                    console.error(e);
-                    window.showToast('danger', 'Ошибка получения логов');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                }
-            };
-
-            document.getElementById('btn-clear-deploy-logs').onclick = function () {
-                document.getElementById('deploy-output').textContent = 'Ожидание действий...';
-            };
-
-            document.getElementById('btn-remove-all').onclick = function () {
-
-                showDeleteConfirmation(currentDeployTarget);
-            };
-        }
-
-        function showDeleteConfirmation(serverName) {
-            const modal = document.getElementById('confirmDeleteModal');
-            const input = document.getElementById('confirm-delete-input');
-            const confirmBtn = document.getElementById('btn-confirm-delete');
-            const cancelBtn = document.getElementById('btn-cancel-delete');
-            const serverNameSpan = document.getElementById('confirm-server-name');
-
-            serverNameSpan.textContent = serverName;
-            input.value = '';
-            confirmBtn.disabled = true;
-
-            modal.style.display = 'flex';
-            setTimeout(() => input.focus(), 100);
-
-            const validateInput = () => {
-                confirmBtn.disabled = input.value !== serverName;
-            };
-
-            input.oninput = validateInput;
-
-            input.onkeypress = (e) => {
-                if (e.key === 'Enter' && !confirmBtn.disabled) {
-                    confirmBtn.click();
-                }
-            };
-
-            const closeConfirmModal = () => {
-                modal.style.display = 'none';
-                input.value = '';
-                input.oninput = null;
-                input.onkeypress = null;
-            };
-
-            cancelBtn.onclick = closeConfirmModal;
-
-            confirmBtn.onclick = async () => {
-                if (input.value !== serverName) {
-                    window.showToast('warning', 'Название сервера не совпадает');
-                    return;
-                }
-
-                closeConfirmModal();
-
-                const btn = document.getElementById('btn-remove-all');
-                btn.disabled = true;
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<svg class="animate-spin h-4 w-4 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Удаление...';
-
-                try {
-                    appendDeployOutput('[WARNING] Начинается полное удаление ноды и Docker...');
-
-                    const resp = await fetch(`/other/servers/deploy/remove-all/${encodeURIComponent(currentDeployTarget)}`, {
-                        method: 'POST',
-                        headers: { 'X-CSRFToken': window.getCsrfToken() }
-                    });
-
-                    if (!resp.ok) {
-                        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-                    }
-
-                    const data = await resp.json();
-
-                    if (data.ok) {
-                        appendDeployOutput('[SUCCESS] ' + data.message);
-                        if (data.output) appendDeployOutput(data.output);
-                        window.showToast('success', 'Нода и Docker успешно удалены');
-
-                        setTimeout(() => {
-                            closeModal('deployNodeModal');
-                        }, 2000);
-                    } else {
-                        appendDeployOutput('[ERROR] ' + (data.error || 'Ошибка удаления'));
-                        if (data.output) appendDeployOutput(data.output);
-                        window.showToast('danger', data.error || 'Ошибка удаления');
-                    }
-                } catch (e) {
-                    console.error('Remove all error:', e);
-                    appendDeployOutput('[ERROR] ' + e.message);
-                    window.showToast('danger', 'Ошибка удаления: ' + e.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                }
-            };
-        }
 
         async function executeDeployStep(stepName, button, apiCall, nextStep) {
             button.disabled = true;
@@ -5673,17 +4562,20 @@
                 btn.disabled = false;
                 btn.innerHTML = '<span class="material-symbols-outlined text-sm">delete_forever</span> Удалить SWAP';
             }
-        };
 
-        let currentExecServer = null;
-        let currentExecServerType = null;
-        let currentExecEventSource = null;
-        let currentExecAbortController = null;
-        let currentExecReader = null;
+            // Закрываем SSH сессию на сервере
+            if (currentExecServer && currentExecServerType) {
+                const formData = new FormData();
+                formData.append('csrf_token', window.getCsrfToken());
+                fetch(`/other/servers/execute/close/${encodeURIComponent(currentExecServerType)}/${encodeURIComponent(currentExecServer)}`, {
+                    method: 'POST',
+                    body: formData
+                }).catch(() => { });
+            }
 
-        let terminalBuffer = [];
-        let isTerminalFlushing = false;
-        const MAX_TERMINAL_LINES = 300;
+            currentExecServer = null;
+            currentExecServerType = null;
+        }
 
         function flushTerminalBuffer() {
             if (terminalBuffer.length === 0) {
@@ -5768,7 +4660,7 @@
             setTimeout(() => document.getElementById('exec-command-input').focus(), 100);
         };
 
-        function closeExecuteCommandModal() {
+        window.closeExecuteCommandModal = function () {
             const modal = document.getElementById('executeCommandModal');
             modal.style.display = 'none';
 
@@ -5789,11 +4681,9 @@
                 currentExecEventSource = null;
             }
 
-            // Clear buffer
             terminalBuffer = [];
             isTerminalFlushing = false;
 
-            // Закрываем SSH сессию на сервере
             if (currentExecServer && currentExecServerType) {
                 const formData = new FormData();
                 formData.append('csrf_token', window.getCsrfToken());
@@ -5805,9 +4695,9 @@
 
             currentExecServer = null;
             currentExecServerType = null;
-        }
+        };
 
-        document.getElementById('btn-close-exec-modal').addEventListener('click', closeExecuteCommandModal);
+        document.getElementById('btn-close-exec-modal').addEventListener('click', window.closeExecuteCommandModal);
 
         // Кнопка остановки команды (Ctrl+C)
         document.getElementById('btn-stop-command').addEventListener('click', async function () {
@@ -6052,153 +4942,6 @@
 
 
 
-        window.openSchedulerModal = function (targetName) {
-            currentSchedulerTarget = targetName;
-            document.getElementById('schedulerTargetName').textContent = targetName;
-
-            const target = sshTargetsData.find(t => t.target_name === targetName);
-            let config = null;
-            if (target && target.time_auto) {
-                try {
-                    config = JSON.parse(target.time_auto);
-                } catch (e) { }
-            }
-
-            const statusBadge = document.getElementById('scheduler-status-badge');
-            const currentValue = document.getElementById('scheduler-current-value');
-
-            if (config && config.enabled) {
-                statusBadge.textContent = 'Включено';
-                statusBadge.className = 'text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400';
-
-                const unitNames = {
-                    'minutes': 'минут',
-                    'hours': 'часов',
-                    'days': 'дней'
-                };
-                const unitName = unitNames[config.unit] || config.unit;
-                currentValue.innerHTML = `<span class="text-white">Каждые <span class="text-primary font-bold">${config.value}</span> ${unitName}</span>`;
-            } else if (config && !config.enabled) {
-                statusBadge.textContent = 'Выключено';
-                statusBadge.className = 'text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-white/50';
-                currentValue.innerHTML = '<span class="text-white/50">Планировщик отключен</span>';
-            } else {
-                statusBadge.textContent = 'Не настроено';
-                statusBadge.className = 'text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-white/40';
-                currentValue.innerHTML = '<span class="text-white/40">Планировщик не настроен</span>';
-            }
-
-            if (config) {
-                document.getElementById('schedulerValue').value = config.value || 1;
-                document.getElementById('schedulerUnit').value = config.unit || 'hours';
-                document.getElementById('schedulerEnabled').checked = !!config.enabled;
-            } else {
-                document.getElementById('schedulerValue').value = 1;
-                document.getElementById('schedulerUnit').value = 'hours';
-                document.getElementById('schedulerEnabled').checked = false;
-            }
-
-            openModal('schedulerModal');
-        };
-
-        window.saveSchedulerConfig = async function () {
-            if (!currentSchedulerTarget) return;
-
-            const value = document.getElementById('schedulerValue').value;
-            const unit = document.getElementById('schedulerUnit').value;
-            const enabled = document.getElementById('schedulerEnabled').checked;
-
-            const formData = new FormData();
-            formData.append('csrf_token', window.getCsrfToken());
-            formData.append('value', value);
-            formData.append('unit', unit);
-            formData.append('enabled', enabled);
-
-            try {
-                const resp = await fetch(`/other/servers/scheduler/save/${currentSchedulerTarget}`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await resp.json();
-
-                if (data.ok) {
-                    window.showToast('success', 'Расписание сохранено');
-                    closeModal('schedulerModal');
-                    loadServers();
-                } else {
-                    window.showToast('danger', data.error || 'Ошибка сохранения');
-                }
-            } catch (e) {
-                console.error(e);
-                window.showToast('danger', 'Ошибка сохранения');
-            }
-        };
-
-        function initSshDragAndDrop() {
-            const listEl = document.getElementById('ssh-targets-list');
-            const container = listEl.querySelector('.grid');
-            if (!container) return;
-
-            let draggedItem = null;
-
-            container.addEventListener('dragstart', (e) => {
-                const card = e.target.closest('.ssh-target-card');
-                if (!card) return;
-
-                draggedItem = card;
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', card.dataset.targetName);
-
-                setTimeout(() => {
-                    card.classList.add('opacity-50', 'scale-95');
-                }, 0);
-            });
-
-            container.addEventListener('dragend', (e) => {
-                if (draggedItem) {
-                    draggedItem.classList.remove('opacity-50', 'scale-95');
-                    draggedItem = null;
-                    saveSshSortOrder();
-                }
-            });
-
-            container.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                if (!draggedItem) return;
-
-                const targetCard = e.target.closest('.ssh-target-card');
-                if (targetCard && targetCard !== draggedItem) {
-                    const siblings = Array.from(container.children);
-                    const draggedIndex = siblings.indexOf(draggedItem);
-                    const targetIndex = siblings.indexOf(targetCard);
-
-                    if (draggedIndex < targetIndex) {
-                        container.insertBefore(draggedItem, targetCard.nextSibling);
-                    } else {
-                        container.insertBefore(draggedItem, targetCard);
-                    }
-                }
-            });
-        }
-
-        async function saveSshSortOrder() {
-            const cards = document.querySelectorAll('.ssh-target-card');
-            const order = Array.from(cards).map(card => card.dataset.targetName);
-
-            try {
-                await fetch('/other/servers/ssh/reorder', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': window.getCsrfToken()
-                    },
-                    body: JSON.stringify({ order: order })
-                });
-            } catch (e) {
-                console.error('Failed to save sort order:', e);
-                window.showToast('danger', 'Ошибка сохранения порядка');
-            }
-        }
     });
 
     window.insertTag = function (tag) {

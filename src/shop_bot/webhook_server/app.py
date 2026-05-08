@@ -60,7 +60,7 @@ from shop_bot.data_manager.remnawave_repository import (
     update_host_url, update_host_name, update_host_ssh_settings, get_latest_speedtest, get_speedtests,
     update_host_description, update_host_traffic_settings,
     get_all_keys, get_keys_for_user, delete_key_by_id, update_key_comment,
-    get_balance, adjust_user_balance, get_referrals_for_user,
+    get_balance, adjust_user_balance, get_referrals_for_user, log_transaction,
 
     get_users_paginated, get_keys_counts_for_users,
 
@@ -73,11 +73,12 @@ from shop_bot.data_manager.database import (
     delete_button_config, reorder_button_configs, DB_FILE,
     add_seller_user, get_seller_user, delete_seller_user
 )
-from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id
+from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id, update_host_button_style
 import sqlite3
 from .modules.other import register_other_routes
 from .modules.update import register_update_routes
 from .modules.gemini import register_gemini_routes
+from .modules.node import register_node_routes
 from .modules import security
 
 
@@ -106,6 +107,18 @@ ALL_SETTINGS_KEYS = [
     "btn_trial_text", "btn_profile_text", "btn_my_keys_text", "btn_buy_key_text", "btn_topup_text",
     "btn_referral_text", "btn_support_text", "btn_about_text", "btn_speed_text", "btn_howto_text",
     "btn_admin_text", "btn_back_to_menu_text",
+    "btn_trial_button_style", "btn_trial_icon_emoji_id",
+    "btn_profile_button_style", "btn_profile_icon_emoji_id",
+    "btn_my_keys_button_style", "btn_my_keys_icon_emoji_id",
+    "btn_buy_key_button_style", "btn_buy_key_icon_emoji_id",
+    "btn_topup_button_style", "btn_topup_icon_emoji_id",
+    "btn_referral_button_style", "btn_referral_icon_emoji_id",
+    "btn_support_button_style", "btn_support_icon_emoji_id",
+    "btn_about_button_style", "btn_about_icon_emoji_id",
+    "btn_howto_button_style", "btn_howto_icon_emoji_id",
+    "btn_speed_button_style", "btn_speed_icon_emoji_id",
+    "btn_admin_button_style", "btn_admin_icon_emoji_id",
+    "btn_back_to_menu_button_style", "btn_back_to_menu_icon_emoji_id",
 
     "backup_interval_days",
 
@@ -297,6 +310,10 @@ def create_webhook_app(bot_controller_instance):
             'csrf_token': generate_csrf,
             'webapp_exists': webapp_exists
         }
+
+    @flask_app.template_filter('strip_bom')
+    def strip_bom_filter(s):
+        return s.lstrip('\ufeff') if s else s
 
     @flask_app.template_filter('relative_time')
     def format_relative_time(date_value, is_future=False):
@@ -638,7 +655,8 @@ def create_webhook_app(bot_controller_instance):
             stats["active_buyers_count"] = 0
             stats["active_keys_count"] = 0
 
-        return render_template('partials/dashboard_stats.html', stats=stats, **common_data)
+        html = render_template('partials/dashboard_stats.html', stats=stats, **common_data)
+        return html.lstrip('\ufeff')
 
     @flask_app.route('/dashboard/transactions.partial')
     @login_required
@@ -713,7 +731,7 @@ def create_webhook_app(bot_controller_instance):
         try:
             all_hosts = get_all_hosts()
             hosts = [h for h in all_hosts if h.get('ssh_host') and (h.get('ssh_password') or h.get('ssh_key_path'))]
-            
+
             all_ssh_targets = get_all_ssh_targets()
             ssh_targets = [t for t in all_ssh_targets if t.get('ssh_host') and (t.get('ssh_password') or t.get('ssh_key_path'))]
         except Exception:
@@ -977,7 +995,33 @@ def create_webhook_app(bot_controller_instance):
             flash('Некорректная сумма изменения баланса.', 'danger')
             return redirect(url_for('users_page'))
 
+        old_balance = get_balance(user_id)
         ok = adjust_user_balance(user_id, delta)
+        if ok:
+            try:
+                new_balance = get_balance(user_id)
+                target_user = get_user(user_id) or {}
+                log_transaction(
+                    username=target_user.get('username') or f"@{user_id}",
+                    transaction_id=None,
+                    payment_id=f"admin-balance-{uuid.uuid4()}",
+                    user_id=user_id,
+                    status='paid',
+                    amount_rub=abs(float(delta)),
+                    amount_currency=None,
+                    currency_name=None,
+                    payment_method='Admin',
+                    metadata=json.dumps({
+                        "action": "admin_balance_adjust",
+                        "delta": float(delta),
+                        "old_balance": float(old_balance or 0),
+                        "new_balance": float(new_balance or 0),
+                        "admin_login": session.get('panel_login') or "panel",
+                        "reason": "manual_panel_adjustment"
+                    }, ensure_ascii=False)
+                )
+            except Exception as e:
+                logger.warning(f"Не удалось записать историю изменения баланса для {user_id}: {e}")
         message = 'Баланс изменён.' if ok else 'Не удалось изменить баланс.'
         category = 'success' if ok else 'danger'
         wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -1016,8 +1060,12 @@ def create_webhook_app(bot_controller_instance):
                     DELETE FROM transactions 
                     WHERE user_id = ? 
                     AND (
-                        metadata LIKE '%"action": "topup"%' 
-                        OR LOWER(payment_method) = 'balance'
+                        LOWER(COALESCE(payment_method, '')) IN ('balance', 'admin')
+                        OR LOWER(COALESCE(metadata, '')) LIKE '%"action": "topup"%'
+                        OR LOWER(COALESCE(metadata, '')) LIKE '%"action": "top_up"%'
+                        OR LOWER(COALESCE(metadata, '')) LIKE '%admin_balance_adjust%'
+                        OR LOWER(COALESCE(metadata, '')) LIKE '%referral_bonus%'
+                        OR LOWER(COALESCE(metadata, '')) LIKE '%referral_start_bonus%'
                     )
                 """, (user_id,))
                 deleted_count = cursor.rowcount
@@ -1039,10 +1087,10 @@ def create_webhook_app(bot_controller_instance):
                 cursor.execute("""
                     DELETE FROM transactions 
                     WHERE user_id = ? 
-                    AND (
-                        metadata NOT LIKE '%"action": "topup"%' 
-                        AND LOWER(payment_method) != 'balance'
-                    )
+                    AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin')
+                    AND LOWER(COALESCE(metadata, '')) NOT LIKE '%admin_balance_adjust%'
+                    AND LOWER(COALESCE(metadata, '')) NOT LIKE '%referral_bonus%'
+                    AND LOWER(COALESCE(metadata, '')) NOT LIKE '%referral_start_bonus%'
                 """, (user_id,))
                 deleted_count = cursor.rowcount
                 conn.commit()
@@ -1084,54 +1132,173 @@ def create_webhook_app(bot_controller_instance):
                     cursor = conn.cursor()
                     
                     cursor.execute("""
-                        SELECT created_date, amount_rub, metadata, status, payment_method
+                        SELECT transaction_id, payment_id, username, created_date, amount_rub, amount_currency, currency_name, metadata, status, payment_method
                         FROM transactions
                         WHERE user_id = ? 
-                        AND LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
                         ORDER BY created_date DESC
-                        LIMIT 100
+                        LIMIT 150
                     """, (user_id,))
                     rows = cursor.fetchall()
                     
+                    def _safe_float(value, default=0.0):
+                        try:
+                            return float(value or default)
+                        except Exception:
+                            return default
+
+                    def _action_label(action, payment_method):
+                        action_norm = (action or '').strip().lower()
+                        method_norm = (payment_method or '').strip().lower()
+                        if action_norm in ('topup', 'top_up'):
+                            return 'Пополнение баланса'
+                        if action_norm == 'admin_balance_adjust':
+                            return 'Ручное изменение баланса'
+                        if action_norm in ('referral_bonus', 'referral_start_bonus'):
+                            return 'Реферальное начисление'
+                        if method_norm == 'balance':
+                            return 'Оплата с баланса'
+                        if action_norm == 'new':
+                            return 'Покупка нового ключа'
+                        if action_norm == 'extend':
+                            return 'Продление ключа'
+                        return 'Внешняя оплата'
+
+                    def _method_label(payment_method):
+                        mapping = {
+                            'balance': 'Баланс',
+                            'yookassa': 'ЮKassa',
+                            'platega': 'Platega',
+                            'platega crypto': 'Platega Crypto',
+                            'cryptobot': 'CryptoBot',
+                            'heleket': 'Heleket',
+                            'ton connect': 'TON Connect',
+                            'telegram stars': 'Telegram Stars',
+                            'admin': 'Админ-панель',
+                            'referral': 'Реферальный бонус',
+                            'yoomoney': 'ЮMoney',
+                        }
+                        raw = payment_method or 'N/A'
+                        return mapping.get(str(raw).strip().lower(), raw)
+
+                    def _plan_name(meta):
+                        plan_name = meta.get('plan_name')
+                        if plan_name:
+                            return plan_name
+                        plan_id = meta.get('plan_id')
+                        if plan_id:
+                            try:
+                                plan = get_plan_by_id(int(plan_id))
+                                if plan:
+                                    return plan.get('plan_name') or f"Тариф #{plan_id}"
+                            except Exception:
+                                return f"Тариф #{plan_id}"
+                        return '—'
+
                     for row in rows:
-                        pm = (row['payment_method'] or '').lower()
+                        pm_raw = row['payment_method'] or 'N/A'
+                        pm = str(pm_raw).strip().lower()
                         meta = {}
                         try:
                             meta = json.loads(row['metadata'] or '{}')
-                        except:
+                            if not isinstance(meta, dict):
+                                meta = {}
+                        except Exception:
                             pass
                             
-                        action = meta.get('action')
-                        host_name = meta.get('host_name') or 'N/A'
-                        plan_name = meta.get('plan_name') or 'N/A'
+                        action = (meta.get('action') or '').strip()
+                        action_norm = action.lower()
+                        host_name = meta.get('host_name') or meta.get('host') or '—'
+                        plan_name = _plan_name(meta)
+                        amount = _safe_float(row['amount_rub'])
+                        delta = _safe_float(meta.get('delta'), amount)
+                        status_norm = (row['status'] or '').strip().lower()
+                        is_success = status_norm in ('paid', 'completed', 'success')
+                        is_topup = action_norm in ('topup', 'top_up')
+                        is_admin_balance = action_norm == 'admin_balance_adjust' or pm == 'admin'
+                        is_referral_bonus = action_norm in ('referral_bonus', 'referral_start_bonus')
+                        is_balance_payment = pm == 'balance'
+
+                        details = []
+                        if plan_name and plan_name != '—':
+                            details.append(f"Тариф: {plan_name}")
+                        if host_name and host_name != '—':
+                            details.append(f"Хост: {host_name}")
+                        if meta.get('months'):
+                            details.append(f"Месяцев: {meta.get('months')}")
+                        if meta.get('key_id'):
+                            details.append(f"Ключ ID: {meta.get('key_id')}")
+                        if meta.get('plan_id'):
+                            details.append(f"Тариф ID: {meta.get('plan_id')}")
+                        if meta.get('customer_email'):
+                            details.append(f"Email: {meta.get('customer_email')}")
+                        if meta.get('tier_device_count'):
+                            details.append(f"Устройства: {meta.get('tier_device_count')}")
+                        if meta.get('tier_price'):
+                            details.append(f"Доплата за устройства: {meta.get('tier_price')} RUB")
+                        if meta.get('promo_code'):
+                            details.append(f"Промокод: {meta.get('promo_code')}")
+                        if meta.get('promo_discount'):
+                            details.append(f"Скидка: {meta.get('promo_discount')} RUB")
+                        if meta.get('old_balance') is not None or meta.get('new_balance') is not None:
+                            details.append(f"Баланс: {meta.get('old_balance', '—')} → {meta.get('new_balance', '—')} RUB")
+                        if meta.get('source_user_id'):
+                            details.append(f"Источник: {meta.get('source_username') or 'N/A'} ({meta.get('source_user_id')})")
+                        if meta.get('source_payment_id'):
+                            details.append(f"Платёж источника: {meta.get('source_payment_id')}")
+                        if meta.get('reason'):
+                            details.append(f"Причина: {meta.get('reason')}")
+
+                        base_item = {
+                            'transaction_id': row['transaction_id'],
+                            'payment_id': row['payment_id'],
+                            'username': row['username'],
+                            'date': row['created_date'],
+                            'status': row['status'],
+                            'payment_method': pm_raw,
+                            'method_label': _method_label(pm_raw),
+                            'amount': amount,
+                            'amount_currency': row['amount_currency'],
+                            'currency_name': row['currency_name'],
+                            'action': action or None,
+                            'action_label': _action_label(action, pm_raw),
+                            'plan': plan_name,
+                            'host': host_name,
+                            'key_id': meta.get('key_id'),
+                            'plan_id': meta.get('plan_id'),
+                            'months': meta.get('months'),
+                            'customer_email': meta.get('customer_email'),
+                            'promo_code': meta.get('promo_code'),
+                            'promo_discount': meta.get('promo_discount'),
+                            'tier_device_count': meta.get('tier_device_count'),
+                            'tier_price': meta.get('tier_price'),
+                            'old_balance': meta.get('old_balance'),
+                            'new_balance': meta.get('new_balance'),
+                            'delta': meta.get('delta'),
+                            'source_user_id': meta.get('source_user_id'),
+                            'source_username': meta.get('source_username'),
+                            'source_action': meta.get('source_action'),
+                            'source_payment_id': meta.get('source_payment_id'),
+                            'source_amount': meta.get('source_amount'),
+                            'reason': meta.get('reason'),
+                            'details': details,
+                            'metadata': meta,
+                        }
                         
-                        if action == 'topup':
-                            balance_history.append({
-                                'date': row['created_date'],
-                                'type': 'Пополнение',
-                                'amount': float(row['amount_rub'] or 0),
-                                'status': row['status'],
-                                'plan': '—',
-                                'host': '—'
-                            })
-                        elif pm == 'balance':
-                            balance_history.append({
-                                'date': row['created_date'],
-                                'type': 'Оплата подписки',
-                                'amount': float(row['amount_rub'] or 0) * -1,
-                                'status': row['status'],
-                                'plan': plan_name,
-                                'host': host_name
-                            })
+                        if is_success and (is_topup or is_admin_balance or is_referral_bonus or is_balance_payment):
+                            balance_item = dict(base_item)
+                            if is_balance_payment:
+                                balance_item['amount'] = -abs(amount)
+                            elif is_admin_balance:
+                                balance_item['amount'] = delta
+                            else:
+                                balance_item['amount'] = abs(amount)
+                            balance_item['type'] = balance_item['action_label']
+                            balance_history.append(balance_item)
                             
-                        if pm != 'balance' and action != 'topup':
-                            payment_history.append({
-                                'date': row['created_date'],
-                                'plan': plan_name,
-                                'host': host_name,
-                                'type': row['payment_method'] or 'N/A',
-                                'amount': float(row['amount_rub'] or 0)
-                            })
+                        if not is_balance_payment and not is_admin_balance and not is_referral_bonus:
+                            payment_item = dict(base_item)
+                            payment_item['type'] = payment_item['action_label']
+                            payment_history.append(payment_item)
 
             except Exception as e:
                 logger.error(f"Failed to get history for user {user_id}: {e}")
@@ -2007,58 +2174,7 @@ def create_webhook_app(bot_controller_instance):
 
 
 
-    @flask_app.route('/admin/ssh-targets/<target_name>/speedtest/run', methods=['POST'])
-    @login_required
-    def run_ssh_target_speedtest_route(target_name: str):
-        logger.info(f"Панель: запущен спидтест для SSH-цели '{target_name}'")
-        try:
-            res = asyncio.run(speedtest_runner.run_and_store_ssh_speedtest_for_target(target_name))
-        except Exception as e:
-            res = {"ok": False, "error": str(e)}
-        if res and res.get('ok'):
-            logger.info(f"Панель: спидтест для SSH-цели '{target_name}' завершён успешно")
-        else:
-            logger.warning(f"Панель: спидтест для SSH-цели '{target_name}' завершился с ошибкой: {res.get('error') if res else 'unknown'}")
-        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        if wants_json:
-            return jsonify(res)
-        flash(('Тест выполнен.' if res and res.get('ok') else f"Ошибка теста: {res.get('error') if res else 'unknown'}"), 'success' if res and res.get('ok') else 'danger')
-        return redirect(request.referrer or url_for('settings_page', tab='hosts'))
 
-
-    @flask_app.route('/admin/ssh-targets/speedtests/run-all', methods=['POST'])
-    @login_required
-    def run_all_ssh_target_speedtests_route():
-        logger.info("Панель: запуск спидтеста ДЛЯ ВСЕХ SSH-целей")
-        try:
-            targets = get_all_ssh_targets()
-        except Exception:
-            targets = []
-        errors = []
-        ok_count = 0
-        total = 0
-        for t in targets or []:
-            name = (t.get('target_name') or '').strip()
-            if not name:
-                continue
-            total += 1
-            try:
-                res = asyncio.run(speedtest_runner.run_and_store_ssh_speedtest_for_target(name))
-                if res and res.get('ok'):
-                    ok_count += 1
-                else:
-                    errors.append(f"{name}: {res.get('error') if res else 'unknown'}")
-            except Exception as e:
-                errors.append(f"{name}: {e}")
-        logger.info(f"Панель: завершён спидтест ДЛЯ ВСЕХ SSH-целей: ок={ok_count}, всего={total}")
-        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        if wants_json:
-            return jsonify({"ok": len(errors) == 0, "done": ok_count, "total": total, "errors": errors})
-        if errors:
-            flash(f"SSH цели: выполнено {ok_count}/{total}. Ошибки: {'; '.join(errors[:3])}{'…' if len(errors) > 3 else ''}", 'warning')
-        else:
-            flash(f"SSH цели: тесты скорости выполнены для всех ({ok_count}/{total})", 'success')
-        return redirect(request.referrer or url_for('dashboard_page'))
 
 
     @flask_app.route('/admin/hosts/<host_name>/speedtest/run', methods=['POST'])
@@ -2389,6 +2505,42 @@ def create_webhook_app(bot_controller_instance):
             flash(f"Не удалось удалить тикет #{ticket_id}.", 'danger')
             return redirect(url_for('support_ticket_page', ticket_id=ticket_id))
 
+    @flask_app.route('/support/delete-all', methods=['POST'])
+    @login_required
+    def delete_all_tickets_route():
+        try:
+            tickets, total = get_tickets_paginated(page=1, per_page=10000, status='')
+            deleted = 0
+            bot = _support_bot_controller.get_bot_instance()
+            loop = current_app.config.get('EVENT_LOOP')
+            for ticket in tickets:
+                tid = ticket.get('ticket_id')
+                forum_chat_id = ticket.get('forum_chat_id')
+                thread_id = ticket.get('message_thread_id')
+                if bot and loop and loop.is_running() and forum_chat_id and thread_id:
+                    try:
+                        fut = asyncio.run_coroutine_threadsafe(
+                            bot.delete_forum_topic(chat_id=int(forum_chat_id), message_thread_id=int(thread_id)),
+                            loop
+                        )
+                        fut.result(timeout=3)
+                    except Exception:
+                        try:
+                            fut2 = asyncio.run_coroutine_threadsafe(
+                                bot.close_forum_topic(chat_id=int(forum_chat_id), message_thread_id=int(thread_id)),
+                                loop
+                            )
+                            fut2.result(timeout=3)
+                        except Exception:
+                            pass
+                if delete_ticket(tid):
+                    deleted += 1
+            flash(f'Удалено тикетов: {deleted}', 'success')
+        except Exception as e:
+            logger.error(f"Failed to delete all tickets: {e}")
+            flash('Ошибка при удалении тикетов.', 'danger')
+        return redirect(url_for('support_list_page'))
+
     @flask_app.route('/settings', methods=['GET', 'POST'])
     @login_required
     def settings_page():
@@ -2503,112 +2655,7 @@ def create_webhook_app(bot_controller_instance):
 
 
 
-    @flask_app.route('/admin/ssh-targets/create', methods=['POST'])
-    @login_required
-    def create_ssh_target_route():
-        name = (request.form.get('target_name') or '').strip()
-        ssh_host = (request.form.get('ssh_host') or '').strip()
-        ssh_port = request.form.get('ssh_port')
-        ssh_user = (request.form.get('ssh_user') or '').strip() or None
-        ssh_password = request.form.get('ssh_password')
-        ssh_key_path = (request.form.get('ssh_key_path') or '').strip() or None
-        description = (request.form.get('description') or '').strip() or None
-        try:
-            ssh_port_val = int(ssh_port) if ssh_port else 22
-        except Exception:
-            ssh_port_val = 22
-        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        if not name or not ssh_host:
-            if wants_json:
-                return jsonify({'ok': False, 'error': 'Укажите имя цели и SSH хост.'}), 400
-            flash('Укажите имя цели и SSH хост.', 'warning')
-            return redirect(url_for('settings_page', tab='hosts'))
-        ok = create_ssh_target(
-            target_name=name,
-            ssh_host=ssh_host,
-            ssh_port=ssh_port_val,
-            ssh_user=ssh_user,
-            ssh_password=ssh_password,
-            ssh_key_path=ssh_key_path,
-            description=description,
-        )
-        if wants_json:
-            return jsonify({'ok': ok, 'message': 'SSH-цель добавлена' if ok else 'Не удалось добавить SSH-цель'})
-        flash('SSH-цель добавлена.' if ok else 'Не удалось добавить SSH-цель.', 'success' if ok else 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
 
-    @flask_app.route('/admin/ssh-targets/<target_name>/update', methods=['POST'])
-    @login_required
-    def update_ssh_target_route(target_name: str):
-        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        new_target_name = (request.form.get('new_target_name') or '').strip() if 'new_target_name' in request.form else None
-        
-        ssh_host = (request.form.get('ssh_host') or '').strip() if 'ssh_host' in request.form else None
-        ssh_port_raw = (request.form.get('ssh_port') or '').strip() if 'ssh_port' in request.form else None
-        ssh_user = (request.form.get('ssh_user') or '').strip() if 'ssh_user' in request.form else None
-        ssh_password = request.form.get('ssh_password') if 'ssh_password' in request.form else None
-        ssh_key_path = (request.form.get('ssh_key_path') or '').strip() if 'ssh_key_path' in request.form else None
-        description = (request.form.get('description') or '').strip() if 'description' in request.form else None
-        try:
-            ssh_port = int(ssh_port_raw) if ssh_port_raw else None
-        except Exception:
-            ssh_port = None
-        
-        actual_target_name = target_name
-        if new_target_name and new_target_name != target_name:
-            rename_ok = rename_ssh_target(target_name, new_target_name)
-            if not rename_ok:
-                if wants_json:
-                    return jsonify({'ok': False, 'error': 'Не удалось переименовать SSH-цель. Возможно, цель с таким именем уже существует.'}), 400
-                flash('Не удалось переименовать SSH-цель. Возможно, цель с таким именем уже существует.', 'danger')
-                return redirect(request.referrer or url_for('settings_page', tab='hosts'))
-            actual_target_name = new_target_name
-        
-        ok = update_ssh_target_fields(
-            actual_target_name,
-            ssh_host=ssh_host,
-            ssh_port=ssh_port,
-            ssh_user=ssh_user,
-            ssh_password=ssh_password,
-            ssh_key_path=ssh_key_path,
-            description=description,
-        )
-        if wants_json:
-            return jsonify({'ok': ok, 'message': 'SSH-цель обновлена' if ok else 'Не удалось обновить SSH-цель'})
-        flash('SSH-цель обновлена.' if ok else 'Не удалось обновить SSH-цель.', 'success' if ok else 'danger')
-        return redirect(request.referrer or url_for('settings_page', tab='hosts'))
-
-    @flask_app.route('/admin/ssh-targets/<target_name>/delete', methods=['POST'])
-    @login_required
-    def delete_ssh_target_route(target_name: str):
-        ok = delete_ssh_target(target_name)
-        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        if wants_json:
-            return jsonify({'ok': ok, 'message': 'SSH-цель удалена' if ok else 'Не удалось удалить SSH-цель'})
-        flash('SSH-цель удалена.' if ok else 'Не удалось удалить SSH-цель.', 'success' if ok else 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
-
-    
-
-    @flask_app.route('/admin/ssh-targets/<target_name>/speedtest/install', methods=['POST'])
-    @login_required
-    def auto_install_speedtest_on_target_route(target_name: str):
-        try:
-            res = asyncio.run(speedtest_runner.auto_install_speedtest_on_target(target_name))
-        except Exception as e:
-            res = {'ok': False, 'log': str(e)}
-        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        if wants_json:
-            return jsonify({"ok": bool(res.get('ok')), "log": res.get('log')})
-        flash(('Установка завершена успешно.' if res.get('ok') else 'Не удалось установить speedtest на цель.') , 'success' if res.get('ok') else 'danger')
-        try:
-            log = res.get('log') or ''
-            short = '\n'.join((log.splitlines() or [])[-20:])
-            if short:
-                flash(short, 'secondary')
-        except Exception:
-            pass
-        return redirect(request.referrer or url_for('settings_page', tab='hosts'))
 
 
     @flask_app.route('/admin/db/backup', methods=['POST'])
@@ -2814,6 +2861,18 @@ def create_webhook_app(bot_controller_instance):
              return jsonify({'ok': ok, 'message': 'Имя хоста обновлено' if ok else 'Не удалось переименовать хост'})
 
         flash('Имя хоста обновлено.' if ok else 'Не удалось переименовать хост.', 'success' if ok else 'danger')
+        return redirect(url_for('settings_page', tab='hosts'))
+
+    @flask_app.route('/update-host-button-style', methods=['POST'])
+    @login_required
+    def update_host_button_style_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        button_style = (request.form.get('button_style') or '').strip()
+        icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip()
+        ok = update_host_button_style(host_name, button_style or None, icon_emoji_id or None)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': ok})
+        flash('Стиль кнопки хоста обновлён.' if ok else 'Ошибка.', 'success' if ok else 'danger')
         return redirect(url_for('settings_page', tab='hosts'))
 
     @flask_app.route('/start-support-bot', methods=['POST'])
@@ -3256,7 +3315,9 @@ def create_webhook_app(bot_controller_instance):
             hwid_limit = int(request.form.get('hwid_limit') or 0)
             traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
             
-            new_plan_id = create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb)
+            button_style = (request.form.get('button_style') or '').strip() or None
+            icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip() or None
+            new_plan_id = create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb, button_style=button_style, icon_emoji_id=icon_emoji_id)
             
             wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             if wants_json:
@@ -3306,7 +3367,9 @@ def create_webhook_app(bot_controller_instance):
                 flash('Название тарифа не может быть пустым.', 'danger')
                 return redirect(url_for('settings_page', tab='hosts'))
 
-            ok = update_plan(plan_id, plan_name, months, price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb)
+            button_style = (request.form.get('button_style') or '').strip() or None
+            icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip() or None
+            ok = update_plan(plan_id, plan_name, months, price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb, button_style=button_style, icon_emoji_id=icon_emoji_id)
             if ok:
                 if wants_json:
                     plan = get_plan_by_id(plan_id)
@@ -3796,7 +3859,9 @@ def create_webhook_app(bot_controller_instance):
                 row_position=data.get('row_position', 0),
                 column_position=data.get('column_position', 0),
                 button_width=data.get('button_width', 1),
-                metadata=data.get('metadata')
+                metadata=data.get('metadata'),
+                button_color=data.get('button_color'),
+                emoji_id=data.get('emoji_id')
             )
             
             if success:
@@ -3826,7 +3891,9 @@ def create_webhook_app(bot_controller_instance):
                 button_width=data.get('button_width'),
                 is_active=data.get('is_active'),
                 sort_order=data.get('sort_order'),
-                metadata=data.get('metadata')
+                metadata=data.get('metadata'),
+                button_color=data.get('button_color'),
+                emoji_id=data.get('emoji_id')
             )
             
             if success:
@@ -4030,50 +4097,12 @@ def create_webhook_app(bot_controller_instance):
             logger.error(f"Ошибка удаления изображения {section}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
 
-    @flask_app.route('/upload-ssh-key', methods=['POST'])
-    @login_required
-    def upload_ssh_key_route():
-        ALLOWED_EXTENSIONS = {'pem', 'key', 'pub', 'rsa'}
-        MAX_SIZE_BYTES = 1 * 1024 * 1024
 
-        if 'file' not in request.files:
-            return jsonify({'ok': False, 'error': 'Файл не выбран'}), 400
-
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({'ok': False, 'error': 'Файл не выбран'}), 400
-
-        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
-        if ext not in ALLOWED_EXTENSIONS:
-            return jsonify({'ok': False, 'error': f'Разрешены только файлы ключей: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
-
-        file.seek(0, 2)
-        size = file.tell()
-        file.seek(0)
-        if size > MAX_SIZE_BYTES:
-            return jsonify({'ok': False, 'error': 'Размер ключа не должен превышать 1 МБ'}), 400
-
-        try:
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            upload_dir = os.path.join(base_dir, 'modules', 'keys')
-            os.makedirs(upload_dir, exist_ok=True)
-
-            filename = secure_filename(file.filename)
-            if not filename.endswith(f'.{ext}'):
-                filename = f"{filename}.{ext}"
-            
-            filepath = os.path.join(upload_dir, filename)
-            
-            file.save(filepath)
-            
-            return jsonify({'ok': True, 'path': filepath})
-        except Exception as e:
-            logger.error(f"Ошибка загрузки SSH ключа: {e}")
-            return jsonify({'ok': False, 'error': str(e)}), 500
 
     register_other_routes(flask_app, login_required, get_common_template_data)
     register_update_routes(flask_app, login_required)
     register_gemini_routes(flask_app, login_required)
+    register_node_routes(flask_app, login_required, get_common_template_data)
 
     return flask_app
 

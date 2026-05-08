@@ -545,6 +545,30 @@ def initialize_db():
                 "btn_howto_text": None,
                 "btn_admin_text": None,
                 "btn_back_to_menu_text": None,
+                "btn_trial_button_style": None,
+                "btn_trial_icon_emoji_id": None,
+                "btn_profile_button_style": None,
+                "btn_profile_icon_emoji_id": None,
+                "btn_my_keys_button_style": None,
+                "btn_my_keys_icon_emoji_id": None,
+                "btn_buy_key_button_style": None,
+                "btn_buy_key_icon_emoji_id": None,
+                "btn_topup_button_style": None,
+                "btn_topup_icon_emoji_id": None,
+                "btn_referral_button_style": None,
+                "btn_referral_icon_emoji_id": None,
+                "btn_support_button_style": None,
+                "btn_support_icon_emoji_id": None,
+                "btn_about_button_style": None,
+                "btn_about_icon_emoji_id": None,
+                "btn_howto_button_style": None,
+                "btn_howto_icon_emoji_id": None,
+                "btn_speed_button_style": None,
+                "btn_speed_icon_emoji_id": None,
+                "btn_admin_button_style": None,
+                "btn_admin_icon_emoji_id": None,
+                "btn_back_to_menu_button_style": None,
+                "btn_back_to_menu_icon_emoji_id": None,
 
                 "stars_enabled": "false",
                 "yoomoney_enabled": "false",
@@ -599,6 +623,18 @@ def initialize_db():
             try:
                 cursor.execute("ALTER TABLE button_configs ADD COLUMN button_width INTEGER DEFAULT 1")
                 logging.info("Добавлена колонка button_width в таблицу button_configs")
+            except sqlite3.OperationalError:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE button_configs ADD COLUMN button_color TEXT DEFAULT NULL")
+                logging.info("Добавлена колонка button_color в таблицу button_configs")
+            except sqlite3.OperationalError:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE button_configs ADD COLUMN emoji_id TEXT DEFAULT NULL")
+                logging.info("Добавлена колонка emoji_id в таблицу button_configs")
             except sqlite3.OperationalError:
                 pass
             
@@ -685,6 +721,8 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
         "traffic_limit_strategy": "TEXT DEFAULT 'NO_RESET'",
         "device_mode": "TEXT DEFAULT 'plan'",
         "tier_lock_extend": "INTEGER DEFAULT 0",
+        "button_style": "TEXT DEFAULT NULL",
+        "icon_emoji_id": "TEXT DEFAULT NULL",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "xui_hosts", column, definition)
@@ -720,6 +758,8 @@ def _ensure_plans_columns(cursor: sqlite3.Cursor) -> None:
         "metadata": "TEXT",
         "hwid_limit": "INTEGER DEFAULT 0",
         "traffic_limit_gb": "INTEGER DEFAULT 0",
+        "button_style": "TEXT DEFAULT NULL",
+        "icon_emoji_id": "TEXT DEFAULT NULL",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "plans", column, definition)
@@ -997,11 +1037,6 @@ def run_migration():
             
 
             try:
-                cursor.execute("""
-                    UPDATE button_configs 
-                    SET text = '🔑 Мои ключи ({len(user_keys)})', updated_at = CURRENT_TIMESTAMP
-                    WHERE menu_type = 'main_menu' AND button_id = 'my_keys'
-                """)
                 wide_buttons = [("trial", 2), ("referral", 2), ("admin", 2)]
                 for button_id, width in wide_buttons:
                     cursor.execute("""
@@ -2369,14 +2404,15 @@ def get_button_config(menu_type: str, button_id: str) -> dict | None:
 # ===== CREATE_BUTTON_CONFIG =====
 def create_button_config(menu_type: str, button_id: str, text: str, callback_data: str = None, 
                         url: str = None, row_position: int = 0, column_position: int = 0, 
-                        button_width: int = 1, metadata: str = None) -> bool:
+                        button_width: int = 1, metadata: str = None, 
+                        button_color: str = None, emoji_id: str = None) -> bool:
     cursor = _exec(
         """
         INSERT OR REPLACE INTO button_configs 
-        (menu_type, button_id, text, callback_data, url, row_position, column_position, button_width, metadata, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        (menu_type, button_id, text, callback_data, url, row_position, column_position, button_width, metadata, button_color, emoji_id, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """,
-        (menu_type, button_id, text, callback_data, url, row_position, column_position, button_width, metadata),
+        (menu_type, button_id, text, callback_data, url, row_position, column_position, button_width, metadata, button_color, emoji_id),
         "Не удалось создать конфиг кнопки"
     )
     if cursor: logging.info(f"Конфиг кнопки создан: {menu_type}/{button_id}"); return True
@@ -2387,7 +2423,8 @@ def create_button_config(menu_type: str, button_id: str, text: str, callback_dat
 # ===== UPDATE_BUTTON_CONFIG =====
 def update_button_config(button_id: int, text: str = None, callback_data: str = None, 
                         url: str = None, row_position: int = None, column_position: int = None, 
-                        button_width: int = None, is_active: bool = None, sort_order: int = None, metadata: str = None) -> bool:
+                        button_width: int = None, is_active: bool = None, sort_order: int = None, 
+                        metadata: str = None, button_color: str = None, emoji_id: str = None) -> bool:
     logging.info(f"update_button_config called for {button_id}: text={text}, callback_data={callback_data}, url={url}, row={row_position}, col={column_position}, active={is_active}, sort={sort_order}")
     
     updates = []
@@ -2420,6 +2457,12 @@ def update_button_config(button_id: int, text: str = None, callback_data: str = 
     if metadata is not None:
         updates.append("metadata = ?")
         params.append(metadata)
+    if button_color is not None:
+        updates.append("button_color = ?")
+        params.append(button_color if button_color else None)
+    if emoji_id is not None:
+        updates.append("emoji_id = ?")
+        params.append(emoji_id if emoji_id else None)
     
     if not updates: return True
         
@@ -2507,11 +2550,11 @@ def delete_button_config(button_id: int) -> bool:
 
 
 # ===== CREATE_PLAN =====
-def create_plan(host_name: str, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0):
+def create_plan(host_name: str, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0, button_style: str = None, icon_emoji_id: str = None):
     host_name = normalize_host_name(host_name)
     cursor = _exec(
-        "INSERT INTO plans (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb) VALUES (?, ?, ?, ?, ?, ?)",
-        (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb),
+        "INSERT INTO plans (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb, button_style, icon_emoji_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb, button_style or None, icon_emoji_id or None),
         f"Не удалось создать тариф для хоста '{host_name}'"
     )
     if cursor: new_id = cursor.lastrowid; logging.info(f"Created new plan '{plan_name}' for host '{host_name}' with HWID={hwid_limit}, Traffic={traffic_limit_gb}GB."); return new_id
@@ -2544,14 +2587,25 @@ def delete_plan(plan_id: int):
 
 
 # ===== UPDATE_PLAN =====
-def update_plan(plan_id: int, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0) -> bool:
+def update_plan(plan_id: int, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0, button_style: str = None, icon_emoji_id: str = None) -> bool:
     cursor = _exec(
-        "UPDATE plans SET plan_name = ?, months = ?, price = ?, hwid_limit = ?, traffic_limit_gb = ? WHERE plan_id = ?",
-        (plan_name, months, price, hwid_limit, traffic_limit_gb, plan_id),
+        "UPDATE plans SET plan_name = ?, months = ?, price = ?, hwid_limit = ?, traffic_limit_gb = ?, button_style = ?, icon_emoji_id = ? WHERE plan_id = ?",
+        (plan_name, months, price, hwid_limit, traffic_limit_gb, button_style or None, icon_emoji_id or None, plan_id),
         f"Не удалось обновить тариф {plan_id}"
     )
     if cursor and cursor.rowcount > 0: logging.info(f"Updated plan {plan_id}: name='{plan_name}', months={months}, price={price}, hwid={hwid_limit}, traffic={traffic_limit_gb}."); return True
     if cursor and cursor.rowcount == 0: logging.warning(f"No plan updated for id {plan_id} (not found).")
+    return False
+
+
+def update_host_button_style(host_name: str, button_style: str = None, icon_emoji_id: str = None) -> bool:
+    host_name = normalize_host_name(host_name)
+    cursor = _exec(
+        "UPDATE xui_hosts SET button_style = ?, icon_emoji_id = ? WHERE TRIM(host_name) = TRIM(?)",
+        (button_style or None, icon_emoji_id or None, host_name),
+        f"Не удалось обновить стиль кнопки для хоста '{host_name}'"
+    )
+    if cursor and cursor.rowcount > 0: logging.info(f"Updated button style for host '{host_name}': style={button_style}, emoji={icon_emoji_id}"); return True
     return False
 # =======================
 
@@ -2838,6 +2892,34 @@ def get_total_spent_by_method(payment_method: str) -> float:
     )
     return float(val) if val is not None else 0.0
 # ===================================
+
+
+# ===== GET_TODAY_INCOME_BY_CURRENCY =====
+def get_today_income_by_currency() -> dict:
+    rub_methods = ('yookassa', 'platega')
+    crypto_methods = ('telegram stars', 'cryptobot', 'heleket', 'ton connect')
+    rub = _fetch_val(
+        f"""
+        SELECT COALESCE(SUM(amount_rub), 0.0)
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+          AND date(created_date) = date('now', '+3 hours')
+          AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in rub_methods)})
+        """,
+        rub_methods, 0.0, "Не удалось получить рублёвый доход за сегодня"
+    )
+    crypto = _fetch_val(
+        f"""
+        SELECT COALESCE(SUM(amount_rub), 0.0)
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+          AND date(created_date) = date('now', '+3 hours')
+          AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in crypto_methods)})
+        """,
+        crypto_methods, 0.0, "Не удалось получить крипто доход за сегодня"
+    )
+    return {"rub": float(rub or 0), "crypto": float(crypto or 0)}
+# ========================================
 
 
 # ===== CREATE_PENDING_TRANSACTION =====

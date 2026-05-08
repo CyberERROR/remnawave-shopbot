@@ -3,6 +3,10 @@
 
 {% block head %}
 <style>
+    .swatch-default { background: #55555520; color: #555; }
+    .swatch-danger  { background: #ef535020; color: #ef5350; }
+    .swatch-success { background: #66bb6a20; color: #66bb6a; }
+    .swatch-primary { background: #42a5f520; color: #42a5f5; }
 </style>
 {% endblock %}
 
@@ -74,7 +78,6 @@
             'icon': 'smart_toy'},
             {'id': 'payments', 'label': 'Платежи', 'icon': 'payments'},
             {'id': 'hosts', 'label': 'Хосты', 'icon': 'dns'},
-            {'id': 'ssh', 'label': 'SSH', 'icon': 'terminal'},
             {'id': 'referrals', 'label': 'Рефералы', 'icon': 'group'},
             {'id': 'content', 'label': 'Контент', 'icon': 'article'}
             ] %}
@@ -1451,7 +1454,7 @@
                 <div id="host-content-{{ host.host_name }}" class="hidden p-6 space-y-6 bg-black/20">
 
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <!-- URL Panel -->
                         <form action="{{ url_for('update_host_url_route') }}" method="post"
                             class="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-between group/tile">
@@ -1491,6 +1494,37 @@
                                     class="group w-full py-2 rounded-lg bg-primary/10 border border-primary/20 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2">
                                     <span class="material-symbols-outlined text-sm">badge</span>
                                     Сменить имя
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Button Style -->
+                        <form action="{{ url_for('update_host_button_style_route') }}" method="post"
+                            class="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-between group/tile">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="material-symbols-outlined text-primary text-sm">palette</span>
+                                <label class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Стиль
+                                    кнопки</label>
+                            </div>
+                            <div class="space-y-2 mt-auto">
+                                <div class="flex gap-1.5 items-center flex-wrap">
+                                    {% set cur_style = host.button_style or '' %}
+                                    {% for val, lbl, cls in [('', '—', 'swatch-default'), ('danger', '🔴', 'swatch-danger'), ('success', '🟢', 'swatch-success'), ('primary', '🔵', 'swatch-primary')] %}
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="button_style" value="{{ val }}" class="sr-only peer" {% if cur_style == val %}checked{% endif %} />
+                                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg border-2 text-xs font-bold transition-all peer-checked:ring-2 peer-checked:ring-primary peer-checked:border-primary border-white/10 hover:border-white/30 {{ cls }}">{{ lbl }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <input type="text" name="icon_emoji_id" value="{{ host.icon_emoji_id or '' }}"
+                                    placeholder="Emoji ID (опц.)"
+                                    class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none transition-all" />
+                                <button type="submit"
+                                    class="group w-full py-2 rounded-lg bg-primary/10 border border-primary/20 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">save</span>
+                                    Сохранить
                                 </button>
                             </div>
                         </form>
@@ -1898,6 +1932,20 @@
                                                 placeholder="HWID"
                                                 class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                                         </div>
+                                        <div class="space-y-1.5">
+                                            <div class="flex gap-1 items-center flex-wrap">
+                                                {% set p_style = plan.button_style or '' %}
+                                                {% for val, lbl, cls in [('', '—', 'swatch-default'), ('danger', '🔴', 'swatch-danger'), ('success', '🟢', 'swatch-success'), ('primary', '🔵', 'swatch-primary')] %}
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="button_style" value="{{ val }}" class="sr-only peer" {% if p_style == val %}checked{% endif %} />
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold border peer-checked:ring-2 peer-checked:ring-primary peer-checked:border-primary border-white/10 hover:border-white/30 {{ cls }}">{{ lbl }}</span>
+                                                </label>
+                                                {% endfor %}
+                                            </div>
+                                            <input type="text" name="icon_emoji_id" value="{{ plan.icon_emoji_id or '' }}"
+                                                placeholder="Emoji ID"
+                                                class="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-white text-[10px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                                        </div>
                                         <div class="grid grid-cols-2 gap-2 mt-auto pt-2">
                                             <button type="submit"
                                                 class="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 hover:text-white hover:border-primary/30 transition-all">ОК</button>
@@ -1958,7 +2006,18 @@
                                             class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none transition-all placeholder:text-white/10" />
                                     </div>
                                 </div>
-
+                                <div class="flex items-center gap-3 w-full lg:w-auto">
+                                    <div class="flex gap-1 items-center">
+                                        {% for val, lbl, cls in [('', '—', 'swatch-default'), ('danger', '🔴', 'swatch-danger'), ('success', '🟢', 'swatch-success'), ('primary', '🔵', 'swatch-primary')] %}
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="button_style" value="{{ val }}" class="sr-only peer" {% if val == '' %}checked{% endif %} />
+                                            <span class="inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold border peer-checked:ring-2 peer-checked:ring-primary peer-checked:border-primary border-white/10 hover:border-white/30 {{ cls }}">{{ lbl }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                    <input type="text" name="icon_emoji_id" placeholder="Emoji ID"
+                                        class="w-32 bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none transition-all placeholder:text-white/10" />
+                                </div>
                                 <button type="submit"
                                     class="group py-2 px-6 rounded-lg bg-primary/10 border border-primary/20 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center gap-2 whitespace-nowrap">
                                     <span class="material-symbols-outlined text-sm">add</span>
@@ -1974,321 +2033,6 @@
             <div class="bg-white/5 border border-white/10 rounded-lg p-8 text-center">
                 <span class="material-symbols-outlined text-4xl text-white/30 mb-2">dns</span>
                 <p class="text-white/50">Хосты ещё не добавлены.</p>
-            </div>
-            {% endif %}
-        </div>
-
-
-    </div>
-</section>
-
-<section id="tab-ssh" class="tab-content hidden">
-    <div class="space-y-6">
-        <div
-            class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-            <div
-                class="absolute -right-16 -top-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700">
-            </div>
-            <div class="relative flex items-center gap-4">
-                <div
-                    class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10 border border-blue-500/20">
-                    <span class="material-symbols-outlined text-3xl">terminal</span>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">SSH цели</h3>
-                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Сервера для Speedtest и
-                        мониторинга нод</p>
-                </div>
-            </div>
-        </div>
-
-        <div>
-
-
-            <!-- ===== ДОБАВЛЕНИЕ НОВОЙ SSH-ЦЕЛИ ===== -->
-            <div
-                class="bg-white/5 border border-white/10 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md transition-all mb-6">
-                <div class="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-white/[0.02] active:bg-white/[0.05] transition-colors"
-                    onclick="document.getElementById('add-ssh-form').classList.toggle('hidden'); document.getElementById('add-ssh-icon').classList.toggle('rotate-180')">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                            <span class="material-symbols-outlined text-2xl">terminal</span>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-white leading-none">Добавить SSH-цель</h3>
-                            <p class="text-white/40 text-xs mt-1">Подключите сервер для тестирования скорости Speedtest
-                            </p>
-                        </div>
-                    </div>
-                    <span id="add-ssh-icon"
-                        class="material-symbols-outlined text-white/30 transition-transform duration-300 transform">expand_more</span>
-                </div>
-
-                <div id="add-ssh-form" class="hidden border-t border-white/10 bg-black/20">
-                    <form action="{{ url_for('create_ssh_target_route') }}" method="post" class="p-6">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                            <div class="space-y-1.5">
-                                <label
-                                    class="block text-white/70 text-xs font-bold uppercase tracking-wider ml-1">Название
-                                    цели</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors text-sm">label</span>
-                                    <input type="text" name="target_name" placeholder="Server 1" required
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
-                                </div>
-                            </div>
-                            <div class="space-y-1.5">
-                                <label class="block text-white/70 text-xs font-bold uppercase tracking-wider ml-1">SSH
-                                    Host</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors text-sm">dns</span>
-                                    <input type="text" name="ssh_host" placeholder="1.2.3.4" required autocomplete="off"
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
-                                </div>
-                            </div>
-                            <div class="space-y-1.5">
-                                <label
-                                    class="block text-white/70 text-xs font-bold uppercase tracking-wider ml-1">Порт</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors text-sm">settings_ethernet</span>
-                                    <input type="number" name="ssh_port" value="22" required
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
-                                </div>
-                            </div>
-                            <div class="space-y-1.5">
-                                <label
-                                    class="block text-white/70 text-xs font-bold uppercase tracking-wider ml-1">Пользователь</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors text-sm">person</span>
-                                    <input type="text" name="ssh_user" value="root" required autocomplete="off"
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
-                                </div>
-                            </div>
-                            <div class="space-y-1.5">
-                                <label
-                                    class="block text-white/70 text-xs font-bold uppercase tracking-wider ml-1">Пароль
-                                    (опционально)</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors text-sm">key</span>
-                                    <input type="password" name="ssh_password" placeholder="••••••••"
-                                        autocomplete="new-password"
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
-                                </div>
-                            </div>
-                            <div class="space-y-1.5 md:col-span-2 lg:col-span-2">
-                                <label class="block text-white/70 text-xs font-bold uppercase tracking-wider ml-1">Путь
-                                    к ключу (опционально)</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors text-sm">vpn_key</span>
-                                    <input type="text" name="ssh_key_path" id="ssh_key_path_input"
-                                        placeholder="/app/keys/id_rsa"
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-12 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
-
-                                    <input type="file" id="ssh_key_file_picker" class="hidden" accept=".pem,.key,.pub"
-                                        onchange="uploadSSHKeyFile(this)" />
-                                    <button type="button"
-                                        onclick="document.getElementById('ssh_key_file_picker').click()"
-                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-primary transition-colors">
-                                        <span class="material-symbols-outlined text-sm">folder_open</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="space-y-1.5 lg:col-span-1">
-                                <label
-                                    class="block text-white/70 text-xs font-bold uppercase tracking-wider ml-1">Описание</label>
-                                <div class="relative group">
-                                    <span
-                                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-primary transition-colors text-sm">description</span>
-                                    <input type="text" name="description" placeholder="Европа"
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white/10 transition-all" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-6 flex justify-end">
-                            <button type="submit"
-                                class="group relative px-8 py-3 rounded-xl bg-primary/10 border border-primary/20 text-white font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all flex items-center gap-2 overflow-hidden">
-                                <div
-                                    class="absolute inset-0 bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform">
-                                </div>
-                                <span class="material-symbols-outlined text-xl relative z-10">add</span>
-                                <span class="relative z-10">Создать SSH-цель</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <!-- ===== КОНЕЦ ДОБАВЛЕНИЯ SSH-ЦЕЛИ ===== -->
-
-
-            {% if ssh_targets %}
-            <div id="ssh-targets-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {% for t in ssh_targets %}
-                <div class="ssh-target-card relative bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md group flex flex-col h-full"
-                    draggable="true" data-target-name="{{ t.target_name }}">
-
-                    <!-- Card Header -->
-                    <div class="flex items-center justify-between px-4 py-2 bg-white/[0.02] border-b border-white/10">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <span
-                                class="material-symbols-outlined text-white/20 cursor-grab active:cursor-grabbing hover:text-white/60 drag-handle transition-colors"
-                                onclick="event.stopPropagation()">drag_indicator</span>
-                            <div class="min-w-0">
-                                <h4 class="text-xs font-bold text-white truncate">{{ t.target_name }}</h4>
-                                {% if t.description %}
-                                <p
-                                    class="text-[8px] text-primary/60 uppercase font-bold tracking-widest flex items-center gap-0.5 mt-0.5">
-                                    <span class="material-symbols-outlined text-[10px]">description</span>{{
-                                    t.description }}
-                                </p>
-                                {% else %}
-                                <p class="text-[8px] text-white/30 uppercase font-bold tracking-widest mt-0.5">SSH
-                                    Target</p>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <form action="{{ url_for('delete_ssh_target_route', target_name=t.target_name) }}" method="post"
-                            data-confirm="Удалить SSH-цель '{{ t.target_name }}'?" class="ml-2">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <button type="submit"
-                                class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-red-500/50 hover:text-red-500 transition-all">
-                                <span class="material-symbols-outlined text-sm">delete</span>
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="p-4 flex-1 flex flex-col justify-between bg-black/10">
-                        <!-- Info Grid -->
-                        <div class="space-y-2">
-                            <div class="bg-black/20 border border-white/5 rounded-xl p-2.5">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <span class="material-symbols-outlined text-primary text-[12px]">dns</span>
-                                    <label
-                                        class="text-white/30 text-[8px] font-bold uppercase tracking-wider">Host:Port</label>
-                                </div>
-                                <p class="text-white/90 text-[11px] font-mono ml-5 truncate">{{ t.ssh_host }}:{{
-                                    t.ssh_port or 22 }}</p>
-                            </div>
-                        </div>
-
-                        <!-- Data display for Speedtest (Added) -->
-                        <div id="st-result-{{ t.target_name }}"
-                            class="bg-black/20 border border-white/5 rounded-xl p-2.5 mt-2 hidden">
-                            <div class="flex items-center gap-2 mb-1 border-b border-white/5 pb-1">
-                                <span class="material-symbols-outlined text-primary text-[12px]">speed</span>
-                                <label class="text-white/30 text-[8px] font-bold uppercase tracking-wider">Последний
-                                    тест</label>
-                                <span id="st-badge-{{ t.target_name }}" class="ml-auto"></span>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] mt-1.5"
-                                id="st-data-{{ t.target_name }}">
-                                <!-- Data injected via JS -->
-                            </div>
-                        </div>
-
-                        <!-- Actions -->
-                        <div class="space-y-1.5 pt-4 mt-auto">
-                            <form action="{{ url_for('run_ssh_target_speedtest_route', target_name=t.target_name) }}"
-                                method="post" class="w-full">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                <button type="submit"
-                                    class="speedtest-loading-btn w-full px-4 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500/30 transition-all flex items-center justify-center gap-2 border border-blue-500/10"
-                                    data-label="Тест">
-                                    <span class="material-symbols-outlined text-sm">speed</span>
-                                    ТЕСТ СКОРОСТИ
-                                </button>
-                            </form>
-
-                            <div class="grid grid-cols-2 gap-1.5">
-                                <button type="button"
-                                    class="ssh-edit-btn px-4 py-1.5 rounded-lg bg-white/5 border border-white/5 text-white/50 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
-                                    data-target="{{ t.target_name }}">
-                                    <span class="flex items-center justify-center gap-1">
-                                        <span class="material-symbols-outlined text-xs">edit</span>
-                                        ПРАВКА
-                                    </span>
-                                </button>
-                                <form
-                                    action="{{ url_for('auto_install_speedtest_on_target_route', target_name=t.target_name) }}"
-                                    method="post">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                    <button type="submit"
-                                        class="speedtest-loading-btn w-full px-4 py-1.5 rounded-lg bg-white/5 border border-white/5 text-white/40 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
-                                        data-label="Setup">
-                                        <span class="flex items-center justify-center gap-1">
-                                            <span class="material-symbols-outlined text-xs">settings</span>
-                                            SETUP
-                                        </span>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- Edit Form (Hidden by default) -->
-                        <div id="edit-ssh-{{ t.target_name }}" class="hidden pt-3 border-t border-white/5">
-                            <form action="{{ url_for('update_ssh_target_route', target_name=t.target_name) }}"
-                                method="post" class="space-y-2">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div class="col-span-2 space-y-1">
-                                        <input type="text" name="new_target_name" value="{{ t.target_name }}"
-                                            placeholder="Имя" required
-                                            class="w-full bg-black/30 border border-white/10 rounded-xl px-2 py-1.5 text-white text-[10px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                    </div>
-                                    <div class="col-span-2 space-y-1">
-                                        <input type="text" name="ssh_host" value="{{ t.ssh_host or '' }}"
-                                            placeholder="IP" required autocomplete="off"
-                                            class="w-full bg-black/30 border border-white/10 rounded-xl px-2 py-1.5 text-white text-[10px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                    </div>
-                                    <input type="number" name="ssh_port" value="{{ t.ssh_port or '' }}"
-                                        placeholder="Порт"
-                                        class="bg-black/30 border border-white/10 rounded-xl px-2 py-1.5 text-white text-[10px]" />
-                                    <input type="text" name="ssh_user" value="{{ t.ssh_user or '' }}" placeholder="Юзер"
-                                        autocomplete="off"
-                                        class="bg-black/30 border border-white/10 rounded-xl px-2 py-1.5 text-white text-[10px]" />
-                                    <div class="col-span-2 relative">
-                                        <input type="password" name="ssh_password" id="pass-{{ t.target_name }}"
-                                            value="{{ t.ssh_password or '' }}" placeholder="Пароль"
-                                            autocomplete="new-password"
-                                            class="w-full bg-black/30 border border-white/10 rounded-xl pl-2 pr-8 py-1.5 text-white text-[10px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                        <button type="button"
-                                            onclick="togglePasswordVisibility('pass-{{ t.target_name }}')"
-                                            class="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors">
-                                            <span class="material-symbols-outlined text-[14px]">visibility</span>
-                                        </button>
-                                    </div>
-                                    <div class="col-span-2 space-y-1">
-                                        <input type="text" name="description" value="{{ t.description or '' }}"
-                                            placeholder="Описание"
-                                            class="w-full bg-black/30 border border-white/10 rounded-xl px-2 py-1.5 text-white text-[10px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
-                                    <button type="submit"
-                                        class="py-1.5 rounded-lg bg-primary text-background-dark text-[10px] font-bold uppercase tracking-widest hover:scale-[1.02] transition-all">ОК</button>
-                                    <button type="button"
-                                        class="ssh-cancel-btn py-1.5 rounded-lg bg-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-white/20 transition-all"
-                                        data-target="{{ t.target_name }}">Отмена</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="bg-white/5 border border-white/10 rounded-lg p-8 text-center">
-                <span class="material-symbols-outlined text-4xl text-white/30 mb-2">dns</span>
-                <p class="text-white/50">SSH-цели не добавлены.</p>
             </div>
             {% endif %}
         </div>
@@ -2798,25 +2542,36 @@
                     </div>
                     <h4 class="text-white font-bold text-sm">Тексты кнопок меню</h4>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {% for f in [
-                    {'n': 'btn_trial_text', 'l': 'Пробный', 'p': '🎁 Пробный'},
-                    {'n': 'btn_profile_text', 'l': 'Профиль', 'p': '👤 Профиль'},
-                    {'n': 'btn_my_keys_text', 'l': 'Ключи', 'p': '🔑 Ключи'},
-                    {'n': 'btn_buy_key_text', 'l': 'Купить', 'p': '🛒 Купить'},
-                    {'n': 'btn_topup_text', 'l': 'Баланс', 'p': '💳 Баланс'},
-                    {'n': 'btn_referral_text', 'l': 'Рефералы', 'p': '🤝 Рефералы'},
-                    {'n': 'btn_support_text', 'l': 'Помощь', 'p': '🆘 Помощь'},
-                    {'n': 'btn_about_text', 'l': 'О боте', 'p': 'ℹ️ О боте'},
-                    {'n': 'btn_howto_text', 'l': 'FAQ', 'p': '❓ Помощь'},
-                    {'n': 'btn_speed_text', 'l': 'Скорость', 'p': '⚡ Скорость'},
-                    {'n': 'btn_admin_text', 'l': 'Админ', 'p': '⚙️ Админ'},
-                    {'n': 'btn_back_to_menu_text', 'l': 'Назад', 'p': '⬅️ Назад'}
+                    {'n': 'btn_trial_text', 'b': 'btn_trial', 'l': 'Пробный', 'p': '🎁 Пробный'},
+                    {'n': 'btn_profile_text', 'b': 'btn_profile', 'l': 'Профиль', 'p': '👤 Профиль'},
+                    {'n': 'btn_my_keys_text', 'b': 'btn_my_keys', 'l': 'Ключи', 'p': '🔑 Ключи'},
+                    {'n': 'btn_buy_key_text', 'b': 'btn_buy_key', 'l': 'Купить', 'p': '🛒 Купить'},
+                    {'n': 'btn_topup_text', 'b': 'btn_topup', 'l': 'Баланс', 'p': '💳 Баланс'},
+                    {'n': 'btn_referral_text', 'b': 'btn_referral', 'l': 'Рефералы', 'p': '🤝 Рефералы'},
+                    {'n': 'btn_support_text', 'b': 'btn_support', 'l': 'Помощь', 'p': '🆘 Помощь'},
+                    {'n': 'btn_about_text', 'b': 'btn_about', 'l': 'О боте', 'p': 'ℹ️ О боте'},
+                    {'n': 'btn_howto_text', 'b': 'btn_howto', 'l': 'FAQ', 'p': '❓ Помощь'},
+                    {'n': 'btn_speed_text', 'b': 'btn_speed', 'l': 'Скорость', 'p': '⚡ Скорость'},
+                    {'n': 'btn_admin_text', 'b': 'btn_admin', 'l': 'Админ', 'p': '⚙️ Админ'},
+                    {'n': 'btn_back_to_menu_text', 'b': 'btn_back_to_menu', 'l': 'Назад', 'p': '⬅️ Назад'}
                     ] %}
-                    <div class="space-y-1">
+                    <div class="space-y-2 bg-black/20 border border-white/5 rounded-xl p-3">
                         <label class="block text-white/30 text-[8px] uppercase font-bold tracking-[0.1em] ml-1">{{ f.l
                             }}</label>
                         <input type="text" name="{{ f.n }}" value="{{ settings[f.n] or '' }}" placeholder="{{ f.p }}"
+                            class="w-full bg-black/30 border border-white/5 rounded-xl px-2 py-1.5 text-white text-[10px] focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                        <div class="flex gap-1 items-center flex-wrap">
+                            {% set cur_style = settings[f.b ~ '_button_style'] or '' %}
+                            {% for val, lbl, cls in [('', '—', 'swatch-default'), ('danger', '🔴', 'swatch-danger'), ('success', '🟢', 'swatch-success'), ('primary', '🔵', 'swatch-primary')] %}
+                            <label class="cursor-pointer">
+                                <input type="radio" name="{{ f.b }}_button_style" value="{{ val }}" class="sr-only peer" {% if cur_style == val %}checked{% endif %} />
+                                <span class="inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold border peer-checked:ring-2 peer-checked:ring-primary peer-checked:border-primary border-white/10 hover:border-white/30 {{ cls }}">{{ lbl }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <input type="text" name="{{ f.b }}_icon_emoji_id" value="{{ settings[f.b ~ '_icon_emoji_id'] or '' }}" placeholder="Emoji ID"
                             class="w-full bg-black/30 border border-white/5 rounded-xl px-2 py-1.5 text-white text-[10px] focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
                     </div>
                     {% endfor %}
@@ -3878,40 +3633,7 @@
         else showToast('danger', r.error || 'Ошибка');
     }
 
-    async function uploadSSHKeyFile(input) {
-        if (!input.files || !input.files[0]) return;
-        const file = input.files[0];
-        const formData = new FormData();
-        formData.append('file', file);
 
-        showToast('info', 'Загрузка ключа...');
-
-        try {
-            const response = await fetch('/upload-ssh-key', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-                }
-            });
-            const result = await response.json();
-            if (result.ok) {
-                const pathInput = document.getElementById('ssh_key_path_input');
-                if (pathInput) {
-                    pathInput.value = result.path;
-                    showToast('success', 'Ключ загружен успешно');
-                }
-            } else {
-                showToast('danger', result.error || 'Ошибка при загрузке');
-            }
-        } catch (error) {
-            console.error('Error uploading key:', error);
-            showToast('danger', 'Произошла сетевая ошибка при загрузке');
-        } finally {
-            input.value = '';
-        }
-    }
 
 </script>
 
