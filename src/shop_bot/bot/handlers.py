@@ -10,6 +10,7 @@ import json
 import base64
 import asyncio
 import time
+import math
 from collections import deque
 
 from urllib.parse import urlencode
@@ -33,6 +34,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from shop_bot.bot import keyboards
 from shop_bot.modules.platega_api import PlategaAPI
 from shop_bot.modules.heleket_api import create_heleket_payment_request
+from shop_bot.modules.yookassa_proxy import create_yookassa_payment_with_proxy, mask_proxy_password
 from shop_bot.data_manager.remnawave_repository import (
     add_to_balance,
     deduct_from_balance,
@@ -59,6 +61,8 @@ from shop_bot.data_manager.remnawave_repository import (
     get_all_users,
     set_terms_agreed,
     set_referral_start_bonus_received,
+    is_referral_discount_used,
+    set_referral_discount_used,
     set_trial_used,
     update_user_stats,
     log_transaction,
@@ -81,12 +85,9 @@ from shop_bot.config import (
     get_purchase_success_text,
     get_msk_time
 )
-from shop_bot.data_manager import remnawave_repository as rw_repo
-from shop_bot.modules import remnawave_api
 
-TELEGRAM_BOT_USERNAME = None
-PAYMENT_METHODS = None
-ADMIN_ID = None
+user_router = Router()
+ADMIN_IDS = []
 CRYPTO_BOT_TOKEN = get_setting("cryptobot_token")
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,37 @@ logger = logging.getLogger(__name__)
 user_command_times = {}
 user_blocked_until = {}
 user_spam_level = {}
+user_blocked_recent_actions = {}
+_recent_payment_clicks = {}
+
+def get_plan_duration_days(plan: dict | None) -> int:
+    if not plan:
+        return 30
+    try:
+        days = int(plan.get('duration_days') or 0)
+        if days > 0:
+            return days
+    except Exception:
+        pass
+    try:
+        return max(1, int(plan.get('months') or 1)) * 30
+    except Exception:
+        return 30
+
+def get_plan_duration_months(plan: dict | None) -> int:
+    days = get_plan_duration_days(plan)
+    return max(1, int(math.ceil(days / 30)))
+
+def get_plan_duration_month_factor(plan: dict | None) -> Decimal:
+    days = get_plan_duration_days(plan)
+    return (Decimal(days) / Decimal(30)).quantize(Decimal("0.0001"))
+
+def get_plan_duration_label(plan: dict | None) -> str:
+    days = get_plan_duration_days(plan)
+    if days % 30 == 0:
+        months = days // 30
+        return f"{months} мес."
+    return f"{days} дн."
 
 # ===== УТИЛИТА БЕЗОПАСНАЯ СТРОКА =====
 # Преобразует входное значение в строку, заменяя None на пустую строку
@@ -139,12 +171,15 @@ def get_transaction_comment(user: types.User, action_type: str, value: any, host
     user_info = ", ".join(user_info_parts)
     info_suffix = f" ({user_info})" if user_info else ""
     
-    if action_type == 'new': 
-        logger.info(f"Транзакция: Создание новой подписки на {value} мес. для пользователя {user_id}")
-        return f"Подписка на {value} мес.{info_suffix}"
-    elif action_type == 'extend': 
-        logger.info(f"Транзакция: Продление подписки на {value} мес. для пользователя {user_id}")
-        return f"Продление на {value} мес.{info_suffix}"
+    if action_type in ('new', 'extend'):
+        value_text = str(value).strip()
+        if re.fullmatch(r"\d+", value_text):
+            value_text = f"{value_text} мес."
+        if action_type == 'new': 
+            logger.info(f"Транзакция: Создание новой подписки на {value_text} для пользователя {user_id}")
+            return f"Подписка на {value_text}{info_suffix}"
+        logger.info(f"Транзакция: Продление подписки на {value_text} для пользователя {user_id}")
+        return f"Продление на {value_text}{info_suffix}"
     elif action_type == 'topup': 
         logger.info(f"Транзакция: Пополнение баланса на {value} RUB для пользователя {user_id}")
         return f"Пополнение баланса на {value} RUB{info_suffix}"
@@ -241,7 +276,11 @@ def calculate_order_price(plan: dict, user_data: dict, promo_code: str = None, p
     except Exception as e:
         logger.error(f"Error in calculate_order_price discount block: {e}")
 
-    if user_data.get('referred_by') and user_data.get('total_spent', 0) == 0 and not get_user_keys(uid):
+    # Check if user has a referrer, hasn't spent anything, has no keys, and hasn't used referral discount yet
+    if (user_data.get('referred_by') and
+        user_data.get('total_spent', 0) == 0 and
+        not get_user_keys(uid) and
+        not is_referral_discount_used(uid)):
         try:
             discount_percentage = Decimal(get_setting("referral_discount") or "0")
             if discount_percentage > 0:
@@ -290,6 +329,25 @@ async def create_pending_payment(user_id: int, amount: float, payment_method: st
 # ===== Конец функции create_pending_payment =====
 
 async def create_yookassa_payment_async(payload: dict, idempotence_key: str, shop_id: str, secret_key: str, timeout_seconds: int = 12) -> dict:
+    """
+    Create YooKassa payment with automatic proxy support and fallback to direct connection.
+    """
+    # Use the proxy manager for intelligent proxy selection and fallback
+    try:
+        return await create_yookassa_payment_with_proxy(
+            payment_create_func=None,  # We'll handle directly via aiohttp
+            payload=payload,
+            idempotence_key=idempotence_key,
+            timeout=timeout_seconds,
+        )
+    except Exception as e:
+        # If proxy system fails entirely, try direct connection as last resort
+        logger.warning(f"YooKassa proxy system failed: {e}, trying direct connection")
+        return await _create_yookassa_payment_direct(payload, idempotence_key, shop_id, secret_key, timeout_seconds)
+
+
+async def _create_yookassa_payment_direct(payload: dict, idempotence_key: str, shop_id: str, secret_key: str, timeout_seconds: int = 12) -> dict:
+    """Direct YooKassa payment creation without proxy (fallback)."""
     timeout = aiohttp.ClientTimeout(total=timeout_seconds, connect=5, sock_read=timeout_seconds)
     headers = {"Idempotence-Key": str(idempotence_key)}
     auth = aiohttp.BasicAuth(str(shop_id), str(secret_key))
@@ -1074,13 +1132,14 @@ def get_user_router() -> Router:
             return
 
         stars_amount = max(1, int((price_rub * stars_ratio).quantize(Decimal('1'), rounding=ROUND_HALF_UP)))
-        months = int(plan['months'])
+        months = get_plan_duration_months(plan)
+        duration_label = get_plan_duration_label(plan)
         
         try:
             payment_id, _ = await create_pending_payment(user_id=user_id, amount=float(price_rub), payment_method="Telegram Stars", action=data.get('action'), metadata_source=data, plan_id=data.get('plan_id'), months=months)
             logger.info(f"Оплата (Stars): пользователь {user_id}, план {data.get('plan_id')}, сумма {price_rub} RUB")
-            description_str = get_transaction_comment(callback.from_user, 'new' if data.get('action') == 'new' else 'extend', months, data.get('host_name'))
-            title = f"{'Подписка' if data.get('action') == 'new' else 'Продление'} на {months} мес."
+            description_str = get_transaction_comment(callback.from_user, 'new' if data.get('action') == 'new' else 'extend', duration_label, data.get('host_name'))
+            title = f"{'Подписка' if data.get('action') == 'new' else 'Продление'} на {duration_label}"
             
             await callback.message.answer_invoice(title=title, description=description_str, prices=[LabeledPrice(label=title, amount=stars_amount)], payload=payment_id, currency="XTR")
             logger.info(f"Stars: Инвойс на подписку для пользователя {user_id} отправлен (сумма в Stars: {stars_amount})")
@@ -1235,9 +1294,10 @@ def get_user_router() -> Router:
             await state.clear()
             return
             
-        user_id, months = callback.from_user.id, int(plan['months'])
+        user_id, months = callback.from_user.id, get_plan_duration_months(plan)
+        duration_label = get_plan_duration_label(plan)
         payment_id, _ = await create_pending_payment(user_id=user_id, amount=float(price_rub), payment_method="YooMoney", action=data.get('action'), metadata_source=data, plan_id=plan_id, months=months)
-        description_str = get_transaction_comment(callback.from_user, 'new' if data.get('action') == 'new' else 'extend', months, data.get('host_name'))
+        description_str = get_transaction_comment(callback.from_user, 'new' if data.get('action') == 'new' else 'extend', duration_label, data.get('host_name'))
         pay_url = _build_yoomoney_link(wallet, price_rub, payment_id, description_str)
         payment_image = get_setting("payment_image")
         
@@ -1363,7 +1423,7 @@ def get_user_router() -> Router:
             return
             
         user_id, user_data = callback.from_user.id, get_user(callback.from_user.id)
-        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), int(plan['months'])
+        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), get_plan_duration_months(plan)
         logger.info(f"Оплата (Heleket): пользователь {user_id}, план {plan_id}, сумма {price_rub} RUB, действие {data.get('action')}")
         
         try:
@@ -1413,7 +1473,7 @@ def get_user_router() -> Router:
             return
             
         user_id, user_data = callback.from_user.id, get_user(callback.from_user.id)
-        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), int(plan['months'])
+        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), get_plan_duration_months(plan)
         logger.info(f"Оплата (Platega): пользователь {user_id}, план {plan_id}, сумма {price_rub} RUB, действие {data.get('action')}")
         
         try:
@@ -1436,6 +1496,58 @@ def get_user_router() -> Router:
             await smart_edit_message(callback.message, "⚠️ Внутренняя ошибка при создании платежа Platega.")
             await state.clear()
     # ===== Конец функции pay_platega_handler =====
+
+    # ===== ОПЛАТА ПОДПИСКИ ЧЕРЕЗ PLATEGA UNIVERSAL (общая пей-форма) =====
+    @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_platega_universal")
+    @anti_spam
+    async def pay_platega_universal_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer("⏳ Генерация ссылки Platega...")
+        data = await state.get_data()
+        plan_id = data.get('plan_id')
+        
+        if not plan_id:
+            logger.error(f"Platega Universal: Отсутствует plan_id для {callback.from_user.id}")
+            await smart_edit_message(callback.message, "❌ Ошибка: Тариф не выбран.")
+            await state.clear()
+            return
+        
+        plan = get_plan_by_id(plan_id)
+        if not plan:
+            logger.error(f"Platega Universal: Тариф {plan_id} не найден.")
+            await smart_edit_message(callback.message, "❌ Выбранный тариф недоступен.")
+            await state.clear()
+            return
+        
+        merchant_id, api_key = get_setting("platega_merchant_id"), get_setting("platega_api_key")
+        if not merchant_id or not api_key:
+            await smart_edit_message(callback.message, "⚠️ Сервис Platega временно отключен.")
+            await state.clear()
+            return
+            
+        user_id, user_data = callback.from_user.id, get_user(callback.from_user.id)
+        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), get_plan_duration_months(plan)
+        logger.info(f"Оплата (Platega Universal): пользователь {user_id}, план {plan_id}, сумма {price_rub} RUB, действие {data.get('action')}")
+        
+        try:
+            payment_id, metadata = await create_pending_payment(user_id=user_id, amount=float(price_rub), payment_method="Platega", action=data.get('action'), metadata_source=data, plan_id=plan_id, months=months)
+            platega = PlategaAPI(merchant_id, api_key)
+            description_str = get_transaction_comment(callback.from_user, 'new' if data.get('action') == 'new' else 'extend', months, data.get('host_name'))
+
+            _, payment_url = await platega.create_payment_universal(amount=float(price_rub), description=description_str, payment_id=payment_id, return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}", failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}")
+            
+            if payment_url:
+                payment_image = get_setting("payment_image")
+                logger.info(f"Platega Universal: Ссылка на оплату для пользователя {user_id} сформирована.")
+                await smart_edit_message(callback.message, "💳 <b>Оплата через Platega</b>\nНажмите на кнопку ниже для выбора способа оплаты:", get_payment_keyboard("Platega", payment_url, back_callback="back_to_payment_options"), payment_image)
+            else:
+                logger.warning(f"Platega Universal: Ошибка генерации ссылки для пользователя {user_id}.")
+                await smart_edit_message(callback.message, "❌ Не удалось создать ссылку. Выберите другой метод.")
+                await state.clear()
+        except Exception as e:
+            logger.error(f"Platega Universal Ошибка: {e}", exc_info=True)
+            await smart_edit_message(callback.message, "⚠️ Внутренняя ошибка при создании платежа Platega.")
+            await state.clear()
+    # ===== Конец функции pay_platega_universal_handler =====
 
     # ===== ОПЛАТА ПОДПИСКИ ЧЕРЕЗ PLATEGA (КРИПТА) =====
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_platega_crypto")
@@ -1465,7 +1577,7 @@ def get_user_router() -> Router:
             return
             
         user_id, user_data = callback.from_user.id, get_user(callback.from_user.id)
-        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), int(plan['months'])
+        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), get_plan_duration_months(plan)
         logger.info(f"Оплата (Platega Crypto): пользователь {user_id}, план {plan_id}, сумма {price_rub} RUB, действие {data.get('action')}")
         
         try:
@@ -1521,6 +1633,40 @@ def get_user_router() -> Router:
             await smart_edit_message(callback.message, "⚠️ Произошла ошибка при инициализации платежа.")
             await state.clear()
     # ===== Конец функции topup_platega_handler =====
+
+    # ===== ПОПОЛНЕНИЕ БАЛАНСА ЧЕРЕЗ PLATEGA UNIVERSAL =====
+    @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_platega_universal")
+    @anti_spam
+    async def topup_platega_universal_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer("⏳ Генерация ссылки Platega...")
+        data = await state.get_data()
+        user_id, amount_rub = callback.from_user.id, Decimal(str(data.get('topup_amount', 0)))
+        merchant_id, api_key = get_setting("platega_merchant_id"), get_setting("platega_api_key")
+        
+        if not merchant_id or not api_key or amount_rub <= 0:
+            await smart_edit_message(callback.message, "⚠️ Оплата через Platega временно недоступна.")
+            await state.clear()
+            return
+        
+        try:
+            payment_id, metadata = await create_pending_payment(user_id=user_id, amount=float(amount_rub), payment_method="Platega", action="top_up", metadata_source=data)
+            logger.info(f"Пополнение (Platega Universal): пользователь {user_id}, сумма {amount_rub} RUB")
+            platega = PlategaAPI(merchant_id, api_key)
+            description_str = get_transaction_comment(callback.from_user, 'topup', f"{amount_rub:.2f}")
+
+            _, payment_url = await platega.create_payment_universal(amount=float(amount_rub), description=description_str, payment_id=payment_id, return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}", failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}")
+            
+            if payment_url:
+                payment_image = get_setting("payment_image")
+                await smart_edit_message(callback.message, "💳 <b>Оплата через Platega</b>\nНажмите на кнопку ниже для пополнения:", get_payment_keyboard("Platega", payment_url, back_callback="back_to_topup_options"), payment_image)
+            else:
+                await smart_edit_message(callback.message, "❌ Ошибка создания ссылки. Попробуйте позже.")
+                await state.clear()
+        except Exception as e:
+            logger.error(f"Platega Universal Пополнение Ошибка: {e}", exc_info=True)
+            await smart_edit_message(callback.message, "⚠️ Произошла ошибка при инициализации платежа.")
+            await state.clear()
+    # ===== Конец функции topup_platega_universal_handler =====
 
     # ===== ПОПОЛНЕНИЕ БАЛАНСА ЧЕРЕЗ PLATEGA (КРИПТА) =====
     @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_platega_crypto")
@@ -2481,7 +2627,7 @@ def get_user_router() -> Router:
                 if not preset_found:
                     from shop_bot.data_manager.database import get_plan_by_id, get_setting
                     plan = get_plan_by_id(data.get('plan_id')) if data.get('plan_id') else None
-                    months = int(plan.get('months') or 1) if plan else 1
+                    months = get_plan_duration_months(plan) if plan else 1
                     base_devices = int(get_setting(f"base_device_{host_name}") or "1")
                     await state.update_data(
                         tier_device_count=base_devices, tier_price=0.0, selected_tier_id=0,
@@ -2660,8 +2806,8 @@ def get_user_router() -> Router:
         if not plan: return await (message.edit_text if isinstance(message, types.Message) else message.answer)("❌ Ошибка: Тариф не найден.")
         
         price = calculate_order_price(plan, user, data.get('promo_code'), data.get('promo_discount', 0))
-        months = int(plan.get('months') or 1)
-        price += Decimal(str(data.get('tier_price', 0))) * months
+        month_factor = get_plan_duration_month_factor(plan)
+        price += Decimal(str(data.get('tier_price', 0))) * month_factor
         await state.update_data(final_price=float(price))
         
         balance = get_balance(message.chat.id)
@@ -2796,9 +2942,11 @@ def get_user_router() -> Router:
         email = data.get('customer_email') or get_setting("receipt_email")
 
         try:
-            pid, meta = await create_pending_payment(user_id=callback.from_user.id, amount=float(price), payment_method="YooKassa", action=data['action'], metadata_source=data, plan_id=plan['plan_id'], months=plan['months'])
+            months = get_plan_duration_months(plan)
+            duration_label = get_plan_duration_label(plan)
+            pid, meta = await create_pending_payment(user_id=callback.from_user.id, amount=float(price), payment_method="YooKassa", action=data['action'], metadata_source=data, plan_id=plan['plan_id'], months=months)
             logger.info(f"Оплата (YooKassa): пользователь {callback.from_user.id}, план {plan['plan_id']}, сумма {price} RUB")
-            comment = get_transaction_comment(callback.from_user, data['action'], plan['months'], data.get('host_name'))
+            comment = get_transaction_comment(callback.from_user, data['action'], duration_label, data.get('host_name'))
             
             payload = {"amount": {"value": f"{price:.2f}", "currency": "RUB"}, "confirmation": {"type": "redirect", "return_url": f"https://t.me/{TELEGRAM_BOT_USERNAME}"}, "capture": True, "description": comment, "metadata": meta}
             if email and is_valid_email(email): payload['receipt'] = {"customer": {"email": email}, "items": [{"description": comment, "quantity": "1.00", "amount": {"value": f"{price:.2f}", "currency": "RUB"}, "vat_code": "1", "payment_subject": "service", "payment_mode": "full_payment"}]}
@@ -2820,10 +2968,11 @@ def get_user_router() -> Router:
 
         price = Decimal(str(data.get('final_price', plan['price'])))
         try:
-            pid, meta = await create_pending_payment(user_id=callback.from_user.id, amount=float(price), payment_method="CryptoBot", action=data['action'], metadata_source=data, plan_id=plan['plan_id'], months=plan['months'])
+            months = get_plan_duration_months(plan)
+            pid, meta = await create_pending_payment(user_id=callback.from_user.id, amount=float(price), payment_method="CryptoBot", action=data['action'], metadata_source=data, plan_id=plan['plan_id'], months=months)
             logger.info(f"Оплата (CryptoBot): пользователь {callback.from_user.id}, план {plan['plan_id']}, сумма {price} RUB")
             
-            payload = ":".join([str(callback.from_user.id), str(plan['months']), f"{price:.2f}", str(data['action']), str(data.get('key_id') or "None"), str(data.get('host_name') or ""), str(plan['plan_id']), str(data.get('customer_email') or "None"), "CryptoBot", str(data.get('promo_code') or "None"), f"{data.get('promo_discount', 0):.2f}", str(data.get('tier_device_count') or 'None')])
+            payload = ":".join([str(callback.from_user.id), str(months), f"{price:.2f}", str(data['action']), str(data.get('key_id') or "None"), str(data.get('host_name') or ""), str(plan['plan_id']), str(data.get('customer_email') or "None"), "CryptoBot", str(data.get('promo_code') or "None"), f"{data.get('promo_discount', 0):.2f}", str(data.get('tier_device_count') or 'None')])
             res = await create_cryptobot_api_invoice(amount=float(price), payload_str=payload)
             
             if res:
@@ -2883,7 +3032,7 @@ def get_user_router() -> Router:
         if not wallet or not plan: return await smart_edit_message(callback.message, "❌ Оплата через TON временно недоступна.")
 
         await callback.answer("⏳ Подготовка TON Connect..."); user = get_user(uid)
-        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), int(plan['months'])
+        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), get_plan_duration_months(plan)
         rt_usdt, rt_ton = await get_usdt_rub_rate(), await get_ton_usdt_rate()
 
         if not rt_usdt or not rt_ton: return await smart_edit_message(callback.message, "❌ Не удалось получить актуальный курс TON.")
@@ -2914,7 +3063,7 @@ def get_user_router() -> Router:
         logger.info(f"Оплата (Баланс): пользователь {callback.from_user.id}, план {plan['plan_id']}, сумма {price} RUB")
         if not deduct_from_balance(callback.from_user.id, price): return await callback.answer("⚖️ Недостаточно средств на балансе.", show_alert=True)
 
-        meta = {"user_id": callback.from_user.id, "months": int(plan['months']), "price": price, "action": data.get('action'), "key_id": data.get('key_id'), "host_name": data.get('host_name'), "plan_id": data.get('plan_id'), "customer_email": data.get('customer_email'), "payment_method": "Balance", "chat_id": callback.message.chat.id, "message_id": callback.message.message_id, "promo_code": (data.get('promo_code') or '').strip(), "promo_discount": float(data.get('promo_discount', 0)), "tier_device_count": data.get('tier_device_count'), "tier_price": data.get('tier_price', 0)}
+        meta = {"user_id": callback.from_user.id, "months": get_plan_duration_months(plan), "price": price, "action": data.get('action'), "key_id": data.get('key_id'), "host_name": data.get('host_name'), "plan_id": data.get('plan_id'), "customer_email": data.get('customer_email'), "payment_method": "Balance", "chat_id": callback.message.chat.id, "message_id": callback.message.message_id, "promo_code": (data.get('promo_code') or '').strip(), "promo_discount": float(data.get('promo_discount', 0)), "tier_device_count": data.get('tier_device_count'), "tier_price": data.get('tier_price', 0)}
         logger.info(f"Оплата Баланс: Успешное списание {price} RUB с баланса пользователя {callback.from_user.id}")
         await state.clear(); await process_successful_payment(bot, meta)
     # ===== Конец функции pay_with_main_balance_handler =====
@@ -3210,25 +3359,59 @@ async def notify_admin_of_purchase(bot: Bot, metadata: dict):
         username = user_data.get('username') if user_data else None
         username_str = f"@{username}" if username else "N/A"
 
-        method = {'Balance': 'Баланс', 'Card': 'Карта', 'Crypto': 'Крипто', 'USDT': 'USDT', 'TON': 'TON'}.get(metadata.get('payment_method'), metadata.get('payment_method') or 'N/A')
+        raw_method = metadata.get('payment_method') or 'N/A'
+        method = {
+            'balance': 'Баланс',
+            'card': 'Карта',
+            'yookassa': 'ЮKassa',
+            'yoomoney': 'ЮMoney',
+            'platega': 'Platega',
+            'platega crypto': 'Platega Crypto',
+            'cryptobot': 'CryptoBot',
+            'heleket': 'Heleket',
+            'telegram stars': 'Telegram Stars',
+            'ton connect': 'TON Connect',
+            'crypto': 'Крипто',
+            'usdt': 'USDT',
+            'ton': 'TON',
+        }.get(str(raw_method).strip().lower(), raw_method)
         plan = get_plan_by_id(metadata.get('plan_id')); plan_name = plan.get('plan_name', 'N/A') if plan else 'N/A'
+        duration_label = metadata.get('duration_label')
+        if not duration_label:
+            try:
+                duration_days = int(metadata.get('duration_days') or 0)
+            except Exception:
+                duration_days = 0
+            if duration_days > 0:
+                if duration_days % 30 == 0:
+                    duration_months = duration_days // 30
+                    duration_label = f"{duration_months} мес."
+                else:
+                    duration_label = f"{duration_days} дн."
+            else:
+                duration_label = f"{months or 1} мес."
         
         from shop_bot.data_manager.database import get_today_income_by_currency
         today = get_today_income_by_currency()
         today_rub = today.get('rub', 0)
         today_crypto = today.get('crypto', 0)
+        today_total = today.get('total', today_rub + today_crypto)
+        action_label = 'Новый ключ' if action == 'new' else 'Продление'
+        balance_note = "не учитывается" if str(raw_method).strip().lower() == 'balance' else "учтено во внешней кассе"
         
         txt = (
-            "📥 <b>Новая оплата</b>\n"
-            f"👤 Пользователь: <code>{user_id}</code>\n"
-            f"💌 Username: {username_str}\n"
-            f"🌍 Локация: <b>{host}</b>\n"
-            f"📦 Тариф: {plan_name} ({months} мес.)\n"
-            f"💳 Метод: {method}\n"
-            f"💰 Сумма: {float(price):.2f} RUB\n"
-            f"⚙️ Тип: {'Новый ключ ➕' if action == 'new' else 'Продление ♻️'}\n\n"
-            f"<blockquote>💵 Касса за сегодня ₽: {today_rub:,.2f} RUB\n"
-            f"💎 Касса за сегодня $: {today_crypto:,.2f} RUB</blockquote>"
+            "✅ <b>Оплата прошла</b>\n\n"
+            f"👤 <b>Клиент:</b> <code>{user_id}</code> · {username_str}\n"
+            f"🌍 <b>Хост:</b> {host or 'N/A'}\n"
+            f"📦 <b>Тариф:</b> {plan_name} · {duration_label}\n"
+            f"⚙️ <b>Действие:</b> {action_label}\n\n"
+            f"💳 <b>Метод:</b> {method}\n"
+            f"💰 <b>Платёж:</b> <code>{float(price):,.2f} RUB</code>\n"
+            f"🧾 <b>Касса:</b> {balance_note}\n\n"
+            f"<blockquote>📊 <b>Сегодня, внешние платежи</b>\n"
+            f"💵 Рубли: <code>{today_rub:,.2f} RUB</code>\n"
+            f"💎 Крипто/Stars: <code>{today_crypto:,.2f} RUB</code>\n"
+            f"🏦 Итого: <code>{today_total:,.2f} RUB</code></blockquote>"
         )
         
         promo = (metadata.get('promo_code') or '').strip()
@@ -3472,7 +3655,16 @@ async def process_successful_payment(bot: Bot | None, metadata: dict) -> bool:
                             except: pass
 
             update_user_stats(uid, price, months)
-            
+
+            # Mark referral discount as used if this was user's first purchase with referral discount
+            try:
+                u_data = get_user(uid) or {}
+                if u_data.get('referred_by') and not is_referral_discount_used(uid):
+                    set_referral_discount_used(uid)
+                    logger.info(f"Рефералка: Скидка помечена как использованная для пользователя {uid}")
+            except Exception as e:
+                logger.warning(f"Не удалось пометить скидку реферала как использованную для {uid}: {e}")
+
             # Подготовка метаданных для истории
             tx_meta = dict(metadata or {})
             tx_meta.update({
