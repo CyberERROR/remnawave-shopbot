@@ -24,7 +24,7 @@ from shop_bot.data_manager.remnawave_repository import (
     deduct_from_balance, check_transaction_exists, add_to_balance, log_transaction,
     add_to_referral_balance_all, get_balance, get_all_users, is_admin, update_user_stats,
     redeem_promo_code, update_promo_code_status, record_key_from_payload, get_key_by_id,
-    update_key, get_key_by_email
+    update_key, get_key_by_email, get_admin_ids
 )
 import shop_bot.data_manager.remnawave_repository as rw_repo
 from shop_bot.data_manager.database import get_seller_user, get_device_tiers, get_host, is_referral_discount_used
@@ -38,6 +38,8 @@ from urllib.parse import urlencode
 
 
 logger = logging.getLogger(__name__)
+
+NEW_TICKET_PHOTO_URL = "https://github.com/CyberERROR/remnawave-shopbot/blob/main/docs/screenshots/suppshor.png?raw=true"
 
 # In-memory storage for temporary auth tokens: {token: user_id}
 TEMP_AUTH_TOKENS = {}
@@ -2344,43 +2346,6 @@ async def api_support_create(req: SupportTicketCreateRequest):
             
         if not created_new:
             return {"ok": False, "error": "У вас уже есть открытый тикет"}
-            
-        from aiogram import Bot
-        token = get_setting("support_bot_token")
-        if token:
-            bot = Bot(token=token)
-            try:
-                try:
-                    user = await bot.get_chat(req.user_id)
-                    username_display = f"@{user.username}" if getattr(user, 'username', None) else f"ID {req.user_id}"
-                except Exception:
-                    username_display = f"ID {req.user_id}"
-                    
-                import html
-                notification_text = (
-                    f"🆕 <b>Новое обращение (WebApp)!</b>\n\n"
-                    f"👤 <b>USER:</b> (<code>{req.user_id}</code> - {html.escape(username_display)})\n"
-                    f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n"
-                    f"💬 <b>Тема:</b> <i>{html.escape(subject_text)}</i>\n\n"
-                    f"💌 Сообщения:\n"
-                    f"<blockquote>Тикет открыт через веб-приложение.</blockquote>"
-                )
-                
-                admin_ids_str = get_setting("admin_ids") or ""
-                admin_ids = [aid.strip() for aid in admin_ids_str.split(",") if aid.strip()]
-                for aid in admin_ids:
-                    try:
-                        await bot.send_message(
-                            chat_id=int(aid),
-                            text=notification_text,
-                            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                                [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply_dm_{ticket_id}")]
-                            ])
-                        )
-                    except Exception:
-                        pass
-            finally:
-                await bot.session.close()
                     
         return {"ok": True, "ticket_id": ticket_id}
     except Exception as e:
@@ -2394,11 +2359,13 @@ async def api_support_send(req: SupportMessageSendRequest):
         if not user or user.get('is_banned'):
             return {"ok": False, "error": "Access denied"}
             
-        from shop_bot.data_manager.remnawave_repository import get_ticket, add_support_message, get_setting
+        from shop_bot.data_manager.remnawave_repository import get_ticket, add_support_message, get_setting, get_ticket_messages
         ticket = get_ticket(req.ticket_id)
         if not ticket or ticket.get('user_id') != req.user_id or ticket.get('status') != 'open':
             return {"ok": False, "error": "Тикет не найден или закрыт"}
-            
+
+        existing_messages = get_ticket_messages(req.ticket_id) or []
+        is_first_user_message = not any(m.get('sender') == 'user' for m in existing_messages)
         add_support_message(req.ticket_id, sender="user", content=req.message)
         
         from aiogram import Bot
@@ -2413,8 +2380,9 @@ async def api_support_send(req: SupportMessageSendRequest):
                     username_display = f"ID {req.user_id}"
                     
                 import html
+                header = "🆘 <b>Новое обращение:</b>" if is_first_user_message else "✅ <b>Сообщение добавлено в тикет</b>"
                 notification_text = (
-                    f"📨 <b>Новое сообщение (WebApp)!</b>\n\n"
+                    f"{header}\n\n"
                     f"👤 <b>USER:</b> (<code>{req.user_id}</code> - {html.escape(username_display)})\n"
                     f"📝 <b>ID тикета:</b> <code>#{req.ticket_id}</code>\n"
                     f"💬 <b>Тема:</b> <i>{html.escape(ticket.get('subject', 'Без темы'))}</i>\n\n"
@@ -2430,24 +2398,34 @@ async def api_support_send(req: SupportMessageSendRequest):
                         await bot.send_message(
                             chat_id=int(forum_chat_id),
                             message_thread_id=int(thread_id),
-                            text=notification_text
+                            text=notification_text,
+                            parse_mode="HTML"
                         )
                     except Exception as e:
                         logger.warning(f"Error mirroring to forum: {e}")
-                else:
-                    admin_ids_str = get_setting("admin_ids") or ""
-                    admin_ids = [aid.strip() for aid in admin_ids_str.split(",") if aid.strip()]
-                    for aid in admin_ids:
-                        try:
+
+                for aid in get_admin_ids():
+                    try:
+                        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+                            [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply_dm_{req.ticket_id}")]
+                        ])
+                        if is_first_user_message:
+                            await bot.send_photo(
+                                chat_id=int(aid),
+                                photo=NEW_TICKET_PHOTO_URL,
+                                caption=notification_text,
+                                parse_mode="HTML",
+                                reply_markup=reply_markup
+                            )
+                        else:
                             await bot.send_message(
                                 chat_id=int(aid),
                                 text=notification_text,
-                                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                                    [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply_dm_{req.ticket_id}")]
-                                ])
+                                parse_mode="HTML",
+                                reply_markup=reply_markup
                             )
-                        except Exception:
-                            pass
+                    except Exception:
+                        pass
             finally:
                 await bot.session.close()
                         
