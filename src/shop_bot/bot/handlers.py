@@ -32,6 +32,7 @@ from aiogram.enums import ChatMemberStatus
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from shop_bot.bot import keyboards
+from shop_bot.data_manager import remnawave_repository as rw_repo
 from shop_bot.modules.platega_api import PlategaAPI
 from shop_bot.modules.heleket_api import create_heleket_payment_request
 from shop_bot.modules.yookassa_proxy import create_yookassa_payment_with_proxy, mask_proxy_password

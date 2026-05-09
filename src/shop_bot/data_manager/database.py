@@ -2,7 +2,9 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 import logging
 from pathlib import Path
+import logging
 import json
+import math
 import re
 from typing import Any
 
@@ -233,6 +235,7 @@ def initialize_db():
                     referral_balance REAL DEFAULT 0,
                     referral_balance_all REAL DEFAULT 0,
                     referral_start_bonus_received BOOLEAN DEFAULT 0,
+                    referral_discount_used BOOLEAN DEFAULT 0,
                     is_pinned BOOLEAN DEFAULT 0,
                     seller_active INTEGER DEFAULT 0,
                     auth_token TEXT,
@@ -501,6 +504,10 @@ def initialize_db():
                 "yookassa_shop_id": None,
                 "yookassa_secret_key": None,
                 "sbp_enabled": "false",
+                "yookassa_proxies": "",
+                "yookassa_active_proxy": "",
+                "yookassa_proxy_status": "",
+                "yookassa_proxy_enabled": "false",
                 "cryptobot_token": None,
                 "heleket_merchant_id": None,
                 "heleket_api_key": None,
@@ -581,6 +588,7 @@ def initialize_db():
                 "yoomoney_redirect_uri": None,
                 "stars_per_rub": "1",
                 
+                "platega_universal_enabled": "false",
                 "platega_enabled": "false",
                 "platega_crypto_enabled": "false",
                 "platega_merchant_id": None,
@@ -669,6 +677,7 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
         "referral_balance": "REAL DEFAULT 0",
         "referral_balance_all": "REAL DEFAULT 0",
         "referral_start_bonus_received": "BOOLEAN DEFAULT 0",
+        "referral_discount_used": "BOOLEAN DEFAULT 0",
         "is_pinned": "BOOLEAN DEFAULT 0",
         "seller_active": "INTEGER DEFAULT 0",
         "auth_token": "TEXT",
@@ -1575,6 +1584,22 @@ def set_referral_start_bonus_received(user_id: int) -> bool:
         f"Не удалось установить бонус реферала для пользователя {user_id}"
     ), f"пользователь {user_id}", "")
 # =============================================
+
+
+# ===== REFERRAL DISCOUNT USED TRACKING =====
+def is_referral_discount_used(user_id: int) -> bool:
+    """Check if user has already used their referral discount"""
+    row = _fetch_row("SELECT referral_discount_used FROM users WHERE telegram_id = ?", (user_id,), f"Не удалось проверить использование скидки реферала для {user_id}")
+    return bool(row and row.get("referral_discount_used"))
+
+def set_referral_discount_used(user_id: int) -> bool:
+    """Mark that user has used their referral discount"""
+    return _check_rowcount(_exec(
+        "UPDATE users SET referral_discount_used = 1 WHERE telegram_id = ?",
+        (user_id,),
+        f"Не удалось установить флаг использования скидки реферала для пользователя {user_id}"
+    ), f"пользователь {user_id}", "")
+# ===========================================
 
 
 # ===== UPDATE_HOST_URL =====
@@ -2550,11 +2575,15 @@ def delete_button_config(button_id: int) -> bool:
 
 
 # ===== CREATE_PLAN =====
-def create_plan(host_name: str, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0, button_style: str = None, icon_emoji_id: str = None):
+def create_plan(host_name: str, plan_name: str, months: int = None, price: float = 0, hwid_limit: int = 0, traffic_limit_gb: int = 0, button_style: str = None, icon_emoji_id: str = None, duration_days: int = None):
     host_name = normalize_host_name(host_name)
+    if duration_days is None and months is not None:
+        duration_days = months * 30
+    if months is None and duration_days is not None:
+        months = max(1, math.ceil(duration_days / 30))
     cursor = _exec(
-        "INSERT INTO plans (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb, button_style, icon_emoji_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (host_name, plan_name, months, price, hwid_limit, traffic_limit_gb, button_style or None, icon_emoji_id or None),
+        "INSERT INTO plans (host_name, plan_name, months, duration_days, price, hwid_limit, traffic_limit_gb, button_style, icon_emoji_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (host_name, plan_name, months, duration_days, price, hwid_limit, traffic_limit_gb, button_style or None, icon_emoji_id or None),
         f"Не удалось создать тариф для хоста '{host_name}'"
     )
     if cursor: new_id = cursor.lastrowid; logging.info(f"Created new plan '{plan_name}' for host '{host_name}' with HWID={hwid_limit}, Traffic={traffic_limit_gb}GB."); return new_id
@@ -2565,7 +2594,7 @@ def create_plan(host_name: str, plan_name: str, months: int, price: float, hwid_
 # ===== GET_PLANS_FOR_HOST =====
 def get_plans_for_host(host_name: str) -> list[dict]:
     host_name = normalize_host_name(host_name)
-    rows = _fetch_list("SELECT * FROM plans WHERE TRIM(host_name) = TRIM(?) ORDER BY months", (host_name,), f"Не удалось получить тарифы для хоста '{host_name}'")
+    rows = _fetch_list("SELECT * FROM plans WHERE TRIM(host_name) = TRIM(?) ORDER BY COALESCE(duration_days, months * 30, 30)", (host_name,), f"Не удалось получить тарифы для хоста '{host_name}'")
     return [dict(plan) for plan in rows]
 
 # ==============================
@@ -2587,10 +2616,14 @@ def delete_plan(plan_id: int):
 
 
 # ===== UPDATE_PLAN =====
-def update_plan(plan_id: int, plan_name: str, months: int, price: float, hwid_limit: int = 0, traffic_limit_gb: int = 0, button_style: str = None, icon_emoji_id: str = None) -> bool:
+def update_plan(plan_id: int, plan_name: str, months: int = None, price: float = 0, hwid_limit: int = 0, traffic_limit_gb: int = 0, button_style: str = None, icon_emoji_id: str = None, duration_days: int = None) -> bool:
+    if duration_days is None and months is not None:
+        duration_days = months * 30
+    if months is None and duration_days is not None:
+        months = max(1, math.ceil(duration_days / 30))
     cursor = _exec(
-        "UPDATE plans SET plan_name = ?, months = ?, price = ?, hwid_limit = ?, traffic_limit_gb = ?, button_style = ?, icon_emoji_id = ? WHERE plan_id = ?",
-        (plan_name, months, price, hwid_limit, traffic_limit_gb, button_style or None, icon_emoji_id or None, plan_id),
+        "UPDATE plans SET plan_name = ?, months = ?, duration_days = ?, price = ?, hwid_limit = ?, traffic_limit_gb = ?, button_style = ?, icon_emoji_id = ? WHERE plan_id = ?",
+        (plan_name, months, duration_days, price, hwid_limit, traffic_limit_gb, button_style or None, icon_emoji_id or None, plan_id),
         f"Не удалось обновить тариф {plan_id}"
     )
     if cursor and cursor.rowcount > 0: logging.info(f"Updated plan {plan_id}: name='{plan_name}', months={months}, price={price}, hwid={hwid_limit}, traffic={traffic_limit_gb}."); return True
@@ -2896,29 +2929,33 @@ def get_total_spent_by_method(payment_method: str) -> float:
 
 # ===== GET_TODAY_INCOME_BY_CURRENCY =====
 def get_today_income_by_currency() -> dict:
-    rub_methods = ('yookassa', 'platega')
-    crypto_methods = ('telegram stars', 'cryptobot', 'heleket', 'ton connect')
+    rub_methods = ('yookassa', 'юkassa', 'юкassa', 'platega', 'platega universal', 'platega pay-form', 'platega payform', 'yoomoney', 'yoo money', 'youmoney', 'юmoney', 'card', 'карта')
+    crypto_methods = ('telegram stars', 'stars', 'cryptobot', 'crypto bot', 'heleket', 'ton connect', 'tonconnect', 'platega crypto', 'platega_crypto', 'crypto', 'крипто', 'usdt', 'ton')
+    external_methods = rub_methods + crypto_methods
+    statuses = ('paid', 'completed', 'success', 'succeeded')
     rub = _fetch_val(
         f"""
         SELECT COALESCE(SUM(amount_rub), 0.0)
         FROM transactions
-        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+        WHERE LOWER(COALESCE(status, '')) IN ({','.join('?' for _ in statuses)})
           AND date(created_date) = date('now', '+3 hours')
-          AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in rub_methods)})
+          AND LOWER(TRIM(COALESCE(payment_method, ''))) IN ({','.join('?' for _ in rub_methods)})
         """,
-        rub_methods, 0.0, "Не удалось получить рублёвый доход за сегодня"
+        statuses + rub_methods, 0.0, "Не удалось получить рублёвый доход за сегодня"
     )
     crypto = _fetch_val(
         f"""
         SELECT COALESCE(SUM(amount_rub), 0.0)
         FROM transactions
-        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+        WHERE LOWER(COALESCE(status, '')) IN ({','.join('?' for _ in statuses)})
           AND date(created_date) = date('now', '+3 hours')
-          AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in crypto_methods)})
+          AND LOWER(TRIM(COALESCE(payment_method, ''))) IN ({','.join('?' for _ in crypto_methods)})
         """,
-        crypto_methods, 0.0, "Не удалось получить крипто доход за сегодня"
+        statuses + crypto_methods, 0.0, "Не удалось получить крипто доход за сегодня"
     )
-    return {"rub": float(rub or 0), "crypto": float(crypto or 0)}
+    rub_value = float(rub or 0)
+    crypto_value = float(crypto or 0)
+    return {"rub": rub_value, "crypto": crypto_value, "total": rub_value + crypto_value}
 # ========================================
 
 

@@ -130,7 +130,10 @@ ALL_SETTINGS_KEYS = [
 
     "yoomoney_api_token", "yoomoney_client_id", "yoomoney_client_secret", "yoomoney_redirect_uri",
     
-    "platega_enabled", "platega_crypto_enabled", "platega_merchant_id", "platega_api_key",
+    "platega_universal_enabled", "platega_enabled", "platega_crypto_enabled", "platega_merchant_id", "platega_api_key",
+
+    # YooKassa proxy settings
+    "yookassa_proxies", "yookassa_active_proxy", "yookassa_proxy_status", "yookassa_proxy_enabled",
 
     "main_menu_image",
     "skip_email", "enable_wal_mode",
@@ -2550,7 +2553,7 @@ def create_webhook_app(bot_controller_instance):
                 update_setting('panel_password', request.form.get('panel_password'))
 
 
-            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled']
+            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_universal_enabled', 'platega_enabled', 'platega_crypto_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'yookassa_proxy_enabled']
             for checkbox_key in checkbox_keys:
                 values = request.form.getlist(checkbox_key)
                 value = values[-1] if values else 'false'
@@ -3310,14 +3313,21 @@ def create_webhook_app(bot_controller_instance):
         try:
             host_name = request.form.get('host_name')
             plan_name = request.form.get('plan_name')
-            months = int(request.form.get('months'))
+            # Support both months (legacy) and duration_days (new)
+            duration_days = request.form.get('duration_days')
+            if duration_days:
+                duration_days = int(duration_days)
+                months = max(1, ceil(duration_days / 30))
+            else:
+                months = int(request.form.get('months') or 1)
+                duration_days = months * 30
             price = float(request.form.get('price'))
             hwid_limit = int(request.form.get('hwid_limit') or 0)
             traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
-            
+
             button_style = (request.form.get('button_style') or '').strip() or None
             icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip() or None
-            new_plan_id = create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb, button_style=button_style, icon_emoji_id=icon_emoji_id)
+            new_plan_id = create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb, button_style=button_style, icon_emoji_id=icon_emoji_id, duration_days=duration_days)
             
             wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             if wants_json:
@@ -3356,7 +3366,6 @@ def create_webhook_app(bot_controller_instance):
         wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         try:
             plan_name = (request.form.get('plan_name') or '').strip()
-            months = int(request.form.get('months'))
             price = float(request.form.get('price'))
             hwid_limit = int(request.form.get('hwid_limit') or 0)
             traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
@@ -3369,7 +3378,15 @@ def create_webhook_app(bot_controller_instance):
 
             button_style = (request.form.get('button_style') or '').strip() or None
             icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip() or None
-            ok = update_plan(plan_id, plan_name, months, price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb, button_style=button_style, icon_emoji_id=icon_emoji_id)
+            # Support both months (legacy) and duration_days (new)
+            duration_days = request.form.get('duration_days')
+            if duration_days:
+                duration_days = int(duration_days)
+                months = max(1, ceil(duration_days / 30))
+            else:
+                months = int(request.form.get('months') or 1)
+                duration_days = months * 30
+            ok = update_plan(plan_id, plan_name, months, price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb, button_style=button_style, icon_emoji_id=icon_emoji_id, duration_days=duration_days)
             if ok:
                 if wants_json:
                     plan = get_plan_by_id(plan_id)
@@ -3485,6 +3502,65 @@ def create_webhook_app(bot_controller_instance):
             "timestamp": get_msk_time().isoformat()
         }
     
+    @csrf.exempt
+    @flask_app.route('/check-yookassa-proxies', methods=['POST'])
+    @login_required
+    def check_yookassa_proxies_route():
+        """Trigger YooKassa proxy health check and return results"""
+        from shop_bot.modules.yookassa_proxy import check_yookassa_proxies, get_proxy_manager
+        
+        try:
+            payload = request.get_json(silent=True) or {}
+            if 'yookassa_proxies' in payload:
+                update_setting('yookassa_proxies', payload.get('yookassa_proxies') or '')
+            if 'yookassa_proxy_enabled' in payload:
+                update_setting('yookassa_proxy_enabled', 'true' if str(payload.get('yookassa_proxy_enabled')).lower() == 'true' else 'false')
+
+            manager = get_proxy_manager()
+            manager.initialize(
+                settings_callback=rw_repo.get_setting,
+                update_settings_callback=rw_repo.update_setting
+            )
+
+            loop = current_app.config.get('EVENT_LOOP')
+            if not loop or not loop.is_running():
+                return jsonify({'ok': False, 'error': 'Event loop not available'}), 500
+            
+            # Run proxy check in the bot's event loop
+            future = asyncio.run_coroutine_threadsafe(check_yookassa_proxies(), loop)
+            statuses = future.result(timeout=60)  # Wait up to 60 seconds
+            
+            # Format results
+            results = []
+            working_count = 0
+            best_proxy = None
+            
+            for status in statuses:
+                result = {
+                    'proxy': status.masked_proxy,
+                    'is_working': status.is_working,
+                    'latency_ms': round(status.latency_ms, 1) if status.is_working else None,
+                    'error': status.error_message if not status.is_working else '',
+                    'is_best': status.is_best,
+                }
+                results.append(result)
+                if status.is_working:
+                    working_count += 1
+                if status.is_best:
+                    best_proxy = status.masked_proxy
+            
+            return jsonify({
+                'ok': True,
+                'working_count': working_count,
+                'total_count': len(results),
+                'best_proxy': best_proxy,
+                'proxies': results,
+                'checked_at': get_msk_time().isoformat(),
+            })
+        except Exception as e:
+            logger.error(f"Error checking YooKassa proxies: {e}", exc_info=True)
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
     @csrf.exempt
     @flask_app.route('/yoomoney-webhook', methods=['POST'])
     def yoomoney_webhook_handler():

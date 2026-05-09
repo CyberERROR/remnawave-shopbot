@@ -14,6 +14,8 @@ from shop_bot.bot.admin_handlers import get_admin_router
 from shop_bot.bot.middlewares import BanMiddleware
 from shop_bot.bot import handlers
 from shop_bot.webhook_server.modules.security import get_security_router
+from shop_bot.modules.yookassa_proxy import get_proxy_manager
+from shop_bot.modules.payment_queue import get_payment_queue
 try:
     from shop_bot.webapp.handlers import app as webapp_app
 except ImportError:
@@ -136,6 +138,27 @@ class BotController:
             if yookassa_enabled:
                 Configuration.account_id = yookassa_shop_id
                 Configuration.secret_key = yookassa_secret_key
+
+                # Initialize YooKassa proxy manager
+                try:
+                    proxy_manager = get_proxy_manager()
+                    proxy_manager.initialize(
+                        settings_callback=rw_repo.get_setting,
+                        update_settings_callback=rw_repo.update_setting
+                    )
+                    asyncio.run_coroutine_threadsafe(proxy_manager.start_monitor(), self._loop)
+                    logger.info("YooKassa proxy manager initialized and monitor started")
+                except Exception as e:
+                    logger.warning(f"YooKassa proxy manager initialization failed: {e}")
+
+            # Initialize payment queue
+            try:
+                payment_queue = get_payment_queue()
+                payment_queue.initialize()
+                asyncio.run_coroutine_threadsafe(payment_queue.start_worker(), self._loop)
+                logger.info("Payment queue initialized and worker started")
+            except Exception as e:
+                logger.warning(f"Payment queue initialization failed: {e}")
             
             handlers.PAYMENT_METHODS = {
                 "yookassa": yookassa_enabled,
@@ -185,6 +208,22 @@ class BotController:
             self._webapp_server.should_exit = True
             self._webapp_server = None
             self._webapp_thread = None
+
+        # Stop YooKassa proxy monitor
+        try:
+            proxy_manager = get_proxy_manager()
+            asyncio.run_coroutine_threadsafe(proxy_manager.stop_monitor(), self._loop).result(timeout=2)
+            logger.info("YooKassa proxy monitor stopped")
+        except Exception as e:
+            logger.warning(f"Error stopping YooKassa proxy monitor: {e}")
+
+        # Stop payment queue worker
+        try:
+            payment_queue = get_payment_queue()
+            asyncio.run_coroutine_threadsafe(payment_queue.stop_worker(), self._loop).result(timeout=5)
+            logger.info("Payment queue worker stopped")
+        except Exception as e:
+            logger.warning(f"Error stopping payment queue worker: {e}")
 
         try:
             asyncio.run_coroutine_threadsafe(self._dp.stop_polling(), self._loop).result(timeout=2)

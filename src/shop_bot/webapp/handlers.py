@@ -27,8 +27,9 @@ from shop_bot.data_manager.remnawave_repository import (
     update_key, get_key_by_email
 )
 import shop_bot.data_manager.remnawave_repository as rw_repo
-from shop_bot.data_manager.database import get_seller_user, get_device_tiers, get_host
+from shop_bot.data_manager.database import get_seller_user, get_device_tiers, get_host, is_referral_discount_used
 from shop_bot.modules import remnawave_api
+from shop_bot.modules.yookassa_proxy import create_yookassa_payment_with_proxy, mask_proxy_password
 from shop_bot.config import get_purchase_success_text
 import re
 from decimal import Decimal
@@ -72,7 +73,11 @@ def calculate_webapp_price(price: float, user_id: int) -> float:
                 price -= price * (discount_percent / 100)
                 logger.info(f"[WEBAPP] - Применена скидка продавца {discount_percent}% для {user_id}")
         
-        if user.get('referred_by') and user.get('total_spent', 0) == 0 and not get_user_keys(user_id):
+        # Check referral discount - only for first purchase and if not used before
+        if (user.get('referred_by') and
+            user.get('total_spent', 0) == 0 and
+            not get_user_keys(user_id) and
+            not is_referral_discount_used(user_id)):
             ref_discount = get_setting("referral_discount")
             if ref_discount:
                 try:
@@ -86,6 +91,36 @@ def calculate_webapp_price(price: float, user_id: int) -> float:
         logger.error(f"[WEBAPP] - Ошибка расчета цены для {user_id}: {e}")
         
     return round(price, 2)
+
+def get_plan_duration_days(plan: dict | None) -> int:
+    if not plan:
+        return 30
+    try:
+        days = int(plan.get('duration_days') or 0)
+        if days > 0:
+            return days
+    except Exception:
+        pass
+    try:
+        return max(1, int(plan.get('months') or 1)) * 30
+    except Exception:
+        return 30
+
+def get_plan_duration_months(plan: dict | None) -> int:
+    days = get_plan_duration_days(plan)
+    return max(1, int((days + 29) // 30))
+
+def get_plan_duration_month_factor(plan: dict | None) -> float:
+    return float(get_plan_duration_days(plan)) / 30.0
+
+def get_plan_duration_label(plan: dict | None) -> str:
+    days = get_plan_duration_days(plan)
+    if days % 30 == 0:
+        months = days // 30
+        word = "месяц" if months == 1 else ("месяца" if 1 < months < 5 else "месяцев")
+        return f"{months} {word}"
+    word = "день" if days == 1 else ("дня" if 1 < days < 5 else "дней")
+    return f"{days} {word}"
 
 # ===== HELPER FUNCTIONS FOR PAYMENT PROCESS =====
 async def notify_admin_of_purchase(bot: Bot, metadata: dict):
@@ -853,11 +888,10 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
             try:
                 raw_price = float(plan.get('price', 0))
                 final_price = int(calculate_webapp_price(raw_price, user_id))
-                months = int(plan.get('months') or 1)
+                months = get_plan_duration_months(plan)
+                duration_label = get_plan_duration_label(plan)
             except (ValueError, TypeError):
                 continue
-
-            month_label = "месяц" if months == 1 else ("месяца" if 1 < months < 5 else "месяцев")
 
             is_last_odd = (plan_idx == plan_count - 1) and (plan_count % 2 == 1)
             span_class = " col-span-2" if is_last_odd else ""
@@ -869,7 +903,7 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
                 data-months="{months}"
                 onclick="selectPlan(this)">
                 <span
-                    class="plan-label text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 group-hover:text-gray-300 transition-colors">{months} {month_label}</span>
+                    class="plan-label text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 group-hover:text-gray-300 transition-colors">{duration_label}</span>
                 <div class="flex items-baseline gap-0.5">
                     <span class="plan-price text-xl font-bold text-white">{final_price}</span>
                     <span class="text-xs font-medium text-gray-400">₽</span>
@@ -1621,6 +1655,8 @@ async def api_get_payment_methods(req: PaymentMethodsRequest):
         methods.append({"id": "pay_yookassa", "name": label, "icon": "credit_card"})
 
     # 2. Platega
+    if (get_setting("platega_universal_enabled") or "false").strip().lower() == "true":
+        methods.append({"id": "pay_platega_universal", "name": "Platega", "icon": "payments"})
     if (get_setting("platega_enabled") or "false").strip().lower() == "true":
         methods.append({"id": "pay_platega", "name": "СБП / Platega", "icon": "payments"})
     if (get_setting("platega_crypto_enabled") or "false").strip().lower() == "true":
@@ -1673,7 +1709,10 @@ async def api_create_payment(req: CreatePaymentRequest):
         
         final_price = calculate_webapp_price(float(plan['price']), user_id) 
         
-        months = int(plan.get('months') or 1)
+        months = get_plan_duration_months(plan)
+        month_factor = get_plan_duration_month_factor(plan)
+        duration_label = get_plan_duration_label(plan)
+        duration_days = get_plan_duration_days(plan)
         
         tier_device_count = req.tier_device_count
         tier_price_per_month = req.tier_price
@@ -1681,56 +1720,95 @@ async def api_create_payment(req: CreatePaymentRequest):
         if tier_price_per_month == 0:
             tier_device_count = None
         
+        # Calculate extension with proration when changing devices
         if req.action == 'extend' and req.key_id:
-            host_data = get_host(req.host_name) if req.host_name else None
-            if host_data and host_data.get('device_mode') == 'tiers' and int(host_data.get('tier_lock_extend', 0) or 0):
-                key = get_key_by_id(req.key_id)
-                if key and key.get('remnawave_user_uuid'):
-                    try:
-                        user_info = await remnawave_api.get_user_by_uuid(key['remnawave_user_uuid'], host_name=req.host_name)
-                        if user_info:
-                            old_hwid = int(user_info.get('hwidDeviceLimit') or 1)
-                            if not tier_price_per_month:
-                                if old_hwid > 1:
-                                    from shop_bot.data_manager import database
-                                    base_devices = int(database.get_setting(f"base_device_{req.host_name}", "1"))
-                                    tiers = get_device_tiers(req.host_name)
-                                    for t in tiers:
-                                        if t['device_count'] == old_hwid:
-                                            tier_device_count = old_hwid
-                                            diff = old_hwid - base_devices
-                                            if diff < 0: diff = 0
-                                            tier_price_per_month = float(diff * t['price'])
-                                            break
-                            elif tier_device_count and int(tier_device_count) > old_hwid:
+            key = get_key_by_id(req.key_id)
+            if key and key.get('expiry_date'):
+                try:
+                    expire_dt = datetime.strptime(key['expiry_date'], "%Y-%m-%d %H:%M:%S")
+                    now = get_msk_time().replace(tzinfo=None)
+                    days_left = max(0, (expire_dt - now).days)
+
+                    if days_left > 0:
+                        # Get current device count from API
+                        current_device_count = None
+                        if key.get('remnawave_user_uuid'):
+                            try:
+                                user_info = await remnawave_api.get_user_by_uuid(key['remnawave_user_uuid'], host_name=req.host_name)
+                                if user_info:
+                                    current_device_count = int(user_info.get('hwidDeviceLimit') or 1)
+                            except Exception as e:
+                                logger.warning(f"[WEBAPP] - Could not get current HWID: {e}")
+
+                        # If tier device count not specified but we can determine it from current subscription
+                        if not tier_device_count and current_device_count and current_device_count > 1:
+                            host_data = get_host(req.host_name) if req.host_name else None
+                            if host_data and host_data.get('device_mode') == 'tiers':
                                 from shop_bot.data_manager import database
                                 base_devices = int(database.get_setting(f"base_device_{req.host_name}", "1"))
                                 tiers = get_device_tiers(req.host_name)
+                                for t in tiers:
+                                    if t['device_count'] == current_device_count:
+                                        tier_device_count = current_device_count
+                                        diff = max(0, current_device_count - base_devices)
+                                        tier_price_per_month = float(diff * t['price'])
+                                        break
+
+                        # Calculate prorated remaining value if changing devices
+                        new_device_count = int(tier_device_count) if tier_device_count else (current_device_count or 1)
+
+                        if current_device_count and new_device_count != current_device_count:
+                            # User is changing device count - need to calculate prorated cost
+                            host_data = get_host(req.host_name) if req.host_name else None
+                            if host_data and host_data.get('device_mode') == 'tiers':
+                                from shop_bot.data_manager import database
+                                base_devices = int(database.get_setting(f"base_device_{req.host_name}", "1"))
+                                tiers = get_device_tiers(req.host_name)
+
+                                # Get tier prices for old and new device counts
                                 old_tier_price = 0.0
                                 new_tier_price = 0.0
                                 for t in tiers:
-                                    if t['device_count'] == old_hwid:
+                                    if t['device_count'] == current_device_count:
                                         old_tier_price = float(t['price'])
-                                    if t['device_count'] == int(tier_device_count):
+                                    if t['device_count'] == new_device_count:
                                         new_tier_price = float(t['price'])
-                                old_diff = max(0, old_hwid - base_devices)
-                                new_diff = max(0, int(tier_device_count) - base_devices)
-                                old_total_tier_price = old_diff * old_tier_price
-                                new_total_tier_price = new_diff * new_tier_price
-                                monthly_diff_price = max(0.0, new_total_tier_price - old_total_tier_price)
-                                if key.get('expiry_date') and monthly_diff_price > 0:
-                                    expire_dt = datetime.strptime(key['expiry_date'], "%Y-%m-%d %H:%M:%S")
-                                    now = get_msk_time().replace(tzinfo=None)
-                                    days_left = (expire_dt - now).days
-                                    if days_left > 0:
-                                        remaining_months = float(days_left) / 30.0
-                                        device_surcharge = monthly_diff_price * remaining_months
-                                        final_price += device_surcharge
-                    except Exception as e:
-                        logger.error(f"[WEBAPP] - Ошибка HWID: {e}")
+
+                                # Calculate monthly tier costs
+                                old_diff = max(0, current_device_count - base_devices)
+                                new_diff = max(0, new_device_count - base_devices)
+                                old_monthly_tier = old_diff * old_tier_price
+                                new_monthly_tier = new_diff * new_tier_price
+
+                                # Calculate prorated remaining value of current subscription
+                                remaining_months = float(days_left) / 30.0
+                                remaining_value = (float(plan['price']) + old_monthly_tier) * remaining_months
+
+                                # Calculate cost of new subscription period with new device count
+                                new_subscription_cost = (float(plan['price']) + new_monthly_tier) * month_factor
+
+                                # Final price = new cost - remaining value (prorated credit)
+                                final_price = max(0, new_subscription_cost - remaining_value)
+
+                                logger.info(f"[WEBAPP] - Extension with device change: days_left={days_left}, "
+                                          f"old_devices={current_device_count}, new_devices={new_device_count}, "
+                                          f"remaining_value={remaining_value:.2f}, new_cost={new_subscription_cost:.2f}, "
+                                          f"final_price={final_price:.2f}")
+
+                                tier_price_per_month = 0  # Already included in calculation above
+
+                        elif days_left > 0 and tier_price_per_month > 0:
+                            # Simple device upgrade surcharge for remaining period
+                            remaining_months = float(days_left) / 30.0
+                            device_surcharge = tier_price_per_month * remaining_months
+                            final_price += device_surcharge
+                            logger.info(f"[WEBAPP] - Device upgrade surcharge: {device_surcharge:.2f} for {remaining_months:.2f} months")
+
+                except Exception as e:
+                    logger.error(f"[WEBAPP] - Error calculating extension proration: {e}")
         
         if tier_price_per_month > 0:
-            final_price += tier_price_per_month * months
+            final_price += tier_price_per_month * month_factor
             
         # --- APPLY PROMO DISCOUNT ---
         if req.promo_code:
@@ -1754,28 +1832,60 @@ async def api_create_payment(req: CreatePaymentRequest):
             meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
-                "plan_id": plan_id, "payment_method": "YooKassa", "payment_id": pid,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "YooKassa", "payment_id": pid,
                 "tier_device_count": tier_device_count
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
-            comment = get_transaction_comment({"id": user_id, "username": user.get("username")}, action_name, months, req.host_name)
+            comment = get_transaction_comment({"id": user_id, "username": user.get("username")}, action_name, duration_label, req.host_name)
             payload = {
                 "amount": {"value": f"{final_price:.2f}", "currency": "RUB"},
                 "confirmation": {"type": "redirect", "return_url": f"https://t.me/{get_setting('telegram_bot_username')}"},
                 "capture": True, "description": comment, "metadata": meta
             }
             try:
-                pay_obj = YookassaPayment.create(payload, pid)
-                pay_url = pay_obj.confirmation.confirmation_url
-                
+                # Use proxy-based payment creation with fallback
+                pay_data = await create_yookassa_payment_with_proxy(
+                    payment_create_func=None,
+                    payload=payload,
+                    idempotence_key=pid,
+                    timeout=12.0,
+                )
+                pay_url = pay_data.get("confirmation", {}).get("confirmation_url")
+                if not pay_url:
+                    raise RuntimeError("YooKassa не вернула confirmation_url")
+
                 kb = create_payment_keyboard(pay_url)
                 await _send_telegram_message(user_id, f"<b>Оплата через ЮKassa</b>\n\nСумма: <b>{final_price:.2f} RUB</b>\n\n<i>Вы можете оплатить счет здесь или в WebApp.</i>", kb)
-                
+
                 logger.info(f"[WEBAPP] - Успешно создан счет YooKassa для {user_id}: {pid}")
                 return {"ok": True, "payment_url": pay_url, "payment_id": pid, "message": "Счёт создан"}
             except Exception as e:
                 logger.error(f"[WEBAPP] - Ошибка YooKassa для {user_id}: {e}")
                 return {"ok": False, "error": f"Ошибка YooKassa: {e}"}
+
+        # --- Platega Universal ---
+        elif method_id == "pay_platega_universal":
+            mid, key = get_setting("platega_merchant_id"), get_setting("platega_api_key")
+            if not mid or not key: return {"ok": False, "error": "Platega не настроена"}
+            pid = str(uuid.uuid4())
+            meta = {
+                "user_id": user_id, "months": months, "price": float(final_price),
+                "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "Platega", "payment_id": pid,
+                "tier_device_count": tier_device_count
+            }
+            create_payload_pending(pid, user_id, float(final_price), meta)
+            desc = f"Order {pid}"
+            try:
+                platega = PlategaAPI(mid, key)
+                _, url = await platega.create_payment_universal(float(final_price), desc, pid, f"https://t.me/{get_setting('telegram_bot_username')}", f"https://t.me/{get_setting('telegram_bot_username')}")
+                if url:
+                    kb = create_payment_keyboard(url)
+                    await _send_telegram_message(user_id, f"<b>Оплата через Platega</b>\n\nСумма: <b>{final_price:.2f} RUB</b>\n\n<i>Счет также доступен в WebApp.</i>", kb)
+                    return {"ok": True, "payment_url": url, "payment_id": pid, "message": "Счёт создан"}
+                return {"ok": False, "error": "Ошибка получения ссылки Platega"}
+            except Exception as e:
+                return {"ok": False, "error": f"Ошибка Platega: {e}"}
 
         # --- Platega ---
         elif method_id == "pay_platega":
@@ -1785,7 +1895,7 @@ async def api_create_payment(req: CreatePaymentRequest):
             meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
-                "plan_id": plan_id, "payment_method": "Platega", "payment_id": pid,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "Platega", "payment_id": pid,
                 "tier_device_count": tier_device_count
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
@@ -1809,7 +1919,7 @@ async def api_create_payment(req: CreatePaymentRequest):
             meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
-                "plan_id": plan_id, "payment_method": "Platega Crypto", "payment_id": pid,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "Platega Crypto", "payment_id": pid,
                 "tier_device_count": tier_device_count
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
@@ -1831,7 +1941,7 @@ async def api_create_payment(req: CreatePaymentRequest):
              meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
-                "plan_id": plan_id, "payment_method": "CryptoBot", "payment_id": pid,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "CryptoBot", "payment_id": pid,
                 "tier_device_count": tier_device_count
             }
              create_payload_pending(pid, user_id, float(final_price), meta)
@@ -1859,7 +1969,7 @@ async def api_create_payment(req: CreatePaymentRequest):
             meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
-                "plan_id": plan_id, "payment_method": "Heleket", "payment_id": pid,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "Heleket", "payment_id": pid,
                 "tier_device_count": tier_device_count
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
@@ -1894,12 +2004,12 @@ async def api_create_payment(req: CreatePaymentRequest):
              meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
-                "plan_id": plan_id, "payment_method": "YooMoney", "payment_id": pid,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "YooMoney", "payment_id": pid,
                 "tier_device_count": tier_device_count
             }
              create_payload_pending(pid, user_id, float(final_price), meta)
              label = pid
-             desc = get_transaction_comment({"id": user_id, "username": user.get("username")}, action_name, months, req.host_name)
+             desc = get_transaction_comment({"id": user_id, "username": user.get("username")}, action_name, duration_label, req.host_name)
              link = _build_yoomoney_link(receiver, Decimal(str(final_price)), label, desc)
              
              kb = create_yoomoney_payment_keyboard(link, pid)
@@ -1922,12 +2032,12 @@ async def api_create_payment(req: CreatePaymentRequest):
              meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
-                "plan_id": plan_id, "payment_method": "Telegram Stars", "payment_id": pid,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "Telegram Stars", "payment_id": pid,
                 "tier_device_count": tier_device_count
             }
              create_payload_pending(pid, user_id, float(final_price), meta)
-             title = f"{'Подписка' if action_name == 'new' else 'Продление'} на {months} мес."
-             desc = get_transaction_comment({"id": user_id, "username": user.get("username")}, action_name, months, req.host_name)
+             title = f"{'Подписка' if action_name == 'new' else 'Продление'} на {duration_label}"
+             desc = get_transaction_comment({"id": user_id, "username": user.get("username")}, action_name, duration_label, req.host_name)
              await _send_invoice_stars(user_id, title, desc, pid, stars_amount)
              bot_username = get_setting('telegram_bot_username')
              logger.info(f"[WEBAPP] - Успешно отправлен счет Stars для {user_id} на {stars_amount} звезд")
@@ -1942,7 +2052,7 @@ async def api_create_payment(req: CreatePaymentRequest):
             meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
-                "plan_id": plan_id, "payment_method": "Balance", "promo_code": "", "promo_discount": 0,
+                "plan_id": plan_id, "duration_days": duration_days, "payment_method": "Balance", "promo_code": "", "promo_discount": 0,
                 "tier_device_count": tier_device_count,
                 "payment_id": p_log_id
             }

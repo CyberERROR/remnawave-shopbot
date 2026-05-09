@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import json
+import re
 
 from datetime import datetime, timedelta, timezone
 
@@ -276,8 +277,6 @@ async def sync_keys_with_panels():
 
         if remote_by_email:
             for normalized_email, (remote_email, remote_user) in remote_by_email.items():
-                import re
-
                 # Пытаемся найти user_id разными способами
                 user_id = remote_user.get('telegramId')
                 
@@ -327,7 +326,6 @@ async def sync_keys_with_panels():
                     
                     # 2. Если есть суффиксы -2, -3 и т.д., пробуем отрезать их
                      
-                    import re
                     # Ищем паттерн: любое_имя-цифра(ы)
                     # Используем цикл, чтобы отрезать несколько раз, если вдруг что-то типа name-2-3 (редко, но бывает)
                     temp = username_part

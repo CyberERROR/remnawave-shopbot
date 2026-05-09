@@ -914,6 +914,65 @@
                             <p class="text-[10px] text-primary/80 font-mono mt-0.5 truncate webhook-display"
                                 data-endpoint="/yookassa-webhook"></p>
                         </div>
+
+                        <!-- YooKassa Proxy Configuration -->
+                        <div class="mt-4 pt-4 border-t border-white/10">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary text-sm">vpn_key</span>
+                                    <span class="text-white/80 text-xs font-bold uppercase tracking-wider">Прокси для YooKassa</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <!-- Proxy Enable Toggle -->
+                                    <div class="flex items-center gap-2 bg-black/20 rounded-xl px-3 py-1.5 border border-white/5">
+                                        <input type="hidden" name="yookassa_proxy_enabled" value="false" />
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="yookassa_proxy_enabled" value="true" id="yookassa_proxy_enabled"
+                                                {% if settings.yookassa_proxy_enabled == 'true' %}checked{% endif %}
+                                                class="sr-only peer" />
+                                            <div
+                                                class="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
+                                            </div>
+                                        </label>
+                                        <span class="text-[10px] font-bold text-white/60 uppercase">Вкл</span>
+                                    </div>
+                                    <button type="button" id="check-proxies-btn"
+                                        class="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/20 active:scale-95 transition-all flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-sm">refresh</span>
+                                        <span>Проверить</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">
+                                    Список прокси (по одному на строку)
+                                </label>
+                                <textarea name="yookassa_proxies" rows="3" placeholder="login:pass@host:port&#10;http://login:pass@host:port&#10;socks5://login:pass@host:port"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs font-mono focus:ring-1 focus:ring-primary/40 outline-none transition-all resize-none">{{ settings.yookassa_proxies or '' }}</textarea>
+                                <p class="text-[9px] text-white/40 mt-1 ml-1">Форматы: <code>login:pass@host:port</code>, <code>http://login:pass@host:port</code>, <code>socks5://login:pass@host:port</code></p>
+                            </div>
+
+                            <!-- Proxy Status Display -->
+                            <div id="proxy-status-container" class="hidden">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-white/60 text-[10px] uppercase font-bold tracking-wider">Статус прокси:</span>
+                                    <span id="proxy-summary" class="text-[10px] text-white/60"></span>
+                                </div>
+                                <div id="proxy-list" class="space-y-1.5 max-h-32 overflow-y-auto">
+                                    <!-- Proxy items will be inserted here -->
+                                </div>
+                                <div id="proxy-last-check" class="text-[9px] text-white/40 mt-2 text-right"></div>
+                            </div>
+
+                            <!-- Loading Indicator -->
+                            <div id="proxy-check-loading" class="hidden py-4">
+                                <div class="flex items-center justify-center gap-2">
+                                    <div class="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                    <span class="text-white/60 text-xs">Проверка прокси...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -983,7 +1042,20 @@
                             </div>
                             <h4 class="text-white font-bold text-sm">Platega</h4>
                         </div>
-                        <div class="flex items-center gap-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div
+                                class="flex items-center gap-2 bg-black/20 rounded-xl px-3 py-1.5 border border-white/5">
+                                <input type="hidden" name="platega_universal_enabled" value="false" />
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="platega_universal_enabled" value="true"
+                                        id="platega_universal_enabled" {% if settings.platega_universal_enabled=='true'
+                                        %}checked{% endif %} class="sr-only peer" />
+                                    <div
+                                        class="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
+                                    </div>
+                                </label>
+                                <span class="text-[10px] font-bold text-white/60 uppercase ml-1">PAY-FORM</span>
+                            </div>
                             <div
                                 class="flex items-center gap-2 bg-black/20 rounded-xl px-3 py-1.5 border border-white/5">
                                 <input type="hidden" name="platega_enabled" value="false" />
@@ -994,7 +1066,7 @@
                                         class="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
                                     </div>
                                 </label>
-                                <span class="text-[10px] font-bold text-white/60 uppercase ml-1">ВКЛ</span>
+                                <span class="text-[10px] font-bold text-white/60 uppercase ml-1">СБП</span>
                             </div>
                             <div
                                 class="flex items-center gap-2 bg-black/20 rounded-xl px-3 py-1.5 border border-white/5">
@@ -1719,7 +1791,15 @@
                                     <span class="material-symbols-outlined text-lg">devices</span>
                                 </div>
                                 <div>
-                                    <h5 class="text-white font-bold text-sm tracking-tight">Режим устройств</h5>
+                                    <div class="flex items-center gap-2">
+                                        <h5 class="text-white font-bold text-sm tracking-tight">Режим устройств</h5>
+                                        <button type="button"
+                                            onclick="openDeviceModeHelp('{{ host.host_name }}')"
+                                            class="w-5 h-5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[11px] font-black flex items-center justify-center hover:bg-cyan-500/20 hover:border-cyan-400/60 hover:text-white active:scale-95 transition-all shadow-lg shadow-cyan-500/5"
+                                            title="Как работает режим устройств">
+                                            ?
+                                        </button>
+                                    </div>
                                     <p class="text-white/40 text-[9px]">Как определяется лимит устройств</p>
                                 </div>
                             </div>
@@ -1833,6 +1913,141 @@
                         </div>
                     </div>
 
+                    <div id="device-mode-help-{{ host.host_name }}"
+                        class="hidden fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center"
+                        onclick="if(event.target === this) closeDeviceModeHelp('{{ host.host_name }}')">
+                        <div
+                            class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#0b1411] border border-cyan-500/20 shadow-2xl shadow-black/60 relative">
+                            <div class="absolute inset-0 pointer-events-none bg-gradient-to-br from-cyan-500/10 via-transparent to-primary/10"></div>
+                            <div class="relative p-6 sm:p-7">
+                                <div class="flex items-start justify-between gap-4 mb-6">
+                                    <div class="flex items-start gap-3">
+                                        <div
+                                            class="w-11 h-11 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center text-cyan-300 shrink-0">
+                                            <span class="material-symbols-outlined text-2xl">devices</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-white text-lg font-black tracking-tight">Как работает режим устройств</h3>
+                                            <p class="text-white/45 text-xs mt-1">Подробно про лимиты, выбор устройств и расчёт цены</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="closeDeviceModeHelp('{{ host.host_name }}')"
+                                        class="w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-xl">close</span>
+                                    </button>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                                    <div class="rounded-2xl bg-white/[0.04] border border-white/10 p-4">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="material-symbols-outlined text-cyan-300 text-lg">sell</span>
+                                            <h4 class="text-white text-sm font-bold">Режим «По тарифу»</h4>
+                                        </div>
+                                        <p class="text-white/55 text-xs leading-relaxed">
+                                            Количество устройств берётся напрямую из поля <b>HWID</b> у выбранного тарифа.
+                                            Пользователь не выбирает устройства отдельно, а цена равна только цене тарифа.
+                                        </p>
+                                        <div class="mt-3 rounded-xl bg-black/25 border border-white/5 px-3 py-2 text-[11px] text-white/45">
+                                            Формула: <span class="text-cyan-200 font-bold">итог = цена тарифа</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-cyan-500/[0.06] border border-cyan-500/20 p-4">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="material-symbols-outlined text-cyan-300 text-lg">tune</span>
+                                            <h4 class="text-white text-sm font-bold">Режим «Выбор»</h4>
+                                        </div>
+                                        <p class="text-white/55 text-xs leading-relaxed">
+                                            Пользователь выбирает нужное количество устройств из списка. Базовое количество
+                                            устройств уже включено в тариф, а дополнительные устройства считаются отдельно.
+                                        </p>
+                                        <div class="mt-3 rounded-xl bg-black/25 border border-cyan-500/10 px-3 py-2 text-[11px] text-white/45">
+                                            Формула: <span class="text-cyan-200 font-bold">итог = тариф + доп. устройства</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="rounded-2xl bg-black/25 border border-white/10 p-4">
+                                        <h4 class="text-white text-sm font-bold mb-3 flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-cyan-300 text-lg">calculate</span>
+                                            Как считается цена за устройства
+                                        </h4>
+                                        <div class="space-y-2 text-xs text-white/55 leading-relaxed">
+                                            <p>
+                                                <b class="text-white/80">Базовое количество</b> — это сколько устройств входит в тариф бесплатно.
+                                                Например, если базовое значение равно <b>1</b>, то первое устройство уже включено в цену тарифа.
+                                            </p>
+                                            <p>
+                                                <b class="text-white/80">Дополнительный уровень</b> задаётся как «N устройств — X ₽/шт».
+                                                Цена применяется только к устройствам сверх базового количества.
+                                            </p>
+                                            <div class="rounded-xl bg-cyan-500/10 border border-cyan-500/20 p-3 text-cyan-50/80">
+                                                <div class="font-bold text-cyan-200 mb-1">Формула:</div>
+                                                <div class="font-mono text-[11px]">
+                                                    доплата = (выбранные устройства − базовые устройства) × цена за устройство × срок в месяцах
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-white/[0.04] border border-white/10 p-4">
+                                        <h4 class="text-white text-sm font-bold mb-3 flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-emerald-300 text-lg">receipt_long</span>
+                                            Пример расчёта
+                                        </h4>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                            <div class="rounded-xl bg-black/25 border border-white/5 p-3 text-white/55">
+                                                <div class="text-white/80 font-bold mb-2">Настройки:</div>
+                                                <div>Цена тарифа: <b class="text-white">200 ₽ / месяц</b></div>
+                                                <div>Базово: <b class="text-white">1 устройство</b></div>
+                                                <div>Выбрано: <b class="text-white">3 устройства</b></div>
+                                                <div>Цена за устройство: <b class="text-white">50 ₽/шт</b></div>
+                                            </div>
+                                            <div class="rounded-xl bg-cyan-500/10 border border-cyan-500/20 p-3 text-white/60">
+                                                <div class="text-cyan-200 font-bold mb-2">Итог:</div>
+                                                <div>Доп. устройств: <b class="text-white">3 − 1 = 2</b></div>
+                                                <div>Доплата: <b class="text-white">2 × 50 = 100 ₽</b></div>
+                                                <div>Итого за месяц: <b class="text-white">200 + 100 = 300 ₽</b></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-amber-500/[0.06] border border-amber-500/20 p-4">
+                                        <h4 class="text-white text-sm font-bold mb-3 flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-amber-300 text-lg">sync_alt</span>
+                                            Что происходит при продлении
+                                        </h4>
+                                        <div class="space-y-2 text-xs text-white/55 leading-relaxed">
+                                            <p>
+                                                Если включена опция <b class="text-white/80">«Без выбора при продлении»</b>,
+                                                пользователь при продлении не выбирает количество устройств заново — система берёт текущий лимит устройств у ключа.
+                                            </p>
+                                            <p>
+                                                Если пользователь увеличивает количество устройств при продлении, система должна учесть разницу по устройствам
+                                                и остаток текущей подписки, чтобы клиент не получил больше устройств дешевле положенного.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-red-500/[0.05] border border-red-500/15 p-4">
+                                        <h4 class="text-white text-sm font-bold mb-3 flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-red-300 text-lg">priority_high</span>
+                                            Важные правила настройки
+                                        </h4>
+                                        <ul class="space-y-2 text-xs text-white/55 leading-relaxed">
+                                            <li><b class="text-white/80">Базовое количество</b> должно быть не меньше 1.</li>
+                                            <li><b class="text-white/80">Уровни устройств</b> лучше задавать по возрастанию: 2, 3, 4, 5 и т.д.</li>
+                                            <li><b class="text-white/80">Цена за устройство</b> — это цена за одно дополнительное устройство, а не общая доплата за весь уровень.</li>
+                                            <li>Если тариф сам содержит HWID, режим <b class="text-white/80">«По тарифу»</b> проще и безопаснее.</li>
+                                            <li>Если хотите продавать гибкие пакеты устройств, используйте режим <b class="text-white/80">«Выбор»</b>.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Plans -->
                     <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
                         <div class="flex items-center justify-between mb-6">
@@ -1873,7 +2088,12 @@
                                                 class="flex items-center gap-1 text-white/40 text-[10px] font-bold uppercase tracking-tight bg-white/5 px-1.5 py-0.5 rounded-md">
                                                 <span
                                                     class="material-symbols-outlined text-[12px]">calendar_today</span>
-                                                {{ plan.months }} м
+                                                {% set plan_days = plan.duration_days or (plan.months * 30 if plan.months else 30) %}
+                                                {% if plan_days % 30 == 0 %}
+                                                    {{ plan_days // 30 }} мес
+                                                {% else %}
+                                                    {{ plan_days }} дн
+                                                {% endif %}
                                             </div>
                                             <div
                                                 class="flex items-center gap-1 text-white/40 text-[10px] font-bold uppercase tracking-tight bg-white/5 px-1.5 py-0.5 rounded-md">
@@ -1916,18 +2136,36 @@
                                                 placeholder="Название" required
                                                 class="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                                         </div>
+                                        <div class="space-y-1">
+                                            <div class="flex gap-1">
+                                                <!-- Hidden input stores duration in days -->
+                                                <input type="hidden" name="duration_days" id="edit-plan-duration-days-{{ plan.plan_id }}" value="{{ plan.duration_days or (plan.months * 30 if plan.months else 30) }}" />
+                                                <!-- Duration type toggle -->
+                                                <div class="flex bg-black/30 border border-white/10 rounded-lg p-0.5 shrink-0">
+                                                    <button type="button" id="edit-type-months-{{ plan.plan_id }}"
+                                                        class="px-1.5 py-1 rounded text-[9px] font-bold transition-all {% if (plan.duration_days or (plan.months * 30 if plan.months else 30)) % 30 == 0 %}bg-primary text-white{% else %}text-white/50 hover:text-white{% endif %} min-w-[20px]"
+                                                        onclick="setEditDurationType('{{ plan.plan_id }}', 'months')">Мес</button>
+                                                    <button type="button" id="edit-type-days-{{ plan.plan_id }}"
+                                                        class="px-1.5 py-1 rounded text-[9px] font-bold transition-all {% if (plan.duration_days or (plan.months * 30 if plan.months else 30)) % 30 != 0 %}bg-primary text-white{% else %}text-white/50 hover:text-white{% endif %} min-w-[20px]"
+                                                        onclick="setEditDurationType('{{ plan.plan_id }}', 'days')">Дни</button>
+                                                </div>
+                                                <!-- Value input -->
+                                                <input type="number" id="edit-duration-value-{{ plan.plan_id }}"
+                                                    value="{% if (plan.duration_days or (plan.months * 30 if plan.months else 30)) % 30 == 0 %}{{ (plan.duration_days or (plan.months * 30 if plan.months else 30)) // 30 }}{% else %}{{ plan.duration_days or (plan.months * 30 if plan.months else 30) }}{% endif %}"
+                                                    min="1" required
+                                                    class="flex-1 min-w-[50px] bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                                                    onchange="updateEditDurationDays('{{ plan.plan_id }}')" />
+                                            </div>
+                                        </div>
                                         <div class="grid grid-cols-2 gap-2">
-                                            <input type="number" name="months" value="{{ plan.months }}"
-                                                placeholder="Мес." required
-                                                class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                                             <input type="number" name="price" value="{{ plan.price }}"
                                                 placeholder="Цена" required
                                                 class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2">
                                             <input type="number" name="traffic_limit_gb"
                                                 value="{{ plan.traffic_limit_gb }}" placeholder="GB (0=∞)"
                                                 class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
                                             <input type="number" name="hwid_limit" value="{{ plan.hwid_limit }}"
                                                 placeholder="HWID"
                                                 class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
@@ -1981,9 +2219,24 @@
                                     </div>
                                     <div class="space-y-1">
                                         <label
-                                            class="text-white/30 text-[9px] font-bold uppercase tracking-wider ml-1">Месяцев</label>
-                                        <input type="number" name="months" placeholder="12" required
-                                            class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none transition-all placeholder:text-white/10" />
+                                            class="text-white/30 text-[9px] font-bold uppercase tracking-wider ml-1">Длительность</label>
+                                        <div class="flex gap-1">
+                                            <!-- Hidden input stores duration in days -->
+                                            <input type="hidden" name="duration_days" id="add-plan-duration-days" value="30" />
+                                            <!-- Duration type toggle -->
+                                            <div class="flex bg-black/30 border border-white/10 rounded-lg p-0.5 shrink-0">
+                                                <button type="button" id="add-type-months"
+                                                    class="px-1.5 py-1 rounded text-[9px] font-bold transition-all bg-primary text-white min-w-[20px]"
+                                                    onclick="setDurationType('add', 'months')">Мес</button>
+                                                <button type="button" id="add-type-days"
+                                                    class="px-1.5 py-1 rounded text-[9px] font-bold transition-all text-white/50 hover:text-white min-w-[20px]"
+                                                    onclick="setDurationType('add', 'days')">Дни</button>
+                                            </div>
+                                            <!-- Value input -->
+                                            <input type="number" id="add-duration-value" value="1" min="1" required
+                                                class="flex-1 min-w-[50px] bg-black/20 border border-white/10 rounded-xl px-2 py-2 text-white text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none transition-all placeholder:text-white/10"
+                                                onchange="updateDurationDays('add')" />
+                                        </div>
                                     </div>
                                     <div class="space-y-1">
                                         <label
@@ -3199,6 +3452,13 @@
         const traffic = plan.traffic_limit_gb || '∞';
         const hwid = plan.hwid_limit || '∞';
         const price = Math.round(plan.price);
+        const planDays = plan.duration_days || (plan.months * 30) || 30;
+        const isMonths = planDays % 30 === 0;
+        const displayValue = isMonths ? (planDays / 30) : planDays;
+        const displayUnit = isMonths ? 'мес' : 'дн';
+        const monthsClass = isMonths ? 'bg-primary text-white' : 'text-white/50 hover:text-white';
+        const daysClass = !isMonths ? 'bg-primary text-white' : 'text-white/50 hover:text-white';
+
         return `
         <div id="plan-card-${plan.plan_id}" class="bg-black/30 border border-white/10 rounded-2xl p-4 group/plan relative overflow-hidden">
             <div id="view-plan-${plan.plan_id}" class="flex flex-col h-full relative z-10">
@@ -3210,7 +3470,7 @@
                     <div class="flex flex-wrap gap-x-2 gap-y-1 justify-center">
                         <div class="flex items-center gap-1 text-white/40 text-[10px] font-bold uppercase tracking-tight bg-white/5 px-1.5 py-0.5 rounded-md">
                             <span class="material-symbols-outlined text-[12px]">calendar_today</span>
-                            ${plan.months} м
+                            ${displayValue} ${displayUnit}
                         </div>
                         <div class="flex items-center gap-1 text-white/40 text-[10px] font-bold uppercase tracking-tight bg-white/5 px-1.5 py-0.5 rounded-md">
                             <span class="material-symbols-outlined text-[12px]">data_usage</span>
@@ -3244,15 +3504,30 @@
                         <input type="text" name="plan_name" value="${plan.plan_name}" placeholder="Название" required
                             class="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                     </div>
+                    <div class="space-y-1">
+                        <div class="flex gap-1">
+                            <input type="hidden" name="duration_days" id="edit-plan-duration-days-${plan.plan_id}" value="${planDays}" />
+                            <div class="flex bg-black/30 border border-white/10 rounded-lg p-0.5">
+                                <button type="button" id="edit-type-months-${plan.plan_id}"
+                                    class="px-2 py-1 rounded text-[10px] font-bold transition-all ${monthsClass}"
+                                    onclick="setEditDurationType('${plan.plan_id}', 'months')">Мес</button>
+                                <button type="button" id="edit-type-days-${plan.plan_id}"
+                                    class="px-2 py-1 rounded text-[10px] font-bold transition-all ${daysClass}"
+                                    onclick="setEditDurationType('${plan.plan_id}', 'days')">Дни</button>
+                            </div>
+                            <input type="number" id="edit-duration-value-${plan.plan_id}"
+                                value="${displayValue}" min="1" required
+                                class="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                                onchange="updateEditDurationDays('${plan.plan_id}')" />
+                        </div>
+                    </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="number" name="months" value="${plan.months}" placeholder="Мес." required
-                            class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                         <input type="number" name="price" value="${price}" placeholder="Цена" required
+                            class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
+                        <input type="number" name="traffic_limit_gb" value="${plan.traffic_limit_gb || ''}" placeholder="GB (0=∞)"
                             class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="number" name="traffic_limit_gb" value="${plan.traffic_limit_gb || ''}" placeholder="GB (0=∞)"
-                            class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                         <input type="number" name="hwid_limit" value="${plan.hwid_limit || ''}" placeholder="HWID"
                             class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                     </div>
@@ -3522,6 +3797,28 @@
         else showToast('danger', r.error || 'Ошибка сохранения');
     }
 
+    function openDeviceModeHelp(hostName) {
+        const modal = document.getElementById('device-mode-help-' + hostName);
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDeviceModeHelp(hostName) {
+        const modal = document.getElementById('device-mode-help-' + hostName);
+        if (!modal) return;
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        document.querySelectorAll('[id^="device-mode-help-"]:not(.hidden)').forEach((modal) => {
+            modal.classList.add('hidden');
+        });
+        document.body.style.overflow = '';
+    });
+
     function editBaseTier(hostName) {
         document.getElementById('base-tier-display-' + hostName).classList.add('hidden');
         document.getElementById('base-tier-display-' + hostName).classList.remove('flex');
@@ -3633,7 +3930,252 @@
         else showToast('danger', r.error || 'Ошибка');
     }
 
+    // ===== YOOKASSA PROXY CHECK =====
+    async function checkYooKassaProxies() {
+        const btn = document.getElementById('check-proxies-btn');
+        const loading = document.getElementById('proxy-check-loading');
+        const container = document.getElementById('proxy-status-container');
+        const list = document.getElementById('proxy-list');
+        const summary = document.getElementById('proxy-summary');
+        const lastCheck = document.getElementById('proxy-last-check');
 
+        if (!btn || !loading) return;
+
+        // Show loading, hide container
+        btn.disabled = true;
+        loading.classList.remove('hidden');
+        container.classList.add('hidden');
+
+        try {
+            const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+            const proxiesText = document.querySelector('textarea[name="yookassa_proxies"]')?.value || '';
+            const proxyEnabled = document.getElementById('yookassa_proxy_enabled')?.checked || false;
+            const response = await fetch('/check-yookassa-proxies', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    yookassa_proxies: proxiesText,
+                    yookassa_proxy_enabled: proxyEnabled ? 'true' : 'false',
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.ok) {
+                // Update summary
+                summary.innerHTML = `<span class="text-green-400">${data.working_count}</span> / ${data.total_count} рабочих`;
+
+                // Build proxy list
+                list.innerHTML = '';
+                data.proxies.forEach(proxy => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between px-2 py-1.5 rounded-lg bg-black/20 border border-white/5';
+
+                    const icon = proxy.is_working
+                        ? '<span class="text-green-400 text-sm">check_circle</span>'
+                        : '<span class="text-red-400 text-sm">error</span>';
+
+                    const bestBadge = proxy.is_best
+                        ? '<span class="ml-1 text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded">★ лучший</span>'
+                        : '';
+
+                    const latency = proxy.latency_ms !== null
+                        ? `<span class="text-white/60 text-[10px]">${proxy.latency_ms} мс</span>`
+                        : '';
+
+                    const error = !proxy.is_working && proxy.error
+                        ? `<span class="text-red-400/70 text-[9px] truncate max-w-[150px]" title="${proxy.error}">${proxy.error}</span>`
+                        : '';
+
+                    item.innerHTML = `
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="material-symbols-outlined ${proxy.is_working ? 'text-green-400' : 'text-red-400'}">${proxy.is_working ? 'check_circle' : 'error'}</span>
+                            <span class="text-white/80 text-xs font-mono truncate" title="${proxy.proxy}">${proxy.proxy}</span>
+                            ${bestBadge}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${latency}
+                            ${error}
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+
+                // Update last check time
+                if (data.checked_at) {
+                    const dt = new Date(data.checked_at);
+                    lastCheck.textContent = 'Проверено: ' + dt.toLocaleString('ru-RU');
+                }
+
+                container.classList.remove('hidden');
+
+                if (data.working_count > 0) {
+                    showToast('success', `${data.working_count} из ${data.total_count} прокси работают`);
+                } else if (data.total_count > 0) {
+                    showToast('warning', 'Ни один прокси не работает');
+                } else {
+                    showToast('info', 'Прокси не настроены');
+                }
+            } else {
+                showToast('danger', data.error || 'Ошибка проверки прокси');
+            }
+        } catch (e) {
+            showToast('danger', 'Ошибка сети при проверке прокси');
+            console.error('Proxy check error:', e);
+        } finally {
+            btn.disabled = false;
+            loading.classList.add('hidden');
+        }
+    }
+
+    // Initialize proxy check button
+    const checkProxiesBtn = document.getElementById('check-proxies-btn');
+    if (checkProxiesBtn) {
+        checkProxiesBtn.addEventListener('click', checkYooKassaProxies);
+    }
+
+    // Load proxy status on page load if available
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedStatusStr = '{{ settings.yookassa_proxy_status|default("{}", true) }}';
+        const savedStatus = savedStatusStr ? JSON.parse(savedStatusStr) : {};
+        if (savedStatus && savedStatus.proxies && savedStatus.proxies.length > 0) {
+            const container = document.getElementById('proxy-status-container');
+            const list = document.getElementById('proxy-list');
+            const summary = document.getElementById('proxy-summary');
+            const lastCheck = document.getElementById('proxy-last-check');
+
+            if (container && list) {
+                summary.innerHTML = `<span class="text-green-400">${savedStatus.working_count || 0}</span> / ${savedStatus.total_count || 0} рабочих`;
+
+                list.innerHTML = '';
+                savedStatus.proxies.forEach(proxy => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between px-2 py-1.5 rounded-lg bg-black/20 border border-white/5';
+
+                    const bestBadge = proxy.is_best
+                        ? '<span class="ml-1 text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded">★ лучший</span>'
+                        : '';
+
+                    const latency = proxy.latency_ms !== null && proxy.latency_ms !== undefined
+                        ? `<span class="text-white/60 text-[10px]">${proxy.latency_ms} мс</span>`
+                        : '';
+
+                    const error = !proxy.is_working && proxy.error
+                        ? `<span class="text-red-400/70 text-[9px] truncate max-w-[150px]">${proxy.error}</span>`
+                        : '';
+
+                    item.innerHTML = `
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="material-symbols-outlined ${proxy.is_working ? 'text-green-400' : 'text-red-400'}">${proxy.is_working ? 'check_circle' : 'error'}</span>
+                            <span class="text-white/80 text-xs font-mono truncate">${proxy.proxy}</span>
+                            ${bestBadge}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${latency}
+                            ${error}
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+
+                if (savedStatus.last_check) {
+                    const dt = new Date(savedStatus.last_check * 1000);
+                    lastCheck.textContent = 'Проверено: ' + dt.toLocaleString('ru-RU');
+                }
+
+                container.classList.remove('hidden');
+            }
+        }
+    });
+
+    // ===== DURATION TYPE TOGGLE (MONTHS/DAYS) =====
+    // Global state for add plan form
+    let addPlanDurationType = 'months';
+
+    function setDurationType(formId, type) {
+        const monthsBtn = document.getElementById(formId + '-type-months');
+        const daysBtn = document.getElementById(formId + '-type-days');
+        const valueInput = document.getElementById(formId + '-duration-value');
+        const daysInput = document.getElementById(formId + '-plan-duration-days');
+
+        if (type === 'months') {
+            monthsBtn.className = 'px-2 py-1 rounded text-[10px] font-bold transition-all bg-primary text-white';
+            daysBtn.className = 'px-2 py-1 rounded text-[10px] font-bold transition-all text-white/50 hover:text-white';
+            // Convert current days to months for display
+            const currentDays = parseInt(daysInput.value) || 30;
+            valueInput.value = Math.round(currentDays / 30) || 1;
+        } else {
+            daysBtn.className = 'px-2 py-1 rounded text-[10px] font-bold transition-all bg-primary text-white';
+            monthsBtn.className = 'px-2 py-1 rounded text-[10px] font-bold transition-all text-white/50 hover:text-white';
+            // Convert current months to days for display
+            const currentDays = parseInt(daysInput.value) || 30;
+            valueInput.value = currentDays;
+        }
+
+        if (formId === 'add') {
+            addPlanDurationType = type;
+        }
+
+        updateDurationDays(formId);
+    }
+
+    function updateDurationDays(formId) {
+        const valueInput = document.getElementById(formId + '-duration-value');
+        const daysInput = document.getElementById(formId + '-plan-duration-days');
+        const type = formId === 'add' ? addPlanDurationType : 'months';
+
+        const value = parseInt(valueInput.value) || 1;
+        const monthsBtn = document.getElementById(formId + '-type-months');
+        const isMonths = monthsBtn.classList.contains('bg-primary');
+
+        if (isMonths) {
+            daysInput.value = value * 30;
+        } else {
+            daysInput.value = value;
+        }
+    }
+
+    // Edit plan functions
+    function setEditDurationType(planId, type) {
+        const monthsBtn = document.getElementById('edit-type-months-' + planId);
+        const daysBtn = document.getElementById('edit-type-days-' + planId);
+        const valueInput = document.getElementById('edit-duration-value-' + planId);
+        const daysInput = document.getElementById('edit-plan-duration-days-' + planId);
+
+        if (type === 'months') {
+            monthsBtn.className = 'px-2 py-1 rounded text-[10px] font-bold transition-all bg-primary text-white';
+            daysBtn.className = 'px-2 py-1 rounded text-[10px] font-bold transition-all text-white/50 hover:text-white';
+            const currentDays = parseInt(daysInput.value) || 30;
+            valueInput.value = Math.round(currentDays / 30) || 1;
+        } else {
+            daysBtn.className = 'px-2 py-1 rounded text-[10px] font-bold transition-all bg-primary text-white';
+            monthsBtn.className = 'px-2 py-1 rounded text-[10px] font-bold transition-all text-white/50 hover:text-white';
+            const currentDays = parseInt(daysInput.value) || 30;
+            valueInput.value = currentDays;
+        }
+
+        updateEditDurationDays(planId);
+    }
+
+    function updateEditDurationDays(planId) {
+        const valueInput = document.getElementById('edit-duration-value-' + planId);
+        const daysInput = document.getElementById('edit-plan-duration-days-' + planId);
+        const monthsBtn = document.getElementById('edit-type-months-' + planId);
+        const isMonths = monthsBtn.classList.contains('bg-primary');
+
+        const value = parseInt(valueInput.value) || 1;
+
+        if (isMonths) {
+            daysInput.value = value * 30;
+        } else {
+            daysInput.value = value;
+        }
+    }
 
 </script>
 

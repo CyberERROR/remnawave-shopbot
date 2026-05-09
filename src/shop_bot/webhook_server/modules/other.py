@@ -321,23 +321,26 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
         try:
             keyboard = None
             if buttons:
-                from aiogram.utils.keyboard import InlineKeyboardBuilder
-                builder = InlineKeyboardBuilder()
+                from aiogram.types import InlineKeyboardButton as IKB, InlineKeyboardMarkup
+                _COLOR_STYLE = {'red': 'danger', 'green': 'success', 'blue': 'primary'}
+                kb_rows = []
                 for btn in buttons:
                     btn_text = btn.get('text', '').strip()
                     btn_type = btn.get('type', 'url')
                     if not btn_text: continue
-                    
+                    extra = {}
+                    btn_color = (btn.get('color') or '').strip()
+                    if btn_color in _COLOR_STYLE:
+                        extra['style'] = _COLOR_STYLE[btn_color]
                     if btn_type == 'promo':
                         promo_val = btn.get('value', '').strip()
                         cb_data = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
-                        builder.button(text=btn_text, callback_data=cb_data)
+                        kb_rows.append([IKB(text=btn_text, callback_data=cb_data, **extra)])
                     else:
                         btn_url = btn.get('url', '').strip()
                         if btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
-                            builder.button(text=btn_text, url=btn_url)
-                builder.adjust(1)
-                keyboard = builder.as_markup() if builder.export() else None
+                            kb_rows.append([IKB(text=btn_text, url=btn_url, **extra)])
+                keyboard = InlineKeyboardMarkup(inline_keyboard=kb_rows) if kb_rows else None
             
             if media_path and media_type:
                 media_file = FSInputFile(media_path)
@@ -565,23 +568,26 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             
             keyboard = None
             if buttons:
-                from aiogram.utils.keyboard import InlineKeyboardBuilder
-                builder = InlineKeyboardBuilder()
+                from aiogram.types import InlineKeyboardButton as IKB, InlineKeyboardMarkup
+                _COLOR_STYLE = {'red': 'danger', 'green': 'success', 'blue': 'primary'}
+                kb_rows = []
                 for btn in buttons:
                     btn_text = btn.get('text', '').strip()
                     btn_type = btn.get('type', 'url')
                     if not btn_text: continue
-                    
+                    extra = {}
+                    btn_color = (btn.get('color') or '').strip()
+                    if btn_color in _COLOR_STYLE:
+                        extra['style'] = _COLOR_STYLE[btn_color]
                     if btn_type == 'promo':
                         promo_val = btn.get('value', '').strip()
                         cb_data = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
-                        builder.button(text=btn_text, callback_data=cb_data)
+                        kb_rows.append([IKB(text=btn_text, callback_data=cb_data, **extra)])
                     else:
                         btn_url = btn.get('url', '').strip()
                         if btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
-                            builder.button(text=btn_text, url=btn_url)
-                builder.adjust(1)
-                keyboard = builder.as_markup() if builder.export() else None
+                            kb_rows.append([IKB(text=btn_text, url=btn_url, **extra)])
+                keyboard = InlineKeyboardMarkup(inline_keyboard=kb_rows) if kb_rows else None
             
             media_path, media_type = None, None
             if media_filename:

@@ -238,7 +238,7 @@
                             <label
                                 class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold mb-4 ml-1">Клавиатура</label>
                             <div id="buttons-list"
-                                class="space-y-2 mb-3 flex-1 overflow-y-auto max-h-[200px] pr-1 custom-scrollbar"></div>
+                                class="space-y-2 mb-3 flex-1 overflow-y-auto max-h-[280px] pr-1 custom-scrollbar"></div>
                             <div class="flex gap-2 mt-auto">
                                 <button type="button" id="btn-add-button"
                                     class="flex-1 py-3.5 rounded-xl bg-white/5 hover:border-white/30 border border-white/10 text-white text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
@@ -2945,6 +2945,12 @@
 
         let uploadedMediaFilename = null;
         let buttons = [];
+        const buttonColorPresets = {
+            green: { dot: 'bg-emerald-400', ring: 'ring-emerald-400', border: 'border-emerald-400/70', panel: 'bg-emerald-500/10' },
+            red: { dot: 'bg-rose-400', ring: 'ring-rose-400', border: 'border-rose-400/70', panel: 'bg-rose-500/10' },
+            blue: { dot: 'bg-sky-400', ring: 'ring-sky-400', border: 'border-sky-400/70', panel: 'bg-sky-500/10' },
+            gray: { dot: 'bg-white/50', ring: 'ring-white/60', border: 'border-white/20', panel: 'bg-white/5' }
+        };
 
         async function loadStats() {
             try {
@@ -3093,24 +3099,40 @@
             list.innerHTML = '';
             buttons.forEach((btn, idx) => {
                 const item = document.createElement('div');
-                item.className = 'flex gap-2';
+                const selectedColor = btn.color || 'gray';
+                const colorPreset = buttonColorPresets[selectedColor] || buttonColorPresets.gray;
+                item.className = `rounded-xl border ${colorPreset.border} ${colorPreset.panel} p-2.5 transition-all`;
 
                 let inputField = '';
                 if (btn.type === 'promo') {
-                    inputField = `<input type="text" value="${btn.value || ''}" placeholder="Код промокода (например, 6UFW43SD)" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="value" />`;
+                    inputField = `<input type="text" value="${btn.value || ''}" placeholder="Код промокода (например, 6UFW43SD)" class="min-w-0 flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="value" />`;
                 } else {
-                    inputField = `<input type="url" value="${btn.url || ''}" placeholder="https://..." class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="url" />`;
+                    inputField = `<input type="url" value="${btn.url || ''}" placeholder="https://..." class="min-w-0 flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="url" />`;
                 }
 
                 item.innerHTML = `
-                    <input type="text" value="${btn.text || ''}" placeholder="Текст кнопки" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="text" />
-                    <div class="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white/50 text-[10px] uppercase font-bold flex items-center justify-center min-w-[80px] select-none">
-                        ${btn.type === 'promo' ? 'Callback' : 'URL'}
+                    <div class="flex flex-col xl:flex-row gap-2">
+                        <input type="text" value="${btn.text || ''}" placeholder="Текст кнопки" class="min-w-0 flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/30" data-idx="${idx}" data-field="text" />
+                        <div class="flex gap-2 min-w-0 flex-1">
+                            <div class="px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white/50 text-[10px] uppercase font-bold flex items-center justify-center min-w-[78px] select-none">
+                                ${btn.type === 'promo' ? 'Callback' : 'URL'}
+                            </div>
+                            ${inputField}
+                        </div>
+                        <button type="button" class="px-2.5 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors flex items-center justify-center shrink-0" data-remove="${idx}">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                        </button>
                     </div>
-                    ${inputField}
-                    <button type="button" class="px-2.5 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors" data-remove="${idx}">
-                        <span class="material-symbols-outlined text-base">delete</span>
-                    </button>
+                    <div class="mt-2 flex items-center justify-between gap-2">
+                        <span class="text-[9px] uppercase tracking-[0.16em] text-white/35 font-bold">Цвет кнопки</span>
+                        <div class="flex items-center gap-1.5 rounded-lg bg-black/20 border border-white/10 px-2 py-1.5">
+                            ${Object.entries(buttonColorPresets).map(([colorKey, preset]) => `
+                                <button type="button" title="${colorKey}" data-color="${idx}:${colorKey}" class="w-5 h-5 rounded-md border ${selectedColor === colorKey ? `${preset.border} ring-2 ${preset.ring} ring-offset-1 ring-offset-[#111]` : 'border-white/10 hover:border-white/30'} bg-white/5 flex items-center justify-center transition-all">
+                                    <span class="w-2.5 h-2.5 rounded-full ${preset.dot} shadow-sm"></span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
                 `;
                 list.appendChild(item);
             });
@@ -3130,6 +3152,17 @@
                     renderButtons();
                 });
             });
+
+            list.querySelectorAll('[data-color]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const [idxRaw, color] = e.currentTarget.dataset.color.split(':');
+                    const idx = parseInt(idxRaw);
+                    if (buttons[idx]) {
+                        buttons[idx].color = color;
+                        renderButtons();
+                    }
+                });
+            });
         }
 
         document.getElementById('btn-add-button').addEventListener('click', () => {
@@ -3137,7 +3170,7 @@
                 window.showToast('warning', 'Максимум 6 кнопок');
                 return;
             }
-            buttons.push({ type: 'url', text: '', url: '' });
+            buttons.push({ type: 'url', text: '', url: '', color: 'gray' });
             renderButtons();
         });
 
@@ -3148,7 +3181,7 @@
                     window.showToast('warning', 'Максимум 6 кнопок');
                     return;
                 }
-                buttons.push({ type: 'promo', text: '🎁 Активировать промокод', value: '' });
+                buttons.push({ type: 'promo', text: '🎁 Активировать промокод', value: '', color: 'green' });
                 renderButtons();
             });
         }

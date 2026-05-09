@@ -1,6 +1,7 @@
 import logging
 import hashlib
 import urllib.parse
+import math
 
 from datetime import datetime
 
@@ -443,7 +444,10 @@ def create_plans_keyboard(plans: list[dict], action: str, host_name: str, key_id
 def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int, action: str, key_id: int = 0, selected_tier_id: int = None) -> InlineKeyboardMarkup:
     from shop_bot.data_manager.database import get_plan_by_id, get_setting
     plan = get_plan_by_id(plan_id) if plan_id else None
-    months = int(plan.get('months') or 1) if plan else 1
+    duration_days = int(plan.get('duration_days') or 0) if plan else 30
+    if duration_days <= 0:
+        duration_days = int(plan.get('months') or 1) * 30 if plan else 30
+    month_factor = duration_days / 30.0
     base_devices = int(get_setting(f"base_device_{host_name}") or "1")
 
     builder = InlineKeyboardBuilder()
@@ -455,7 +459,7 @@ def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int
         icon = "🟢" if is_selected else "⚪️"
         diff = t['device_count'] - base_devices
         if diff < 0: diff = 0
-        total_price = diff * t['price'] * months
+        total_price = diff * t['price'] * month_factor
         label = f"{icon} {t['device_count']} (+{total_price:.0f}₽)"
         builder.button(text=label, callback_data=f"select_tier_{t['tier_id']}")
         total_btns += 1
@@ -497,6 +501,7 @@ def create_payment_method_keyboard(
 
     pm = {
         "yookassa": bool((get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or "")),
+        "platega_universal": ((get_setting("platega_universal_enabled") or "false").strip().lower() == "true"),
         "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
         "platega_crypto": ((get_setting("platega_crypto_enabled") or "false").strip().lower() == "true"),
         "heleket": bool((get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or "")),
@@ -523,6 +528,8 @@ def create_payment_method_keyboard(
         else:
             builder.button(text="🏦 Банковская карта", callback_data="pay_yookassa")
     
+    if pm.get("platega_universal"):
+        builder.button(text="💳 Platega", callback_data="pay_platega_universal")
     if pm.get("platega"):
         builder.button(text="💳 СБП / Platega", callback_data="pay_platega")
     if pm.get("platega_crypto"):
@@ -588,6 +595,7 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
         "cryptobot": bool(get_setting("cryptobot_token") or ""),
         "tonconnect": bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or "")),
         "yoomoney": ((get_setting("yoomoney_enabled") or "false").strip().lower() == "true"),
+        "platega_universal": ((get_setting("platega_universal_enabled") or "false").strip().lower() == "true"),
         "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
         "platega_crypto": ((get_setting("platega_crypto_enabled") or "false").strip().lower() == "true"),
         "stars": ((get_setting("stars_enabled") or "false").strip().lower() == "true"),
@@ -609,6 +617,8 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
         builder.button(text="⭐ Telegram Stars", callback_data="topup_pay_stars")
     if pm.get("yoomoney"):
         builder.button(text="💜 ЮMoney (кошелёк)", callback_data="topup_pay_yoomoney")
+    if pm.get("platega_universal"):
+        builder.button(text="💳 Platega", callback_data="topup_pay_platega_universal")
     if pm.get("platega"):
         builder.button(text="💳 СБП / Platega", callback_data="topup_pay_platega")
     if pm.get("platega_crypto"):
