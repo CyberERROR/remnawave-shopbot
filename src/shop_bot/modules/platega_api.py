@@ -99,68 +99,6 @@ class PlategaAPI:
             logger.error(f"Platega unexpected error during payment creation: {e}", exc_info=True)
             return None, None
     
-    async def create_payment_universal(
-        self,
-        amount: float,
-        description: str,
-        payment_id: str,
-        return_url: str,
-        failed_url: str
-    ) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Create a payment via Platega v2 (universal pay-form, no preset method).
-        The user chooses the payment method on the Platega page.
-        
-        Args:
-            amount: Payment amount in RUB
-            description: Payment description
-            payment_id: Internal payment ID (will be used as payload)
-            return_url: URL to redirect on successful payment
-            failed_url: URL to redirect on failed payment
-        
-        Returns:
-            Tuple of (transaction_id, payment_url) or (None, None) on error
-        """
-        payload = {
-            "paymentDetails": {
-                "amount": int(amount),
-                "currency": "RUB"
-            },
-            "description": description,
-            "return": return_url,
-            "failedUrl": failed_url,
-            "payload": payment_id
-        }
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.BASE_URL}/v2/transaction/process",
-                    json=payload,
-                    headers=self._get_headers(),
-                    timeout=aiohttp.ClientTimeout(total=20)
-                ) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    
-                    logger.info(f"Platega v2 create_payment_universal response: {data}")
-                    
-                    if data.get("status") == "PENDING" and "url" in data:
-                        transaction_id = data.get("transactionId")
-                        payment_url = data.get("url")
-                        logger.info(f"Platega v2 payment created: transaction_id={transaction_id}, url={payment_url}")
-                        return transaction_id, payment_url
-                    else:
-                        logger.error(f"Platega v2 payment creation failed: {data}")
-                        return None, None
-                        
-        except aiohttp.ClientError as e:
-            logger.error(f"Platega v2 HTTP error during payment creation: {e}")
-            return None, None
-        except Exception as e:
-            logger.error(f"Platega v2 unexpected error during payment creation: {e}", exc_info=True)
-            return None, None
-
     async def check_payment(self, transaction_id: str) -> bool:
         """
         Check payment status in Platega

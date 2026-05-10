@@ -2491,36 +2491,13 @@ def get_admin_router() -> Router:
 
 
         try:
-            # Add timeout protection for API call
-            host_resp = await asyncio.wait_for(
-                create_or_update_key_on_host(host_name, generated_email, days_to_add=days, telegram_id=user_id),
-                timeout=30.0
-            )
-        except asyncio.TimeoutError:
-            host_resp = None
-            logging.error(f"Gift flow: Timeout creating client on host '{host_name}' for user {user_id}")
-            await message.answer("❌ Таймаут при создании ключа на сервере. API не ответил за 30 секунд. Попробуйте снова.")
-            await state.clear()
-            await show_admin_menu(message)
-            return
+            host_resp = await create_or_update_key_on_host(host_name, generated_email, days_to_add=days)
         except Exception as e:
             host_resp = None
             logging.error(f"Gift flow: failed to create client on host '{host_name}' for user {user_id}: {e}")
 
-        if not host_resp:
-            await message.answer("❌ Не удалось выдать ключ на сервере. API вернул пустой ответ. Проверьте логи.")
-            await state.clear()
-            await show_admin_menu(message)
-            return
-
-        if not host_resp.get("client_uuid"):
-            await message.answer("❌ Не удалось выдать ключ: API не вернул client_uuid. Проверьте настройки хоста.")
-            await state.clear()
-            await show_admin_menu(message)
-            return
-
-        if not host_resp.get("expiry_timestamp_ms"):
-            await message.answer("❌ Не удалось выдать ключ: API не вернул дату истечения. Обратитесь к разработчику.")
+        if not host_resp or not host_resp.get("client_uuid") or not host_resp.get("expiry_timestamp_ms"):
+            await message.answer("❌ Не удалось выдать ключ на сервере. Проверьте настройки хоста и доступность панели Remnawave.")
             await state.clear()
             await show_admin_menu(message)
             return

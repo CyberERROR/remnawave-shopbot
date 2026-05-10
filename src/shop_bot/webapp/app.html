@@ -239,7 +239,7 @@
             </button>
         </div>
         <footer class="text-center pb-4 opacity-40 hover:opacity-100 transition-opacity">
-            <p class="text-[10px] text-gray-500 dark:text-gray-400">v2.5.0
+            <p class="text-[10px] text-gray-500 dark:text-gray-400">v2.3.2
             </p>
         </footer>
     </div>
@@ -1734,29 +1734,6 @@
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
-        }
-
-        async function copyReferralLink(button) {
-            const link = button?.dataset?.refLink;
-            if (!link) return;
-            try {
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(link);
-                } else {
-                    const input = document.createElement('input');
-                    input.value = link;
-                    input.style.position = 'fixed';
-                    input.style.opacity = '0';
-                    document.body.appendChild(input);
-                    input.focus();
-                    input.select();
-                    document.execCommand('copy');
-                    input.remove();
-                }
-                showNotification('Реферальная ссылка скопирована!', 'success');
-            } catch (e) {
-                showNotification('Не удалось скопировать ссылку', 'error');
-            }
         }
 
         let activeTierData = { purchase: { tiers: [], selected: 0, deviceCount: 1, tierPrice: 0 }, renew: { tiers: [], selected: 0, deviceCount: 1, tierPrice: 0 } };

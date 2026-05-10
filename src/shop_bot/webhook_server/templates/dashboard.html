@@ -25,18 +25,14 @@
     // Мгновенная инициализация состояния до рендеринга статистики
     (function () {
         const isHidden = localStorage.getItem('hide_payment_stats') === 'true';
-        document.addEventListener('DOMContentLoaded', () => {
-            // Удалить BOM/пробельные текстовые узлы из всех обновляемых секций
-            document.querySelectorAll('[data-fetch-url]').forEach(el => {
-                [...el.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); });
-            });
-            if (isHidden) {
+        if (isHidden) {
+            document.addEventListener('DOMContentLoaded', () => {
                 const statsCont = document.getElementById('dash-stats');
                 if (statsCont) statsCont.classList.add('hide-payments');
                 const icon = document.getElementById('icon-toggle-payments');
                 if (icon) icon.innerText = 'visibility_off';
-            }
-        });
+            });
+        }
     })();
 
     function togglePaymentStats() {
@@ -66,225 +62,196 @@
 <!-- ===== Конец заголовка ===== -->
 
 <!-- ===== СЕКЦИЯ: Карточки статистики ===== -->
-<section id="dash-stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-8"
+<section id="dash-stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8"
     data-fetch-url="{{ url_for('dashboard_stats_partial') }}" data-fetch-interval="120000">
-    {% set _stats_html %}{% include 'partials/dashboard_stats.html' %}{% endset %}{{ _stats_html|strip_bom }}
+    {% include 'partials/dashboard_stats.html' %}
 </section>
 
-<!-- ===== СЕКЦИЯ: Проверка скорости SSH ===== -->
+<!-- ===== СЕКЦИЯ: Проверка скорости SSH ===== (Стиль Settings) -->
 <section class="mb-8">
-    <div class="bg-[#0b0f0e]/80 border border-white/10 rounded-[1.4rem] shadow-2xl shadow-black/30 backdrop-blur-2xl overflow-hidden relative z-20">
-        <div class="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-primary/[0.07] via-white/[0.025] to-transparent">
-            <div class="absolute -top-14 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-10 -left-10 w-24 h-24 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 px-5 py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary shadow-lg shadow-primary/5 shrink-0">
-                        <span class="material-symbols-outlined text-lg">speed</span>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-black text-white tracking-tight leading-tight">Speedtest SSH</h3>
-                        <p class="text-[9px] font-bold text-white/30 uppercase tracking-[0.18em] mt-0.5">Проверка скорости на серверах</p>
-                    </div>
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md relative z-20">
+        <div
+            class="flex flex-col sm:flex-row items-center sm:items-center justify-between gap-4 mb-6 text-center sm:text-left">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 flex-shrink-0">
+                    <span class="material-symbols-outlined text-3xl">speed</span>
                 </div>
+                <div class="text-left">
+                    <h3 class="text-xl font-bold text-white tracking-tight">Speedtest SSH</h3>
+                    <p class="text-white/60 text-xs font-medium">Проверка скорости соединения на серверах</p>
+                </div>
+            </div>
 
-                <div class="bg-black/25 border border-white/[0.06] rounded-xl px-3.5 py-2 flex items-center sm:items-start justify-center min-w-[140px] w-full sm:w-auto h-fit">
-                    <div class="flex flex-col items-center sm:items-start w-full">
-                        <span class="text-[9px] font-black text-white/25 uppercase tracking-[0.18em] block mb-1">Последний замер:
-                            <span id="st-latest-date" class="text-white/40 normal-case tracking-normal ml-1">—</span></span>
-                        <div id="st-latest"
-                            class="text-[11px] text-white font-bold text-center sm:text-left leading-relaxed break-words whitespace-normal mt-0.5">
-                            —
-                        </div>
+            <div
+                class="bg-black/20 border border-white/5 rounded-xl px-4 py-2 flex items-center sm:items-start justify-center min-w-[140px] w-full sm:w-auto h-fit">
+                <div class="flex flex-col items-center sm:items-start w-full">
+                    <span class="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Последний
+                        замер:
+                        <span id="st-latest-date" class="text-white/50 normal-case tracking-normal ml-1">—</span></span>
+                    <div id="st-latest"
+                        class="text-xs text-white font-medium text-center sm:text-left leading-relaxed break-words whitespace-normal mt-1">
+                        —
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="p-5">
-            <div class="flex flex-col lg:flex-row items-start justify-between gap-5 mb-5">
-                <div class="flex-1 w-full">
-                    <div class="grid grid-cols-1 gap-3">
-                        <div>
-                            <div class="flex items-center justify-between mb-1.5 ml-0.5">
-                                <label class="block text-white/30 text-[9px] uppercase font-black tracking-[0.18em]">SSH цель</label>
-                                <span id="st-target-ip" class="text-[9px] text-white/25 font-mono font-bold tracking-wider ml-2"
-                                    title="IP адрес выбранного сервера">IP: —</span>
-                            </div>
-                            <div class="soft-select w-full" data-target="st-target">
-                                <button type="button"
-                                    class="soft-select-toggle w-full text-left bg-black/30 border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-xs font-bold focus:ring-1 focus:ring-primary/30 transition-all flex items-center justify-between"
-                                    id="st_target_toggle">
-                                    <span>Выберите сервер...</span>
-                                    <span class="material-symbols-outlined text-white/30 text-sm">expand_more</span>
-                                </button>
-                                <div class="soft-select-menu" id="st_target_menu"></div>
-                                <select id="st-target" class="hidden">
-                                </select>
-                            </div>
+        <div class="flex flex-col lg:flex-row items-start justify-between gap-6 mb-6">
+            <div class="flex-1 w-full">
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5 ml-1">
+                            <label
+                                class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-0 ml-0">SSH
+                                цель</label>
+                            <span id="st-target-ip" class="text-[10px] text-white/40 font-mono tracking-wider ml-2"
+                                title="IP адрес выбранного сервера">IP: —</span>
+                        </div>
+                        <div class="soft-select w-full" data-target="st-target">
+                            <button type="button"
+                                class="soft-select-toggle w-full text-left bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 transition-all font-medium flex items-center justify-between"
+                                id="st_target_toggle">
+                                <span>Выберите сервер...</span>
+                                <span class="material-symbols-outlined text-white/50 text-sm">expand_more</span>
+                            </button>
+                            <div class="soft-select-menu" id="st_target_menu"></div>
+                            <select id="st-target" class="hidden">
+                            </select>
                         </div>
                     </div>
                 </div>
-
-                <div class="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto mt-auto">
-                    <form id="st-run-form" method="post" class="m-0 w-full sm:w-auto">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <input type="hidden" name="method" value="both" />
-                        <button type="submit"
-                            class="w-full sm:w-auto px-4 py-2 rounded-xl bg-primary/10 border border-primary/15 text-primary font-black text-[9px] uppercase tracking-[0.18em] hover:bg-primary hover:text-background-dark transition-all flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">play_arrow</span>
-                            Проверить
-                        </button>
-                    </form>
-
-                    <form id="st-run-all-form" action="{{ url_for('node_run_all_ssh_target_speedtests_route') }}" method="post"
-                        class="m-0 w-full sm:w-auto">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <button type="submit"
-                            class="w-full sm:w-auto px-4 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white/60 font-black text-[9px] uppercase tracking-[0.18em] hover:bg-white/[0.08] hover:text-white transition-all flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined text-[14px]">playlist_play</span>
-                            Запустить все
-                        </button>
-                    </form>
-                </div>
             </div>
 
-            <div class="h-64 bg-black/20 rounded-xl border border-white/[0.05] p-4">
-                <canvas id="st-top-canvas"></canvas>
+            <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto mt-auto">
+                <form id="st-run-form" method="post" class="m-0 w-full sm:w-auto">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="method" value="both" />
+                    <button type="submit"
+                        class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-sm">play_arrow</span>
+                        Проверить
+                    </button>
+                </form>
+
+                <form id="st-run-all-form" action="{{ url_for('run_all_ssh_target_speedtests_route') }}" method="post"
+                    class="m-0 w-full sm:w-auto">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit"
+                        class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-sm">playlist_play</span>
+                        Запустить все
+                    </button>
+                </form>
             </div>
+        </div>
+
+        <div class="h-64 mt-4 bg-black/20 rounded-xl border border-white/5 p-4">
+            <canvas id="st-top-canvas"></canvas>
         </div>
     </div>
 </section>
 
 <!-- ===== СЕКЦИЯ: Аналитика доходов ===== -->
 <section class="mb-8">
-    <div class="bg-[#0b0f0e]/80 border border-white/10 rounded-[1.4rem] shadow-2xl shadow-black/30 backdrop-blur-2xl overflow-hidden">
-        <div class="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-green-500/[0.07] via-white/[0.025] to-transparent">
-            <div class="absolute -top-14 -right-10 w-32 h-32 bg-green-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-10 -left-10 w-24 h-24 bg-green-500/5 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 px-5 py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-green-500/10 border border-green-500/15 flex items-center justify-center text-green-400 shadow-lg shadow-green-500/5 shrink-0">
-                        <span class="material-symbols-outlined text-lg">payments</span>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-black text-white tracking-tight leading-tight">Аналитика доходов</h3>
-                        <div class="flex flex-wrap items-center gap-2 mt-1.5">
-                            <div class="flex gap-0.5 bg-black/30 p-0.5 rounded-lg border border-white/[0.06]">
-                                <button onclick="setIncomePeriod('today', this)"
-                                    class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all text-white/35 hover:text-white"
-                                    id="p-today">Сегодня</button>
-                                <button onclick="setIncomePeriod('7d', this)"
-                                    class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all text-white/35 hover:text-white"
-                                    id="p-7d">7 дней</button>
-                                <button onclick="setIncomePeriod('30d', this)"
-                                    class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all bg-white/10 text-white"
-                                    id="p-30d">30 дней</button>
-                                <button onclick="setIncomePeriod('3m', this)"
-                                    class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all text-white/35 hover:text-white"
-                                    id="p-3m">3 мес</button>
-                                <button onclick="setIncomePeriod('6m', this)"
-                                    class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all text-white/35 hover:text-white"
-                                    id="p-6m">6 мес</button>
-                                <button onclick="setIncomePeriod('12m', this)"
-                                    class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all text-white/35 hover:text-white"
-                                    id="p-12m">1 год</button>
-                                <button onclick="setIncomePeriod('all', this)"
-                                    class="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all text-white/35 hover:text-white"
-                                    id="p-all">Все</button>
-                            </div>
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
+                    <span class="material-symbols-outlined text-xl">payments</span>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Аналитика доходов</h3>
+                    <div class="flex flex-wrap items-center gap-3 mt-1">
+                        <div class="flex gap-1 bg-black/30 p-0.5 rounded-lg border border-white/5">
+                            <button onclick="setIncomePeriod('today', this)"
+                                class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all text-white/40 hover:text-white"
+                                id="p-today">Сегодня</button>
+                            <button onclick="setIncomePeriod('7d', this)"
+                                class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all text-white/40 hover:text-white"
+                                id="p-7d">7 дней</button>
+                            <button onclick="setIncomePeriod('30d', this)"
+                                class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all bg-white/10 text-white"
+                                id="p-30d">30 дней</button>
+                            <button onclick="setIncomePeriod('3m', this)"
+                                class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all text-white/40 hover:text-white"
+                                id="p-3m">3 мес</button>
+                            <button onclick="setIncomePeriod('6m', this)"
+                                class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all text-white/40 hover:text-white"
+                                id="p-6m">6 мес</button>
+                            <button onclick="setIncomePeriod('12m', this)"
+                                class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all text-white/40 hover:text-white"
+                                id="p-12m">1 год</button>
+                            <button onclick="setIncomePeriod('all', this)"
+                                class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all text-white/40 hover:text-white"
+                                id="p-all">Все</button>
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-2 bg-black/25 border border-white/[0.06] rounded-xl px-3.5 py-2">
-                    <span class="text-[9px] font-black text-white/25 uppercase tracking-[0.18em]">Итого:</span>
-                    <span id="period-total" class="text-sm font-black text-green-400 tabular-nums">— ₽</span>
-                </div>
+            </div>
+            <div class="flex items-center gap-2 bg-black/30 border border-white/5 rounded-xl px-4 py-2">
+                <span class="text-[10px] font-bold text-white/30 uppercase tracking-widest">Итого за период:</span>
+                <span id="period-total" class="text-sm font-bold text-green-400">— ₽</span>
             </div>
         </div>
-        <div class="p-5">
-            <div class="h-80"><canvas id="incomeChart"></canvas></div>
-        </div>
+        <div class="h-80"><canvas id="incomeChart"></canvas></div>
     </div>
 </section>
 
 <!-- ===== СЕКЦИЯ: Аналитические графики ===== -->
 <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <div class="bg-[#0b0f0e]/80 border border-white/10 rounded-[1.4rem] shadow-2xl shadow-black/30 backdrop-blur-2xl overflow-hidden">
-        <div class="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-primary/[0.07] via-white/[0.025] to-transparent">
-            <div class="absolute -top-14 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 px-5 py-3.5 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary shadow-lg shadow-primary/5 shrink-0">
-                    <span class="material-symbols-outlined text-lg">person_add</span>
-                </div>
-                <div>
-                    <h3 class="text-sm font-black text-white tracking-tight leading-tight">Новые пользователи</h3>
-                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-[0.18em] mt-0.5">Регистрации за период</p>
-                </div>
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined text-xl">person_add</span>
             </div>
+            <h3 class="text-lg font-bold text-white">Новые пользователи</h3>
         </div>
-        <div class="p-5">
-            <div class="h-64"><canvas id="newUsersChart"></canvas></div>
-        </div>
+        <div class="h-64"><canvas id="newUsersChart"></canvas></div>
     </div>
-    <div class="bg-[#0b0f0e]/80 border border-white/10 rounded-[1.4rem] shadow-2xl shadow-black/30 backdrop-blur-2xl overflow-hidden">
-        <div class="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-blue-500/[0.07] via-white/[0.025] to-transparent">
-            <div class="absolute -top-14 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 px-5 py-3.5 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/5 shrink-0">
-                    <span class="material-symbols-outlined text-lg">vpn_key</span>
-                </div>
-                <div>
-                    <h3 class="text-sm font-black text-white tracking-tight leading-tight">Новые ключи</h3>
-                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-[0.18em] mt-0.5">Выданные ключи за период</p>
-                </div>
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                <span class="material-symbols-outlined text-xl">vpn_key</span>
             </div>
+            <h3 class="text-lg font-bold text-white">Новые ключи</h3>
         </div>
-        <div class="p-5">
-            <div class="h-64"><canvas id="newKeysChart"></canvas></div>
-        </div>
+        <div class="h-64"><canvas id="newKeysChart"></canvas></div>
     </div>
 </section>
 
 <!-- ===== СЕКЦИЯ: Транзакции и Трайлы ===== -->
 <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
     <!-- Transactions -->
-    <div class="lg:col-span-2 bg-[#0b0f0e]/80 border border-white/10 rounded-[1.4rem] shadow-2xl shadow-black/30 backdrop-blur-2xl flex flex-col overflow-hidden">
-        <div class="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-green-500/[0.07] via-white/[0.025] to-transparent">
-            <div class="absolute -top-14 -right-10 w-32 h-32 bg-green-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-10 -left-10 w-24 h-24 bg-green-500/5 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 px-5 py-3.5 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-green-500/10 border border-green-500/15 flex items-center justify-center text-green-400 shadow-lg shadow-green-500/5 shrink-0">
-                    <span class="material-symbols-outlined text-lg">receipt_long</span>
-                </div>
-                <div>
-                    <h3 class="text-sm font-black text-white tracking-tight leading-tight">Недавние транзакции</h3>
-                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-[0.18em] mt-0.5">Последние платежи</p>
-                </div>
+    <div
+        class="lg:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
+                <span class="material-symbols-outlined text-xl">receipt_long</span>
             </div>
+            <h3 class="text-lg font-bold text-white">Недавние транзакции</h3>
         </div>
 
-        <div id="transactions-wrapper" class="flex-1 overflow-x-auto">
+        <div id="transactions-wrapper" class="overflow-x-auto rounded-xl border border-white/5 bg-black/20">
             <table class="w-full text-left border-collapse">
-                <thead class="bg-white/[0.03] backdrop-blur-sm border-b border-white/[0.06] sticky top-0 z-10">
+                <thead class="bg-white/5 border-b border-white/10">
                     <tr>
-                        <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Пользователь</th>
-                        <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Услуга</th>
-                        <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Сумма</th>
-                        <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Дата</th>
-                        <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/30 text-right"></th>
+                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Пользователь
+                        </th>
+                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Услуга</th>
+                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Сумма</th>
+                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Дата</th>
+                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-right">
+                        </th>
                     </tr>
                 </thead>
-                <tbody id="dash-transactions" class="divide-y divide-white/[0.04]"
+                <tbody id="dash-transactions" class="divide-y divide-white/5"
                     data-fetch-url="{{ url_for('dashboard_transactions_partial') }}" data-fetch-interval="120000">
                     <tr>
                         <td colspan="5" class="p-8 text-center">
-                            <div class="flex flex-col items-center justify-center gap-2">
-                                <div class="relative w-7 h-7">
-                                    <div class="absolute inset-0 rounded-full border border-green-500/20"></div>
-                                    <div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-green-400 animate-spin"></div>
-                                </div>
-                                <span class="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">Загрузка</span>
+                            <div class="flex flex-col items-center justify-center text-white/30">
+                                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mb-2"></div>
+                                <span class="text-xs">Загрузка транзакций...</span>
                             </div>
                         </td>
                     </tr>
@@ -292,51 +259,41 @@
             </table>
         </div>
 
-        <div id="transactions-pagination" class="flex justify-center py-2.5 gap-1 border-t border-white/[0.04] empty:hidden"></div>
+        <div id="transactions-pagination" class="flex justify-center mt-4 gap-1"></div>
 
-        <div id="transactions-empty" class="hidden flex flex-col items-center justify-center py-12">
-            <div class="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/25 mb-3">
-                <span class="material-symbols-outlined text-xl">receipt_long</span>
-            </div>
-            <p class="text-[10px] font-bold text-white/30 uppercase tracking-wider">Транзакций пока нет</p>
+        <div id="transactions-empty" class="hidden flex flex-col items-center justify-center py-12 text-white/30">
+            <span class="material-symbols-outlined text-4xl mb-2">receipt_long</span>
+            <p class="text-sm">Транзакций пока нет</p>
         </div>
     </div>
 
     <!-- Trials -->
-    <div class="bg-[#0b0f0e]/80 border border-white/10 rounded-[1.4rem] shadow-2xl shadow-black/30 backdrop-blur-2xl flex flex-col h-fit overflow-hidden">
-        <div class="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-orange-500/[0.07] via-white/[0.025] to-transparent">
-            <div class="absolute -top-14 -right-10 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-10 -left-10 w-24 h-24 bg-orange-500/5 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 px-5 py-3.5 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/15 flex items-center justify-center text-orange-400 shadow-lg shadow-orange-500/5 shrink-0">
-                    <span class="material-symbols-outlined text-lg">history_toggle_off</span>
-                </div>
-                <div>
-                    <h3 class="text-sm font-black text-white tracking-tight leading-tight">Пробные периоды</h3>
-                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-[0.18em] mt-0.5">Активные триалы</p>
-                </div>
+    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col h-fit">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
+                <span class="material-symbols-outlined text-xl">history_toggle_off</span>
             </div>
+            <h3 class="text-lg font-bold text-white">Пробные периоды</h3>
         </div>
 
-        <div id="trials-wrapper" class="overflow-x-auto">
+        <div id="trials-wrapper" class="overflow-x-auto rounded-xl border border-white/5 bg-black/20">
             <table class="w-full text-left border-collapse">
-                <thead class="bg-white/[0.03] backdrop-blur-sm border-b border-white/[0.06] sticky top-0 z-10">
+                <thead class="bg-white/5 border-b border-white/10">
                     <tr>
-                        <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Пользователь</th>
-                        <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">Дата</th>
-                        <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/30 text-right"></th>
+                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Пользователь
+                        </th>
+                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Дата</th>
+                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-right">
+                        </th>
                     </tr>
                 </thead>
-                <tbody id="dash-trials" class="divide-y divide-white/[0.04]"
+                <tbody id="dash-trials" class="divide-y divide-white/5"
                     data-fetch-url="{{ url_for('dashboard_trials_partial') }}" data-fetch-interval="120000">
                     <tr>
                         <td colspan="3" class="p-8 text-center">
-                            <div class="flex flex-col items-center justify-center gap-2">
-                                <div class="relative w-7 h-7">
-                                    <div class="absolute inset-0 rounded-full border border-orange-500/20"></div>
-                                    <div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-orange-400 animate-spin"></div>
-                                </div>
-                                <span class="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">Загрузка</span>
+                            <div class="flex flex-col items-center justify-center text-white/30">
+                                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-400 mb-2"></div>
+                                <span class="text-xs">Загрузка триалов...</span>
                             </div>
                         </td>
                     </tr>
@@ -344,129 +301,83 @@
             </table>
         </div>
 
-        <div id="trials-pagination" class="flex justify-center py-2.5 gap-1 border-t border-white/[0.04] empty:hidden"></div>
+        <div id="trials-pagination" class="flex justify-center mt-4 gap-1"></div>
 
-        <div id="trials-empty" class="hidden flex flex-col items-center justify-center py-12">
-            <div class="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/25 mb-3">
-                <span class="material-symbols-outlined text-xl">history_toggle_off</span>
-            </div>
-            <p class="text-[10px] font-bold text-white/30 uppercase tracking-wider">Триалов пока нет</p>
+        <div id="trials-empty" class="hidden flex flex-col items-center justify-center py-12 text-white/30">
+            <span class="material-symbols-outlined text-4xl mb-2">history_toggle_off</span>
+            <p class="text-sm">Триалов пока нет</p>
         </div>
     </div>
 </section>
 
 <!-- ===== МОДАЛЬНЫЕ ОКНА ===== -->
 <div id="speedtestRunningModal" class="modal-overlay">
-    <div class="modal-content bg-[#0b0f0e]/95 border border-primary/10 rounded-[1.4rem] shadow-2xl shadow-black/40 backdrop-blur-2xl p-6">
+    <div class="modal-content p-6">
         <div class="flex items-center gap-4">
-            <div class="relative w-9 h-9 shrink-0">
-                <div class="absolute inset-0 rounded-full border border-primary/20"></div>
-                <div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-primary animate-spin"></div>
-            </div>
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             <div>
-                <div class="text-sm font-black text-white tracking-tight">Идёт измерение скорости…</div>
-                <div class="text-white/35 text-[10px] font-bold mt-0.5">Пожалуйста, подождите 10–30 секунд</div>
+                <div class="font-semibold text-white">Идёт измерение скорости…</div>
+                <div class="text-white/50 text-sm">Пожалуйста, подождите 10–30 секунд</div>
             </div>
         </div>
     </div>
 </div>
 
 <div id="speedtestModal" class="modal-overlay modal-xl">
-    <div class="modal-content bg-[#0b0f0e]/95 border border-primary/10 rounded-[1.4rem] shadow-2xl shadow-black/40 backdrop-blur-2xl overflow-hidden">
-        <div class="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-primary/[0.07] via-white/[0.025] to-transparent">
-            <div class="absolute -top-14 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 px-5 py-3.5 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary shadow-lg shadow-primary/5 shrink-0">
-                        <span class="material-symbols-outlined text-lg">speed</span>
-                    </div>
-                    <div>
-                        <h5 class="text-sm font-black text-white tracking-tight leading-tight">Скорость — <span id="st-modal-host"></span></h5>
-                        <p class="text-[9px] font-bold text-white/30 uppercase tracking-[0.18em] mt-0.5">Детальный график</p>
-                    </div>
-                </div>
-                <button onclick="closeModal('speedtestModal')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/35 hover:text-red-300 border border-white/10 hover:border-red-500/20 flex items-center justify-center transition-all">
-                    <span class="material-symbols-outlined text-[18px]">close</span>
-                </button>
-            </div>
+    <div class="modal-content">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold">Скорость — <span id="st-modal-host"></span></h5>
+            <button onclick="closeModal('speedtestModal')" class="text-white/50 hover:text-white"><span
+                    class="material-symbols-outlined">close</span></button>
         </div>
-        <div class="p-5">
-            <div class="flex flex-wrap items-center gap-3 mb-5">
-                <div class="flex items-center gap-2">
-                    <label class="text-[9px] font-black text-white/30 uppercase tracking-[0.18em]">Метрика:</label>
-                    <select id="st-metric"
-                        class="bg-black/30 border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-white text-[11px] font-bold focus:ring-1 focus:ring-primary/30 transition-all">
-                        <option value="download_mbps" selected>Загрузка (Mbps)</option>
-                        <option value="upload_mbps">Отдача (Mbps)</option>
-                        <option value="ping_ms">Пинг (ms)</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-[9px] font-black text-white/30 uppercase tracking-[0.18em]">Период:</label>
-                    <select id="st-range"
-                        class="bg-black/30 border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-white text-[11px] font-bold focus:ring-1 focus:ring-primary/30 transition-all">
-                        <option value="24">24 точки</option>
-                        <option value="60" selected>60 точек</option>
-                        <option value="120">120 точек</option>
-                    </select>
-                </div>
+        <div class="p-6">
+            <div class="flex flex-wrap items-center gap-4 mb-4">
+                <label class="text-white/70">Метрика:</label>
+                <select id="st-metric"
+                    class="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm">
+                    <option value="download_mbps" selected>Скорость загрузки (Mbps)</option>
+                    <option value="upload_mbps">Скорость отдачи (Mbps)</option>
+                    <option value="ping_ms">Пинг (ms)</option>
+                </select>
+                <label class="text-white/70">Период:</label>
+                <select id="st-range"
+                    class="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm">
+                    <option value="24">24 точки</option>
+                    <option value="60" selected>60 точек</option>
+                    <option value="120">120 точек</option>
+                </select>
                 <button id="st-refresh"
-                    class="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/15 text-primary text-[9px] font-black uppercase tracking-[0.18em] hover:bg-primary/20 transition-all flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[14px]">refresh</span>
-                    Обновить
-                </button>
+                    class="px-4 py-1.5 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30">Обновить</button>
             </div>
-            <div class="h-80 bg-black/20 rounded-xl border border-white/[0.05] p-4"><canvas id="st-detail-canvas"></canvas></div>
+            <div class="h-80"><canvas id="st-detail-canvas"></canvas></div>
         </div>
     </div>
 </div>
 
 <div id="userGroupModal" class="modal-overlay modal-xl">
-    <div class="modal-content bg-[#0b0f0e]/95 border border-primary/10 rounded-[1.6rem] shadow-2xl shadow-black/40 backdrop-blur-2xl overflow-hidden">
-        <div class="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-primary/[0.08] via-white/[0.035] to-transparent">
-            <div class="absolute -top-16 -right-12 w-36 h-36 bg-primary/10 rounded-full blur-3xl"></div>
-            <div class="absolute -bottom-16 -left-14 w-36 h-36 bg-primary/5 rounded-full blur-3xl"></div>
-            <div class="relative z-10 p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div class="flex items-start gap-3 min-w-0">
-                    <div id="userGroupModalIcon" class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-lg shadow-primary/10 shrink-0">
-                        <span class="material-symbols-outlined text-xl">group</span>
-                    </div>
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                            <span class="text-[9px] font-black uppercase tracking-[0.22em] text-white/35">Сегмент пользователей</span>
-                            <span id="userGroupModalCount" class="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/15 text-primary text-[9px] font-black tabular-nums" title="Количество записей в выбранном сегменте">—</span>
-                        </div>
-                        <h5 class="text-white font-black text-lg tracking-tight leading-tight" id="userGroupModalTitle">Пользователи</h5>
-                        <p id="userGroupModalDesc" class="text-white/45 text-[11px] mt-1.5 max-w-2xl leading-relaxed"></p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="loadAllUserGroup()" id="ugm-load-all-btn" class="h-8 px-2.5 rounded-lg bg-white/5 hover:bg-primary/10 text-white/45 hover:text-primary border border-white/10 hover:border-primary/20 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider transition-all" title="Загрузить всех пользователей в список сразу">
-                        <span class="material-symbols-outlined text-[15px]">download_for_offline</span>
-                        <span>Все</span>
-                    </button>
-                    <button onclick="copyUserGroupIds()" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-primary/10 text-white/45 hover:text-primary border border-white/10 hover:border-primary/20 flex items-center justify-center transition-all" title="Скопировать Telegram ID всех пользователей в этом списке">
-                        <span class="material-symbols-outlined text-[16px]">content_copy</span>
-                    </button>
-                    <button onclick="closeModal('userGroupModal')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/45 hover:text-red-300 border border-white/10 hover:border-red-500/20 flex items-center justify-center transition-all" title="Закрыть окно">
-                        <span class="material-symbols-outlined text-[18px]">close</span>
-                    </button>
-                </div>
+    <div class="modal-content">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <h5 class="text-white font-bold text-lg" id="userGroupModalTitle">Пользователи</h5>
+            <div class="flex items-center gap-2">
+                <button onclick="copyUserGroupIds()" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors" title="Скопировать Telegram ID пользователей">
+                    <span class="material-symbols-outlined text-sm">content_copy</span>
+                </button>
+                <button onclick="closeModal('userGroupModal')" class="text-white/50 hover:text-white transition-colors"><span class="material-symbols-outlined">close</span></button>
             </div>
         </div>
-        <div class="p-3 sm:p-4 bg-gradient-to-b from-black/10 to-black/25">
-            <div id="userGroupModalContent" class="overflow-x-auto rounded-xl border border-white/10 bg-black/25 max-h-[56vh] overflow-y-auto shadow-inner shadow-black/20">
-                <table class="w-full text-left border-collapse min-w-[650px]">
-                    <thead class="bg-white/[0.04] backdrop-blur-md border-b border-white/10 sticky top-0 z-10">
+        <div class="p-6">
+            <p id="userGroupModalDesc" class="text-white/50 text-xs mb-4"></p>
+            <div id="userGroupModalContent" class="overflow-x-auto rounded-xl border border-white/5 bg-black/20 max-h-[60vh] overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-[#102219] dark:bg-black border-b border-white/10 sticky top-0 z-10">
                         <tr>
-                            <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/35 cursor-help" title="Пользователь из выбранного сегмента: username, Telegram ID и быстрый доступ к копированию ID">Пользователь</th>
-                            <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/35 cursor-help" title="Финансы пользователя: текущий баланс и общая сумма всех успешных платежей">Финансы</th>
-                            <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/35 cursor-help" title="Информация о ключе пользователя: ID ключа в боте и дата окончания действия">Ключ / срок</th>
-                            <th id="th_months_bought" class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/35 text-center hidden cursor-help" title="Сколько месяцев подписки пользователь суммарно купил по успешным платежам">Куплено мес.</th>
-                            <th class="px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.18em] text-white/35 text-center" title="Быстрые действия с пользователем">Действия</th>
+                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Пользователь</th>
+                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Баланс</th>
+                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40">Ключ / Срок</th>
+                            <th id="th_months_bought" class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-center hidden">Куплено мес.</th>
                         </tr>
                     </thead>
-                    <tbody id="userGroupModalBody" class="divide-y divide-white/[0.06]">
+                    <tbody id="userGroupModalBody" class="divide-y divide-white/5">
                         <tr><td colspan="4" class="p-8 text-center text-white/30">Загрузка...</td></tr>
                     </tbody>
                 </table>
@@ -488,9 +399,9 @@
         const getChartColors = () => {
             const isDark = document.documentElement.classList.contains('dark');
             return {
-                bg: isDark ? 'rgba(11, 15, 14, 0.95)' : 'rgba(167, 243, 208, 0.98)',
+                bg: isDark ? 'rgba(0, 0, 0, 0.95)' : 'rgba(167, 243, 208, 0.98)',
                 text: isDark ? '#e0e0e0' : '#102219',
-                border: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(16, 77, 48, 0.2)'
+                border: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(16, 77, 48, 0.2)'
             };
         };
 
@@ -499,37 +410,23 @@
             options: {
                 responsive: true, maintainAspectRatio: false,
                 interaction: { intersect: false, mode: 'index' },
-                layout: { padding: { top: 4, bottom: 4, left: 0, right: 4 } },
                 plugins: {
-                    legend: { display: true, position: 'top', align: 'end', labels: { color: 'rgba(255,255,255,0.45)', boxWidth: 8, boxHeight: 8, padding: 16, usePointStyle: true, pointStyle: 'circle', font: { family: 'Inter', size: 10, weight: '600' } } },
+                    legend: { display: true, position: 'top', align: 'end', labels: { color: '#e0e0e0', boxWidth: 12, padding: 20, font: { size: 14 } } },
                     tooltip: {
-                        backgroundColor: 'rgba(8, 12, 11, 0.92)',
-                        titleColor: 'rgba(255, 255, 255, 0.9)',
-                        bodyColor: 'rgba(255, 255, 255, 0.65)',
-                        borderColor: 'rgba(255, 255, 255, 0.08)',
-                        borderWidth: 1,
-                        padding: { top: 10, bottom: 10, left: 14, right: 14 },
-                        cornerRadius: 12,
+                        backgroundColor: () => getChartColors().bg,
+                        titleColor: () => getChartColors().text,
+                        bodyColor: () => getChartColors().text,
+                        borderColor: () => getChartColors().border,
+                        borderWidth: 1, padding: 10, cornerRadius: 12,
                         usePointStyle: true,
-                        boxPadding: 8,
-                        titleFont: { family: 'Inter', size: 11, weight: '700' },
-                        bodyFont: { family: 'Inter', size: 11, weight: '500' },
-                        footerFont: { family: 'Inter', size: 10, weight: '700' },
-                        footerColor: 'rgba(255, 255, 255, 0.35)',
-                        titleMarginBottom: 8,
-                        footerMarginTop: 8,
-                        displayColors: true,
-                        caretSize: 5,
-                        caretPadding: 10,
-                        multiKeyBackground: 'transparent',
-                        titleAlign: 'left',
-                        bodyAlign: 'left',
-                        bodySpacing: 6
+                        boxPadding: 6,
+                        titleFont: { family: 'Inter', size: 14, weight: 'bold' },
+                        bodyFont: { family: 'Inter', size: 13 }
                     }
                 },
                 scales: {
-                    x: { ticks: { color: 'rgba(255, 255, 255, 0.25)', font: { family: 'Inter', size: 9, weight: '600' }, maxRotation: 0, padding: 6 }, grid: { color: 'rgba(255, 255, 255, 0.04)', drawOnChartArea: true, lineWidth: 1 }, border: { color: 'rgba(255, 255, 255, 0.06)', dash: [3, 3] } },
-                    y: { ticks: { color: 'rgba(255, 255, 255, 0.25)', font: { family: 'Inter', size: 9, weight: '600' }, padding: 8 }, grid: { color: 'rgba(255, 255, 255, 0.04)', lineWidth: 1, borderDash: [3, 4] }, border: { display: false }, beginAtZero: true }
+                    x: { ticks: { color: 'rgba(224, 224, 224, 0.5)' }, grid: { color: 'rgba(255, 255, 255, 0.1)', drawOnChartArea: false } },
+                    y: { ticks: { color: 'rgba(224, 224, 224, 0.5)' }, grid: { color: 'rgba(255, 255, 255, 0.1)', borderDash: [2, 4] }, beginAtZero: true }
                 }
             }
         };
@@ -558,11 +455,9 @@
         };
 
         // ===== ФУНКЦИЯ: Градиент =====
-        const createGrad = (ctx, col, topAlpha = 0.2, midAlpha = 0.06) => {
+        const createGrad = (ctx, col) => {
             const g = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-            g.addColorStop(0, col.replace('1)', `${topAlpha})`));
-            g.addColorStop(0.6, col.replace('1)', `${midAlpha})`));
-            g.addColorStop(1, col.replace('1)', '0)'));
+            g.addColorStop(0, col.replace('1)', '0.3)')); g.addColorStop(1, col.replace('1)', '0)'));
             return g;
         };
 
@@ -612,13 +507,10 @@
                     const html = await res.text();
                     if (isLoginPage(html)) { window.location.reload(); return; }
 
-                    const trimmedHtml = html.trim();
-                    if (el.innerHTML !== trimmedHtml) {
+                    if (el.innerHTML !== html) {
                         el.style.opacity = '0.5';
                         setTimeout(() => {
-                            el.innerHTML = trimmedHtml;
-                            // Удалить текстовые узлы (BOM, пробелы) из grid-контейнеров
-                            [...el.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); });
+                            el.innerHTML = html;
                             el.style.opacity = '1';
                         }, 150);
                     }
@@ -635,7 +527,7 @@
                 autoRefreshRegistry[id] = setInterval(() => refreshSection(id), interval);
 
                 if (id === 'dash-stats') {
-                    setTimeout(() => refreshSection(id), 100);
+                    refreshSection(id);
                 }
             });
         };
@@ -714,9 +606,6 @@
             const ctx = document.getElementById(id)?.getContext('2d');
             if (!ctx) return;
             const dates = Object.keys(obj || {}).sort();
-            const color = id === 'newUsersChart' ? '#13ec80' : '#3b82f6';
-            const colorRgba = id === 'newUsersChart' ? 'rgba(19, 236, 128, 1)' : 'rgba(59, 130, 246, 1)';
-            const dataLen = dates.length;
 
             window.dashCharts[id] = new Chart(ctx, {
                 ...chartConfig,
@@ -725,18 +614,10 @@
                     datasets: [{
                         label,
                         data: dates.map(d => obj[d] || 0),
-                        borderColor: color,
-                        backgroundColor: createGrad(ctx, colorRgba, 0.18, 0.04),
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: color,
-                        pointBorderColor: 'rgba(11, 15, 14, 0.8)',
-                        pointBorderWidth: 2,
-                        pointRadius: dataLen > 40 ? 0 : dataLen > 20 ? 2 : 3,
-                        pointHoverRadius: 6,
-                        pointHoverBorderWidth: 2,
-                        pointHoverBorderColor: 'rgba(11, 15, 14, 0.9)',
-                        borderWidth: 2.5
+                        borderColor: id === 'newUsersChart' ? '#13ec80' : '#3b82f6',
+                        backgroundColor: createGrad(ctx, id === 'newUsersChart' ? 'rgba(19, 236, 128, 1)' : 'rgba(59, 130, 246, 1)'),
+                        fill: true, tension: 0.4, pointBackgroundColor: id === 'newUsersChart' ? '#13ec80' : '#3b82f6',
+                        pointRadius: 4, pointHoverRadius: 6, borderWidth: 2
                     }]
                 },
                 options: { ...chartConfig.options, plugins: { ...chartConfig.options.plugins, legend: { display: false } } }
@@ -848,24 +729,22 @@
             });
             if (!methods.size) ['YooKassa', 'Platega', 'Telegram Stars', 'CryptoBot', 'Heleket', 'TON Connect'].forEach(m => methods.add(m));
 
-            const dataLen = dates.length;
             const datasets = Array.from(methods).map(method => ({
                 label: method,
                 data: dates.map(d => (incomeData[d] && incomeData[d][method]) || 0),
                 borderColor: methodColors[method] || '#94a3b8',
-                backgroundColor: createGrad(ctx, hexToRgba(methodColors[method] || '#94a3b8', 1), 0.15, 0.03),
+                backgroundColor: createGrad(ctx, hexToRgba(methodColors[method] || '#94a3b8', 1)),
                 fill: true,
                 tension: 0.4,
                 pointRadius: (ctx) => {
                     const val = ctx.dataset.data[ctx.dataIndex];
-                    return val > 0 ? (dataLen > 50 ? 0 : dataLen > 25 ? 2 : 3) : 0;
+                    return val > 0 ? (dates.length > 50 ? 0 : 4) : 0;
                 },
-                borderWidth: 2.5,
-                pointHoverRadius: 6,
-                pointHoverBorderWidth: 2,
-                pointHoverBorderColor: 'rgba(11, 15, 14, 0.9)',
-                pointBorderColor: 'rgba(11, 15, 14, 0.8)',
-                pointBorderWidth: 2,
+                borderWidth: 2,
+                pointHoverRadius: (ctx) => {
+                    const val = ctx.dataset.data[ctx.dataIndex];
+                    return val > 0 ? 6 : 0;
+                },
                 pointBackgroundColor: methodColors[method] || '#94a3b8'
             }));
 
@@ -892,7 +771,7 @@
                         legend: {
                             display: true,
                             position: 'bottom',
-                            labels: { color: 'rgba(255,255,255,0.4)', usePointStyle: true, pointStyle: 'circle', boxWidth: 7, boxHeight: 7, font: { family: 'Inter', size: 9, weight: '700' }, padding: 16 }
+                            labels: { color: 'rgba(255,255,255,0.6)', usePointStyle: true, font: { family: 'Inter', size: 10 }, padding: 20 }
                         },
                         tooltip: {
                             ...chartConfig.options.plugins.tooltip,
@@ -923,21 +802,12 @@
                                         }
 
                                         if (relTime) {
-                                            return `${displayTitle}  ·  ${relTime}`;
+                                            return `${displayTitle} (${relTime})`;
                                         }
                                     }
                                     return displayTitle;
                                 },
-                                label: function (context) {
-                                    const val = context.parsed.y;
-                                    return `  ${context.dataset.label}:  ${val.toLocaleString('ru-RU')} ₽`;
-                                },
-                                footer: function (tooltipItems) {
-                                    if (!tooltipItems || tooltipItems.length <= 1) return '';
-                                    let sum = 0;
-                                    tooltipItems.forEach(item => { sum += item.parsed.y; });
-                                    return `──────────────\n  Итого:  ${sum.toLocaleString('ru-RU')} ₽`;
-                                }
+                                label: (context) => ` ${context.dataset.label}: ${context.parsed.y.toLocaleString('ru-RU')} ₽`
                             }
                         }
                     },
@@ -959,24 +829,22 @@
                 Object.keys(day).forEach(m => methods.add(m));
             });
 
-            const dataLen2 = dates.length;
             const datasets = Array.from(methods).map(method => ({
                 label: method,
                 data: dates.map(d => (incomeData[d] && incomeData[d][method]) || 0),
                 borderColor: methodColors[method] || '#94a3b8',
-                backgroundColor: createGrad(chart.ctx, hexToRgba(methodColors[method] || '#94a3b8', 1), 0.15, 0.03),
+                backgroundColor: createGrad(chart.ctx, hexToRgba(methodColors[method] || '#94a3b8', 1)),
                 fill: true,
                 tension: 0.4,
                 pointRadius: (ctx) => {
                     const val = ctx.dataset.data[ctx.dataIndex];
-                    return val > 0 ? (dataLen2 > 50 ? 0 : dataLen2 > 25 ? 2 : 3) : 0;
+                    return val > 0 ? (dates.length > 50 ? 0 : 4) : 0;
                 },
-                borderWidth: 2.5,
-                pointHoverRadius: 6,
-                pointHoverBorderWidth: 2,
-                pointHoverBorderColor: 'rgba(11, 15, 14, 0.9)',
-                pointBorderColor: 'rgba(11, 15, 14, 0.8)',
-                pointBorderWidth: 2,
+                borderWidth: 2,
+                pointHoverRadius: (ctx) => {
+                    const val = ctx.dataset.data[ctx.dataIndex];
+                    return val > 0 ? 6 : 0;
+                },
                 pointBackgroundColor: methodColors[method] || '#94a3b8'
             }));
 
@@ -1056,19 +924,19 @@
                 if (items.length) {
                     const last = items[items.length - 1];
                     if (dateEl) dateEl.textContent = last.created_at;
-                    const method = last.method ? `<span class='px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/15 text-primary text-[8px] font-black uppercase tracking-[0.18em]'>${last.method.toUpperCase()}</span>` : '';
-                    const ping = `<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-white/40">timer</span><span class="text-white/60 font-bold">${last.ping_ms ?? '—'}</span><span class="text-white/25 text-[9px]">ms</span></span>`;
-                    const down = `<span class="whitespace-nowrap flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#13ec80] shadow-sm shadow-[#13ec80]/50"></span><span class="text-white/60 font-bold">${last.download_mbps ?? '—'}</span><span class="text-white/25 text-[9px]">Mbps</span></span>`;
-                    const up = `<span class="whitespace-nowrap flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#00bfff] shadow-sm shadow-[#00bfff]/50"></span><span class="text-white/60 font-bold">${last.upload_mbps ?? '—'}</span><span class="text-white/25 text-[9px]">Mbps</span></span>`;
+                    const method = last.method ? `<span class='px-2 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider'>${last.method.toUpperCase()}</span>` : '';
+                    const ping = `<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px] text-white/70">timer</span>${last.ping_ms ?? '—'} ms</span>`;
+                    const down = `<span class="whitespace-nowrap"><span class="text-[#13ec80] font-bold">↓</span> ${last.download_mbps ?? '—'} Mbps</span>`;
+                    const up = `<span class="whitespace-nowrap"><span class="text-[#00bfff] font-bold">↑</span> ${last.upload_mbps ?? '—'} Mbps</span>`;
 
                     latestBox.innerHTML = `
-                        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-2.5 gap-y-1">
+                        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1">
                             ${method}
-                            <span class="text-white/10">·</span>
+                            <span class="text-white/20">·</span>
                             ${ping}
-                            <span class="text-white/10">·</span>
+                            <span class="text-white/20">·</span>
                             ${down}
-                            <span class="text-white/10">·</span>
+                            <span class="text-white/20">·</span>
                             ${up}
                         </div>
                     `;
@@ -1078,55 +946,14 @@
                 }
             }
             const ctx = topCanvas.getContext('2d'); if (topChart) topChart.destroy();
-            const stLen = items.length;
             topChart = new Chart(ctx, {
                 ...chartConfig,
                 data: {
                     labels: items.map(it => it.created_at.slice(5, 16).replace(/-/g, '.')),
                     datasets: [
-                        {
-                            label: 'Загрузка',
-                            data: items.map(it => parseFloat(it.download_mbps) || 0),
-                            borderColor: '#13ec80',
-                            backgroundColor: createGrad(ctx, 'rgba(19, 236, 128, 1)', 0.18, 0.04),
-                            fill: true, tension: 0.4,
-                            pointRadius: stLen > 40 ? 0 : stLen > 20 ? 2 : 3,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#13ec80',
-                            pointBorderColor: 'rgba(11, 15, 14, 0.8)',
-                            pointBorderWidth: 2,
-                            pointHoverBorderWidth: 2,
-                            pointHoverBorderColor: 'rgba(11, 15, 14, 0.9)',
-                            borderWidth: 2.5
-                        },
-                        {
-                            label: 'Отдача',
-                            data: items.map(it => parseFloat(it.upload_mbps) || 0),
-                            borderColor: '#00bfff',
-                            backgroundColor: createGrad(ctx, 'rgba(0, 191, 255, 1)', 0.15, 0.03),
-                            fill: true, tension: 0.4,
-                            pointRadius: stLen > 40 ? 0 : stLen > 20 ? 2 : 3,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#00bfff',
-                            pointBorderColor: 'rgba(11, 15, 14, 0.8)',
-                            pointBorderWidth: 2,
-                            pointHoverBorderWidth: 2,
-                            pointHoverBorderColor: 'rgba(11, 15, 14, 0.9)',
-                            borderWidth: 2.5
-                        }
+                        { label: 'Загрузка Mbps', data: items.map(it => parseFloat(it.download_mbps) || 0), borderColor: '#13ec80', backgroundColor: createGrad(ctx, 'rgba(19, 236, 128, 1)'), fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 },
+                        { label: 'Отдача Mbps', data: items.map(it => parseFloat(it.upload_mbps) || 0), borderColor: '#00bfff', backgroundColor: createGrad(ctx, 'rgba(0, 191, 255, 1)'), fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 }
                     ]
-                },
-                options: {
-                    ...chartConfig.options,
-                    plugins: {
-                        ...chartConfig.options.plugins,
-                        tooltip: {
-                            ...chartConfig.options.plugins.tooltip,
-                            callbacks: {
-                                label: (ctx) => `  ${ctx.dataset.label}:  ${ctx.parsed.y.toFixed(1)} Mbps`
-                            }
-                        }
-                    }
                 }
             });
         };
@@ -1145,7 +972,7 @@
                 } catch (e) { closeModal('speedtestRunningModal'); }
             });
         };
-        handleForm('st-run-form', () => `{{ url_for('node_run_ssh_target_speedtest_route', target_name='__T__') }}`.replace('__T__', encodeURIComponent(targetSelect.value)), 800);
+        handleForm('st-run-form', () => `{{ url_for('run_ssh_target_speedtest_route', target_name='__T__') }}`.replace('__T__', encodeURIComponent(targetSelect.value)), 800);
         handleForm('st-run-all-form', () => document.getElementById('st-run-all-form').action, 1200);
 
         // ===== МОДАЛЬНЫЕ ОКНА =====
@@ -1161,44 +988,15 @@
             if (!data?.ok) return;
             const items = data.items.slice().reverse();
             const ctx = canvas.getContext('2d'); if (detailChart) detailChart.destroy();
-            const metricColor = metric === 'ping_ms' ? '#f59e0b' : (metric === 'upload_mbps' ? '#00bfff' : '#13ec80');
-            const metricColorRgba = metric === 'ping_ms' ? 'rgba(245, 158, 11, 1)' : (metric === 'upload_mbps' ? 'rgba(0, 191, 255, 1)' : 'rgba(19, 236, 128, 1)');
-            const metricUnit = metric === 'ping_ms' ? 'ms' : 'Mbps';
-            const metricLabel = metric === 'ping_ms' ? 'Пинг' : (metric === 'upload_mbps' ? 'Отдача' : 'Загрузка');
-            const dtLen = items.length;
             detailChart = new Chart(ctx, {
                 ...chartConfig,
                 data: {
                     labels: items.map(it => it.created_at),
                     datasets: [{
-                        label: metricLabel,
-                        data: items.map(it => Number(it[metric] || 0)),
-                        borderColor: metricColor,
-                        backgroundColor: createGrad(ctx, metricColorRgba, 0.18, 0.04),
-                        borderWidth: 2.5,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: dtLen > 40 ? 0 : dtLen > 20 ? 2 : 3,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: metricColor,
-                        pointBorderColor: 'rgba(11, 15, 14, 0.8)',
-                        pointBorderWidth: 2,
-                        pointHoverBorderWidth: 2,
-                        pointHoverBorderColor: 'rgba(11, 15, 14, 0.9)'
+                        label: metric, data: items.map(it => Number(it[metric] || 0)),
+                        borderColor: metric === 'ping_ms' ? '#f59e0b' : (metric === 'upload_mbps' ? '#00bfff' : '#13ec80'),
+                        backgroundColor: 'rgba(19, 236, 128, 0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6
                     }]
-                },
-                options: {
-                    ...chartConfig.options,
-                    plugins: {
-                        ...chartConfig.options.plugins,
-                        legend: { display: false },
-                        tooltip: {
-                            ...chartConfig.options.plugins.tooltip,
-                            callbacks: {
-                                label: (ctx) => `  ${metricLabel}:  ${ctx.parsed.y.toFixed(1)} ${metricUnit}`
-                            }
-                        }
-                    }
                 }
             });
         };
@@ -1259,133 +1057,15 @@
             }
         };
 
-        const escapeGroupHtml = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        }[ch]));
-
-        const formatGroupRub = (value) => `${(Number(value) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽`;
-
-        // ===== ВСПОМОГАТЕЛЬНЫЕ ДАННЫЕ ДЛЯ ЛЕНИВОЙ ЗАГРУЗКИ =====
-        let _ugmAllItems = [];
-        let _ugmRenderedCount = 0;
-        let _ugmShowMonths = false;
-        let _ugmColCount = 3;
-        let _ugmObserver = null;
-        const UGM_INITIAL = 15;
-        const UGM_BATCH = 10;
-
-        function _ugmBuildRow(item) {
-            const uid = item.telegram_id || item.user_id;
-            let username = item.username ? '@' + item.username : 'User #' + uid;
-            let curBal = item.balance !== undefined ? parseFloat(item.balance) : 0;
-            let totSp = item.total_spent !== undefined && item.total_spent !== null ? parseFloat(item.total_spent) : 0;
-
-            let balanceHTML = `
-                <div class="flex flex-col gap-1 min-w-[135px]">
-                    <span class="inline-flex w-fit items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/15 text-primary text-[10px] font-bold cursor-help" title="Текущий баланс пользователя в боте">
-                        <span class="material-symbols-outlined text-[13px]">account_balance_wallet</span>${formatGroupRub(curBal)}
-                    </span>
-                    <span class="inline-flex w-fit items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/45 text-[10px] font-bold cursor-help" title="Общая сумма всех успешных платежей пользователя">
-                        <span class="material-symbols-outlined text-[13px]">payments</span>${formatGroupRub(totSp)}
-                    </span>
-                </div>`;
-
-            let keyInfo = `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white/35 text-[10px] font-bold cursor-help" title="У пользователя нет ключа в этом сегменте"><span class="material-symbols-outlined text-[14px]">vpn_key_off</span>Нет ключа</span>`;
-            if (item.key_id || item.host_name) {
-                if (item.host_name && !item.telegram_id) {
-                    username = item.username ? '@' + item.username : 'User #' + item.user_id;
-                    balanceHTML = `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/10 border border-primary/15 text-primary text-[10px] font-black cursor-help" title="Хост или сервер, на котором находится этот активный ключ"><span class="material-symbols-outlined text-[14px]">dns</span>${escapeGroupHtml(item.host_name)}</span>`;
-                }
-                let expText = '';
-                let expClass = 'bg-emerald-500/10 border-emerald-500/15 text-emerald-300';
-                let hostBadge = item.host_name ? `<span class="inline-flex w-fit items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/45 text-[10px] font-bold cursor-help" title="Хост или сервер, на котором находится этот ключ"><span class="material-symbols-outlined text-[13px]">dns</span>${escapeGroupHtml(item.host_name)}</span>` : '';
-                if (item.expire_at) {
-                    let expDate = new Date(item.expire_at.replace(' ', 'T'));
-                    let diffTime = expDate - new Date();
-                    if (diffTime > 0) {
-                        let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        expText = `осталось ${diffDays} дн.`;
-                        if (diffDays <= 3) expClass = 'bg-orange-500/10 border-orange-500/15 text-orange-300';
-                    } else {
-                        expText = 'истёк'; expClass = 'bg-red-500/10 border-red-500/15 text-red-300';
-                    }
-                    keyInfo = `<div class="flex flex-col gap-1 min-w-[190px]"><span class="inline-flex w-fit items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/15 text-primary text-[10px] font-mono font-bold cursor-help" title="Это ID ключа в боте"><span class="material-symbols-outlined text-[13px] text-primary">vpn_key</span>id ${escapeGroupHtml(item.key_id)}</span>${hostBadge}<span class="inline-flex w-fit items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-bold cursor-help ${expClass}" title="Дата окончания ключа и сколько дней осталось до истечения"><span class="material-symbols-outlined text-[13px]">schedule</span>${escapeGroupHtml(expText)} · ${escapeGroupHtml(item.expire_at)}</span></div>`;
-                } else {
-                    keyInfo = `<div class="flex flex-col gap-1 min-w-[190px]"><span class="inline-flex w-fit items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/15 text-primary text-[10px] font-mono font-bold cursor-help" title="Это ID ключа в боте"><span class="material-symbols-outlined text-[13px] text-primary">vpn_key</span>id ${escapeGroupHtml(item.key_id)}</span>${hostBadge}<span class="inline-flex w-fit items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/15 text-primary text-[10px] font-bold cursor-help" title="У ключа не указана дата окончания, поэтому он считается безлимитным"><span class="material-symbols-outlined text-[13px]">all_inclusive</span>Безлимит</span></div>`;
-                }
-            }
-
-            let charLetter = (username.startsWith('@') ? username.charAt(1) : username.charAt(0)) || '?';
-            let monthsTd = '';
-            if (_ugmShowMonths) {
-                let monthsBought = item.months_bought || 0;
-                monthsTd = `<td class="px-4 py-2 text-center"><span class="inline-flex items-center justify-center min-w-9 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/15 text-primary text-[10px] font-black tabular-nums cursor-help" title="Сколько месяцев подписки пользователь суммарно купил по успешным платежам">${escapeGroupHtml(monthsBought)}</span></td>`;
-            }
-
-            const profileUrl = `/users?q=${escapeGroupHtml(uid)}`;
-            const actionsTd = `<td class="px-4 py-2 text-center"><a href="${profileUrl}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/15 text-primary hover:bg-primary/20 text-[10px] font-bold transition-all" title="Открыть профиль пользователя в разделе управления пользователями"><span class="material-symbols-outlined text-[14px]">open_in_new</span>Профиль</a></td>`;
-
-            return `<tr class="hover:bg-white/[0.035] transition-colors group">
-                <td class="px-4 py-2"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-white/5 text-primary border border-primary/15 flex items-center justify-center font-black text-[11px] uppercase shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform cursor-help" title="Аватар пользователя: первая буква username или ID">${escapeGroupHtml(charLetter)}</div><div class="flex flex-col min-w-0"><span class="text-xs font-bold text-white truncate cursor-help" title="Username пользователя в Telegram или fallback по ID">${escapeGroupHtml(username)}</span><button type="button" class="text-left text-[9px] text-white/35 hover:text-primary transition-colors font-mono cursor-help" title="Telegram ID пользователя. Нажмите, чтобы скопировать" onclick="copySingleId(event, '${escapeGroupHtml(uid)}')">tg id: ${escapeGroupHtml(uid)}</button></div></div></td>
-                <td class="px-4 py-2">${balanceHTML}</td>
-                <td class="px-4 py-2">${keyInfo}</td>
-                ${monthsTd}
-                ${actionsTd}
-            </tr>`;
-        }
-
-        function _ugmRenderBatch(items, count) {
-            const bodyEl = document.getElementById('userGroupModalBody');
-            if (!bodyEl) return;
-            const sentinel = document.getElementById('ugm-sentinel');
-            if (sentinel) sentinel.remove();
-            const slice = items.slice(_ugmRenderedCount, _ugmRenderedCount + count);
-            slice.forEach(item => {
-                const tr = document.createElement('tbody');
-                tr.innerHTML = _ugmBuildRow(item);
-                bodyEl.appendChild(tr.firstElementChild);
-            });
-            _ugmRenderedCount += slice.length;
-            const remaining = items.length - _ugmRenderedCount;
-            if (remaining > 0) {
-                const sentinelRow = document.createElement('tr');
-                sentinelRow.id = 'ugm-sentinel';
-                sentinelRow.innerHTML = `<td colspan="${_ugmColCount + 1}" class="px-4 py-3 text-center"><div class="inline-flex items-center gap-2 text-white/30 text-[10px] font-bold"><span class="material-symbols-outlined text-[14px] animate-bounce">expand_more</span>Ещё ${remaining} · прокрутите вниз</div></td>`;
-                bodyEl.appendChild(sentinelRow);
-                if (_ugmObserver) _ugmObserver.observe(sentinelRow);
-            }
-        }
-
-        window.loadAllUserGroup = function() {
-            if (!_ugmAllItems.length) return;
-            const remaining = _ugmAllItems.length - _ugmRenderedCount;
-            if (remaining <= 0) return;
-            if (_ugmObserver) _ugmObserver.disconnect();
-            const sentinel = document.getElementById('ugm-sentinel');
-            if (sentinel) sentinel.remove();
-            _ugmRenderBatch(_ugmAllItems, remaining + UGM_INITIAL);
-        };
-
         window.openUserGroupModal = async function(groupKey, title) {
             const modal = document.getElementById('userGroupModal');
             const titleEl = document.getElementById('userGroupModalTitle');
             const descEl = document.getElementById('userGroupModalDesc');
             const bodyEl = document.getElementById('userGroupModalBody');
             const thMonths = document.getElementById('th_months_bought');
-            const countEl = document.getElementById('userGroupModalCount');
-            const iconWrap = document.getElementById('userGroupModalIcon');
-            const scrollEl = document.getElementById('userGroupModalContent');
-
+            
             if (!modal || !titleEl || !bodyEl) return;
-
-            _ugmAllItems = [];
-            _ugmRenderedCount = 0;
-            if (_ugmObserver) { _ugmObserver.disconnect(); _ugmObserver = null; }
-
+            
             const groupDescriptions = {
                 'no_purchases': 'Пользователи, которые зарегистрировались, но ни разу не покупали подписку.',
                 'inactive_buyers': 'Пользователи, которые когда-то покупали ключ, но сейчас у них нет активных подписок.',
@@ -1393,65 +1073,101 @@
                 'active_buyers': 'Пользователи с активной купленной подпиской.',
                 'active_keys': 'Все действующие ключи в системе, включая триалы и купленные.'
             };
-            const groupVisuals = {
-                'no_purchases': { icon: 'person_off', cls: 'w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-lg shadow-primary/10 shrink-0' },
-                'inactive_buyers': { icon: 'history', cls: 'w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-lg shadow-primary/10 shrink-0' },
-                'trials': { icon: 'card_giftcard', cls: 'w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-lg shadow-primary/10 shrink-0' },
-                'active_buyers': { icon: 'verified_user', cls: 'w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-lg shadow-primary/10 shrink-0' },
-                'active_keys': { icon: 'vpn_key', cls: 'w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-lg shadow-primary/10 shrink-0' }
-            };
-            const visual = groupVisuals[groupKey] || { icon: 'group', cls: 'w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-lg shadow-primary/10 shrink-0' };
-
+            
             titleEl.textContent = title;
             if (descEl) descEl.textContent = groupDescriptions[groupKey] || '';
-            if (countEl) countEl.textContent = 'загрузка';
-            if (iconWrap) {
-                iconWrap.className = visual.cls;
-                iconWrap.innerHTML = `<span class="material-symbols-outlined text-xl">${visual.icon}</span>`;
+            
+            const showMonths = ['inactive_buyers', 'active_buyers', 'active_keys'].includes(groupKey);
+            if (showMonths) {
+                thMonths.classList.remove('hidden');
+            } else {
+                thMonths.classList.add('hidden');
             }
-
-            _ugmShowMonths = ['inactive_buyers', 'active_buyers', 'active_keys'].includes(groupKey);
-            _ugmColCount = _ugmShowMonths ? 4 : 3;
-            if (_ugmShowMonths && thMonths) thMonths.classList.remove('hidden');
-            else if (thMonths) thMonths.classList.add('hidden');
-
-            bodyEl.innerHTML = `<tr><td colspan="${_ugmColCount + 1}" class="p-8 text-center"><div class="flex flex-col items-center gap-2"><div class="relative w-8 h-8"><div class="absolute inset-0 rounded-full border border-primary/20"></div><div class="absolute inset-1 rounded-full border-2 border-white/10 border-t-primary animate-spin"></div></div><span class="text-[9px] text-white/35 font-black uppercase tracking-[0.22em]">Загрузка сегмента</span></div></td></tr>`;
-
+            
+            const colCount = showMonths ? 4 : 3;
+            bodyEl.innerHTML = `<tr><td colspan="${colCount}" class="p-8 text-center"><div class="flex flex-col items-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mb-2"></div><span class="text-xs text-white/30">Загрузка...</span></div></td></tr>`;
+            
             window.currentUserGroupIds = [];
             openModal('userGroupModal');
-
+            
             try {
                 const data = await fetchJSON('{{ url_for("dashboard_user_groups_json") }}');
                 if (data && data.ok && data.groups && data.groups[groupKey]) {
                     const list = data.groups[groupKey];
-                    _ugmAllItems = list;
-                    list.forEach(item => { if (item.telegram_id) window.currentUserGroupIds.push(item.telegram_id); });
-                    if (countEl) countEl.textContent = `${list.length} шт.`;
-
                     if (list.length === 0) {
-                        bodyEl.innerHTML = `<tr><td colspan="${_ugmColCount + 1}" class="p-8 text-center"><div class="inline-flex flex-col items-center gap-2"><div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/30"><span class="material-symbols-outlined text-lg">inbox</span></div><span class="text-xs text-white/35 font-bold">Список пуст</span></div></td></tr>`;
+                        bodyEl.innerHTML = `<tr><td colspan="${colCount}" class="p-8 text-center text-white/30 text-sm">Список пуст</td></tr>`;
                         return;
                     }
-
-                    bodyEl.innerHTML = '';
-
-                    _ugmObserver = new IntersectionObserver((entries) => {
-                        entries.forEach(entry => {
-                            if (entry.isIntersecting) {
-                                _ugmRenderBatch(_ugmAllItems, UGM_BATCH);
+                    
+                    let html = '';
+                    list.forEach(item => {
+                        if (item.telegram_id) {
+                            window.currentUserGroupIds.push(item.telegram_id);
+                        }
+                        let username = item.username ? '@' + item.username : 'User #' + item.telegram_id;
+                        
+                        let curBal = item.balance !== undefined ? parseFloat(item.balance) : 0;
+                        let totSp = item.total_spent !== undefined && item.total_spent !== null ? parseFloat(item.total_spent) : 0;
+                        let balanceHTML = `<span class="cursor-help border-b border-dashed border-white/30" title="сейчас на балансе (${curBal}р) всего в общем патратил (${totSp}р)">${curBal}р / ${totSp}р</span>`;
+                        
+                        let keyInfo = '—';
+                        if (item.key_id || item.host_name) {
+                            if (item.host_name && !item.telegram_id) {
+                                username = item.username ? '@' + item.username : 'User #' + item.user_id;
+                                balanceHTML = `<span class="text-xs text-white/50">${item.host_name}</span>`; // для active_keys
                             }
-                        });
-                    }, { root: scrollEl, threshold: 0.1 });
+                            
+                            let expText = '';
+                            if (item.expire_at) {
+                                let expDate = new Date(item.expire_at.replace(' ', 'T'));
+                                let now = new Date();
+                                let diffTime = expDate - now;
+                                if (diffTime > 0) {
+                                    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    expText = `(осталось ${diffDays} дн.)`;
+                                } else {
+                                    expText = `(истек)`;
+                                }
+                                keyInfo = `<span class="text-white/80 font-mono text-xs">id ${item.key_id}</span><br><span class="text-xs text-white/50">${item.expire_at} ${expText}</span>`;
+                            } else {
+                                keyInfo = `<span class="text-white/80 font-mono text-xs">id ${item.key_id}</span><br><span class="text-xs text-white/50">(Безлимит)</span>`;
+                            }
+                        }
 
-                    _ugmRenderBatch(list, UGM_INITIAL);
+                        let charLetter = username.startsWith('@') ? username.charAt(1) : username.charAt(0);
+                        
+                        let monthsTd = '';
+                        if (showMonths) {
+                            let monthsBought = item.months_bought || 0;
+                            monthsTd = `<td class="px-5 py-3 text-sm text-center font-bold text-emerald-400">${monthsBought}</td>`;
+                        }
+                        
+                        html += `
+                            <tr class="hover:bg-white/5 transition-colors">
+                                <td class="px-5 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase shadow-sm flex-shrink-0">
+                                            ${charLetter}
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-medium text-white">${username}</span>
+                                            <span class="text-[10px] text-white/40 cursor-pointer hover:text-primary transition-colors" onclick="copySingleId(event, '${item.telegram_id}')">tg id: ${item.telegram_id}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-3 text-sm text-white/70">${balanceHTML}</td>
+                                <td class="px-5 py-3 text-sm">${keyInfo}</td>
+                                ${monthsTd}
+                            </tr>
+                        `;
+                    });
+                    bodyEl.innerHTML = html;
                 } else {
-                    if (countEl) countEl.textContent = 'ошибка';
-                    bodyEl.innerHTML = `<tr><td colspan="${_ugmColCount + 1}" class="p-8 text-center text-red-300 text-xs font-bold">Ошибка загрузки данных или нет доступа</td></tr>`;
+                    bodyEl.innerHTML = `<tr><td colspan="${colCount}" class="p-8 text-center text-red-400 text-sm">Ошибка загрузки данных или нет доступа</td></tr>`;
                 }
             } catch (e) {
                 console.error(e);
-                if (countEl) countEl.textContent = 'ошибка';
-                bodyEl.innerHTML = `<tr><td colspan="${_ugmColCount + 1}" class="p-8 text-center text-red-300 text-xs font-bold">Ошибка сети</td></tr>`;
+                bodyEl.innerHTML = `<tr><td colspan="${colCount}" class="p-8 text-center text-red-400 text-sm">Ошибка сети</td></tr>`;
             }
         };
 

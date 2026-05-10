@@ -106,7 +106,7 @@
         /* ========================================== */
 
         .max-w-7xl {
-            max-width: 100rem !important;
+            max-width: 90rem !important;
         }
 
         .material-symbols-outlined {
@@ -624,8 +624,7 @@
                         <div class="space-y-1">
                             {{ nav_link('settings_page', 'Настройки', 'settings') }}
                             {{ nav_link('monitor_page', 'Мониторинг', 'monitoring') }}
-                            {{ nav_link('node_page', 'Ноды', 'dns') }}
-
+                            {{ nav_link('node_page', 'Ноды', 'dashboard') }}
 
 
                             {% set is_other_active = request.endpoint == 'other_page' %}
@@ -676,6 +675,8 @@
                                         'broadcast') }}
                                         {{ accordion_link(url_for('other_page') ~ '?tab=promo', 'Промо коды',
                                         'confirmation_number', 'promo') }}
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=servers', 'Сервера', 'dns',
+                                        'servers') }}
                                         {{ accordion_link(url_for('other_page') ~ '?tab=logs', 'Логи Бота', 'article',
                                         'logs') }}
                                         {% if webapp_exists %}
@@ -1306,15 +1307,11 @@
             // ===== ФУНКЦИЯ: Асинхронное обновление бейджей =====
             // Загружает количество тикетов без перезагрузки всей страницы
             const updateGlobalBadges = async () => {
-                let controller = null;
-                let timeoutId = null;
                 try {
                     const badge = document.getElementById('sidebar-support-badge');
                     if (!badge) return;
 
-                    controller = new AbortController();
-                    timeoutId = setTimeout(() => controller.abort(), 8000);
-                    const res = await fetch("{{ url_for('support_badge_counts_json') }}", { signal: controller.signal });
+                    const res = await fetch("{{ url_for('support_badge_counts_json') }}");
 
                     if (res.ok) {
                         const data = await res.json();
@@ -1335,10 +1332,8 @@
                         }
                     }
                 } catch (e) {
-                    if (e.name === 'AbortError' || e.name === 'TypeError') return;
+                    if (e.name === 'TypeError') return;
                     console.error('Badge update error:', e);
-                } finally {
-                    if (timeoutId) clearTimeout(timeoutId);
                 }
             };
 

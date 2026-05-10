@@ -1,7 +1,6 @@
 import logging
 import hashlib
 import urllib.parse
-import math
 
 from datetime import datetime
 
@@ -14,33 +13,6 @@ from shop_bot.config import get_msk_time
 
 logger = logging.getLogger(__name__)
 
-
-BUTTON_STYLE_MAP = {
-    'red': 'danger',
-    'green': 'success',
-    'blue': 'primary',
-}
-
-TELEGRAM_BUTTON_STYLES = {'danger', 'success', 'primary'}
-
-
-def _setting_button_extra(prefix: str) -> dict:
-    extra = {}
-    style = (get_setting(f"{prefix}_button_style") or "").strip()
-    if style in BUTTON_STYLE_MAP:
-        style = BUTTON_STYLE_MAP[style]
-    if style in TELEGRAM_BUTTON_STYLES:
-        extra['style'] = style
-    emoji_id = (get_setting(f"{prefix}_icon_emoji_id") or "").strip()
-    if emoji_id:
-        extra['icon_custom_emoji_id'] = emoji_id
-    return extra
-
-
-def _setting_button_text(prefix: str, default: str, suffix: str = "") -> str:
-    text = get_setting(f"{prefix}_text") or default
-    return apply_html_to_button_text(f"{text}{suffix}")
-
 main_reply_keyboard = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="🏠 Главное меню")]],
     resize_keyboard=True
@@ -50,29 +22,33 @@ def create_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: 
     builder = InlineKeyboardBuilder()
     
     if trial_available:
-        builder.button(text=_setting_button_text("btn_trial", "🎁 Попробовать бесплатно"), callback_data="get_trial", **_setting_button_extra("btn_trial"))
+        text = get_setting("btn_trial_text") or "🎁 Попробовать бесплатно"
+        builder.button(text=apply_html_to_button_text(text), callback_data="get_trial")
     
+    builder.button(text=apply_html_to_button_text(get_setting("btn_profile_text") or "👤 Мой профиль"), callback_data="show_profile")
+    base_my_keys = (get_setting("btn_my_keys_text") or "🔑 Мои ключи")
     keys_count = len(user_keys) if user_keys else 0
-    builder.button(text=_setting_button_text("btn_profile", "👤 Мой профиль"), callback_data="show_profile", **_setting_button_extra("btn_profile"))
-    builder.button(text=_setting_button_text("btn_my_keys", "🔑 Мои ключи", f" ({keys_count})"), callback_data="manage_keys", **_setting_button_extra("btn_my_keys"))
+    builder.button(text=apply_html_to_button_text(f"{base_my_keys} ({keys_count})"), callback_data="manage_keys")
     
-    builder.button(text=_setting_button_text("btn_buy_key", "🛒 Купить ключ"), callback_data="buy_new_key", **_setting_button_extra("btn_buy_key"))
-    topup_suffix = f" ({int(balance)})" if balance > 0 else ""
-    builder.button(text=_setting_button_text("btn_topup", "💳 Пополнить баланс", topup_suffix), callback_data="top_up_start", **_setting_button_extra("btn_topup"))
+    builder.button(text=apply_html_to_button_text(get_setting("btn_buy_key_text") or "🛒 Купить ключ"), callback_data="buy_new_key")
+    btn_topup_text = get_setting("btn_topup_text") or "💳 Пополнить баланс"
+    if balance > 0:
+        btn_topup_text += f" ({int(balance)})"
+    builder.button(text=apply_html_to_button_text(btn_topup_text), callback_data="top_up_start")
     
-    builder.button(text=_setting_button_text("btn_referral", "🤝 Реферальная программа"), callback_data="show_referral_program", **_setting_button_extra("btn_referral"))
-    
-
-    builder.button(text=_setting_button_text("btn_support", "🆘 Поддержка"), callback_data="show_help", **_setting_button_extra("btn_support"))
-    builder.button(text=_setting_button_text("btn_about", "ℹ️ О проекте"), callback_data="show_about", **_setting_button_extra("btn_about"))
+    builder.button(text=(get_setting("btn_referral_text") or "🤝 Реферальная программа"), callback_data="show_referral_program")
     
 
-    builder.button(text=_setting_button_text("btn_speed", "⚡ Скорость"), callback_data="user_speedtest_last", **_setting_button_extra("btn_speed"))
-    builder.button(text=_setting_button_text("btn_howto", "❓ Как использовать"), callback_data="howto_vless", **_setting_button_extra("btn_howto"))
+    builder.button(text=(get_setting("btn_support_text") or "🆘 Поддержка"), callback_data="show_help")
+    builder.button(text=(get_setting("btn_about_text") or "ℹ️ О проекте"), callback_data="show_about")
+    
+
+    builder.button(text=(get_setting("btn_speed_text") or "⚡ Скорость"), callback_data="user_speedtest_last")
+    builder.button(text=(get_setting("btn_howto_text") or "❓ Как использовать"), callback_data="howto_vless")
     
 
     if is_admin:
-        builder.button(text=_setting_button_text("btn_admin", "⚙️ Админка"), callback_data="admin_menu", **_setting_button_extra("btn_admin"))
+        builder.button(text=(get_setting("btn_admin_text") or "⚙️ Админка"), callback_data="admin_menu")
     
 
     layout = []
@@ -98,7 +74,7 @@ def create_admin_menu_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="♻️ Восстановить БД", callback_data="admin_restore_db")
     builder.button(text="👮 Администраторы", callback_data="admin_admins_menu")
     builder.button(text="📢 Рассылка", callback_data="start_broadcast")
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
 
     builder.adjust(2, 2, 2, 2, 2, 1)
     return builder.as_markup()
@@ -315,7 +291,7 @@ def create_about_keyboard(channel_url: str | None, terms_url: str | None, privac
         builder.button(text="📄 Условия использования", url=terms_url)
     if privacy_url:
         builder.button(text="🔒 Политика конфиденциальности", url=privacy_url)
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     builder.adjust(1)
     return builder.as_markup()
     
@@ -347,12 +323,12 @@ def create_support_keyboard(support_user: str | None = None) -> InlineKeyboardMa
             url = f"tg://resolve?domain={username}"
 
     if url:
-        builder.button(text=_setting_button_text("btn_support", "🆘 Поддержка"), url=url, **_setting_button_extra("btn_support"))
-        builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+        builder.button(text=(get_setting("btn_support_text") or "🆘 Поддержка"), url=url)
+        builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     else:
 
-        builder.button(text=_setting_button_text("btn_support", "🆘 Поддержка"), callback_data="show_help", **_setting_button_extra("btn_support"))
-        builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+        builder.button(text=(get_setting("btn_support_text") or "🆘 Поддержка"), callback_data="show_help")
+        builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -361,7 +337,7 @@ def create_support_bot_link_keyboard(support_bot_username: str) -> InlineKeyboar
     username = support_bot_username.lstrip("@")
     deep_link = f"tg://resolve?domain={username}&start=new"
     builder.button(text="🆘 Открыть поддержку", url=deep_link)
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -375,7 +351,7 @@ def create_support_menu_keyboard(has_external: bool = False) -> InlineKeyboardMa
         builder.button(text="🆘 Внешняя поддержка", callback_data="support_external")
         layout.append(1)
         
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     layout.append(1)
     
     builder.adjust(*layout)
@@ -403,32 +379,19 @@ def create_ticket_actions_keyboard(ticket_id: int, is_open: bool = True) -> Inli
     return builder.as_markup()
 
 def create_host_selection_keyboard(hosts: list, action: str) -> InlineKeyboardMarkup:
-    rows = []
+    builder = InlineKeyboardBuilder()
     for host in hosts:
         callback_data = f"select_host_{action}_{host['host_name']}"
-        extra = {}
-        style = host.get('button_style')
-        emoji_id = host.get('icon_emoji_id')
-        if style:
-            extra['style'] = style
-        if emoji_id:
-            extra['icon_custom_emoji_id'] = emoji_id
-        rows.append([InlineKeyboardButton(text=host['host_name'], callback_data=callback_data, **extra)])
-    rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_main_menu")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+        builder.button(text=host['host_name'], callback_data=callback_data)
+    builder.button(text="⬅️ Назад", callback_data="back_to_main_menu")
+    builder.adjust(1)
+    return builder.as_markup()
 
 def create_plans_keyboard(plans: list[dict], action: str, host_name: str, key_id: int = 0) -> InlineKeyboardMarkup:
-    rows = []
+    builder = InlineKeyboardBuilder()
     for plan in plans:
         callback_data = f"buy_{host_name}_{plan['plan_id']}_{action}_{key_id}"
-        extra = {}
-        style = plan.get('button_style')
-        emoji_id = plan.get('icon_emoji_id')
-        if style:
-            extra['style'] = style
-        if emoji_id:
-            extra['icon_custom_emoji_id'] = emoji_id
-        rows.append([InlineKeyboardButton(text=f"{plan['plan_name']} - {plan['price']:.0f} RUB", callback_data=callback_data, **extra)])
+        builder.button(text=f"{plan['plan_name']} - {plan['price']:.0f} RUB", callback_data=callback_data)
     
     if action == "extend":
         back_callback = "manage_keys"
@@ -437,17 +400,15 @@ def create_plans_keyboard(plans: list[dict], action: str, host_name: str, key_id
         hosts = get_all_hosts(visible_only=True) or []
         back_callback = "back_to_main_menu" if len(hosts) == 1 else "buy_new_key"
         
-    rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=back_callback)])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    builder.button(text="⬅️ Назад", callback_data=back_callback)
+    builder.adjust(1) 
+    return builder.as_markup()
 
 
 def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int, action: str, key_id: int = 0, selected_tier_id: int = None) -> InlineKeyboardMarkup:
     from shop_bot.data_manager.database import get_plan_by_id, get_setting
     plan = get_plan_by_id(plan_id) if plan_id else None
-    duration_days = int(plan.get('duration_days') or 0) if plan else 30
-    if duration_days <= 0:
-        duration_days = int(plan.get('months') or 1) * 30 if plan else 30
-    month_factor = duration_days / 30.0
+    months = int(plan.get('months') or 1) if plan else 1
     base_devices = int(get_setting(f"base_device_{host_name}") or "1")
 
     builder = InlineKeyboardBuilder()
@@ -459,7 +420,7 @@ def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int
         icon = "🟢" if is_selected else "⚪️"
         diff = t['device_count'] - base_devices
         if diff < 0: diff = 0
-        total_price = diff * t['price'] * month_factor
+        total_price = diff * t['price'] * months
         label = f"{icon} {t['device_count']} (+{total_price:.0f}₽)"
         builder.button(text=label, callback_data=f"select_tier_{t['tier_id']}")
         total_btns += 1
@@ -501,7 +462,6 @@ def create_payment_method_keyboard(
 
     pm = {
         "yookassa": bool((get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or "")),
-        "platega_universal": ((get_setting("platega_universal_enabled") or "false").strip().lower() == "true"),
         "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
         "platega_crypto": ((get_setting("platega_crypto_enabled") or "false").strip().lower() == "true"),
         "heleket": bool((get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or "")),
@@ -528,8 +488,6 @@ def create_payment_method_keyboard(
         else:
             builder.button(text="🏦 Банковская карта", callback_data="pay_yookassa")
     
-    if pm.get("platega_universal"):
-        builder.button(text="💳 Platega", callback_data="pay_platega_universal")
     if pm.get("platega"):
         builder.button(text="💳 СБП / Platega", callback_data="pay_platega")
     if pm.get("platega_crypto"):
@@ -559,14 +517,14 @@ def create_payment_method_keyboard(
 def create_ton_connect_keyboard(connect_url: str, back_callback: str = "back_to_main_menu") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="🚀 Открыть кошелек", url=connect_url)
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data=back_callback, **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 
 def create_payment_keyboard(payment_url: str, back_callback: str = "back_to_main_menu") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к оплате", url=payment_url)
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data=back_callback, **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 
@@ -574,7 +532,7 @@ def create_yoomoney_payment_keyboard(payment_url: str, payment_id: str, back_cal
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к оплате", url=payment_url)
     builder.button(text="🔄 Проверить оплату", callback_data=f"check_pending:{payment_id}")
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data=back_callback, **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 
@@ -582,7 +540,7 @@ def create_cryptobot_payment_keyboard(payment_url: str, invoice_id: int | str, b
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к оплате", url=payment_url)
     builder.button(text="🔄 Проверить оплату", callback_data=f"check_crypto_invoice:{invoice_id}")
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data=back_callback, **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data=back_callback)
     builder.adjust(1)
     return builder.as_markup()
 
@@ -595,7 +553,6 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
         "cryptobot": bool(get_setting("cryptobot_token") or ""),
         "tonconnect": bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or "")),
         "yoomoney": ((get_setting("yoomoney_enabled") or "false").strip().lower() == "true"),
-        "platega_universal": ((get_setting("platega_universal_enabled") or "false").strip().lower() == "true"),
         "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
         "platega_crypto": ((get_setting("platega_crypto_enabled") or "false").strip().lower() == "true"),
         "stars": ((get_setting("stars_enabled") or "false").strip().lower() == "true"),
@@ -617,8 +574,6 @@ def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboar
         builder.button(text="⭐ Telegram Stars", callback_data="topup_pay_stars")
     if pm.get("yoomoney"):
         builder.button(text="💜 ЮMoney (кошелёк)", callback_data="topup_pay_yoomoney")
-    if pm.get("platega_universal"):
-        builder.button(text="💳 Platega", callback_data="topup_pay_platega_universal")
     if pm.get("platega"):
         builder.button(text="💳 СБП / Platega", callback_data="topup_pay_platega")
     if pm.get("platega_crypto"):
@@ -689,8 +644,8 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
             button_text = f"{status_icon} #{i+1} ({host_name}) {time_str}"
             builder.button(text=button_text, callback_data=f"show_key_{key['key_id']}")
             
-    builder.button(text=_setting_button_text("btn_buy_key", "🛒 Купить ключ"), callback_data="buy_new_key", **_setting_button_extra("btn_buy_key"))
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_buy_key_text") or "🛒 Купить ключ"), callback_data="buy_new_key")
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -768,7 +723,7 @@ def create_howto_vless_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="📱 iOS", callback_data="howto_ios")
     builder.button(text="💻 Windows", callback_data="howto_windows")
     builder.button(text="🐧 Linux", callback_data="howto_linux")
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     builder.adjust(2, 2, 1)
     return builder.as_markup()
 
@@ -784,16 +739,16 @@ def create_howto_vless_keyboard_key(key_id: int) -> InlineKeyboardMarkup:
 
 def create_back_to_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     return builder.as_markup()
 
 def create_profile_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text=_setting_button_text("btn_topup", "💳 Пополнить баланс"), callback_data="top_up_start", **_setting_button_extra("btn_topup"))
-    builder.button(text=_setting_button_text("btn_referral", "🤝 Реферальная программа"), callback_data="show_referral_program", **_setting_button_extra("btn_referral"))
+    builder.button(text=(get_setting("btn_topup_text") or "💳 Пополнить баланс"), callback_data="top_up_start")
+    builder.button(text=(get_setting("btn_referral_text") or "🤝 Реферальная программа"), callback_data="show_referral_program")
     builder.button(text="🛠 Подключиться", callback_data="howto_vless")
     builder.button(text="🎁 Ввести промокод", callback_data="promo_uni")
-    builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
+    builder.button(text=(get_setting("btn_back_to_menu_text") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
     builder.adjust(1, 1, 2, 1)
     return builder.as_markup()
 
@@ -1034,7 +989,7 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
             else:
                 return create_back_to_menu_keyboard()
 
-        keyboard_rows: list[list[InlineKeyboardButton]] = []
+        builder = InlineKeyboardBuilder()
         
 
         rows: dict[int, list[dict]] = {}
@@ -1043,6 +998,7 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
             rows.setdefault(row_pos, []).append(config)
 
 
+        layout: list[int] = []
         for row_pos in sorted(rows.keys()):
             original_row = sorted(rows[row_pos], key=lambda x: x.get('column_position', 0))
             included_row: list[dict] = []
@@ -1055,8 +1011,6 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 callback_data = cfg.get('callback_data')
                 url = cfg.get('url')
                 button_id = cfg.get('button_id', '')
-                btn_color = cfg.get('button_color') or None
-                btn_emoji_id = cfg.get('emoji_id') or None
 
 
                 if menu_type == "main_menu" and button_id == "trial" and not trial_available:
@@ -1094,21 +1048,15 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 if cfg.get('url') == "{connection_string}" and connection_string:
                      is_web_app = True
 
-                btn_text = apply_html_to_button_text(text)
-                extra_kwargs = {}
-                if btn_color and btn_color in BUTTON_STYLE_MAP:
-                    extra_kwargs['style'] = BUTTON_STYLE_MAP[btn_color]
-                if btn_emoji_id:
-                    extra_kwargs['icon_custom_emoji_id'] = btn_emoji_id
-
                 if is_web_app:
-                     row_buttons_objs.append(InlineKeyboardButton(text=btn_text, web_app=WebAppInfo(url=url), **extra_kwargs))
+                     row_buttons_objs.append(InlineKeyboardButton(text=apply_html_to_button_text(text), web_app=WebAppInfo(url=url)))
                      included_row.append(cfg)
+
                 elif url:
-                    row_buttons_objs.append(InlineKeyboardButton(text=btn_text, url=url, **extra_kwargs))
+                    row_buttons_objs.append(InlineKeyboardButton(text=apply_html_to_button_text(text), url=url))
                     included_row.append(cfg)
                 elif callback_data:
-                    row_buttons_objs.append(InlineKeyboardButton(text=btn_text, callback_data=callback_data, **extra_kwargs))
+                    row_buttons_objs.append(InlineKeyboardButton(text=apply_html_to_button_text(text), callback_data=callback_data))
                     included_row.append(cfg)
 
 
@@ -1116,8 +1064,9 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 continue
             
             if row_buttons_objs:
-                keyboard_rows.append(row_buttons_objs)
-        return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
+                builder.row(*row_buttons_objs)
+                layout.append(len(row_buttons_objs)) 
+        return builder.as_markup()
         
     except Exception as e:
         logger.error(f"Error creating dynamic keyboard for {menu_type}: {e}")

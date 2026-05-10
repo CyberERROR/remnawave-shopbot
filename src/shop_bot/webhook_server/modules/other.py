@@ -10,8 +10,22 @@ from werkzeug.utils import secure_filename
 from aiogram.types import FSInputFile
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, TelegramAPIError
 from shop_bot.data_manager import remnawave_repository as rw_repo
+from shop_bot.data_manager import speedtest_runner
+from . import server_plan
 
 logger = logging.getLogger(__name__)
+
+import re
+
+def clean_ansi(text):
+    if not text: return ""
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])|\x1B\(B|\x1B\][0-2];[^\x07]*\x07')
+    return ansi_escape.sub('', text)
+
+
+# ===== НАСТРОЙКИ И ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+# Конфигурация путей, расширений файлов и глобальных объектов
+# ===== Конец настроек =====
 
 def get_msk_time() -> datetime:
     return datetime.now(timezone(timedelta(hours=3)))
@@ -43,6 +57,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 broadcast_progress = {}
 broadcast_lock = threading.Lock()
 scheduler = None
+
+ssh_sessions = {}
+ssh_sessions_lock = threading.Lock()
 
 # ===== ПРОВЕРКА ДОПУСТИМОГО ФАЙЛА =====
 # Проверяет, имеет ли файл разрешенное расширение
@@ -321,26 +338,23 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
         try:
             keyboard = None
             if buttons:
-                from aiogram.types import InlineKeyboardButton as IKB, InlineKeyboardMarkup
-                _COLOR_STYLE = {'red': 'danger', 'green': 'success', 'blue': 'primary'}
-                kb_rows = []
+                from aiogram.utils.keyboard import InlineKeyboardBuilder
+                builder = InlineKeyboardBuilder()
                 for btn in buttons:
                     btn_text = btn.get('text', '').strip()
                     btn_type = btn.get('type', 'url')
                     if not btn_text: continue
-                    extra = {}
-                    btn_color = (btn.get('color') or '').strip()
-                    if btn_color in _COLOR_STYLE:
-                        extra['style'] = _COLOR_STYLE[btn_color]
+                    
                     if btn_type == 'promo':
                         promo_val = btn.get('value', '').strip()
                         cb_data = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
-                        kb_rows.append([IKB(text=btn_text, callback_data=cb_data, **extra)])
+                        builder.button(text=btn_text, callback_data=cb_data)
                     else:
                         btn_url = btn.get('url', '').strip()
                         if btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
-                            kb_rows.append([IKB(text=btn_text, url=btn_url, **extra)])
-                keyboard = InlineKeyboardMarkup(inline_keyboard=kb_rows) if kb_rows else None
+                            builder.button(text=btn_text, url=btn_url)
+                builder.adjust(1)
+                keyboard = builder.as_markup() if builder.export() else None
             
             if media_path and media_type:
                 media_file = FSInputFile(media_path)
@@ -419,10 +433,16 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
         'blocked_bot': blocked_bot, 'deactivated': deactivated,
         'added_to_banned': added_to_banned, 'removed_from_banned': removed_from_banned
     }
+# ===== Конец функции send_broadcast_async =====
 
 # ===== РЕГИСТРАЦИЯ РОУТОВ МОДУЛЯ =====
-# Подключает Flask-эндпоинты раздела Прочее
+# Инициализирует планировщик и подключает Flask-эндпоинты
 def register_other_routes(flask_app, login_required, get_common_template_data):
+    global scheduler
+    if scheduler is None:
+        scheduler = server_plan.ServerScheduler(ssh_executor=execute_ssh_command, log_func=lambda msg: logger.info(msg))
+        scheduler.start()
+
     # ===== СТРАНИЦА "ПРОЧЕЕ" =====
     # Отображает основной интерфейс раздела дополнительных функций
     @flask_app.route('/other')
@@ -568,26 +588,23 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             
             keyboard = None
             if buttons:
-                from aiogram.types import InlineKeyboardButton as IKB, InlineKeyboardMarkup
-                _COLOR_STYLE = {'red': 'danger', 'green': 'success', 'blue': 'primary'}
-                kb_rows = []
+                from aiogram.utils.keyboard import InlineKeyboardBuilder
+                builder = InlineKeyboardBuilder()
                 for btn in buttons:
                     btn_text = btn.get('text', '').strip()
                     btn_type = btn.get('type', 'url')
                     if not btn_text: continue
-                    extra = {}
-                    btn_color = (btn.get('color') or '').strip()
-                    if btn_color in _COLOR_STYLE:
-                        extra['style'] = _COLOR_STYLE[btn_color]
+                    
                     if btn_type == 'promo':
                         promo_val = btn.get('value', '').strip()
                         cb_data = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
-                        kb_rows.append([IKB(text=btn_text, callback_data=cb_data, **extra)])
+                        builder.button(text=btn_text, callback_data=cb_data)
                     else:
                         btn_url = btn.get('url', '').strip()
                         if btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
-                            kb_rows.append([IKB(text=btn_text, url=btn_url, **extra)])
-                keyboard = InlineKeyboardMarkup(inline_keyboard=kb_rows) if kb_rows else None
+                            builder.button(text=btn_text, url=btn_url)
+                builder.adjust(1)
+                keyboard = builder.as_markup() if builder.export() else None
             
             media_path, media_type = None, None
             if media_filename:
@@ -1322,7 +1339,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if os.name == 'nt':
                 yield f"data: [INFO] --- Windows Logs Simulation Mode ---\n\n"
                 while True:
-                    yield f": heartbeat {get_msk_time().isoformat()}\n\n"
+                    yield f"data: [INFO] {get_msk_time().isoformat()} - Heartbeat\n\n"
                     time.sleep(2)
                 return
 
@@ -1419,8 +1436,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                             while True:
                                 line = f.readline()
                                 if not line:
-                                    yield f": heartbeat {get_msk_time().isoformat()}\n\n"
-                                    time.sleep(5)
+                                    time.sleep(0.5)
                                     continue
                                 yield f"data: {line.strip()}\n\n"
                     except Exception as e: yield f"data: [ERROR] Ошибка чтения файла: {e}\n\n"
@@ -1430,7 +1446,6 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
 
         response = current_app.response_class(generate(), mimetype='text/event-stream')
         response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/event-stream; charset=utf-8'
         response.headers['X-Accel-Buffering'] = 'no'
         response.headers['Connection'] = 'keep-alive'
         return response

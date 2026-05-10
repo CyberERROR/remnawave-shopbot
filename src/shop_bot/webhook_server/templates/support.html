@@ -272,18 +272,11 @@
             <p class="text-white/30 text-[10px] font-bold uppercase tracking-[0.3em] ml-1">Центр управления обращениями
             </p>
         </div>
-        <div class="flex items-center gap-2">
-            <button onclick="confirmDeleteAllTickets()"
-                class="h-12 px-4 rounded-2xl premium-card flex items-center justify-center gap-2 text-red-400/60 hover:text-red-400 hover:border-red-500/30 transition-all group">
-                <span class="material-symbols-outlined text-lg">delete_sweep</span>
-                <span class="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Удалить все</span>
-            </button>
-            <button onclick="openGeminiModal()"
-                class="w-12 h-12 rounded-2xl premium-card flex items-center justify-center text-white/40 hover:text-primary transition-all group">
-                <span
-                    class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-500">settings</span>
-            </button>
-        </div>
+        <button onclick="openGeminiModal()"
+            class="w-12 h-12 rounded-2xl premium-card flex items-center justify-center text-white/40 hover:text-primary transition-all group">
+            <span
+                class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-500">settings</span>
+        </button>
     </div>
 
     <!-- Статистика -->
@@ -407,11 +400,6 @@
         </div>
     </div>
 </div>
-
-<!-- Hidden form for delete all tickets -->
-<form id="deleteAllTicketsForm" method="post" action="{{ url_for('delete_all_tickets_route') }}" class="hidden">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-</form>
 
 {% endblock %}
 
@@ -594,12 +582,6 @@
                 closeGeminiModal();
             } else showToast('danger', 'Ошибка сохранения');
         } catch (e) { showToast('danger', 'Ошибка сети'); }
-    }
-
-    function confirmDeleteAllTickets() {
-        if (confirm('Вы уверены, что хотите удалить ВСЕ чаты поддержки? Это действие необратимо.')) {
-            document.getElementById('deleteAllTicketsForm').submit();
-        }
     }
 
     // Функция переключения меню (универсальная)
