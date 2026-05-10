@@ -1,0 +1,634 @@
+{% extends "base.html" %}
+{% block title %}Поддержка{% endblock %}
+
+{% block content %}
+<style>
+    /* ========== ОБЩИЕ СТИЛИ (Премиум дизайн) ========== */
+    .support-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* Стеклянные карточки */
+    .premium-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1.25rem;
+        backdrop-filter: blur(12px);
+        transition: all 0.3s ease;
+    }
+
+    .dark .premium-card {
+        background: rgba(255, 255, 255, 0.05);
+        /* Чуть светлее в темной теме */
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* ========== DESKTOP СТИЛИ ========== */
+    @media (min-width: 769px) {
+        .desktop-view {
+            display: block;
+        }
+
+        .mobile-view {
+            display: none;
+        }
+
+        .mobile-app-header {
+            display: none;
+        }
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .stat-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(19, 236, 128, 0.2);
+        transform: translateY(-4px);
+    }
+
+    .stat-card.active {
+        background: rgba(19, 236, 128, 0.08);
+        border-color: rgba(19, 236, 128, 0.4);
+        box-shadow: 0 10px 30px -10px rgba(19, 236, 128, 0.2);
+    }
+
+    .stat-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        flex-shrink: 0;
+    }
+
+    /* Цвета для подложек иконок */
+    .icon-box-primary {
+        background: rgba(19, 236, 128, 0.1);
+        color: #13ec80;
+        box-shadow: 0 4px 15px -5px rgba(19, 236, 128, 0.4);
+    }
+
+    .icon-box-orange {
+        background: rgba(251, 146, 60, 0.1);
+        color: #fb923c;
+        box-shadow: 0 4px 15px -5px rgba(251, 146, 60, 0.4);
+    }
+
+    .icon-box-blue {
+        background: rgba(96, 165, 250, 0.1);
+        color: #60a5fa;
+        box-shadow: 0 4px 15px -5px rgba(96, 165, 250, 0.4);
+    }
+
+    .stat-card:hover .stat-icon,
+    .stat-card.active .stat-icon {
+        transform: scale(1.05) rotate(5deg);
+        box-shadow: 0 8px 20px -5px currentColor;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: #fff;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Таблица */
+    .tickets-table-wrapper {
+        margin-bottom: 2rem;
+    }
+
+    .tickets-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .tickets-table thead {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tickets-table th {
+        padding: 1rem 1.5rem;
+        text-align: left;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: rgba(255, 255, 255, 0.3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* ========== MOBILE СТИЛИ ========== */
+    @media (max-width: 768px) {
+        .desktop-view {
+            display: none;
+        }
+
+        .mobile-view {
+            display: block;
+        }
+
+        .mobile-app-header {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: rgba(16, 34, 25, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem;
+            margin: -1.5rem -1.5rem 1rem -1.5rem;
+        }
+
+        .dark .mobile-app-header {
+            background: rgba(0, 0, 0, 0.82);
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 0.75rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .chat-item:active {
+            transform: scale(0.98);
+            background: rgba(19, 236, 128, 0.05);
+        }
+
+        .chat-avatar {
+            width: 3.25rem;
+            height: 3.25rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #fff;
+            margin-right: 1rem;
+            box-shadow: 0 4px 12px rgba(19, 236, 128, 0.2);
+        }
+
+        .chat-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.125rem;
+        }
+
+        .chat-name {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .chat-time {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.3);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .chat-preview {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.4);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-preview.highlight {
+            color: #13ec80;
+            font-weight: 700;
+        }
+    }
+</style>
+
+<!-- ========== MOBILE HEADER ========== -->
+<div class="mobile-app-header">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-black text-white tracking-tighter">Поддержка</h2>
+        <div class="flex items-center gap-2">
+            <div
+                class="px-3 py-1 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                {{ open_count }} открыто
+            </div>
+        </div>
+    </div>
+    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+        {% for s, l, c in [('', 'Все', all_count), ('open', 'Открытые', open_count), ('closed', 'Закрытые',
+        closed_count)] %}
+        <a href="{{ url_for('support_list_page', status=s) }}"
+            class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border {% if filter_status == s %}bg-primary text-background-dark border-primary{% else %}bg-white/5 text-white/40 border-white/5{% endif %}">
+            {{ l }} ({{ c }})
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ========== DESKTOP VIEW ========== -->
+<div class="desktop-view support-container">
+    <div class="flex items-center justify-between mb-8">
+        <div class="space-y-1">
+            <h2 class="text-3xl font-black text-white tracking-tight flex items-center gap-3 uppercase">Поддержка</h2>
+            <p class="text-white/30 text-[10px] font-bold uppercase tracking-[0.3em] ml-1">Центр управления обращениями
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="confirmDeleteAllTickets()"
+                class="h-12 px-4 rounded-2xl premium-card flex items-center justify-center gap-2 text-red-400/60 hover:text-red-400 hover:border-red-500/30 transition-all group">
+                <span class="material-symbols-outlined text-lg">delete_sweep</span>
+                <span class="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Удалить все</span>
+            </button>
+            <button onclick="openGeminiModal()"
+                class="w-12 h-12 rounded-2xl premium-card flex items-center justify-center text-white/40 hover:text-primary transition-all group">
+                <span
+                    class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-500">settings</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-grid" data-refresh-part="support-stats">
+        {% for s, l, icon, count, box_class in [
+        ('', 'Все обращения', 'forum', all_count, 'icon-box-primary'),
+        ('open', 'В ожидании', 'pending', open_count, 'icon-box-orange'),
+        ('closed', 'Завершенные', 'task_alt', closed_count, 'icon-box-blue')
+        ] %}
+        <a href="{{ url_for('support_list_page', status=s) }}"
+            class="premium-card stat-card ajax-nav {% if filter_status == s %}active{% endif %}" data-target="{{ s }}">
+            <div class="stat-icon {{ box_class }}">
+                <span class="material-symbols-outlined text-2xl">{{ icon }}</span>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ count }}</div>
+                <div class="stat-label">{{ l }}</div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="premium-card tickets-table-wrapper bg-black/20" data-refresh-part="support-table">
+        <table class="tickets-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Пользователь</th>
+                    <th>Тема</th>
+                    <th>Статус</th>
+                    <th>Обновлен</th>
+                    <th class="text-right">Действия</th>
+                </tr>
+            </thead>
+            <tbody id="support-tbody"
+                data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
+                data-fetch-interval="20000">
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-white/30">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                            <span class="text-[10px] font-bold uppercase tracking-widest">Загрузка обращений...</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Пагинация Desktop -->
+        <div id="support-pagination"
+            class="p-5 border-t border-white/5 flex items-center justify-between bg-white/[0.01]"
+            data-src="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}">
+            <!-- Will be populated by JS -->
+        </div>
+    </div>
+</div>
+
+<!-- ========== MOBILE VIEW ========== -->
+<div class="mobile-view">
+    <div id="support-mobile-list" class="space-y-3 pt-4"
+        data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page, mobile=1) }}">
+        <div class="flex flex-col items-center justify-center p-20 opacity-20">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Gemini Settings Modal -->
+<div id="geminiModal" class="modal-overlay" onclick="if(event.target===this)event.stopPropagation()">
+    <div class="modal-content premium-card !bg-[#0a0f0d] !border-primary/20 w-full max-w-3xl p-0 overflow-hidden transform transition-all duration-300 scale-95 opacity-0"
+        id="geminiModalContent">
+        <div class="p-6 border-b border-white/5 bg-primary/5 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-10 h-10 rounded-xl bg-primary/20 border border-primary/20 flex items-center justify-center text-primary shadow-[0_0_15px_rgba(19,236,128,0.3)]">
+                    <span class="material-symbols-outlined text-xl">auto_awesome</span>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+                        AI Assistant
+                        <span class="px-1.5 py-0.5 rounded bg-primary text-[#0a0f0d] text-[10px] font-bold">PRO</span>
+                    </h3>
+                    <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Генерация ответов</p>
+                </div>
+            </div>
+            <button onclick="closeGeminiModal()"
+                class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] ml-1">API Key</label>
+                <div class="relative group">
+                    <input type="password" id="geminiKeyInput" name="gemini_secret_key" autocomplete="new-password"
+                        data-lpignore="true"
+                        class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white text-sm focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                        placeholder="••••••••••••••••••••••••">
+                    <button onclick="toggleKeyVisibility()"
+                        class="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-xl" id="keyVisibilityIcon">visibility</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] ml-1">System Prompt
+                    (sg_promt)</label>
+                <textarea id="geminiPromptInput" name="gemini_system_prompt" autocomplete="off"
+                    class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white text-xs focus:ring-1 focus:ring-primary/50 outline-none transition-all min-h-[150px] resize-y"
+                    placeholder="Введите системные инструкции для ИИ..."></textarea>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeGeminiModal()"
+                    class="flex-1 px-5 py-4 rounded-xl bg-white/5 text-white/60 font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all">Отмена</button>
+                <button onclick="saveGeminiKey()"
+                    class="flex-[1.5] px-5 py-4 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-widest hover:scale-[1.02] shadow-xl shadow-primary/20 transition-all">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for delete all tickets -->
+<form id="deleteAllTicketsForm" method="post" action="{{ url_for('delete_all_tickets_route') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ===== AJAX НАВИГАЦИЯ И LAZY LOAD =====
+
+        const loadSupportTable = async () => {
+            const tbody = document.getElementById('support-tbody');
+            const mobileList = document.getElementById('support-mobile-list');
+            if (!tbody && !mobileList) return;
+
+            const fetchUrlTbody = tbody ? new URL(tbody.dataset.fetchUrl, location.origin) : null;
+            const fetchUrlMobile = mobileList ? new URL(mobileList.dataset.fetchUrl, location.origin) : null;
+
+            try {
+                if (tbody) {
+                    const res = await fetch(fetchUrlTbody, { headers: { 'Accept': 'application/json' } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        tbody.innerHTML = data.table_html || '<tr><td colspan="6" class="p-20 text-center opacity-20"><span class="material-symbols-outlined text-5xl mb-4">forum</span><p class="text-[10px] font-black uppercase tracking-widest">Обращений пока нет</p></td></tr>';
+                        tbody.style.opacity = '1';
+                        const pagEl = document.getElementById('support-pagination');
+                        if (pagEl) pagEl.innerHTML = data.pagination_html;
+                    }
+                }
+
+                if (mobileList) {
+                    const resM = await fetch(fetchUrlMobile, { headers: { 'Accept': 'application/json' } });
+                    if (resM.ok) {
+                        const dataM = await resM.json();
+                        mobileList.innerHTML = dataM.table_html || '<div class="flex flex-col items-center justify-center py-20 opacity-20"><span class="material-symbols-outlined text-6xl mb-4">forum</span><p class="text-[10px] font-black uppercase tracking-widest">Обращений пока нет</p></div>';
+                        mobileList.style.opacity = '1';
+                    }
+                }
+
+                if (window.updateRelativeTimes) window.updateRelativeTimes();
+            } catch (err) {
+                console.error('Fetch error:', err);
+            }
+        };
+
+        const updatePagination = async (currentUrl) => {
+            const pagEl = document.getElementById('support-pagination');
+            if (!pagEl) return;
+        };
+
+        // AJAX Навигация по фильтрам и пагинации
+        document.addEventListener('click', async (e) => {
+            const link = e.target.closest('.ajax-nav, .ajax-pagination');
+            if (!link) return;
+
+            e.preventDefault();
+            const href = link.getAttribute('href');
+            if (!href) return;
+
+            history.pushState(null, '', href);
+
+            // Обновление активного класса на карточках (фильтрах)
+            const currentStatus = new URL(href, location.origin).searchParams.get('status') || '';
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.classList.toggle('active', card.getAttribute('data-target') === currentStatus);
+            });
+
+            const tbody = document.getElementById('support-tbody');
+            const mobileList = document.getElementById('support-mobile-list');
+
+            if (tbody) {
+                const newUrl = new URL(href, location.origin);
+                const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+                newUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
+                tbody.dataset.fetchUrl = fetchUrl.toString();
+                tbody.style.opacity = '0.5';
+            }
+
+            if (mobileList) {
+                const newUrl = new URL(href, location.origin);
+                const fetchUrl = new URL(mobileList.dataset.fetchUrl, location.origin);
+                newUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
+                mobileList.dataset.fetchUrl = fetchUrl.toString();
+                mobileList.style.opacity = '0.5';
+            }
+
+            await loadSupportTable();
+        });
+
+        loadSupportTable();
+
+        window.addEventListener('popstate', () => location.reload());
+
+        window.updateRelativeTimes = function () {
+            const fmt = (s) => {
+                if (!s) return '';
+                const p = s.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
+                if (!p) return s;
+                const d = new Date(Date.UTC(p[1], p[2] - 1, p[3], p[4], p[5]));
+                const now = new Date();
+                const diffMin = Math.floor((now - d) / 60000);
+                if (diffMin < 1) return 'сейчас';
+                if (diffMin < 60) return diffMin + ' мин. назад';
+                if (diffMin < 1440) return Math.floor(diffMin / 60) + ' ч. назад';
+                if (diffMin < 10080) return Math.floor(diffMin / 1440) + ' д. назад';
+                return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            };
+            document.querySelectorAll('.desktop-rel-time, .mobile-relative-time').forEach(el => {
+                el.textContent = fmt(el.dataset.timestamp);
+            });
+        };
+
+        const tbody = document.getElementById('support-tbody');
+        if (tbody && tbody.dataset.fetchInterval) {
+            setInterval(loadSupportTable, parseInt(tbody.dataset.fetchInterval));
+        }
+
+        window.updateRelativeTimes();
+    });
+
+    async function openGeminiModal() {
+        const keyInp = document.getElementById('geminiKeyInput');
+        const promptInp = document.getElementById('geminiPromptInput');
+        const content = document.getElementById('geminiModalContent');
+
+        keyInp.value = '';
+        promptInp.value = '';
+
+        try {
+            const res = await fetch("{{ url_for('gemini_settings') }}");
+            const data = await res.json();
+            if (data.ok) {
+                if (data.key) keyInp.value = data.key;
+                if (data.prompt) promptInp.value = data.prompt;
+            }
+        } catch (e) {
+            console.error("Failed to fetch gemini settings:", e);
+        }
+
+        openModal('geminiModal');
+        requestAnimationFrame(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        });
+    }
+
+    function closeGeminiModal() {
+        const content = document.getElementById('geminiModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+
+        setTimeout(() => {
+            closeModal('geminiModal');
+        }, 300);
+    }
+    function toggleKeyVisibility() {
+        const inp = document.getElementById('geminiKeyInput');
+        const icon = document.getElementById('keyVisibilityIcon');
+        if (inp.type === 'password') {
+            inp.type = 'text';
+            icon.textContent = 'visibility_off';
+        } else {
+            inp.type = 'password';
+            icon.textContent = 'visibility';
+        }
+    }
+
+    async function saveGeminiKey() {
+        const key = document.getElementById('geminiKeyInput').value.trim();
+        const prompt = document.getElementById('geminiPromptInput').value.trim();
+        try {
+            const res = await fetch("{{ url_for('gemini_settings') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({ key: key, prompt: prompt })
+            });
+            if (res.ok) {
+                showToast('success', 'Настройки Gemini сохранены');
+                closeGeminiModal();
+            } else showToast('danger', 'Ошибка сохранения');
+        } catch (e) { showToast('danger', 'Ошибка сети'); }
+    }
+
+    function confirmDeleteAllTickets() {
+        if (confirm('Вы уверены, что хотите удалить ВСЕ чаты поддержки? Это действие необратимо.')) {
+            document.getElementById('deleteAllTicketsForm').submit();
+        }
+    }
+
+    // Функция переключения меню (универсальная)
+    window.toggleSupportMenu = function (e, id) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const menu = document.getElementById(id) || document.getElementById('support-menu-' + id) || document.getElementById('m-support-menu-' + id);
+
+        // Закрываем все остальные открытые меню
+        document.querySelectorAll('[id*="dropdown"], [id*="menu-"]').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+
+        if (menu) {
+            menu.classList.toggle('hidden');
+        }
+    }
+
+    // Закрытие меню при клике вне его области
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('button')) {
+            document.querySelectorAll('[id*="dropdown"], [id*="menu-"]').forEach(m => {
+                m.classList.add('hidden');
+            });
+        }
+    });
+
+</script>
+{% endblock %}
+```

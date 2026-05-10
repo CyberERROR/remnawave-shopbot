@@ -1,0 +1,465 @@
+{% if partial_mode %}
+{% for m in messages %}
+<div class="flex {% if m.sender == 'admin' %}justify-end admin{% else %}justify-start user{% endif %} message-row">
+    <div
+        class="message-bubble border {% if m.sender == 'admin' %}!bg-primary/10 !border-primary/20 !rounded-br-none{% else %}!bg-white/5 !border-white/10 !rounded-bl-none{% endif %} !max-w-[85%]">
+        {% if m.sender != 'admin' %}
+        <div class="text-[10px] font-black uppercase tracking-widest mb-1 text-white/30 hidden md:block">
+            {{ ticket.username or 'Пользователь' }}
+        </div>
+        {% endif %}
+        <div class="text-sm leading-relaxed whitespace-pre-wrap">{{ m.content }}</div>
+        <div class="text-[9px] mt-2 font-bold opacity-30 text-right uppercase tracking-widest msg-rel-time"
+            data-timestamp="{{ m.updated_at or m.created_at }}">
+            {{ (m.updated_at or m.created_at or "").split(' ')[1][:5] }}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+{% extends "base.html" %}
+{% block title %}Тикет #{{ ticket.ticket_id }}{% endblock %}
+
+{% block content %}
+<style>
+    /* ========== DESKTOP VIEW ========== */
+    @media (min-width: 769px) {
+        .desktop-chat-view {
+            display: flex;
+            flex-direction: column;
+            margin: 0 auto;
+            height: calc(100vh - 185px);
+            min-height: 550px;
+        }
+
+        .mobile-chat-view {
+            display: none;
+        }
+    }
+
+    /* Премиум контейнеры */
+    .premium-chat-container {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1.5rem;
+        backdrop-filter: blur(12px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .dark .premium-chat-container {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Пузыри сообщений */
+    .message-bubble {
+        max-width: 75%;
+        padding: 1rem 1.25rem;
+        border-radius: 1.25rem;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .message-row.admin .message-bubble {
+        background: rgba(19, 236, 128, 0.1);
+        border: 1px solid rgba(19, 236, 128, 0.2);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+
+    .message-row.user .message-bubble {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border-bottom-left-radius: 4px;
+    }
+
+    /* ========== MOBILE VIEW ========== */
+    @media (max-width: 768px) {
+        .desktop-chat-view {
+            display: none;
+        }
+
+        .mobile-chat-view {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000;
+            z-index: 9999;
+        }
+
+        .dark .mobile-chat-view {
+            background: #000;
+        }
+
+        .mobile-chat-header {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: rgba(16, 34, 25, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .dark .mobile-chat-header {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .mobile-user-avatar {
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #fff;
+            margin-right: 0.75rem;
+        }
+
+        .mobile-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+            padding: 0.75rem 1.25rem;
+            color: #fff;
+            font-size: 1rem;
+            max-height: 120px;
+            resize: none;
+        }
+    }
+</style>
+
+<!-- ========== MOBILE VIEW ========== -->
+<div class="mobile-chat-view" data-refresh-part="mobile-view">
+    <div class="mobile-chat-header">
+        <a href="{{ url_for('support_list_page') }}" class="text-primary p-2 -ml-2">
+            <span class="material-symbols-outlined text-2xl">arrow_back_ios</span>
+        </a>
+        <div class="mobile-user-avatar">
+            {{ ticket.username[0]|upper if ticket.username else 'U' }}
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="text-white font-bold truncate">{% if ticket.username %}@{{ ticket.username }}{% else %}User #{{
+                ticket.user_id }}{% endif %}</div>
+            <div
+                class="text-[10px] uppercase font-black tracking-widest {% if ticket.status == 'open' and ticket.last_sender == 'user' %}text-yellow-500{% elif ticket.status == 'open' %}text-primary{% else %}text-white/40{% endif %} flex items-center gap-1.5">
+                {% if ticket.status == 'open' %}
+                <span
+                    class="w-1.5 h-1.5 rounded-full {% if ticket.last_sender == 'user' %}bg-yellow-500 animate-bounce{% else %}bg-primary animate-pulse{% endif %}"></span>
+                Открыт
+                {% else %}
+                <span class="w-1.5 h-1.5 rounded-full bg-white/20"></span>
+                Закрыт
+                {% endif %} •
+                #{{ ticket.ticket_id }} • <span class="text-primary italic">{{ ticket.subject or 'Без темы' }}</span>
+            </div>
+        </div>
+        <div class="relative">
+            <button type="button" class="text-white/40 p-2" onclick="toggleSupportMenu(event,'m-dropdown')">
+                <span class="material-symbols-outlined">more_vert</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- МЕНЮ ВЫНЕСЕНО ИЗ ШАПКИ ДЛЯ ИСКЛЮЧЕНИЯ КОНФЛИКТА С BACKDROP-FILTER -->
+    <div id="m-dropdown"
+        class="hidden absolute top-14 right-2 w-48 border border-white/20 rounded-xl shadow-2xl z-[10000] overflow-hidden"
+        style="background: #222222 !important; background-color: #222222 !important; opacity: 1 !important;">
+        <form method="post" data-ajax="true" data-refresh="mobile-view">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            {% if ticket.status == 'open' %}
+            <button type="submit" name="t_action" value="close"
+                class="w-full p-4 text-left text-xs font-bold text-white hover:bg-white/5 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-sm">check_circle</span> ЗАКРЫТЬ
+            </button>
+            {% else %}
+            <button type="submit" name="t_action" value="open"
+                class="w-full p-4 text-left text-xs font-bold text-primary hover:bg-white/5 flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">refresh</span> ОТКРЫТЬ
+            </button>
+            {% endif %}
+        </form>
+        <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
+            class="m-0 border-t border-white/5" data-ajax="true" data-refresh="page">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit"
+                class="w-full p-4 text-left text-xs font-bold text-red-500 hover:bg-white/5 flex items-center gap-2"
+                onclick="return confirm('Удалить?')">
+                <span class="material-symbols-outlined text-sm">delete_forever</span> УДАЛИТЬ
+            </button>
+        </form>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-4" id="m-chat-box">
+        <div class="flex items-center justify-center p-10 opacity-20">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+    </div>
+
+    <form id="mobileReplyForm" method="post"
+        class="p-3 bg-white/[0.02] border-t border-white/5 flex items-end gap-2 pb-safe"
+        onsubmit="handleReplySubmit(event, 'm')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <textarea name="message" class="mobile-input" rows="1" placeholder="Ваш ответ..." {% if ticket.status=='closed'
+            %}disabled{% endif %}></textarea>
+        <button type="button" class="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center text-primary"
+            onclick="generateGeminiResponse('m', event)">
+            <span class="material-symbols-outlined">auto_awesome</span>
+        </button>
+        <button type="submit" name="t_action" value="reply"
+            class="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-black font-bold">
+            <span class="material-symbols-outlined">send</span>
+        </button>
+    </form>
+</div>
+
+<!-- ========== DESKTOP VIEW ========== -->
+<div class="desktop-chat-view" id="ticket-root" data-ticket-id="{{ ticket.ticket_id }}"
+    data-refresh-part="desktop-view">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-2xl font-black text-white flex items-center gap-3">
+                Тикет #{{ ticket.ticket_id }}
+                {% if ticket.status == 'open' %}
+                {% set is_waiting = ticket.last_sender == 'user' %}
+                <span
+                    class="px-3 py-0.5 rounded-lg {% if is_waiting %}bg-yellow-500/10 border border-yellow-500/20 text-yellow-500{% else %}bg-primary/10 border border-primary/20 text-primary{% endif %} text-[10px] font-black uppercase tracking-widest">
+                    Открыт
+                </span>
+                {% endif %}
+            </h2>
+            <div class="flex gap-4 mt-1">
+                <span
+                    class="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-1.5"><span
+                        class="material-symbols-outlined text-sm">person</span> {% if ticket.username %}@{{
+                    ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}</span>
+                <span
+                    class="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-1.5"><span
+                        class="material-symbols-outlined text-sm">history</span> {{ ticket.updated_at or
+                    ticket.created_at }}</span>
+                <span class="text-[10px] font-bold text-white/20">|</span>
+                <span class="text-[10px] font-black text-primary uppercase tracking-widest">{{ ticket.subject or 'Без темы' }}</span>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('support_list_page') }}"
+                class="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-white/10 transition-all">
+                <span class="material-symbols-outlined text-sm">arrow_back</span> К списку
+            </a>
+            <div class="relative">
+                <button type="button"
+                    onclick="if(!window.toggleSupportMenu){window.toggleSupportMenu=function(e,id){if(e)e.stopPropagation();const m=document.getElementById(id)||document.getElementById('support-menu-'+id);document.querySelectorAll('[id*=\'dropdown\'],[id*=\'menu-\']').forEach(x=>{if(x!==m)x.classList.add('hidden')});if(m)m.classList.toggle('hidden')};document.addEventListener('click',()=>document.querySelectorAll('[id*=\'dropdown\'],[id*=\'menu-\']').forEach(x=>x.classList.add('hidden')))}toggleSupportMenu(event,'d-dropdown')"
+                    class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all">
+                    <span class="material-symbols-outlined">more_vert</span>
+                </button>
+                <div id="d-dropdown"
+                    class="hidden absolute top-full right-0 mt-2 w-48 border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden"
+                    style="background: #222222 !important; background-color: #222222 !important; opacity: 1 !important;">
+                    <form method="post" class="m-0" data-ajax="true" data-refresh="desktop-view">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" name="t_action"
+                            value="{{ 'close' if ticket.status == 'open' else 'open' }}"
+                            class="w-full p-4 text-left text-xs font-bold text-white hover:bg-white/5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary text-sm">{{ 'check_circle' if
+                                ticket.status == 'open' else 'refresh' }}</span> {{ 'ЗАКРЫТЬ' if ticket.status == 'open'
+                            else 'ОТКРЫТЬ' }}
+                        </button>
+                    </form>
+                    <form method="post"
+                        action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
+                        class="m-0 border-t border-white/5" data-ajax="true" data-refresh="page">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit"
+                            class="w-full p-4 text-left text-xs font-bold text-red-500 hover:bg-white/5 flex items-center gap-2"
+                            onclick="return confirm('Удалить?')">
+                            <span class="material-symbols-outlined text-sm">delete_forever</span> УДАЛИТЬ
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="premium-chat-container">
+        <div class="flex-1 overflow-y-auto p-6 space-y-4" id="d-chat-box">
+            <div class="flex items-center justify-center p-20 opacity-20">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+            </div>
+        </div>
+
+        <form id="desktopReplyForm" method="post" class="p-6 bg-black/40 border-t border-white/5"
+            onsubmit="handleReplySubmit(event, 'd')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <div class="flex items-end gap-4">
+                <textarea name="message" id="replyTextarea"
+                    class="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:ring-1 focus:ring-primary/50 outline-none transition-all resize-none"
+                    placeholder="Ответить..." rows="1" {% if ticket.status=='closed' %}disabled{% endif %}></textarea>
+                <div class="flex gap-2">
+                    <button type="button"
+                        class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all"
+                        onclick="generateGeminiResponse('d', event)">
+                        <span class="material-symbols-outlined text-2xl">auto_awesome</span>
+                    </button>
+                    <button type="submit" name="t_action" value="reply"
+                        class="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-black font-black hover:scale-105 transition-all shadow-lg shadow-primary/20"
+                        {% if ticket.status=='closed' %}disabled{% endif %}>
+                        <span class="material-symbols-outlined text-2xl">send</span>
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 text-[9px] font-black text-white/20 uppercase tracking-widest px-2">Ctrl + Enter для
+                отправки</div>
+        </form>
+    </div>
+</div>
+
+<script>
+    async function handleReplySubmit(event, type) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        formData.append('t_action', 'reply');
+        const textarea = form.querySelector('textarea');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        if (!textarea.value.trim()) return;
+
+        submitBtn.disabled = true;
+        try {
+            const res = await fetch(window.location.pathname, {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                textarea.value = '';
+                textarea.style.height = 'auto';
+                await loadMessages(true); // Принудительная прокрутка
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            submitBtn.disabled = false;
+        }
+    }
+
+    // ===== ЗАГРУЗКА СООБЩЕНИЙ =====
+    const loadMessages = async (forceScroll = false) => {
+        try {
+            const res = await fetch(window.location.pathname + '?partial=true');
+            if (res.ok) {
+                const html = await res.text();
+                const mBox = document.getElementById('m-chat-box');
+                const dBox = document.getElementById('d-chat-box');
+
+                const wasAtBottom = forceScroll ||
+                    (mBox && (mBox.scrollHeight - mBox.scrollTop <= mBox.clientHeight + 100)) ||
+                    (dBox && (dBox.scrollHeight - dBox.scrollTop <= dBox.clientHeight + 100)) ||
+                    !mBox.querySelector('.message-row');
+
+                if (mBox) mBox.innerHTML = html;
+                if (dBox) dBox.innerHTML = html;
+
+                if (wasAtBottom) scrollChat();
+                else document.querySelectorAll('.msg-rel-time').forEach(el => el.textContent = formatMessageRelativeTime(el.dataset.timestamp));
+            }
+        } catch (e) { }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const tx = document.getElementById('replyTextarea');
+        if (tx) {
+            tx.addEventListener('input', () => { tx.style.height = 'auto'; tx.style.height = Math.min(tx.scrollHeight, 200) + 'px'; });
+            tx.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    handleReplySubmit({ target: document.getElementById('desktopReplyForm'), preventDefault: () => { } }, 'd');
+                }
+            });
+        }
+
+        window.scrollChat = function () {
+            const mChat = document.getElementById('m-chat-box');
+            const dChat = document.getElementById('d-chat-box');
+            if (mChat) mChat.scrollTop = mChat.scrollHeight;
+            if (dChat) dChat.scrollTop = dChat.scrollHeight;
+            document.querySelectorAll('.msg-rel-time').forEach(el => el.textContent = formatMessageRelativeTime(el.dataset.timestamp));
+        };
+
+        function formatMessageRelativeTime(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
+            if (!parts) return dateStr;
+            const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5]));
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMin = Math.floor(diffMs / 60000);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
+
+            if (diffDay >= 7) return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            if (diffDay >= 1) return diffDay + ' д. назад';
+            if (diffHour >= 1) return diffHour + ' ч. назад';
+            if (diffMin >= 1) return diffMin + ' мин. назад';
+            return 'только что';
+        }
+
+        loadMessages();
+        // 10s автообновление чата
+        setInterval(loadMessages, 10000);
+    });
+
+    async function generateGeminiResponse(type, event) {
+        const id = "{{ ticket.ticket_id }}";
+        const tx = type === 'm' ? document.querySelector('.mobile-input') : document.getElementById('replyTextarea');
+        const btn = event.currentTarget; const icon = btn.querySelector('.material-symbols-outlined');
+
+        if (btn.disabled) return;
+        btn.disabled = true; icon.textContent = 'hourglass_empty'; icon.classList.add('animate-spin');
+
+        try {
+            const r = await fetch('/admin/gemini/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
+                body: JSON.stringify({ ticket_id: id, current_text: tx.value })
+            });
+            const d = await r.json();
+            if (d.ok) { tx.value = d.response; tx.dispatchEvent(new Event('input')); tx.focus(); }
+            else showToast('danger', d.error || 'Ошибка');
+        } catch (e) { showToast('danger', 'Сеть?'); }
+        finally { btn.disabled = false; icon.textContent = 'auto_awesome'; icon.classList.remove('animate-spin'); }
+    }
+
+    // Меню управления тикетами
+    window.toggleSupportMenu = function (e, id) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const menu = document.getElementById(id) || document.getElementById('support-menu-' + id);
+        if (menu) {
+            const isHidden = menu.classList.contains('hidden');
+            document.querySelectorAll('[id*="dropdown"], [id*="menu-"]').forEach(m => m.classList.add('hidden'));
+            if (isHidden) menu.classList.remove('hidden');
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('button')) {
+            document.querySelectorAll('[id*="dropdown"]').forEach(m => m.classList.add('hidden'));
+        }
+    });
+</script>
+{% endblock %}
+{% endif %}
