@@ -2,12 +2,18 @@
 <tr class="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0 group">
     <td class="px-5 py-4 whitespace-nowrap text-xs font-mono text-white/60 group-hover:text-white transition-colors">#{{
         k.key_id }}</td>
-    <td class="px-5 py-4 whitespace-nowrap text-sm font-medium text-white">{{ k.user_id or '—' }}</td>
+    <td class="px-5 py-4 whitespace-nowrap text-sm font-medium text-white">
+        {% if k.username %}
+        <span class="demo-blur-username">@{{ k.username }}</span>
+        {% else %}
+        {{ k.user_id or '—' }}
+        {% endif %}
+    </td>
     <td class="px-5 py-4 whitespace-nowrap text-xs text-white/70">
         <span class="px-2 py-1 rounded bg-white/5 border border-white/10">{{ k.host_name }}</span>
     </td>
-    <td class="px-5 py-4 whitespace-nowrap text-xs text-white/50 font-mono">{{ k.key_email }}</td>
-    <td class="px-5 py-4 text-xs text-white/30 max-w-[150px] truncate font-mono select-all hover:text-white/70 transition-colors"
+    <td class="px-5 py-4 whitespace-nowrap text-xs text-white/50 font-mono demo-blur-sensitive">{{ k.key_email }}</td>
+    <td class="px-5 py-4 text-xs text-white/30 max-w-[150px] truncate font-mono select-all hover:text-white/70 transition-colors demo-blur-sensitive"
         title="{{ k.remnawave_user_uuid }}">{{ k.remnawave_user_uuid }}</td>
     <td class="px-5 py-4 whitespace-nowrap">
         {% if k.expiry_date %}

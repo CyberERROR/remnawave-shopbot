@@ -203,7 +203,64 @@
             </div>
         </div>
         <div class="p-5">
-            <div class="h-80"><canvas id="incomeChart"></canvas></div>
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_16rem] gap-4 items-stretch">
+                <div class="h-80 min-w-0"><canvas id="incomeChart"></canvas></div>
+                <div class="relative overflow-hidden rounded-2xl bg-black/25 border border-white/[0.07] p-3.5 min-h-[18rem] flex flex-col gap-3">
+                    <div class="absolute -top-10 -right-10 w-24 h-24 bg-green-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                    <div class="relative z-10 flex-1 min-h-0">
+                        <div class="h-full grid grid-rows-2 gap-2">
+                            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/[0.10] via-white/[0.025] to-transparent border border-emerald-500/[0.14] p-3 flex flex-col justify-between">
+                                <div class="absolute -right-8 -top-8 w-20 h-20 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none"></div>
+                                <div class="relative z-10 flex items-start justify-between gap-2">
+                                    <div class="flex items-start gap-2 min-w-0">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 shrink-0"></span>
+                                        <div class="min-w-0">
+                                            <div class="text-xs font-black text-white uppercase tracking-[0.08em] leading-none">Баланс</div>
+                                            <div class="text-[8px] font-black text-white/35 uppercase tracking-[0.14em] mt-1.5 leading-none">Пополнения</div>
+                                        </div>
+                                    </div>
+                                    <span id="finance-topups-count" class="text-[9px] font-black text-emerald-300 bg-emerald-500/10 border border-emerald-500/15 rounded-md px-1.5 py-0.5 tabular-nums">0 шт.</span>
+                                </div>
+                                <div class="relative z-10">
+                                    <div id="finance-topups-amount" class="text-xl font-black text-emerald-300 tabular-nums tracking-tight">0 ₽</div>
+                                    <div class="mt-2 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                                        <div id="finance-topups-bar" class="h-full w-0 rounded-full bg-emerald-400/70 transition-all duration-500"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500/[0.10] via-white/[0.025] to-transparent border border-sky-500/[0.14] p-3 flex flex-col justify-between">
+                                <div class="absolute -right-8 -top-8 w-20 h-20 bg-sky-400/10 rounded-full blur-2xl pointer-events-none"></div>
+                                <div class="relative z-10 flex items-start justify-between gap-2">
+                                    <div class="flex items-start gap-2 min-w-0">
+                                        <span class="w-2 h-2 rounded-full bg-sky-400 shadow-sm shadow-sky-400/50 shrink-0"></span>
+                                        <div class="min-w-0">
+                                            <div class="text-xs font-black text-white uppercase tracking-[0.08em] leading-none">Подписки</div>
+                                            <div class="text-[8px] font-black text-white/35 uppercase tracking-[0.14em] mt-1.5 leading-none">Покупки</div>
+                                        </div>
+                                    </div>
+                                    <span id="finance-subscriptions-count" class="text-[9px] font-black text-sky-300 bg-sky-500/10 border border-sky-500/15 rounded-md px-1.5 py-0.5 tabular-nums">0 шт.</span>
+                                </div>
+                                <div class="relative z-10">
+                                    <div id="finance-subscriptions-amount" class="text-xl font-black text-sky-300 tabular-nums tracking-tight">0 ₽</div>
+                                    <div class="mt-2 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                                        <div id="finance-subscriptions-bar" class="h-full w-0 rounded-full bg-sky-400/70 transition-all duration-500"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="relative z-10 pt-2.5 border-t border-white/[0.07] space-y-1.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[9px] font-black text-white/25 uppercase tracking-[0.16em]">Всего операций</span>
+                            <span id="finance-total-count" class="text-xs font-black text-white/70 tabular-nums">0 шт.</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[9px] font-black text-white/25 uppercase tracking-[0.16em]">Итого</span>
+                            <span id="finance-total-amount" class="text-sm font-black text-green-400 tabular-nums">0 ₽</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -744,6 +801,40 @@
         };
 
         let currentIncomePeriod = '30d';
+        const incomePeriodLabels = {
+            today: 'Сегодня',
+            '7d': '7 дней',
+            '30d': '30 дней',
+            '3m': '3 месяца',
+            '6m': '6 месяцев',
+            '12m': '1 год',
+            all: 'Все время'
+        };
+        const formatRub = (value) => `${Number(value || 0).toLocaleString('ru-RU')} ₽`;
+        const formatCount = (value) => `${Number(value || 0).toLocaleString('ru-RU')} шт.`;
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+        const updateFinanceStats = (finance) => {
+            const topups = finance?.topups || {};
+            const subscriptions = finance?.subscriptions || {};
+            const total = finance?.total || {};
+            const totalAmount = Number(total.amount || 0);
+            const topupsPercent = totalAmount > 0 ? Math.min(100, Math.max(0, Number(topups.amount || 0) / totalAmount * 100)) : 0;
+            const subscriptionsPercent = totalAmount > 0 ? Math.min(100, Math.max(0, Number(subscriptions.amount || 0) / totalAmount * 100)) : 0;
+            setText('finance-topups-amount', formatRub(topups.amount));
+            setText('finance-topups-count', formatCount(topups.count));
+            setText('finance-subscriptions-amount', formatRub(subscriptions.amount));
+            setText('finance-subscriptions-count', formatCount(subscriptions.count));
+            setText('finance-total-count', formatCount(total.count));
+            setText('finance-total-amount', formatRub(total.amount));
+            setText('period-total', formatRub(total.amount));
+            const topupsBar = document.getElementById('finance-topups-bar');
+            const subscriptionsBar = document.getElementById('finance-subscriptions-bar');
+            if (topupsBar) topupsBar.style.width = `${topupsPercent}%`;
+            if (subscriptionsBar) subscriptionsBar.style.width = `${subscriptionsPercent}%`;
+        };
 
         window.setIncomePeriod = function (period, btn) {
             currentIncomePeriod = period;
@@ -782,6 +873,7 @@
                 update('newKeysChart', data.keys);
                 updateIncomeChart(data.income);
             }
+            updateFinanceStats(data.finance);
         };
 
         const methodColors = {
@@ -1330,7 +1422,7 @@
             const actionsTd = `<td class="px-4 py-2 text-center"><a href="${profileUrl}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/15 text-primary hover:bg-primary/20 text-[10px] font-bold transition-all" title="Открыть профиль пользователя в разделе управления пользователями"><span class="material-symbols-outlined text-[14px]">open_in_new</span>Профиль</a></td>`;
 
             return `<tr class="hover:bg-white/[0.035] transition-colors group">
-                <td class="px-4 py-2"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-white/5 text-primary border border-primary/15 flex items-center justify-center font-black text-[11px] uppercase shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform cursor-help" title="Аватар пользователя: первая буква username или ID">${escapeGroupHtml(charLetter)}</div><div class="flex flex-col min-w-0"><span class="text-xs font-bold text-white truncate cursor-help" title="Username пользователя в Telegram или fallback по ID">${escapeGroupHtml(username)}</span><button type="button" class="text-left text-[9px] text-white/35 hover:text-primary transition-colors font-mono cursor-help" title="Telegram ID пользователя. Нажмите, чтобы скопировать" onclick="copySingleId(event, '${escapeGroupHtml(uid)}')">tg id: ${escapeGroupHtml(uid)}</button></div></div></td>
+                <td class="px-4 py-2"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-white/5 text-primary border border-primary/15 flex items-center justify-center font-black text-[11px] uppercase shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform cursor-help" title="Аватар пользователя: первая буква username или ID">${escapeGroupHtml(charLetter)}</div><div class="flex flex-col min-w-0"><span class="text-xs font-bold text-white truncate cursor-help demo-blur-username" title="Username пользователя в Telegram или fallback по ID">${escapeGroupHtml(username)}</span><button type="button" class="text-left text-[9px] text-white/35 hover:text-primary transition-colors font-mono cursor-help" title="Telegram ID пользователя. Нажмите, чтобы скопировать" onclick="copySingleId(event, '${escapeGroupHtml(uid)}')">tg id: ${escapeGroupHtml(uid)}</button></div></div></td>
                 <td class="px-4 py-2">${balanceHTML}</td>
                 <td class="px-4 py-2">${keyInfo}</td>
                 ${monthsTd}

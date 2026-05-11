@@ -6,8 +6,8 @@
                 {% if trial.username %}{{ trial.username[0] | upper }}{% else %}U{% endif %}
             </div>
             <div class="min-w-0">
-                <div class="text-xs font-bold text-white truncate max-w-[110px]">
-                    {% if trial.username %}{{ trial.username }}{% else %}User {{ trial.telegram_id }}{% endif %}
+                <div class="text-xs font-bold text-white truncate max-w-[110px] demo-blur-username">
+                    {% if trial.username %}@{{ trial.username }}{% else %}User {{ trial.telegram_id }}{% endif %}
                 </div>
                 <button type="button" class="text-[9px] text-white/25 hover:text-orange-400 transition-colors font-mono tracking-wider" onclick="copySingleId(event, '{{ trial.telegram_id }}')" title="Скопировать ID">{{ trial.telegram_id }}</button>
             </div>

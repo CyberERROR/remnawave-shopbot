@@ -72,7 +72,7 @@ def calculate_webapp_price(price: float, user_id: int) -> float:
                 price -= price * (discount_percent / 100)
                 logger.info(f"[WEBAPP] - Применена скидка продавца {discount_percent}% для {user_id}")
         
-        if user.get('referred_by') and user.get('total_spent', 0) == 0 and not get_user_keys(user_id):
+        if user.get('referred_by') and user.get('total_spent', 0) == 0 and not [k for k in get_user_keys(user_id) if not (k.get('key_email') or '').startswith('trial_')]:
             ref_discount = get_setting("referral_discount")
             if ref_discount:
                 try:
@@ -854,6 +854,8 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
                 raw_price = float(plan.get('price', 0))
                 final_price = int(calculate_webapp_price(raw_price, user_id))
                 months = int(plan.get('months') or 1)
+                duration_days = int(plan.get('duration_days') or 0) or (months * 30)
+                month_factor = round(duration_days / 30.0, 4)
             except (ValueError, TypeError):
                 continue
 
@@ -866,7 +868,7 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
             <button
                 class="plan-btn glass-card border border-white/10 rounded-2xl p-3.5 flex flex-col items-center justify-center text-center transition-all active:scale-95 hover:border-primary/40 hover:bg-white/5 group{span_class}"
                 data-host="{host_name}" data-plan-id="{plan['plan_id']}" data-price="{final_price}" data-plan-name="{plan.get('plan_name', '')}"
-                data-months="{months}"
+                data-months="{months}" data-month-factor="{month_factor}"
                 onclick="selectPlan(this)">
                 <span
                     class="plan-label text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 group-hover:text-gray-300 transition-colors">{months} {month_label}</span>
@@ -1621,6 +1623,8 @@ async def api_get_payment_methods(req: PaymentMethodsRequest):
         methods.append({"id": "pay_yookassa", "name": label, "icon": "credit_card"})
 
     # 2. Platega
+    if (get_setting("platega_payform_enabled") or "false").strip().lower() == "true":
+        methods.append({"id": "pay_platega_payform", "name": "Platega", "icon": "credit_card"})
     if (get_setting("platega_enabled") or "false").strip().lower() == "true":
         methods.append({"id": "pay_platega", "name": "СБП / Platega", "icon": "payments"})
     if (get_setting("platega_crypto_enabled") or "false").strip().lower() == "true":
@@ -1674,6 +1678,8 @@ async def api_create_payment(req: CreatePaymentRequest):
         final_price = calculate_webapp_price(float(plan['price']), user_id) 
         
         months = int(plan.get('months') or 1)
+        duration_days = int(plan.get('duration_days') or 0) or (months * 30)
+        month_factor = duration_days / 30.0
         
         tier_device_count = req.tier_device_count
         tier_price_per_month = req.tier_price
@@ -1730,7 +1736,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                         logger.error(f"[WEBAPP] - Ошибка HWID: {e}")
         
         if tier_price_per_month > 0:
-            final_price += tier_price_per_month * months
+            final_price += tier_price_per_month * month_factor
             
         # --- APPLY PROMO DISCOUNT ---
         if req.promo_code:
@@ -1776,6 +1782,30 @@ async def api_create_payment(req: CreatePaymentRequest):
             except Exception as e:
                 logger.error(f"[WEBAPP] - Ошибка YooKassa для {user_id}: {e}")
                 return {"ok": False, "error": f"Ошибка YooKassa: {e}"}
+
+        # --- Platega Payform ---
+        elif method_id == "pay_platega_payform":
+            mid, key = get_setting("platega_merchant_id"), get_setting("platega_api_key")
+            if not mid or not key: return {"ok": False, "error": "Platega не настроена"}
+            pid = str(uuid.uuid4())
+            meta = {
+                "user_id": user_id, "months": months, "price": float(final_price),
+                "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
+                "plan_id": plan_id, "payment_method": "Platega Payform", "payment_id": pid,
+                "tier_device_count": tier_device_count
+            }
+            create_payload_pending(pid, user_id, float(final_price), meta)
+            desc = f"Order {pid}"
+            try:
+                platega = PlategaAPI(mid, key)
+                _, url = await platega.create_payment_payform(float(final_price), desc, pid, f"https://t.me/{get_setting('telegram_bot_username')}", f"https://t.me/{get_setting('telegram_bot_username')}")
+                if url:
+                    kb = create_payment_keyboard(url)
+                    await _send_telegram_message(user_id, f"<b>Оплата через Platega</b>\n\nСумма: <b>{final_price:.2f} RUB</b>\n\n<i>Счет также доступен в WebApp.</i>", kb)
+                    return {"ok": True, "payment_url": url, "payment_id": pid, "message": "Счёт создан"}
+                return {"ok": False, "error": "Ошибка получения ссылки Platega"}
+            except Exception as e:
+                return {"ok": False, "error": f"Ошибка Platega: {e}"}
 
         # --- Platega ---
         elif method_id == "pay_platega":
@@ -2247,6 +2277,7 @@ async def api_support_create(req: SupportTicketCreateRequest):
                     username_display = f"ID {req.user_id}"
                     
                 import html
+                from shop_bot.data_manager.database import get_admin_ids
                 notification_text = (
                     f"🆕 <b>Новое обращение (WebApp)!</b>\n\n"
                     f"👤 <b>USER:</b> (<code>{req.user_id}</code> - {html.escape(username_display)})\n"
@@ -2256,16 +2287,18 @@ async def api_support_create(req: SupportTicketCreateRequest):
                     f"<blockquote>Тикет открыт через веб-приложение.</blockquote>"
                 )
                 
-                admin_ids_str = get_setting("admin_ids") or ""
-                admin_ids = [aid.strip() for aid in admin_ids_str.split(",") if aid.strip()]
-                for aid in admin_ids:
+                photo_url = "https://github.com/CyberERROR/remnawave-shopbot/blob/main/docs/screenshots/suppshor.png?raw=true"
+                reply_kb = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply_dm_{ticket_id}")]
+                ])
+                for aid in get_admin_ids():
                     try:
-                        await bot.send_message(
+                        await bot.send_photo(
                             chat_id=int(aid),
-                            text=notification_text,
-                            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                                [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply_dm_{ticket_id}")]
-                            ])
+                            photo=photo_url,
+                            caption=notification_text,
+                            parse_mode="HTML",
+                            reply_markup=reply_kb
                         )
                     except Exception:
                         pass
@@ -2303,14 +2336,19 @@ async def api_support_send(req: SupportMessageSendRequest):
                     username_display = f"ID {req.user_id}"
                     
                 import html
+                from shop_bot.data_manager.database import get_admin_ids
                 notification_text = (
-                    f"📨 <b>Новое сообщение (WebApp)!</b>\n\n"
+                    f"✅ <b>Сообщение добавлено в тикет</b>\n\n"
                     f"👤 <b>USER:</b> (<code>{req.user_id}</code> - {html.escape(username_display)})\n"
                     f"📝 <b>ID тикета:</b> <code>#{req.ticket_id}</code>\n"
                     f"💬 <b>Тема:</b> <i>{html.escape(ticket.get('subject', 'Без темы'))}</i>\n\n"
                     f"💌 Сообщения:\n"
                     f"<blockquote>{html.escape(req.message)}</blockquote>"
                 )
+                
+                reply_kb = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply_dm_{req.ticket_id}")]
+                ])
                 
                 forum_chat_id = ticket.get('forum_chat_id')
                 thread_id = ticket.get('message_thread_id')
@@ -2320,24 +2358,22 @@ async def api_support_send(req: SupportMessageSendRequest):
                         await bot.send_message(
                             chat_id=int(forum_chat_id),
                             message_thread_id=int(thread_id),
-                            text=notification_text
+                            text=notification_text,
+                            parse_mode="HTML"
                         )
                     except Exception as e:
                         logger.warning(f"Error mirroring to forum: {e}")
-                else:
-                    admin_ids_str = get_setting("admin_ids") or ""
-                    admin_ids = [aid.strip() for aid in admin_ids_str.split(",") if aid.strip()]
-                    for aid in admin_ids:
-                        try:
-                            await bot.send_message(
-                                chat_id=int(aid),
-                                text=notification_text,
-                                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                                    [InlineKeyboardButton(text="💬 Ответить", callback_data=f"admin_reply_dm_{req.ticket_id}")]
-                                ])
-                            )
-                        except Exception:
-                            pass
+                
+                for aid in get_admin_ids():
+                    try:
+                        await bot.send_message(
+                            chat_id=int(aid),
+                            text=notification_text,
+                            parse_mode="HTML",
+                            reply_markup=reply_kb
+                        )
+                    except Exception:
+                        pass
             finally:
                 await bot.session.close()
                         

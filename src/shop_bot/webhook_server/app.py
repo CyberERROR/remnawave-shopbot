@@ -130,7 +130,7 @@ ALL_SETTINGS_KEYS = [
 
     "yoomoney_api_token", "yoomoney_client_id", "yoomoney_client_secret", "yoomoney_redirect_uri",
     
-    "platega_enabled", "platega_crypto_enabled", "platega_merchant_id", "platega_api_key",
+    "platega_enabled", "platega_crypto_enabled", "platega_payform_enabled", "platega_merchant_id", "platega_api_key",
 
     "main_menu_image",
     "skip_email", "enable_wal_mode",
@@ -1430,6 +1430,14 @@ def create_webhook_app(bot_controller_instance):
             all_keys = get_all_keys()
         except Exception:
             all_keys = []
+        try:
+            users_by_id = {str(u.get('telegram_id')): u.get('username') for u in get_all_users() if u.get('telegram_id')}
+            for key in all_keys:
+                user_id = key.get('user_id')
+                if user_id is not None:
+                    key['username'] = users_by_id.get(str(user_id))
+        except Exception:
+            pass
         
         if filter_mode == 'gift':
             keys = [k for k in all_keys if (k.get('user_id') or 0) == 0 or str(k.get('key_email') or '').lower().startswith('gift')]
@@ -2550,7 +2558,7 @@ def create_webhook_app(bot_controller_instance):
                 update_setting('panel_password', request.form.get('panel_password'))
 
 
-            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled']
+            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'platega_payform_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'demo_mode_enabled']
             for checkbox_key in checkbox_keys:
                 values = request.form.getlist(checkbox_key)
                 value = values[-1] if values else 'false'

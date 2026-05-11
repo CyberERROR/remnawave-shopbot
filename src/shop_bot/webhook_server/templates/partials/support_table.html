@@ -11,7 +11,7 @@
                 {{ ticket.username[0]|upper if ticket.username else 'U' }}
             </div>
             <div class="flex flex-col min-w-0">
-                <span class="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
+                <span class="text-sm font-bold text-white truncate group-hover:text-primary transition-colors demo-blur-username">
                     {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
                 </span>
                 <span class="text-[9px] text-white/20 font-black uppercase tracking-widest">ID: {{ ticket.user_id

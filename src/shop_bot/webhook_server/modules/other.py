@@ -322,20 +322,33 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
             keyboard = None
             if buttons:
                 from aiogram.utils.keyboard import InlineKeyboardBuilder
+                from aiogram.types import InlineKeyboardButton
                 builder = InlineKeyboardBuilder()
+                style_map = {'red': 'danger', 'green': 'success', 'blue': 'primary'}
                 for btn in buttons:
                     btn_text = btn.get('text', '').strip()
                     btn_type = btn.get('type', 'url')
                     if not btn_text: continue
                     
+                    btn_kwargs = {'text': btn_text}
+                    btn_color = btn.get('color', '').strip()
+                    if btn_color and btn_color in style_map:
+                        btn_kwargs['style'] = style_map[btn_color]
+                    
                     if btn_type == 'promo':
                         promo_val = btn.get('value', '').strip()
-                        cb_data = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
-                        builder.button(text=btn_text, callback_data=cb_data)
+                        btn_kwargs['callback_data'] = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
                     else:
                         btn_url = btn.get('url', '').strip()
                         if btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
-                            builder.button(text=btn_text, url=btn_url)
+                            btn_kwargs['url'] = btn_url
+                        else:
+                            continue
+                    try:
+                        builder.add(InlineKeyboardButton(**btn_kwargs))
+                    except Exception:
+                        btn_kwargs.pop('style', None)
+                        builder.add(InlineKeyboardButton(**btn_kwargs))
                 builder.adjust(1)
                 keyboard = builder.as_markup() if builder.export() else None
             
@@ -566,20 +579,33 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             keyboard = None
             if buttons:
                 from aiogram.utils.keyboard import InlineKeyboardBuilder
+                from aiogram.types import InlineKeyboardButton
                 builder = InlineKeyboardBuilder()
+                style_map = {'red': 'danger', 'green': 'success', 'blue': 'primary'}
                 for btn in buttons:
                     btn_text = btn.get('text', '').strip()
                     btn_type = btn.get('type', 'url')
                     if not btn_text: continue
                     
+                    btn_kwargs = {'text': btn_text}
+                    btn_color = btn.get('color', '').strip()
+                    if btn_color and btn_color in style_map:
+                        btn_kwargs['style'] = style_map[btn_color]
+                    
                     if btn_type == 'promo':
                         promo_val = btn.get('value', '').strip()
-                        cb_data = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
-                        builder.button(text=btn_text, callback_data=cb_data)
+                        btn_kwargs['callback_data'] = f"promo_uni:{promo_val}" if promo_val else "promo_uni"
                     else:
                         btn_url = btn.get('url', '').strip()
                         if btn_url and (btn_url.startswith('http://') or btn_url.startswith('https://')):
-                            builder.button(text=btn_text, url=btn_url)
+                            btn_kwargs['url'] = btn_url
+                        else:
+                            continue
+                    try:
+                        builder.add(InlineKeyboardButton(**btn_kwargs))
+                    except Exception:
+                        btn_kwargs.pop('style', None)
+                        builder.add(InlineKeyboardButton(**btn_kwargs))
                 builder.adjust(1)
                 keyboard = builder.as_markup() if builder.export() else None
             

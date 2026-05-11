@@ -979,11 +979,12 @@
                 refs = (data && data.ok) ? (data.items || []) : [];
             } catch (_) { }
 
+            document.getElementById('bm-user').classList.add('demo-blur-username');
             document.getElementById('bm-user').textContent = `@${uname} (#${uid})`;
             document.getElementById('bm-balance').textContent = balance;
             document.getElementById('bm-form').action = `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
             document.getElementById('bm-refcount').textContent = refs.length;
-            document.getElementById('bm-reflist').innerHTML = refs.map(r => `<li>#${r.telegram_id} — @${r.username || 'N/A'} · ${r.registration_date}</li>`).join('');
+            document.getElementById('bm-reflist').innerHTML = refs.map(r => `<li>#${r.telegram_id} — <span class="demo-blur-username">@${r.username || 'N/A'}</span> · ${r.registration_date}</li>`).join('');
 
             const deltaInput = document.querySelector('#bm-form input[name="delta"]');
             if (deltaInput) {
@@ -1226,6 +1227,7 @@
                     }
 
                     document.getElementById('udm-telegram-id').textContent = data.user.telegram_id || 'N/A';
+                    document.getElementById('udm-username').classList.add('demo-blur-username');
                     document.getElementById('udm-username').textContent = '@' + (data.user.username || 'N/A');
                     document.getElementById('udm-registration').textContent = data.user.registration_date || 'N/A';
                     document.getElementById('udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' ₽';
@@ -1541,7 +1543,7 @@
                                        RF
                                     </div>
                                     <div class="flex flex-col truncate">
-                                        <span class="text-white font-bold text-xs tracking-tight group-hover:text-primary transition-colors">@${r.username || 'Без юзернейма'}</span>
+                                        <span class="text-white font-bold text-xs tracking-tight group-hover:text-primary transition-colors demo-blur-username">@${r.username || 'Без юзернейма'}</span>
                                         <span class="text-white/40 text-[10px] font-mono">#${r.telegram_id}</span>
                                     </div>
                                 </div>

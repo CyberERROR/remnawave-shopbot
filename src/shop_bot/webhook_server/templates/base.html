@@ -79,6 +79,11 @@
             --site-scale: 0.85;
         }
 
+        .demo-username-blur {
+            filter: blur(4px);
+            user-select: none;
+        }
+
         html {
             font-size: calc(15px * var(--site-scale));
         }
@@ -1561,6 +1566,112 @@
                 wrap.dataset.initialized = 'true';
             };
             // ===== Конец инициализации select =====
+
+            (function () {
+                const demoModeEnabled = "{{ settings.demo_mode_enabled or '0' }}" === "1";
+                if (!demoModeEnabled) return;
+
+                const maskDigits = (value) => String(value || '').replace(/[1-5]/g, '9');
+                const ignoredTags = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION']);
+                const blurUsername = (el) => {
+                    if (!el || el.dataset.demoUsernameBlurred === '1') return;
+                    const text = (el.textContent || '').trim();
+                    if (!text.startsWith('@') || text.length < 2) return;
+                    el.innerHTML = '@<span class="demo-username-blur">' + text.slice(1).replace(/[&<>"']/g, ch => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    }[ch])) + '</span>';
+                    el.dataset.demoUsernameBlurred = '1';
+                };
+                const blurUsernames = (root) => {
+                    if (!root) return;
+                    if (root.nodeType === Node.ELEMENT_NODE && root.classList && root.classList.contains('demo-blur-username')) blurUsername(root);
+                    if (root.querySelectorAll) root.querySelectorAll('.demo-blur-username').forEach(blurUsername);
+                };
+                const blurSensitive = (el) => {
+                    if (!el || el.dataset.demoSensitiveBlurred === '1') return;
+                    el.classList.add('demo-username-blur');
+                    el.dataset.demoSensitiveBlurred = '1';
+                };
+                const blurSensitiveValues = (root) => {
+                    if (!root) return;
+                    if (root.nodeType === Node.ELEMENT_NODE && root.classList && root.classList.contains('demo-blur-sensitive')) blurSensitive(root);
+                    if (root.querySelectorAll) root.querySelectorAll('.demo-blur-sensitive').forEach(blurSensitive);
+                };
+                const blurAmount = (el) => {
+                    if (!el || el.dataset.demoAmountBlurred === '1') return;
+                    const text = (el.textContent || '').trim();
+                    const match = text.match(/^([\d\s,.]+)(\s*\S+)$/);
+                    if (!match) return;
+                    const [, numPart, currencyPart] = match;
+                    el.innerHTML = '<span class="demo-username-blur">' + numPart.replace(/[&<>"']/g, ch => ({
+                        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                    })[ch]) + '</span>' + currencyPart;
+                    el.dataset.demoAmountBlurred = '1';
+                };
+                const blurAmounts = (root) => {
+                    if (!root) return;
+                    if (root.nodeType === Node.ELEMENT_NODE && root.classList && root.classList.contains('demo-blur-amount')) blurAmount(root);
+                    if (root.querySelectorAll) root.querySelectorAll('.demo-blur-amount').forEach(blurAmount);
+                };
+                const maskTextNode = (node) => {
+                    const next = maskDigits(node.nodeValue);
+                    if (node.nodeValue !== next) node.nodeValue = next;
+                };
+                const maskElement = (root) => {
+                    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                        acceptNode(node) {
+                            const parent = node.parentElement;
+                            if (!parent || ignoredTags.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
+                            return /[1-5]/.test(node.nodeValue || '') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+                        }
+                    });
+                    const nodes = [];
+                    while (walker.nextNode()) nodes.push(walker.currentNode);
+                    nodes.forEach(maskTextNode);
+                };
+                const patchCanvasText = (proto) => {
+                    if (!proto || proto.__demoModePatched) return;
+                    proto.__demoModePatched = true;
+                    ['fillText', 'strokeText'].forEach(method => {
+                        const original = proto[method];
+                        if (typeof original !== 'function') return;
+                        proto[method] = function (text, ...args) {
+                            return original.call(this, maskDigits(text), ...args);
+                        };
+                    });
+                };
+
+                patchCanvasText(window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype);
+                document.addEventListener('DOMContentLoaded', () => {
+                    blurUsernames(document.body);
+                    blurSensitiveValues(document.body);
+                    blurAmounts(document.body);
+                    maskElement(document.body);
+                    const observer = new MutationObserver((mutations) => {
+                        mutations.forEach(mutation => {
+                            mutation.addedNodes.forEach(node => {
+                                if (node.nodeType === Node.TEXT_NODE) maskTextNode(node);
+                                else if (node.nodeType === Node.ELEMENT_NODE) {
+                                    blurUsernames(node);
+                                    blurSensitiveValues(node);
+                                    blurAmounts(node);
+                                    maskElement(node);
+                                }
+                            });
+                            if (mutation.type === 'characterData') {
+                                const parent = mutation.target.parentElement;
+                                if (parent && parent.classList && parent.classList.contains('demo-blur-username')) blurUsername(parent);
+                                maskTextNode(mutation.target);
+                            }
+                        });
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+                });
+            })();
 
             // ===== ОБНОВЛЕНИЕ КОНТЕЙНЕРОВ ДАННЫХ =====
             // Функция для динамической перезагрузки контента по ID

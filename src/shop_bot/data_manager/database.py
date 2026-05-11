@@ -611,6 +611,7 @@ def initialize_db():
                 "stealth_login_enabled": "0",
                 "stealth_login_hotkey": "ctrl+b",
                 "dashboard_layout": "sidebar",
+                "demo_mode_enabled": "0",
             }
             _ensure_default_values(cursor, "bot_settings", default_settings)
             conn.commit()
@@ -1024,7 +1025,8 @@ def run_migration():
             _ensure_default_values(cursor, "bot_settings", {
                 "skip_email": "0",
                 "enable_wal_mode": "0",
-                "dashboard_layout": "sidebar"
+                "dashboard_layout": "sidebar",
+                "demo_mode_enabled": "0"
             })
             
             _ensure_default_values(cursor, "other", {
@@ -2867,8 +2869,8 @@ def get_total_spent_sum() -> float:
         """
         SELECT COALESCE(SUM(amount_rub), 0.0) as s
         FROM transactions
-        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
-          AND LOWER(COALESCE(payment_method, '')) <> 'balance'
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success', 'succeeded')
+          AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin', 'referral')
         """,
         (),
         "Не удалось получить общую сумму расходов"
@@ -2879,14 +2881,22 @@ def get_total_spent_sum() -> float:
 
 # ===== GET_TOTAL_SPENT_BY_METHOD =====
 def get_total_spent_by_method(payment_method: str) -> float:
+    method_norm = (payment_method or '').strip().lower()
+    method_aliases = {
+        'platega': ('platega', 'platega payform', 'platega crypto'),
+        'ton connect': ('ton connect', 'ton'),
+    }
+    methods = method_aliases.get(method_norm, (method_norm,))
+    placeholders = ','.join('?' for _ in methods)
     val = _fetch_val(
-        """
+        f"""
         SELECT COALESCE(SUM(amount_rub), 0.0)
         FROM transactions
-        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
-          AND LOWER(payment_method) = LOWER(?)
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success', 'succeeded')
+          AND LOWER(COALESCE(payment_method, '')) IN ({placeholders})
+          AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin', 'referral')
         """,
-        (payment_method,),
+        methods,
         0.0,
         f"Не удалось получить доход по методу {payment_method}"
     )
@@ -2896,8 +2906,8 @@ def get_total_spent_by_method(payment_method: str) -> float:
 
 # ===== GET_TODAY_INCOME_BY_CURRENCY =====
 def get_today_income_by_currency() -> dict:
-    rub_methods = ('yookassa', 'platega')
-    crypto_methods = ('telegram stars', 'cryptobot', 'heleket', 'ton connect')
+    rub_methods = ('yookassa', 'platega', 'platega payform')
+    crypto_methods = ('telegram stars', 'cryptobot', 'heleket', 'ton connect', 'platega crypto')
     rub = _fetch_val(
         f"""
         SELECT COALESCE(SUM(amount_rub), 0.0)
@@ -3288,7 +3298,7 @@ def update_key_status_from_server(key_email: str, client_data) -> bool:
 
 # ===== GET_DAILY_STATS_FOR_CHARTS =====
 def get_daily_stats_for_charts(days: int = 30) -> dict:
-    stats = {'users': {}, 'keys': {}, 'income': {}}
+    stats = {'users': {}, 'keys': {}, 'income': {}, 'finance': {'topups': {'amount': 0.0, 'count': 0}, 'subscriptions': {'amount': 0.0, 'count': 0}, 'total': {'amount': 0.0, 'count': 0}}}
     time_filter = ""
     params = []
     group_fmt = "%Y-%m-%d"
@@ -3305,7 +3315,7 @@ def get_daily_stats_for_charts(days: int = 30) -> dict:
         if is_count:
             query = f"SELECT STRFTIME('{group_fmt}', {date_col}) AS period, COUNT(*) as cnt FROM {table} {where_clause} GROUP BY period ORDER BY period"
         else:
-            income_filter = "LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success') AND LOWER(COALESCE(payment_method, '')) <> 'balance'"
+            income_filter = "LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success') AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin', 'referral')"
             if where_clause:
                 where_clause += f" AND {income_filter}"
             else:
@@ -3327,6 +3337,43 @@ def get_daily_stats_for_charts(days: int = 30) -> dict:
         if period not in stats['income']:
             stats['income'][period] = {}
         stats['income'][period][method or 'Other'] = float(amount) if amount else 0.0
+    
+    tx_where = "WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')"
+    tx_params = []
+    if days > 0:
+        tx_where += " AND created_date >= datetime('now', '+3 hours', ?)"
+        tx_params.append(f'-{days} days')
+    rows = _fetch_list(
+        f"""
+        SELECT amount_rub, payment_method, metadata
+        FROM transactions
+        {tx_where}
+        """,
+        tuple(tx_params),
+        "Не удалось получить финансовую статистику"
+    )
+    for row in rows:
+        amount = float(row['amount_rub'] or 0.0)
+        payment_method = str(row['payment_method'] or '').strip().lower()
+        try:
+            metadata = json.loads(row['metadata'] or '{}')
+            if not isinstance(metadata, dict):
+                metadata = {}
+        except Exception:
+            metadata = {}
+        action = str(metadata.get('action') or '').strip().lower()
+        reason = str(metadata.get('reason') or '').strip().lower()
+        is_income_method = payment_method not in ('balance', 'admin', 'referral')
+        is_topup = action in ('topup', 'top_up') or reason == 'external_balance_top_up'
+        is_subscription = action in ('new', 'extend') or reason == 'subscription_purchase_or_extend' or any(metadata.get(k) for k in ('plan_id', 'key_id', 'host_name', 'host', 'customer_email')) or is_income_method
+        if is_topup and is_income_method:
+            stats['finance']['topups']['amount'] += abs(amount)
+            stats['finance']['topups']['count'] += 1
+        elif is_subscription and is_income_method:
+            stats['finance']['subscriptions']['amount'] += abs(amount)
+            stats['finance']['subscriptions']['count'] += 1
+    stats['finance']['total']['amount'] = stats['finance']['topups']['amount'] + stats['finance']['subscriptions']['amount']
+    stats['finance']['total']['count'] = stats['finance']['topups']['count'] + stats['finance']['subscriptions']['count']
     return stats
 # ==========================
 
@@ -3853,30 +3900,47 @@ def get_dashboard_user_groups() -> dict:
         "active_keys": []
     }
     
+    def purchase_condition(alias: str) -> str:
+        meta_expr = f"CASE WHEN json_valid(COALESCE({alias}.metadata, '{{}}')) THEN COALESCE({alias}.metadata, '{{}}') ELSE '{{}}' END"
+        return f"""
+        LOWER(COALESCE({alias}.status, '')) IN ('paid', 'completed', 'success', 'succeeded')
+        AND LOWER(COALESCE({alias}.payment_method, '')) NOT IN ('admin', 'referral')
+        AND (
+            LOWER(COALESCE(json_extract({meta_expr}, '$.action'), '')) IN ('new', 'extend')
+            OR LOWER(COALESCE(json_extract({meta_expr}, '$.reason'), '')) = 'subscription_purchase_or_extend'
+            OR json_extract({meta_expr}, '$.plan_id') IS NOT NULL
+            OR json_extract({meta_expr}, '$.key_id') IS NOT NULL
+            OR json_extract({meta_expr}, '$.host_name') IS NOT NULL
+            OR json_extract({meta_expr}, '$.host') IS NOT NULL
+            OR json_extract({meta_expr}, '$.customer_email') IS NOT NULL
+        )
+        """
+    
     # 1. Не купил ключ (нет транзакций 'paid' и нет ключей)
-    q_no = """
+    q_no = f"""
     SELECT u.telegram_id, u.username, u.balance,
-           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+           (SELECT COALESCE(SUM(t2.amount_rub), 0) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND {purchase_condition('t2')}) as total_spent
     FROM users u
-    WHERE NOT EXISTS (SELECT 1 FROM vpn_keys k WHERE k.user_id = u.telegram_id)
-      AND NOT EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.telegram_id AND t.status = 'paid')
+    WHERE NOT EXISTS (SELECT 1 FROM vpn_keys k WHERE k.user_id = u.telegram_id AND COALESCE(k.key_email, '') NOT LIKE 'trial_%')
+      AND NOT EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.telegram_id AND {purchase_condition('t')})
     """
     groups["no_purchases"] = _fetch_list(q_no, (), "Ошибка получения no_purchases")
     
     # 2. Покупали, но сейчас нет активных (истекли или нет ключей, но есть транзакции)
-    q_inactive = """
+    q_inactive = f"""
     SELECT u.telegram_id, u.username, u.balance,
            (SELECT SUM(COALESCE(
                CAST(json_extract(t2.metadata, '$.months') AS INTEGER),
                (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t2.metadata, '$.plan_id') AS INTEGER)),
                0
-           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as months_bought,
-           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND {purchase_condition('t2')}) as months_bought,
+           (SELECT COALESCE(SUM(t2.amount_rub), 0) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND {purchase_condition('t2')}) as total_spent
     FROM users u
-    WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.telegram_id AND t.status = 'paid')
+    WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.telegram_id AND {purchase_condition('t')})
       AND NOT EXISTS (
           SELECT 1 FROM vpn_keys k 
           WHERE k.user_id = u.telegram_id 
+            AND COALESCE(k.key_email, '') NOT LIKE 'trial_%'
             AND (k.expire_at IS NULL OR k.expire_at > datetime('now', '+3 hours'))
       )
     """
@@ -3889,46 +3953,46 @@ def get_dashboard_user_groups() -> dict:
                CAST(json_extract(t2.metadata, '$.months') AS INTEGER),
                (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t2.metadata, '$.plan_id') AS INTEGER)),
                0
-           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as months_bought,
-           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND """ + purchase_condition('t2') + """) as months_bought,
+           (SELECT COALESCE(SUM(t2.amount_rub), 0) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND """ + purchase_condition('t2') + """) as total_spent
     FROM users u
     JOIN vpn_keys k ON k.user_id = u.telegram_id
-    WHERE k.key_email LIKE 'trial_%' 
+    WHERE COALESCE(k.key_email, '') LIKE 'trial_%' 
       AND (k.expire_at IS NULL OR k.expire_at > datetime('now', '+3 hours'))
     GROUP BY u.telegram_id
     """
     groups["trials"] = _fetch_list(q_trials, (), "Ошибка получения trials")
     
     # 4. Купили ключ (есть активный нетриальный ключ)
-    q_active_buyers = """
+    q_active_buyers = f"""
     SELECT u.telegram_id, u.username, u.balance, k.key_id, k.expire_at,
            (SELECT SUM(COALESCE(
                CAST(json_extract(t2.metadata, '$.months') AS INTEGER),
                (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t2.metadata, '$.plan_id') AS INTEGER)),
                0
-           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as months_bought,
-           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND {purchase_condition('t2')}) as months_bought,
+           (SELECT COALESCE(SUM(t2.amount_rub), 0) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND {purchase_condition('t2')}) as total_spent
     FROM users u
     JOIN vpn_keys k ON k.user_id = u.telegram_id
-    WHERE k.key_email NOT LIKE 'trial_%' 
+    WHERE COALESCE(k.key_email, '') NOT LIKE 'trial_%' 
       AND (k.expire_at IS NULL OR k.expire_at > datetime('now', '+3 hours'))
     GROUP BY u.telegram_id
     """
     groups["active_buyers"] = _fetch_list(q_active_buyers, (), "Ошибка получения active_buyers")
     
     # 5. Всего активных ключей (действующих)
-    q_active_keys = """
+    q_active_keys = f"""
     SELECT k.key_id, k.user_id as telegram_id, k.host_name, k.expire_at, u.username, u.balance,
            (SELECT SUM(COALESCE(
                CAST(json_extract(t2.metadata, '$.months') AS INTEGER),
                (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t2.metadata, '$.plan_id') AS INTEGER)),
                0
-           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as months_bought,
-           (SELECT SUM(t2.amount_rub) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND t2.status = 'paid') as total_spent
+           )) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND {purchase_condition('t2')}) as months_bought,
+           (SELECT COALESCE(SUM(t2.amount_rub), 0) FROM transactions t2 WHERE t2.user_id = u.telegram_id AND {purchase_condition('t2')}) as total_spent
     FROM vpn_keys k
     LEFT JOIN users u ON k.user_id = u.telegram_id
     WHERE (k.expire_at IS NULL OR k.expire_at > datetime('now', '+3 hours'))
-      AND k.key_email NOT LIKE 'trial_%'
+      AND COALESCE(k.key_email, '') NOT LIKE 'trial_%'
     """
     groups["active_keys"] = _fetch_list(q_active_keys, (), "Ошибка получения active_keys")
     

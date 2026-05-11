@@ -241,7 +241,7 @@ def calculate_order_price(plan: dict, user_data: dict, promo_code: str = None, p
     except Exception as e:
         logger.error(f"Error in calculate_order_price discount block: {e}")
 
-    if user_data.get('referred_by') and user_data.get('total_spent', 0) == 0 and not get_user_keys(uid):
+    if user_data.get('referred_by') and user_data.get('total_spent', 0) == 0 and not [k for k in get_user_keys(uid) if not (k.get('key_email') or '').startswith('trial_')]:
         try:
             discount_percentage = Decimal(get_setting("referral_discount") or "0")
             if discount_percentage > 0:
@@ -310,7 +310,7 @@ async def create_yookassa_payment_async(payload: dict, idempotence_key: str, sho
 # Генерирует соответствующую inline-клавиатуру в зависимости от выбранного метода платежа
 def get_payment_keyboard(payment_method: str, pay_url: str = None, invoice_id: int = None, back_callback: str = "back_to_main_menu"):
     if payment_method == 'CryptoBot': return keyboards.create_cryptobot_payment_keyboard(pay_url, invoice_id, back_callback)
-    elif payment_method in ['YooMoney', 'Heleket', 'Platega', 'Platega Crypto', 'YooKassa']:
+    elif payment_method in ['YooMoney', 'Heleket', 'Platega', 'Platega Payform', 'Platega Crypto', 'YooKassa']:
          if payment_method == 'YooMoney' and invoice_id: return keyboards.create_yoomoney_payment_keyboard(pay_url, str(invoice_id), back_callback)
          return keyboards.create_payment_keyboard(pay_url, back_callback)
     elif payment_method == 'TON Connect': return keyboards.create_ton_connect_keyboard(pay_url, back_callback)
@@ -1384,6 +1384,59 @@ def get_user_router() -> Router:
             await state.clear()
     # ===== Конец функции pay_heleket_handler =====
 
+    # ===== ОПЛАТА ПОДПИСКИ ЧЕРЕЗ PLATEGA (PAY-FORM) =====
+    # Создает ссылку на единую платёжную форму Platega (v2 API, пользователь выбирает метод на стороне Platega)
+    @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_platega_payform")
+    @anti_spam
+    async def pay_platega_payform_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer("⏳ Генерация ссылки Platega...")
+        data = await state.get_data()
+        plan_id = data.get('plan_id')
+        
+        if not plan_id:
+            logger.error(f"Platega Payform: Отсутствует plan_id для {callback.from_user.id}")
+            await smart_edit_message(callback.message, "❌ Ошибка: Тариф не выбран.")
+            await state.clear()
+            return
+        
+        plan = get_plan_by_id(plan_id)
+        if not plan:
+            logger.error(f"Platega Payform: Тариф {plan_id} не найден.")
+            await smart_edit_message(callback.message, "❌ Выбранный тариф недоступен.")
+            await state.clear()
+            return
+        
+        merchant_id, api_key = get_setting("platega_merchant_id"), get_setting("platega_api_key")
+        if not merchant_id or not api_key:
+            await smart_edit_message(callback.message, "⚠️ Сервис Platega временно отключен.")
+            await state.clear()
+            return
+            
+        user_id, user_data = callback.from_user.id, get_user(callback.from_user.id)
+        price_rub, months = Decimal(str(data.get('final_price', plan['price']))), int(plan['months'])
+        logger.info(f"Оплата (Platega Payform): пользователь {user_id}, план {plan_id}, сумма {price_rub} RUB, действие {data.get('action')}")
+        
+        try:
+            payment_id, metadata = await create_pending_payment(user_id=user_id, amount=float(price_rub), payment_method="Platega Payform", action=data.get('action'), metadata_source=data, plan_id=plan_id, months=months)
+            platega = PlategaAPI(merchant_id, api_key)
+            description_str = get_transaction_comment(callback.from_user, 'new' if data.get('action') == 'new' else 'extend', months, data.get('host_name'))
+
+            _, payment_url = await platega.create_payment_payform(amount=float(price_rub), description=description_str, payment_id=payment_id, return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}", failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}")
+            
+            if payment_url:
+                payment_image = get_setting("payment_image")
+                logger.info(f"Platega Payform: Ссылка на оплату для пользователя {user_id} сформирована.")
+                await smart_edit_message(callback.message, "💳 <b>Оплата через Platega</b>\nНажмите на кнопку ниже для перехода к оплате:", get_payment_keyboard("Platega", payment_url, back_callback="back_to_payment_options"), payment_image)
+            else:
+                logger.warning(f"Platega Payform: Ошибка генерации ссылки для пользователя {user_id}.")
+                await smart_edit_message(callback.message, "❌ Не удалось создать ссылку Platega. Выберите другой метод.")
+                await state.clear()
+        except Exception as e:
+            logger.error(f"Platega Payform Ошибка: {e}", exc_info=True)
+            await smart_edit_message(callback.message, "⚠️ Внутренняя ошибка при создании платежа Platega.")
+            await state.clear()
+    # ===== Конец функции pay_platega_payform_handler =====
+
     # ===== ОПЛАТА ПОДПИСКИ ЧЕРЕЗ PLATEGA =====
     # Создает ссылку на оплату через систему СБП (система быстрых платежей) Platega
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_platega")
@@ -1486,6 +1539,41 @@ def get_user_router() -> Router:
             await smart_edit_message(callback.message, "⚠️ Внутренняя ошибка при создании платежа Platega Crypto.")
             await state.clear()
     # ===== Конец функции pay_platega_crypto_handler =====
+
+    # ===== ПОПОЛНЕНИЕ БАЛАНСА ЧЕРЕЗ PLATEGA (PAY-FORM) =====
+    # Формирует запрос на пополнение через единую платёжную форму Platega (v2 API)
+    @user_router.callback_query(TopUpProcess.waiting_for_topup_method, F.data == "topup_pay_platega_payform")
+    @anti_spam
+    async def topup_platega_payform_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer("⏳ Генерация ссылки Platega...")
+        data = await state.get_data()
+        user_id, amount_rub = callback.from_user.id, Decimal(str(data.get('topup_amount', 0)))
+        merchant_id, api_key = get_setting("platega_merchant_id"), get_setting("platega_api_key")
+        
+        if not merchant_id or not api_key or amount_rub <= 0:
+            await smart_edit_message(callback.message, "⚠️ Оплата через Platega временно недоступна.")
+            await state.clear()
+            return
+        
+        try:
+            payment_id, metadata = await create_pending_payment(user_id=user_id, amount=float(amount_rub), payment_method="Platega Payform", action="top_up", metadata_source=data)
+            logger.info(f"Пополнение (Platega Payform): пользователь {user_id}, сумма {amount_rub} RUB")
+            platega = PlategaAPI(merchant_id, api_key)
+            description_str = get_transaction_comment(callback.from_user, 'topup', f"{amount_rub:.2f}")
+
+            _, payment_url = await platega.create_payment_payform(amount=float(amount_rub), description=description_str, payment_id=payment_id, return_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}", failed_url=f"https://t.me/{TELEGRAM_BOT_USERNAME}")
+            
+            if payment_url:
+                payment_image = get_setting("payment_image")
+                await smart_edit_message(callback.message, "💳 <b>Пополнение через Platega</b>\nНажмите на кнопку ниже для пополнения:", get_payment_keyboard("Platega", payment_url, back_callback="back_to_topup_options"), payment_image)
+            else:
+                await smart_edit_message(callback.message, "❌ Ошибка создания ссылки Platega. Попробуйте позже.")
+                await state.clear()
+        except Exception as e:
+            logger.error(f"Platega Payform Пополнение Ошибка: {e}", exc_info=True)
+            await smart_edit_message(callback.message, "⚠️ Произошла ошибка при инициализации платежа.")
+            await state.clear()
+    # ===== Конец функции topup_platega_payform_handler =====
 
     # ===== ПОПОЛНЕНИЕ БАЛАНСА ЧЕРЕЗ PLATEGA =====
     # Формирует запрос на пополнение счета через систему Platega (СБП)
@@ -2428,7 +2516,9 @@ def get_user_router() -> Router:
         if tier_price > 0:
             for p in display_plans:
                 months = int(p.get('months') or 1)
-                p['price'] = float(p['price']) + (tier_price * months)
+                duration_days = int(p.get('duration_days') or 0) or (months * 30)
+                month_factor = duration_days / 30.0
+                p['price'] = float(p['price']) + (tier_price * month_factor)
 
         await smart_edit_message(callback.message, plan_text, keyboards.create_plans_keyboard(display_plans, action=action, host_name=host_name, key_id=key_id), get_setting(img_setting))
         logger.info(f"Тарифы: Пользователю {callback.from_user.id} показаны тарифы для хоста {host_name} (действие: {action})")
@@ -2661,7 +2751,9 @@ def get_user_router() -> Router:
         
         price = calculate_order_price(plan, user, data.get('promo_code'), data.get('promo_discount', 0))
         months = int(plan.get('months') or 1)
-        price += Decimal(str(data.get('tier_price', 0))) * months
+        duration_days = int(plan.get('duration_days') or 0) or (months * 30)
+        month_factor = Decimal(str(duration_days)) / Decimal('30')
+        price += Decimal(str(data.get('tier_price', 0))) * month_factor
         await state.update_data(final_price=float(price))
         
         balance = get_balance(message.chat.id)
