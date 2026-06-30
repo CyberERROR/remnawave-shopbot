@@ -18,6 +18,8 @@ BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 DB_FILE: Path = rw_repo.DB_FILE
+ZIP_COMPRESSION = getattr(zipfile, "ZIP_LZMA", zipfile.ZIP_DEFLATED)
+ZIP_COMPRESSLEVEL = 9
 
 
 def get_msk_time() -> datetime:
@@ -26,6 +28,15 @@ def get_msk_time() -> datetime:
 
 def _timestamp() -> str:
     return get_msk_time().strftime("%Y%m%d-%H%M%S")
+
+
+def _write_compressed_backup(zip_path: Path, db_path: Path) -> None:
+    try:
+        with zipfile.ZipFile(zip_path, 'w', compression=ZIP_COMPRESSION) as zf:
+            zf.write(db_path, arcname=db_path.name)
+    except RuntimeError:
+        with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=ZIP_COMPRESSLEVEL) as zf:
+            zf.write(db_path, arcname=db_path.name)
 
 
 def create_backup_file() -> Path | None:
@@ -47,8 +58,7 @@ def create_backup_file() -> Path | None:
                 src.backup(dst)
 
 
-        with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.write(tmp_db_copy, arcname=tmp_db_copy.name)
+        _write_compressed_backup(zip_path, tmp_db_copy)
 
 
         try:

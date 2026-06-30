@@ -509,6 +509,29 @@ def register_node_routes(app, login_required, get_common_template_data):
         try:
             content = request.form.get('content', '').strip()
             if not content: return jsonify({'ok': False, 'error': 'Содержимое обязательно'}), 400
+            if "services:" not in content:
+                key_candidate = content
+                if "SECRET_KEY=" in key_candidate:
+                    parts = key_candidate.split("SECRET_KEY=", 1)
+                    key_candidate = parts[1].strip().strip('"').strip("'")
+                content = (
+                    "services:\n"
+                    "  remnanode:\n"
+                    "    container_name: remnanode\n"
+                    "    hostname: remnanode\n"
+                    "    image: remnawave/node:latest\n"
+                    "    network_mode: host\n"
+                    "    restart: always\n"
+                    "    cap_add:\n"
+                    "      - NET_ADMIN\n"
+                    "    ulimits:\n"
+                    "      nofile:\n"
+                    "        soft: 1048576\n"
+                    "        hard: 1048576\n"
+                    "    environment:\n"
+                    "      - NODE_PORT=2222\n"
+                    f'      - SECRET_KEY="{key_candidate}"'
+                )
             server, error = get_ssh_server(name, 'ssh')
             if error: return error
             creds, error = get_ssh_credentials(server)
@@ -975,14 +998,18 @@ def register_node_routes(app, login_required, get_common_template_data):
                     while True:
                         try:
                             if channel.recv_ready():
-                                data = channel.recv(65536)
+                                data = channel.recv(4096)
                                 if data:
                                     idle_count = 0
                                     try:
                                         decoded = data.decode('utf-8', errors='replace')
+                                        # Detect cursor up sequences for partial replace
                                         cursor_up_re = re.compile(r'\x1b\[(\d+)A')
                                         up_matches = cursor_up_re.findall(decoded)
                                         max_up = max((int(x) for x in up_matches), default=0)
+                                        # Detect clear screen / cursor home patterns (for top, htop, etc.)
+                                        clear_screen_re = re.compile(r'\x1b\[2J|\x1b\[H|\x1b\[1;1H|\x1b\[0?J')
+                                        has_clear_screen = bool(clear_screen_re.search(decoded))
                                         cleaned = clean_ansi(decoded)
                                         cleaned = cleaned.replace('\r\n', '\n')
                                         result_lines = []
@@ -994,10 +1021,14 @@ def register_node_routes(app, login_required, get_common_template_data):
                                                     result_lines.append(last_part.rstrip())
                                             elif seg.rstrip():
                                                 result_lines.append(seg.rstrip())
-                                        if max_up > 0 and result_lines:
+                                        # Send clear command if screen was cleared (full redraw like top)
+                                        if has_clear_screen and result_lines:
+                                            yield f"data: \x01CLEAR\x01\n\n"
+                                        elif max_up > 0 and result_lines:
                                             yield f"data: \x01REPLACE:{max_up}\x01\n\n"
                                         for line in result_lines:
                                             yield f"data: {line}\n\n"
+                                        yield f"data: \x01FLUSH\x01\n\n"  # Force flush marker
                                     except Exception as ex: logger.error(f"Ошибка декодирования вывода: {ex}")
                             else: idle_count += 1
                             if channel.closed:

@@ -472,40 +472,72 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     
     # ===== СТАТИСТИКА РАССЫЛКИ =====
     # Собирает данные о пользователях и ключах для формирования отчета рассылки
+    # Подсчёт ведётся по ПОЛЬЗОВАТЕЛЯМ (не по ключам), логика полностью совпадает с broadcast_send
     @flask_app.route('/other/broadcast/stats')
     @login_required
     def broadcast_stats():
         try:
-            db_stats = rw_repo.database.get_admin_stats()
-            total_keys_all = db_stats.get('total_keys', 0)
-            
-          
+            all_users = rw_repo.database.get_all_users() or []
             all_keys = rw_repo.database.get_all_keys() or []
-            total_keys_active, total_keys_expired = 0, 0
-            expiring_counts = {1: 0, 3: 0, 5: 0, 10: 0}
             now = get_msk_time()
             
+            # Карта user_id -> список ключей (аналог get_keys_for_user, но одним запросом)
+            user_keys_map = {}
             for key in all_keys:
-                expire_at_val = key.get('expire_at')
-                expire_dt = parse_expire_dt(expire_at_val)
-                
-                if not expire_at_val:
-                    total_keys_active += 1
-                elif expire_dt:
-                    if expire_dt > now:
-                        total_keys_active += 1
-                        days_rem = (expire_dt - now).days
-                        for day_limit in [1, 3, 5, 10]:
-                            if days_rem <= day_limit:
-                                expiring_counts[day_limit] += 1
-                    else:
-                        total_keys_expired += 1
-                else:
-                    total_keys_active += 1
+                uid = key.get('user_id')
+                if uid is not None:
+                    user_keys_map.setdefault(uid, []).append(key)
             
-            all_users = rw_repo.database.get_all_users() or []
             total_users = len(all_users)
-            users_without_trial = sum(1 for u in all_users if not u.get('trial_used', 0))
+            users_with_active_keys = 0
+            users_with_expired_keys = 0
+            users_without_trial = 0
+            users_used_trial = 0
+            users_without_subscription_used_trial = 0
+            expiring_counts = {1: 0, 3: 0, 5: 0, 10: 0}
+            
+            for user in all_users:
+                user_id = user.get('telegram_id')
+                if not user_id:
+                    continue
+                
+                # without_trial / not_used_trial (логика из broadcast_send: not trial_used)
+                if not user.get('trial_used', 0):
+                    users_without_trial += 1
+                else:
+                    users_used_trial += 1
+                
+                has_active_key = False
+                has_expired_key = False
+                min_expiring_days = None
+                keys = user_keys_map.get(user_id, [])
+                
+                for key in keys:
+                    expire_dt = parse_expire_dt(key.get('expire_at'))
+                    if expire_dt:
+                        if expire_dt > now:
+                            has_active_key = True
+                            days_until_expiry = (expire_dt - now).days
+                            if min_expiring_days is None or days_until_expiry < min_expiring_days:
+                                min_expiring_days = days_until_expiry
+                        else:
+                            has_expired_key = True
+                
+                # mode='with_keys': есть хотя бы один ключ с expire_dt в будущем
+                if has_active_key:
+                    users_with_active_keys += 1
+                elif user.get('trial_used', 0):
+                    users_without_subscription_used_trial += 1
+                
+                # mode='expired_keys': нет активных ключей + есть хотя бы один истёкший
+                if not has_active_key and has_expired_key:
+                    users_with_expired_keys += 1
+                
+                # mode='expiring_keys': есть ключ с 0 <= days <= day_limit
+                if min_expiring_days is not None:
+                    for day_limit in [1, 3, 5, 10]:
+                        if min_expiring_days <= day_limit:
+                            expiring_counts[day_limit] += 1
             
             last_results = load_broadcast_results()
             banned_data = get_banned_users_data()
@@ -514,9 +546,11 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             return jsonify({
                 'ok': True, 
                 'total_users': total_users, 
-                'users_with_keys': total_keys_active,
-                'users_with_expired_keys': total_keys_expired, 
+                'users_with_keys': users_with_active_keys,
+                'users_with_expired_keys': users_with_expired_keys, 
                 'users_without_trial': users_without_trial,
+                'users_used_trial': users_used_trial,
+                'users_without_subscription_used_trial': users_without_subscription_used_trial,
                 'expiring_counts': expiring_counts,
                 'last_results': last_results,
                 'banned_count': banned_count
@@ -727,7 +761,25 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                                 break
                     if has_expiring_key: filtered_users.append(user)
                 all_users = filtered_users
-            elif mode == 'without_trial' or mode == 'not_used_trial':
+            elif mode == 'without_trial':
+                all_users = [u for u in all_users if u.get('trial_used', 0)]
+            elif mode == 'without_subscription':
+                filtered_users = []
+                for user in all_users:
+                    if not user.get('trial_used', 0):
+                        continue
+                    user_id = user.get('telegram_id')
+                    keys = rw_repo.get_keys_for_user(user_id) or []
+                    has_active_key = False
+                    for key in keys:
+                        expire_dt = parse_expire_dt(key.get('expire_at'))
+                        if expire_dt and expire_dt > get_msk_time():
+                            has_active_key = True
+                            break
+                    if not has_active_key:
+                        filtered_users.append(user)
+                all_users = filtered_users
+            elif mode == 'not_used_trial':
                 all_users = [u for u in all_users if not u.get('trial_used', 0)]
             
             if skip_banned:

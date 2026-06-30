@@ -3308,6 +3308,7 @@ async def notify_admin_of_purchase(bot: Bot, metadata: dict):
         from shop_bot.data_manager.database import get_today_income_by_currency
         today = get_today_income_by_currency()
         today_rub = today.get('rub', 0)
+        yesterday_rub = today.get('yesterday_rub', 0)
         today_crypto = today.get('crypto', 0)
         
         txt = (
@@ -3319,8 +3320,9 @@ async def notify_admin_of_purchase(bot: Bot, metadata: dict):
             f"💳 Метод: {method}\n"
             f"💰 Сумма: {float(price):.2f} RUB\n"
             f"⚙️ Тип: {'Новый ключ ➕' if action == 'new' else 'Продление ♻️'}\n\n"
-            f"<blockquote>💵 Касса за сегодня ₽: {today_rub:,.2f} RUB\n"
-            f"💎 Касса за сегодня $: {today_crypto:,.2f} RUB</blockquote>"
+            f"<blockquote>💵 Касса за сегодня ₽: {today_rub:,.2f} \n"
+            f"💵 Касса за вчера ₽: {yesterday_rub:,.2f}\n"
+            f"💎 Касса за сегодня $: {today_crypto:,.2f} </blockquote>"
         )
         
         promo = (metadata.get('promo_code') or '').strip()

@@ -373,6 +373,11 @@
                         <span class="material-symbols-outlined text-sm">delete_history</span>
                         <span class="hidden sm:inline">Сбросить кеш</span> <span class="cache-count-text">(0)</span>
                     </button>
+                    <button onclick="openRebootModal()" id="btn-reboot-all-servers"
+                        class="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400/70 hover:text-red-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 transition-all duration-300" title="Перезагрузить серверы">
+                        <span class="material-symbols-outlined text-sm">restart_alt</span>
+                        <span class="hidden sm:inline">Перезагрузить</span>
+                    </button>
                     <span class="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[10px] font-bold border border-primary/15 tabular-nums"
                         id="ssh-targets-count">0</span>
                 </div>
@@ -496,11 +501,30 @@
                 <div class="bg-black/25 border border-white/[0.05] rounded-xl p-4 mb-4">
                     <h6 class="text-white font-bold text-[12px] mb-3 flex items-center gap-2.5 tracking-tight">
                         <span class="material-symbols-outlined text-yellow-400 text-lg">edit_document</span>
-                        Файл docker-compose.yml
+                        Настройка docker-compose.yml
                     </h6>
-                    <textarea id="docker-compose-content" rows="10"
-                        class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-4 py-3 text-white font-mono text-[11px] placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/20 transition-all duration-200"
-                        placeholder="version: '3.8'&#10;services:&#10;  remnanode:&#10;    image: remnawave/node:latest&#10;    container_name: remnanode&#10;    restart: always&#10;    network_mode: host&#10;    environment:&#10;      - PANEL_URL=https://your-panel.com&#10;      - PANEL_KEY=your-key"></textarea>
+                    
+                    <div class="flex items-center gap-2 mb-4 bg-white/5 p-1 rounded-xl">
+                        <button type="button" id="btn-deploy-tab-key" class="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 bg-primary/20 text-white border border-primary/20">Secret Key</button>
+                        <button type="button" id="btn-deploy-tab-full" class="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 text-white/40 hover:text-white/80 hover:bg-white/[0.02] border border-transparent">Весь конфиг</button>
+                    </div>
+
+                    <div id="deploy-container-key" class="space-y-2 mb-4">
+                        <label class="block text-white/40 text-[9px] font-bold uppercase tracking-[0.15em] ml-1">Secret Key (SECRET_KEY)</label>
+                        <div class="relative group">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary transition-colors text-sm">key</span>
+                            <input type="text" id="deploy-secret-key-input" placeholder="Вставьте SECRET_KEY (например, eyJub2Rl...)"
+                                class="w-full bg-black/20 border border-white/[0.08] rounded-xl pl-10 pr-4 py-2.5 text-white text-[12px] placeholder:text-white/15 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 focus:bg-black/30 transition-all duration-300" />
+                        </div>
+                    </div>
+
+                    <div id="deploy-container-full" class="space-y-2 mb-4 hidden">
+                        <label class="block text-white/40 text-[9px] font-bold uppercase tracking-[0.15em] ml-1">Содержимое docker-compose.yml</label>
+                        <textarea id="docker-compose-content" rows="10"
+                            class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-4 py-3 text-white font-mono text-[11px] placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/20 transition-all duration-200"
+                            placeholder="services:&#10;  remnanode:&#10;    container_name: remnanode&#10;    hostname: remnanode&#10;    image: remnawave/node:latest&#10;    network_mode: host&#10;    restart: always&#10;    cap_add:&#10;      - NET_ADMIN&#10;    ulimits:&#10;      nofile:&#10;        soft: 1048576&#10;        hard: 1048576&#10;    environment:&#10;      - NODE_PORT=2222&#10;      - SECRET_KEY=&quot;сюда&quot;"></textarea>
+                    </div>
+
                     <div class="flex gap-2 mt-3">
                         <button id="btn-cancel-compose"
                             class="flex-1 px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white/80 text-[10px] font-bold uppercase tracking-wider transition-all duration-200">
@@ -1250,6 +1274,100 @@
     </div>
 </div>
 
+<div id="rebootServersModal" class="modal-overlay" style="z-index: 55;">
+    <div class="modal-content max-w-3xl max-h-[85vh] rounded-2xl bg-gradient-to-br from-[#0c2218] to-[#091a12] border border-white/[0.08] shadow-2xl shadow-black/50 overflow-hidden backdrop-blur-xl">
+        <div class="relative px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <div class="absolute inset-0 bg-gradient-to-r from-red-500/[0.03] to-transparent pointer-events-none"></div>
+            <div class="relative flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/10 flex items-center justify-center border border-red-500/15 shadow-lg shadow-red-500/10">
+                    <span class="material-symbols-outlined text-red-400 text-xl">restart_alt</span>
+                </div>
+                <div>
+                    <h5 class="text-[13px] font-bold text-white tracking-tight">Перезагрузка серверов</h5>
+                    <p class="text-[9px] text-white/25 uppercase tracking-[0.15em] font-semibold mt-0.5">Выберите серверы для перезагрузки</p>
+                </div>
+            </div>
+            <button onclick="closeRebootModal()"
+                class="relative w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center text-white/30 hover:text-white/70 transition-all duration-200">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+
+        <!-- Progress Bar (hidden by default) -->
+        <div id="reboot-progress-container" class="hidden px-5 py-3 bg-black/20 border-b border-white/[0.06]">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] uppercase tracking-[0.15em] text-white/40 font-bold">Прогресс</span>
+                <span id="reboot-progress-text" class="text-[10px] text-white/60 font-mono">0 / 0</span>
+            </div>
+            <div class="w-full bg-white/[0.06] rounded-full h-1.5 overflow-hidden">
+                <div id="reboot-progress-bar" class="h-full bg-gradient-to-r from-red-500/80 to-orange-400/60 transition-all duration-300 shadow-sm shadow-red-500/20 rounded-full" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="p-5 overflow-y-auto max-h-[55vh]">
+            <!-- Selection Actions -->
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.06]">
+                <div class="flex items-center gap-2">
+                    <button onclick="selectAllServers(true)" class="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white text-[9px] font-bold uppercase tracking-wider transition-all">
+                        Выбрать все
+                    </button>
+                    <button onclick="selectAllServers(false)" class="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white text-[9px] font-bold uppercase tracking-wider transition-all">
+                        Снять выбор
+                    </button>
+                </div>
+                <span id="reboot-selected-count" class="text-[10px] text-white/40 font-mono">Выбрано: 0</span>
+            </div>
+
+            <!-- Hosts Section -->
+            <div id="reboot-hosts-section" class="mb-5">
+                <h6 class="text-[10px] font-bold uppercase tracking-[0.15em] text-white/30 mb-3 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-blue-400 text-sm">hub</span>
+                    Хосты
+                    <span id="reboot-hosts-count" class="ml-auto px-2 py-0.5 rounded bg-blue-500/10 text-blue-400/70 text-[9px]">0</span>
+                </h6>
+                <div id="reboot-hosts-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <!-- Hosts checkboxes will be inserted here -->
+                </div>
+            </div>
+
+            <!-- SSH Targets Section -->
+            <div id="reboot-ssh-section">
+                <h6 class="text-[10px] font-bold uppercase tracking-[0.15em] text-white/30 mb-3 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-sm">terminal</span>
+                    SSH-цели
+                    <span id="reboot-ssh-count" class="ml-auto px-2 py-0.5 rounded bg-primary/10 text-primary/70 text-[9px]">0</span>
+                </h6>
+                <div id="reboot-ssh-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <!-- SSH targets checkboxes will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer with delay input -->
+        <div class="p-5 border-t border-white/[0.06] bg-black/20">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="flex items-center gap-2">
+                    <label class="text-[9px] uppercase tracking-[0.15em] text-white/40 font-bold">Задержка между запросами</label>
+                    <input type="number" id="reboot-delay-ms" value="500" min="0" max="10000" step="100"
+                        class="w-20 px-2 py-1.5 rounded-lg bg-black/30 border border-white/[0.08] text-white text-[11px] text-center focus:outline-none focus:ring-1 focus:ring-primary/40">
+                    <span class="text-[9px] text-white/30">мс</span>
+                </div>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+                <button onclick="closeRebootModal()" id="reboot-btn-cancel"
+                    class="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 text-[10px] font-bold uppercase tracking-wider transition-all duration-200">
+                    Отмена
+                </button>
+                <button onclick="executeRebootSelected()" id="reboot-btn-execute"
+                    class="flex-1 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/15 hover:border-red-500/25 text-red-400 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-sm">restart_alt</span>
+                    <span id="reboot-btn-text">Перезагрузить выбранные</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -1634,7 +1752,9 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="text-white font-bold text-[13px] truncate tracking-tight">${target.target_name}</div>
-                                    <div class="text-white/30 text-[10px] font-mono truncate mt-0.5">${target.ssh_host}:${target.ssh_port || 22}</div>
+                                    <div onclick="navigator.clipboard.writeText('${target.ssh_host}:${target.ssh_port || 22}'); window.showToast('success', 'IP скопирован')"
+                                        class="text-white/30 hover:text-primary text-[10px] font-mono truncate mt-0.5 cursor-copy transition-colors"
+                                        title="Скопировать IP">${target.ssh_host}:${target.ssh_port || 22}</div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-1">
@@ -1664,14 +1784,23 @@
                                             <span class="material-symbols-outlined text-sm">vpn_lock</span>
                                             WARP
                                         </button>
-                                        <button onclick="openSwapModal('${target.target_name}'); toggleTargetMenu(${idx})" 
-                                            class="w-full px-3.5 py-2.5 text-left text-[11px] text-purple-400 hover:bg-purple-500/10 flex items-center gap-2.5 transition-all font-medium">
-                                            <span class="material-symbols-outlined text-sm">memory</span>
-                                            SWAP
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                                         <button onclick="openSwapModal('${target.target_name}'); toggleTargetMenu(${idx})" 
+                                             class="w-full px-3.5 py-2.5 text-left text-[11px] text-purple-400 hover:bg-purple-500/10 flex items-center gap-2.5 transition-all font-medium">
+                                             <span class="material-symbols-outlined text-sm">memory</span>
+                                             SWAP
+                                         </button>
+                                         <div class="mx-3 my-0.5 border-t border-white/[0.05]"></div>
+                                         <form action="/node/ssh-targets/${encodeURIComponent(target.target_name)}/delete" method="post" data-confirm="Удалить SSH-цель '${target.target_name}'?" class="w-full">
+                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                             <button type="submit" onclick="localStorage.removeItem('remnawave_servers_cache')"
+                                                 class="w-full px-3.5 py-2.5 text-left text-[11px] text-red-400 hover:bg-red-500/10 flex items-center gap-2.5 transition-all font-medium">
+                                                 <span class="material-symbols-outlined text-sm">delete</span>
+                                                 Удалить
+                                             </button>
+                                         </form>
+                                     </div>
+                                 </div>
+                             </div>
                         </div>
                         
                         <div class="rounded-xl bg-black/25 border border-white/[0.05] p-3 mb-3 min-h-[168px] flex flex-col justify-center" id="target-uptime-${idx}">
@@ -1903,6 +2032,196 @@
         btn.innerHTML = `<span class="material-symbols-outlined text-sm">delete_history</span> Сбросить кеш (${count})`;
     }
 
+    window.openRebootModal = async function () {
+        try {
+            const resp = await fetch('/node/servers/list');
+            const data = await resp.json();
+
+            if (!data.ok) {
+                window.showToast('danger', 'Ошибка получения списка серверов');
+                return;
+            }
+
+            const hosts = data.hosts || [];
+            const sshTargets = data.ssh_targets || [];
+
+            // Reset progress
+            resetRebootProgress();
+
+            // Populate hosts list
+            const hostsList = document.getElementById('reboot-hosts-list');
+            const hostsSection = document.getElementById('reboot-hosts-section');
+            const hostsCount = document.getElementById('reboot-hosts-count');
+            if (hosts.length === 0) {
+                hostsSection.style.display = 'none';
+            } else {
+                hostsSection.style.display = 'block';
+                hostsCount.textContent = hosts.length;
+                hostsList.innerHTML = hosts.map(h => `
+                    <label class="group flex flex-col p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all duration-200">
+                        <div class="flex items-start gap-2">
+                            <input type="checkbox" value="host|${h.host_name}" class="reboot-server-checkbox mt-0.5 w-4 h-4 rounded border-white/[0.1] bg-black/20 text-primary focus:ring-primary/50 focus:ring-1" onchange="updateRebootSelectedCount()">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-white text-[11px] font-medium truncate group-hover:text-primary/90 transition-colors">${h.host_name}</div>
+                                <div class="text-white/30 text-[9px] truncate">${h.ssh_host || '—'}</div>
+                            </div>
+                        </div>
+                    </label>
+                `).join('');
+            }
+
+            // Populate SSH targets list
+            const sshList = document.getElementById('reboot-ssh-list');
+            const sshSection = document.getElementById('reboot-ssh-section');
+            const sshCount = document.getElementById('reboot-ssh-count');
+            if (sshTargets.length === 0) {
+                sshSection.style.display = 'none';
+            } else {
+                sshSection.style.display = 'block';
+                sshCount.textContent = sshTargets.length;
+                sshList.innerHTML = sshTargets.map(t => `
+                    <label class="group flex flex-col p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.06] hover:border-primary/20 cursor-pointer transition-all duration-200">
+                        <div class="flex items-start gap-2">
+                            <input type="checkbox" value="ssh|${t.target_name}" class="reboot-server-checkbox mt-0.5 w-4 h-4 rounded border-white/[0.1] bg-black/20 text-primary focus:ring-primary/50 focus:ring-1" onchange="updateRebootSelectedCount()">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-white text-[11px] font-medium truncate group-hover:text-primary/90 transition-colors">${t.target_name}</div>
+                                <div class="text-white/30 text-[9px] truncate">${t.ssh_host || '—'}</div>
+                            </div>
+                        </div>
+                    </label>
+                `).join('');
+            }
+
+            updateRebootSelectedCount();
+            openModal('rebootServersModal');
+        } catch (err) {
+            console.error('Error loading servers for reboot:', err);
+            window.showToast('danger', 'Ошибка загрузки списка серверов');
+        }
+    };
+
+    window.closeRebootModal = function () {
+        // Don't close if reboot in progress
+        if (isRebootInProgress) return;
+        closeModal('rebootServersModal');
+    };
+
+    let isRebootInProgress = false;
+
+    function resetRebootProgress() {
+        isRebootInProgress = false;
+        document.getElementById('reboot-progress-container').classList.add('hidden');
+        document.getElementById('reboot-progress-bar').style.width = '0%';
+        document.getElementById('reboot-progress-text').textContent = '0 / 0';
+        document.getElementById('reboot-btn-cancel').disabled = false;
+        document.getElementById('reboot-btn-execute').disabled = false;
+        document.getElementById('reboot-btn-text').textContent = 'Перезагрузить выбранные';
+        document.getElementById('reboot-delay-ms').disabled = false;
+        document.querySelectorAll('.reboot-server-checkbox').forEach(cb => cb.disabled = false);
+    }
+
+    window.updateRebootSelectedCount = function () {
+        const selected = document.querySelectorAll('.reboot-server-checkbox:checked').length;
+        document.getElementById('reboot-selected-count').textContent = `Выбрано: ${selected}`;
+    };
+
+    window.selectAllServers = function (select) {
+        if (isRebootInProgress) return;
+        document.querySelectorAll('.reboot-server-checkbox').forEach(cb => {
+            cb.checked = select;
+        });
+        updateRebootSelectedCount();
+    };
+
+    function updateRebootProgress(current, total) {
+        const percent = total > 0 ? (current / total) * 100 : 0;
+        document.getElementById('reboot-progress-bar').style.width = percent + '%';
+        document.getElementById('reboot-progress-text').textContent = `${current} / ${total}`;
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    window.executeRebootSelected = async function () {
+        const selected = Array.from(document.querySelectorAll('.reboot-server-checkbox:checked')).map(cb => cb.value);
+
+        if (selected.length === 0) {
+            window.showToast('warning', 'Выберите хотя бы один сервер');
+            return;
+        }
+
+        if (!confirm(`Перезагрузить ${selected.length} сервер(ов)?\n\nЭто действие нельзя отменить.`)) {
+            return;
+        }
+
+        isRebootInProgress = true;
+        const delayMs = parseInt(document.getElementById('reboot-delay-ms').value) || 500;
+
+        // Show progress
+        document.getElementById('reboot-progress-container').classList.remove('hidden');
+        document.getElementById('reboot-btn-cancel').disabled = true;
+        document.getElementById('reboot-btn-execute').disabled = true;
+        document.getElementById('reboot-btn-text').textContent = 'Выполняется...';
+        document.getElementById('reboot-delay-ms').disabled = true;
+        document.querySelectorAll('.reboot-server-checkbox').forEach(cb => cb.disabled = true);
+
+        let success = 0;
+        let failed = 0;
+        let processed = 0;
+
+        for (const serverValue of selected) {
+            const [type, name] = serverValue.split('|');
+            processed++;
+            updateRebootProgress(processed, selected.length);
+
+            try {
+                const formData = new FormData();
+                formData.append('csrf_token', window.getCsrfToken());
+
+                const rebootResp = await fetch(`/node/servers/reboot/${type}/${encodeURIComponent(name)}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const rebootData = await rebootResp.json();
+
+                if (rebootData.ok) {
+                    success++;
+                } else {
+                    failed++;
+                    console.error(`Failed to reboot ${type}/${name}:`, rebootData.error);
+                }
+            } catch (err) {
+                failed++;
+                console.error(`Error rebooting ${type}/${name}:`, err);
+            }
+
+            // Delay between requests (except after the last one)
+            if (processed < selected.length && delayMs > 0) {
+                await sleep(delayMs);
+            }
+        }
+
+        isRebootInProgress = false;
+        document.getElementById('reboot-btn-execute').disabled = false;
+        document.getElementById('reboot-btn-text').textContent = 'Перезагрузить выбранные';
+        document.getElementById('reboot-delay-ms').disabled = false;
+
+        // Close modal after short delay to show final progress
+        setTimeout(() => {
+            closeModal('rebootServersModal');
+            resetRebootProgress();
+        }, 800);
+
+        if (failed === 0) {
+            window.showToast('success', `Все серверы перезагружаются (${success})`);
+        } else if (success === 0) {
+            window.showToast('danger', `Не удалось перезагрузить (${failed})`);
+        } else {
+            window.showToast('warning', `Перезагружено: ${success}, Ошибок: ${failed}`);
+        }
+    };
+
     async function loadUptime(type, name, idx) {
         const uptimeEl = type === 'host' ? document.getElementById(`host-uptime-${idx}`) : document.getElementById(`target-uptime-${idx}`);
         const statusEl = type === 'host' ? document.getElementById(`host-status-${idx}`) : document.getElementById(`target-status-${idx}`);
@@ -2014,6 +2333,14 @@
 
         setupDeployHandlers();
 
+        if (window.switchDeployTab) {
+            window.switchDeployTab('key');
+        }
+        const secretKeyInput = document.getElementById('deploy-secret-key-input');
+        if (secretKeyInput) {
+            secretKeyInput.value = '';
+        }
+
         setDockerButtonsCheckingState(true);
 
         try {
@@ -2061,6 +2388,9 @@
                             const composeData = await composeResp.json();
                             if (composeData.ok) {
                                 document.getElementById('docker-compose-content').value = composeData.content;
+                                if (window.switchDeployTab) {
+                                    window.switchDeployTab('full');
+                                }
                             }
                         }
                     } catch (e) {
@@ -2168,11 +2498,69 @@
             }, 3);
         };
 
+        let activeDeployTab = 'key';
+
+        const btnTabKey = document.getElementById('btn-deploy-tab-key');
+        const btnTabFull = document.getElementById('btn-deploy-tab-full');
+        const containerKey = document.getElementById('deploy-container-key');
+        const containerFull = document.getElementById('deploy-container-full');
+
+        const activeClass = 'flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 bg-primary/20 text-white border border-primary/20';
+        const inactiveClass = 'flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300 text-white/40 hover:text-white/80 hover:bg-white/[0.02] border border-transparent';
+
+        function switchDeployTab(tab) {
+            activeDeployTab = tab;
+            if (tab === 'key') {
+                btnTabKey.className = activeClass;
+                btnTabFull.className = inactiveClass;
+                containerKey.classList.remove('hidden');
+                containerFull.classList.add('hidden');
+            } else {
+                btnTabKey.className = inactiveClass;
+                btnTabFull.className = activeClass;
+                containerKey.classList.add('hidden');
+                containerFull.classList.remove('hidden');
+            }
+        }
+
+        btnTabKey.onclick = () => switchDeployTab('key');
+        btnTabFull.onclick = () => switchDeployTab('full');
+        window.switchDeployTab = switchDeployTab;
+
         document.getElementById('btn-save-compose').onclick = async function () {
-            const content = document.getElementById('docker-compose-content').value.trim();
-            if (!content) {
-                window.showToast('warning', 'Введите содержимое файла docker-compose.yml');
-                return;
+            let content = '';
+            if (activeDeployTab === 'key') {
+                let key = document.getElementById('deploy-secret-key-input').value.trim();
+                if (!key) {
+                    window.showToast('warning', 'Введите Secret Key (SECRET_KEY)');
+                    return;
+                }
+                if (key.includes('SECRET_KEY=')) {
+                    const parts = key.split('SECRET_KEY=');
+                    key = parts[1].trim().replace(/^['"]|['"]$/g, '');
+                }
+                content = `services:
+  remnanode:
+    container_name: remnanode
+    hostname: remnanode
+    image: remnawave/node:latest
+    network_mode: host
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    environment:
+      - NODE_PORT=2222
+      - SECRET_KEY="${key}"`;
+            } else {
+                content = document.getElementById('docker-compose-content').value.trim();
+                if (!content) {
+                    window.showToast('warning', 'Введите содержимое файла docker-compose.yml');
+                    return;
+                }
             }
 
             await executeDeployStep('save-compose', this, async () => {
@@ -3098,7 +3486,9 @@
         const count = terminalBuffer.length;
         for (let i = 0; i < count; i++) {
             const item = terminalBuffer.shift();
-            if (item.replace) {
+            if (item.clear) {
+                outputEl.innerHTML = '';
+            } else if (item.replace) {
                 for (let j = 0; j < item.replace && outputEl.lastElementChild; j++) {
                     outputEl.removeChild(outputEl.lastElementChild);
                 }
@@ -3143,6 +3533,14 @@
 
     function removeLastTerminalLines(count) {
         terminalBuffer.push({ replace: count });
+        if (!isTerminalFlushing) {
+            isTerminalFlushing = true;
+            requestAnimationFrame(flushTerminalBuffer);
+        }
+    }
+
+    function clearTerminal() {
+        terminalBuffer.push({ clear: true });
         if (!isTerminalFlushing) {
             isTerminalFlushing = true;
             requestAnimationFrame(flushTerminalBuffer);
@@ -3349,6 +3747,15 @@
                     if (line.startsWith('data: ')) {
                         let data = line.substring(6);
                         if (data === '[DONE]') {
+                            continue;
+                        }
+
+                        if (data === '\x01FLUSH\x01') {
+                            continue;
+                        }
+
+                        if (data === '\x01CLEAR\x01') {
+                            clearTerminal();
                             continue;
                         }
 

@@ -137,22 +137,24 @@
             <div class="p-6 relative z-10">
                 <form id="broadcast-form">
                     <div class="mb-8 group/textarea">
-                        <div class="flex items-center justify-between mb-2 px-1">
-                            <label class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Текст
-                                сообщения</label>
-                            <div class="flex items-center gap-2">
-                                <div id="broadcast-themes-container" class="flex items-center gap-1.5 mr-1">
+                        <div class="flex flex-col gap-2 mb-2 px-1">
+                            <div class="flex items-center justify-between gap-3">
+                                <label class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Текст
+                                    сообщения</label>
+                                <button type="button" id="btn-preview"
+                                    class="shrink-0 text-[10px] text-primary hover:text-white px-3 py-1 rounded-lg border border-primary/30 font-bold uppercase tracking-widest transition-all flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-sm">visibility</span>
+                                    Предпросмотр
+                                </button>
+                            </div>
+                            <div class="flex w-full items-center gap-2 overflow-hidden">
+                                <div id="broadcast-themes-container" class="flex min-w-0 flex-1 sm:flex-none items-center gap-1.5 overflow-x-auto no-scrollbar sm:max-w-[52vw] lg:max-w-[42vw]">
                                     <!-- Templates will be loaded here -->
                                 </div>
                                 <button type="button" onclick="openModal('newMessageModal')"
-                                    class="text-primary hover:text-white px-2 py-1 rounded-lg border border-primary/30 font-bold transition-all flex items-center justify-center"
+                                    class="shrink-0 text-primary hover:text-white px-2 py-1 rounded-lg border border-primary/30 font-bold transition-all flex items-center justify-center"
                                     title="Сохранить как шаблон">
                                     <span class="material-symbols-outlined text-sm">add</span>
-                                </button>
-                                <button type="button" id="btn-preview"
-                                    class="text-[10px] text-primary hover:text-white px-3 py-1 rounded-lg border border-primary/30 font-bold uppercase tracking-widest transition-all flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-sm">visibility</span>
-                                    Предпросмотр
                                 </button>
                             </div>
                         </div>
@@ -293,6 +295,8 @@
                             {'v': 'expired_keys', 'l': 'Истекшие ключи', 's': 'Напоминание о продлении', 'i':
                             'timer_off'},
                             {'v': 'without_trial', 'l': 'Использовали триал', 's': 'Уже знакомы с сервисом', 'i':
+                            'new_releases'},
+                            {'v': 'without_subscription', 'l': 'Без подписки', 's': 'Использовали триал, но без активного ключа', 'i':
                             'new_releases'},
                             {'v': 'not_used_trial', 'l': 'Не использовали триал', 's': 'Новые потенциальные клиенты',
                             'i': 'history_toggle_off'},
@@ -2960,7 +2964,8 @@
                     if (document.getElementById('count-mode-all')) document.getElementById('count-mode-all').textContent = `(${data.total_users})`;
                     if (document.getElementById('count-mode-with_keys')) document.getElementById('count-mode-with_keys').textContent = `(${data.users_with_keys})`;
                     if (document.getElementById('count-mode-expired_keys')) document.getElementById('count-mode-expired_keys').textContent = `(${data.users_with_expired_keys || 0})`;
-                    if (document.getElementById('count-mode-without_trial')) document.getElementById('count-mode-without_trial').textContent = `(${data.total_users - data.users_without_trial})`;
+                    if (document.getElementById('count-mode-without_trial')) document.getElementById('count-mode-without_trial').textContent = `(${data.users_used_trial || 0})`;
+                    if (document.getElementById('count-mode-without_subscription')) document.getElementById('count-mode-without_subscription').textContent = `(${data.users_without_subscription_used_trial || 0})`;
                     if (document.getElementById('count-mode-not_used_trial')) document.getElementById('count-mode-not_used_trial').textContent = `(${data.users_without_trial})`;
 
                     window.currentBannedCount = data.banned_count || 0;
@@ -5109,11 +5114,11 @@
                     container.innerHTML = '';
                     Object.entries(data.themes).forEach(([title, content]) => {
                         const wrapper = document.createElement('div');
-                        wrapper.className = 'flex items-center bg-white/5 border border-white/10 rounded-lg overflow-hidden transition-all hover:border-primary/30 group/theme';
+                        wrapper.className = 'shrink-0 flex items-center bg-white/5 border border-white/10 rounded-lg overflow-hidden transition-all hover:border-primary/30 group/theme';
 
                         const mainBtn = document.createElement('button');
                         mainBtn.type = 'button';
-                        mainBtn.className = 'text-[9px] text-white/60 hover:text-white px-2.5 py-1.5 font-bold uppercase tracking-widest border-r border-white/5 hover:bg-white/5 transition-all';
+                        mainBtn.className = 'max-w-28 sm:max-w-36 truncate text-[9px] text-white/60 hover:text-white px-2.5 py-1.5 font-bold uppercase tracking-widest border-r border-white/5 hover:bg-white/5 transition-all';
                         mainBtn.textContent = title;
                         mainBtn.onclick = () => {
                             const textarea = document.getElementById('broadcast-text');

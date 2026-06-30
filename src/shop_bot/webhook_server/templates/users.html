@@ -382,13 +382,30 @@
                                 <div
                                     class="absolute -bottom-4 -right-4 w-20 h-20 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition-colors">
                                 </div>
-                                <div class="flex items-center gap-2 text-primary/80">
-                                    <span class="material-symbols-outlined text-lg">account_balance_wallet</span>
-                                    <span class="text-[10px] font-bold uppercase tracking-wider">Баланс</span>
+                                <div class="flex items-center justify-between gap-2 text-primary/80">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="material-symbols-outlined text-lg">account_balance_wallet</span>
+                                        <span class="text-[10px] font-bold uppercase tracking-wider">Баланс</span>
+                                    </div>
+                                    <button id="udm-balance-edit"
+                                        class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-primary transition-all flex items-center justify-center"
+                                        type="button" title="Изменить баланс вручную">
+                                        <span id="udm-balance-edit-icon" class="material-symbols-outlined text-sm">edit</span>
+                                    </button>
                                 </div>
                                 <div>
                                     <div class="text-2xl font-bold text-white tracking-tight" id="udm-balance"></div>
-                                    <div class="text-[10px] text-white/40 mt-1">Текущий счет</div>
+                                    <input id="udm-balance-input"
+                                        class="hidden w-full bg-black/30 border border-primary/30 rounded-xl px-3 py-2 text-2xl font-bold text-white tracking-tight focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                        type="text" inputmode="decimal" />
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <div class="text-[10px] text-white/40">Текущий счет</div>
+                                        <button id="udm-balance-reset"
+                                            class="w-6 h-6 rounded-md bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 transition-all flex items-center justify-center"
+                                            type="button" title="Обнулить баланс до 0.00 ₽">
+                                            <span class="material-symbols-outlined text-sm">delete</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -467,8 +484,14 @@
                                             <label
                                                 class="flex items-center text-[9px] uppercase font-bold text-white/30 mb-1">
                                                 Скидка (%)
-                                                <span
-                                                    class="material-symbols-outlined text-[10px] ml-1 opacity-40">info</span>
+                                                <span class="group relative ml-1 inline-flex items-center">
+                                                    <span
+                                                        class="material-symbols-outlined text-[10px] opacity-40 cursor-help hover:text-white/60 transition-colors">info</span>
+                                                    <span
+                                                        class="absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#091a12] p-2.5 text-[10px] normal-case tracking-normal text-white/60 shadow-xl opacity-0 transition-opacity pointer-events-none group-hover:opacity-100">
+                                                        Персональная скидка пользователя на покупку. Например, <span class="text-primary font-bold">10%</span> уменьшает стоимость тарифа на <span class="text-primary font-bold">10%</span> только для этого пользователя.
+                                                    </span>
+                                                </span>
                                             </label>
                                             <input type="number" step="0.1" id="udm-seller-sale"
                                                 class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50"
@@ -478,24 +501,36 @@
                                             <label
                                                 class="flex items-center text-[9px] uppercase font-bold text-white/30 mb-1">
                                                 Реф. (%)
-                                                <span
-                                                    class="material-symbols-outlined text-[10px] ml-1 opacity-40">info</span>
+                                                <span class="group relative ml-1 inline-flex items-center">
+                                                    <span
+                                                        class="material-symbols-outlined text-[10px] opacity-40 cursor-help hover:text-white/60 transition-colors">info</span>
+                                                    <span
+                                                        class="absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#091a12] p-2.5 text-[10px] normal-case tracking-normal text-white/60 shadow-xl opacity-0 transition-opacity pointer-events-none group-hover:opacity-100">
+                                                        Реферальный процент дохода. Показывает, сколько процентов получит пользователь с платежей приглашенных им людей.
+                                                    </span>
+                                                </span>
                                             </label>
                                             <input type="number" step="0.1" id="udm-seller-ref"
                                                 class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50"
                                                 placeholder="0">
                                         </div>
-                                        <div>
+                                         <div>
                                             <label
                                                 class="flex items-center text-[9px] uppercase font-bold text-white/30 mb-1">
                                                 UUID
-                                                <span
-                                                    class="material-symbols-outlined text-[10px] ml-1 opacity-40">info</span>
+                                                <span class="group relative ml-1 inline-flex items-center">
+                                                    <span
+                                                        class="material-symbols-outlined text-[10px] opacity-40 cursor-help hover:text-white/60 transition-colors">info</span>
+                                                    <span
+                                                        class="absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#091a12] p-2.5 text-[10px] normal-case tracking-normal text-white/60 shadow-xl opacity-0 transition-opacity pointer-events-none group-hover:opacity-100">
+                                                        Укажите UUID из <span class="text-primary font-bold">внешних сквадов</span> с панели <span class="text-primary font-bold">Remnawave</span>.
+                                                    </span>
+                                                </span>
                                             </label>
-                                            <input type="text" id="udm-seller-uuid"
-                                                class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-primary/50"
-                                                placeholder="0">
-                                        </div>
+                                             <input type="text" id="udm-seller-uuid"
+                                                 class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-primary/50"
+                                                 placeholder="0">
+                                         </div>
                                     </div>
                                     <button id="udm-save-seller-btn"
                                         class="w-full py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all mt-1">
@@ -638,99 +673,147 @@
                     </button>
                 </div>
 
-                <!-- Subscriptions Section -->
-                <div class="mb-6">
-                    <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
-                        <div class="p-5 border-b border-white/10 flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                    <span class="material-symbols-outlined text-xl">vpn_key</span>
+                <div class="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] p-2 backdrop-blur-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <button type="button" data-udm-tab="subscriptions"
+                            class="udm-tab-btn group rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition-all hover:bg-white/10 hover:border-white/20"
+                            aria-selected="true">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20">
+                                        <span class="material-symbols-outlined text-lg">vpn_key</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="text-[11px] font-bold uppercase tracking-wider text-white">Подписки</div>
+                                        <div class="text-[10px] text-white/35">Ключи, срок, ссылки и UUID</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 class="text-white font-bold text-sm uppercase tracking-wide">Подписки</h4>
-                                    <p class="text-white/40 text-[10px] font-medium" id="udm-subs-stats"></p>
-                                </div>
+                                <span id="udm-tab-count-subs" class="rounded-lg bg-white/5 px-2.5 py-1 text-[10px] font-black text-white/60">0</span>
                             </div>
-                        </div>
-                        <div id="udm-subs-list" class="max-h-[450px] overflow-y-auto divide-y divide-white/5 p-2"></div>
+                        </button>
+                        <button type="button" data-udm-tab="payments"
+                            class="udm-tab-btn group rounded-xl border border-white/10 bg-transparent px-4 py-3 text-left transition-all hover:bg-white/10 hover:border-white/20"
+                            aria-selected="false">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center border border-green-500/20">
+                                        <span class="material-symbols-outlined text-lg">receipt_long</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="text-[11px] font-bold uppercase tracking-wider text-white">Платежи</div>
+                                        <div class="text-[10px] text-white/35">Касса, события, metadata</div>
+                                    </div>
+                                </div>
+                                <span id="udm-tab-count-payments" class="rounded-lg bg-white/5 px-2.5 py-1 text-[10px] font-black text-white/60">0</span>
+                            </div>
+                        </button>
+                        <button type="button" data-udm-tab="balance"
+                            class="udm-tab-btn group rounded-xl border border-white/10 bg-transparent px-4 py-3 text-left transition-all hover:bg-white/10 hover:border-white/20"
+                            aria-selected="false">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center border border-orange-500/20">
+                                        <span class="material-symbols-outlined text-lg">account_balance</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="text-[11px] font-bold uppercase tracking-wider text-white">Баланс</div>
+                                        <div class="text-[10px] text-white/35">Пополнения, списания, правки</div>
+                                    </div>
+                                </div>
+                                <span id="udm-tab-count-balance" class="rounded-lg bg-white/5 px-2.5 py-1 text-[10px] font-black text-white/60">0</span>
+                            </div>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Payment History Section -->
-                <div class="mb-6">
-                    <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
-                        <div class="p-5 border-b border-white/10 flex justify-between items-center">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
-                                    <span class="material-symbols-outlined text-xl">receipt_long</span>
+                <div class="space-y-6">
+                    <div id="udm-panel-subscriptions" class="udm-tab-panel">
+                        <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
+                            <div class="p-5 border-b border-white/10 flex items-center justify-between gap-4 flex-wrap">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                        <span class="material-symbols-outlined text-xl">vpn_key</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-white font-bold text-sm uppercase tracking-wide">Подписки</h4>
+                                        <p class="text-white/40 text-[10px] font-medium" id="udm-subs-stats"></p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 class="text-white font-bold text-sm uppercase tracking-wide">История платежей
-                                    </h4>
-                                    <p class="text-white/40 text-[10px] font-medium">Платежи, касса, ID и метаданные</p>
-                                </div>
+                                <div class="text-[10px] uppercase tracking-[0.18em] font-bold text-white/25">Все ключи под рукой</div>
                             </div>
-                            <button id="udm-clear-payment-history"
-                                class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider border border-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
-                                title="Очистить всю историю платежей">
-                                <span class="material-symbols-outlined text-sm">delete_sweep</span>
-                                Очистить всё
-                            </button>
-                        </div>
-                        <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
-                                    <tr>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Дата / ID</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Событие</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Детали</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Метод / статус</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Сумма</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="udm-payment-history" class="divide-y divide-white/5"></tbody>
-                            </table>
+                            <div id="udm-subs-list" class="max-h-[560px] overflow-y-auto divide-y divide-white/5 p-2"></div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Balance History Section -->
-                <div>
-                    <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
-                        <div class="p-5 border-b border-white/10 flex justify-between items-center">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
-                                    <span class="material-symbols-outlined text-xl">account_balance</span>
+                    <div id="udm-panel-payments" class="udm-tab-panel hidden">
+                        <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
+                            <div class="p-5 border-b border-white/10 flex justify-between items-center gap-4 flex-wrap">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
+                                        <span class="material-symbols-outlined text-xl">receipt_long</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-white font-bold text-sm uppercase tracking-wide">История платежей</h4>
+                                        <p class="text-white/40 text-[10px] font-medium">Платежи, касса, ID и метаданные</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 class="text-white font-bold text-sm uppercase tracking-wide">История баланса
-                                    </h4>
-                                    <p class="text-white/40 text-[10px] font-medium">Движения баланса, рефералка и ручные правки</p>
-                                </div>
+                                <button id="udm-clear-payment-history"
+                                    class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider border border-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
+                                    title="Очистить всю историю платежей">
+                                    <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                                    Очистить всё
+                                </button>
                             </div>
-                            <button id="udm-clear-balance-history"
-                                class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider border border-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
-                                title="Очистить всю историю баланса">
-                                <span class="material-symbols-outlined text-sm">delete_sweep</span>
-                                Очистить всё
-                            </button>
+                            <div class="overflow-x-auto max-h-[560px] overflow-y-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
+                                        <tr>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Дата / ID</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Событие</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Детали</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Метод / статус</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Сумма</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="udm-payment-history" class="divide-y divide-white/5"></tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
-                                    <tr>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Дата / ID</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Событие</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Детали</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Метод / статус</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Сумма</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="udm-balance-history" class="divide-y divide-white/5"></tbody>
-                            </table>
+                    </div>
+
+                    <div id="udm-panel-balance" class="udm-tab-panel hidden">
+                        <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
+                            <div class="p-5 border-b border-white/10 flex justify-between items-center gap-4 flex-wrap">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+                                        <span class="material-symbols-outlined text-xl">account_balance</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-white font-bold text-sm uppercase tracking-wide">История баланса</h4>
+                                        <p class="text-white/40 text-[10px] font-medium">Движения баланса, рефералка и ручные правки</p>
+                                    </div>
+                                </div>
+                                <button id="udm-clear-balance-history"
+                                    class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider border border-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
+                                    title="Очистить всю историю баланса">
+                                    <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                                    Очистить всё
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto max-h-[560px] overflow-y-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
+                                        <tr>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Дата / ID</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Событие</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Детали</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Метод / статус</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Сумма</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="udm-balance-history" class="divide-y divide-white/5"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -811,6 +894,33 @@
         const table = document.getElementById('users-table');
         const tbody = document.getElementById('users-tbody');
         if (!input || !table || !tbody) return;
+
+        function setUserDetailsTab(tabName) {
+            const tabs = ['subscriptions', 'payments', 'balance'];
+            tabs.forEach((tab) => {
+                const panel = document.getElementById(`udm-panel-${tab}`);
+                const button = document.querySelector(`[data-udm-tab="${tab}"]`);
+                const isActive = tab === tabName;
+                panel?.classList.toggle('hidden', !isActive);
+                if (button) {
+                    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    button.classList.toggle('bg-white/5', isActive);
+                    button.classList.toggle('ring-1', isActive);
+                    button.classList.toggle('ring-primary/30', isActive);
+                    button.classList.toggle('border-white/10', isActive);
+                    button.classList.toggle('shadow-lg', isActive);
+                    button.classList.toggle('shadow-black/20', isActive);
+                    button.classList.toggle('bg-transparent', !isActive);
+                    button.classList.toggle('ring-0', !isActive);
+                }
+            });
+        }
+
+        document.querySelectorAll('[data-udm-tab]').forEach((button) => {
+            button.addEventListener('click', () => setUserDetailsTab(button.getAttribute('data-udm-tab')));
+        });
+
+        setUserDetailsTab('subscriptions');
 
         const toggleClearBtn = () => {
             if (clearBtn) clearBtn.classList.toggle('hidden', !input.value);
@@ -979,12 +1089,11 @@
                 refs = (data && data.ok) ? (data.items || []) : [];
             } catch (_) { }
 
-            document.getElementById('bm-user').classList.add('demo-blur-username');
             document.getElementById('bm-user').textContent = `@${uname} (#${uid})`;
             document.getElementById('bm-balance').textContent = balance;
             document.getElementById('bm-form').action = `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
             document.getElementById('bm-refcount').textContent = refs.length;
-            document.getElementById('bm-reflist').innerHTML = refs.map(r => `<li>#${r.telegram_id} — <span class="demo-blur-username">@${r.username || 'N/A'}</span> · ${r.registration_date}</li>`).join('');
+            document.getElementById('bm-reflist').innerHTML = refs.map(r => `<li>#${r.telegram_id} — @${r.username || 'N/A'} · ${r.registration_date}</li>`).join('');
 
             const deltaInput = document.querySelector('#bm-form input[name="delta"]');
             if (deltaInput) {
@@ -992,6 +1101,90 @@
                 setTimeout(() => { deltaInput.focus(); deltaInput.setSelectionRange(1, 1); }, 100);
             }
             openModal('balanceModal');
+        }
+
+        function parseBalanceValue(balanceText) {
+            const normalized = String(balanceText || '0')
+                .replace(/\s/g, '')
+                .replace('₽', '')
+                .replace(',', '.');
+            const amount = parseFloat(normalized);
+            return Number.isFinite(amount) ? amount : 0;
+        }
+
+        function formatBalanceValue(amount) {
+            return `${amount.toFixed(2)} ₽`;
+        }
+
+        function setBalanceEditMode(isEditing) {
+            const balanceDisplay = document.getElementById('udm-balance');
+            const balanceInput = document.getElementById('udm-balance-input');
+            const editButton = document.getElementById('udm-balance-edit');
+            const editIcon = document.getElementById('udm-balance-edit-icon');
+
+            if (!balanceDisplay || !balanceInput || !editButton || !editIcon) return;
+
+            balanceDisplay.classList.toggle('hidden', isEditing);
+            balanceInput.classList.toggle('hidden', !isEditing);
+            editButton.title = isEditing ? 'Сохранить баланс' : 'Изменить баланс вручную';
+            editButton.classList.toggle('text-green-400', isEditing);
+            editButton.classList.toggle('hover:text-green-300', isEditing);
+            editButton.classList.toggle('border-green-500/30', isEditing);
+            editButton.classList.toggle('bg-green-500/10', isEditing);
+            editButton.classList.toggle('text-white/60', !isEditing);
+            editButton.classList.toggle('hover:text-primary', !isEditing);
+            editButton.classList.toggle('border-white/10', !isEditing);
+            editButton.classList.toggle('bg-white/5', !isEditing);
+            editIcon.textContent = isEditing ? 'check' : 'edit';
+
+            if (isEditing) {
+                balanceInput.value = parseBalanceValue(balanceDisplay.textContent).toFixed(2);
+                setTimeout(() => {
+                    balanceInput.focus();
+                    balanceInput.select();
+                }, 0);
+            }
+        }
+
+        async function setUserBalanceAbsolute(uid, targetBalance) {
+            const currentBalanceElement = document.getElementById('udm-balance');
+            const currentBalance = parseBalanceValue(currentBalanceElement?.textContent);
+            const nextBalance = Number(targetBalance);
+
+            if (!Number.isFinite(nextBalance) || nextBalance < 0) {
+                showToast('warning', 'Введите корректную сумму');
+                return;
+            }
+
+            const delta = +(nextBalance - currentBalance).toFixed(2);
+            if (delta === 0) {
+                showToast('warning', 'Баланс уже имеет это значение');
+                return;
+            }
+
+            const data = await apiRequest(
+                `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0', `/${uid}`),
+                'POST',
+                { delta: delta.toFixed(2) },
+                nextBalance === 0 ? 'Баланс обнулён' : 'Баланс изменён'
+            );
+
+            if (!data) return;
+
+            if (currentBalanceElement) currentBalanceElement.textContent = formatBalanceValue(nextBalance);
+            const bmBalance = document.getElementById('bm-balance');
+            if (bmBalance) bmBalance.textContent = nextBalance.toFixed(2);
+
+            const tbody = document.getElementById('users-tbody');
+            if (tbody) {
+                const urlStr = tbody.getAttribute('data-fetch-url');
+                if (urlStr) {
+                    const params = new URLSearchParams(new URL(urlStr, location.origin).search);
+                    updateTableAndPagination(params);
+                }
+            }
+
+            await refreshUserDetails(uid);
         }
 
         table.addEventListener('click', async function (e) {
@@ -1227,7 +1420,6 @@
                     }
 
                     document.getElementById('udm-telegram-id').textContent = data.user.telegram_id || 'N/A';
-                    document.getElementById('udm-username').classList.add('demo-blur-username');
                     document.getElementById('udm-username').textContent = '@' + (data.user.username || 'N/A');
                     document.getElementById('udm-registration').textContent = data.user.registration_date || 'N/A';
                     document.getElementById('udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' ₽';
@@ -1244,6 +1436,7 @@
                     document.getElementById('udm-referred-by').textContent = data.user.referred_by?.username ?
                         `@${data.user.referred_by.username} (#${data.user.referred_by.telegram_id})` : 'Не приглашён';
                     document.getElementById('udm-balance').textContent = (data.user.balance || 0).toFixed(2) + ' ₽';
+                    setBalanceEditMode(false);
 
                     const pinBadge = document.getElementById('udm-pinned-badge');
                     if (pinBadge) {
@@ -1285,6 +1478,7 @@
                     const subsList = document.getElementById('udm-subs-list');
                     subsStats.textContent = data.subs_stats ?
                         `(Всего: ${data.subs_stats.total}, Активно: ${data.subs_stats.active}, Истекло: ${data.subs_stats.expired})` : '';
+                    document.getElementById('udm-tab-count-subs').textContent = String(data.subscriptions?.length || 0);
                     subsList.innerHTML = data.subscriptions?.length ? data.subscriptions.map(sub => {
                         function formatDuration(dateStr) {
                             if (!dateStr || sub.is_expired) return '';
@@ -1305,6 +1499,7 @@
                     <div class="p-4 relative bg-black/20 mb-4 border border-white/5 rounded-2xl last:mb-0 shadow-lg hover:bg-black/30 transition-colors">
                         <div class="flex items-center gap-2 mb-3 flex-wrap justify-between">
                             <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-base ${sub.is_expired ? 'text-red-400' : 'text-primary'}">${sub.is_expired ? 'close' : 'check_circle'}</span>
                                 <span class="${sub.is_expired ? 'text-red-400' : 'text-primary'} font-bold text-sm">${sub.status_text}</span>
                                 ${durationText ? `<span class="text-white/50 text-sm font-medium bg-white/5 px-2 py-0.5 rounded-lg">${durationText}</span>` : ''}
                                 <span class="text-white/30 text-[10px] uppercase font-bold tracking-wider ml-1">Истекает: ${sub.expire_date}</span>
@@ -1472,15 +1667,18 @@
                     const emptyHistoryRow = '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
 
                     const paymentHistory = document.getElementById('udm-payment-history');
+                    document.getElementById('udm-tab-count-payments').textContent = String(data.payment_history?.length || 0);
                     paymentHistory.innerHTML = data.payment_history?.length
                         ? data.payment_history.map(tx => renderTxRow(tx, false)).join('')
                         : emptyHistoryRow;
 
                     const balanceHistory = document.getElementById('udm-balance-history');
+                    document.getElementById('udm-tab-count-balance').textContent = String(data.balance_history?.length || 0);
                     balanceHistory.innerHTML = data.balance_history?.length
                         ? data.balance_history.map(tx => renderTxRow(tx, true)).join('')
                         : emptyHistoryRow;
 
+                    setUserDetailsTab('subscriptions');
                     document.getElementById('udm-loading').classList.add('hidden');
                     document.getElementById('udm-content').classList.remove('hidden');
                 } else {
@@ -1543,7 +1741,7 @@
                                        RF
                                     </div>
                                     <div class="flex flex-col truncate">
-                                        <span class="text-white font-bold text-xs tracking-tight group-hover:text-primary transition-colors demo-blur-username">@${r.username || 'Без юзернейма'}</span>
+                                        <span class="text-white font-bold text-xs tracking-tight group-hover:text-primary transition-colors">@${r.username || 'Без юзернейма'}</span>
                                         <span class="text-white/40 text-[10px] font-mono">#${r.telegram_id}</span>
                                     </div>
                                 </div>
@@ -1721,6 +1919,54 @@
                 };
                 openModal('banConfirmModal');
             }
+        });
+
+        document.getElementById('udm-balance-edit')?.addEventListener('click', async function () {
+            const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+            const balanceDisplay = document.getElementById('udm-balance');
+            const balanceInput = document.getElementById('udm-balance-input');
+            const isEditing = balanceInput && !balanceInput.classList.contains('hidden');
+            if (!uid || !balanceDisplay || !balanceInput) return;
+
+            if (!isEditing) {
+                setBalanceEditMode(true);
+                return;
+            }
+
+            const normalized = balanceInput.value.trim().replace(',', '.');
+            const nextBalance = parseFloat(normalized);
+            const previousText = balanceDisplay.textContent;
+
+            await setUserBalanceAbsolute(uid, nextBalance);
+
+            if (Number.isFinite(nextBalance) && nextBalance >= 0 && balanceDisplay.textContent !== previousText) {
+                setBalanceEditMode(false);
+            }
+        });
+
+        document.getElementById('udm-balance-input')?.addEventListener('keydown', async function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('udm-balance-edit')?.click();
+            }
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setBalanceEditMode(false);
+            }
+        });
+
+        document.getElementById('udm-balance-reset')?.addEventListener('click', async function () {
+            const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+            if (!uid) return;
+
+            showConfirmModal(
+                'Обнуление баланса',
+                'Вы уверены, что хотите обнулить баланс пользователя до 0.00 ₽?',
+                async () => {
+                    await setUserBalanceAbsolute(uid, 0);
+                }
+            );
         });
 
         document.addEventListener('change', async function (e) {

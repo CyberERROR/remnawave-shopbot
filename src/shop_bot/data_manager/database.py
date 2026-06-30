@@ -2908,27 +2908,46 @@ def get_total_spent_by_method(payment_method: str) -> float:
 def get_today_income_by_currency() -> dict:
     rub_methods = ('yookassa', 'platega', 'platega payform')
     crypto_methods = ('telegram stars', 'cryptobot', 'heleket', 'ton connect', 'platega crypto')
+    subscription_filter = """
+          AND (
+              LOWER(COALESCE(json_extract(metadata, '$.action'), '')) IN ('new', 'extend')
+              OR LOWER(COALESCE(json_extract(metadata, '$.reason'), '')) = 'subscription_purchase_or_extend'
+          )
+    """
     rub = _fetch_val(
         f"""
         SELECT COALESCE(SUM(amount_rub), 0.0)
         FROM transactions
-        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success', 'succeeded')
           AND date(created_date) = date('now', '+3 hours')
           AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in rub_methods)})
+          {subscription_filter}
         """,
         rub_methods, 0.0, "Не удалось получить рублёвый доход за сегодня"
+    )
+    yesterday_rub = _fetch_val(
+        f"""
+        SELECT COALESCE(SUM(amount_rub), 0.0)
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success', 'succeeded')
+          AND date(created_date) = date('now', '+3 hours', '-1 day')
+          AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in rub_methods)})
+          {subscription_filter}
+        """,
+        rub_methods, 0.0, "Не удалось получить рублёвый доход за вчера"
     )
     crypto = _fetch_val(
         f"""
         SELECT COALESCE(SUM(amount_rub), 0.0)
         FROM transactions
-        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success')
+        WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success', 'succeeded')
           AND date(created_date) = date('now', '+3 hours')
           AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in crypto_methods)})
+          {subscription_filter}
         """,
         crypto_methods, 0.0, "Не удалось получить крипто доход за сегодня"
     )
-    return {"rub": float(rub or 0), "crypto": float(crypto or 0)}
+    return {"rub": float(rub or 0), "yesterday_rub": float(yesterday_rub or 0), "crypto": float(crypto or 0)}
 # ========================================
 
 
