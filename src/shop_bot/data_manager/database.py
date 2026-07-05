@@ -2102,15 +2102,48 @@ def get_admin_stats() -> dict:
     stats["active_keys"] = _get_count_stat("SELECT COUNT(*) as c FROM vpn_keys WHERE expire_at IS NOT NULL AND datetime(expire_at) > CURRENT_TIMESTAMP")
     stats["total_income"] = float(_get_count_stat("""
         SELECT COALESCE(SUM(amount_rub), 0) as s FROM transactions
-        WHERE status IN ('paid','success','succeeded') AND LOWER(COALESCE(payment_method, '')) <> 'balance'
+        WHERE LOWER(COALESCE(status, '')) IN ('paid','completed','success','succeeded')
+          AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin', 'referral')
     """))
     stats["today_new_users"] = _get_count_stat("SELECT COUNT(*) as c FROM users WHERE date(registration_date) = date('now', '+3 hours')")
     stats["today_income"] = float(_get_count_stat("""
         SELECT COALESCE(SUM(amount_rub), 0) as s FROM transactions
-        WHERE status IN ('paid','success','succeeded') AND date(created_date) = date('now', '+3 hours') 
-          AND LOWER(COALESCE(payment_method, '')) <> 'balance'
+        WHERE LOWER(COALESCE(status, '')) IN ('paid','completed','success','succeeded')
+          AND date(created_date) = date('now', '+3 hours') 
+          AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin', 'referral')
     """))
-    stats["today_issued_keys"] = _get_count_stat("SELECT COUNT(*) as c FROM vpn_keys WHERE date(COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)) = date('now', '+3 hours')")
+    stats["today_topups"] = float(_get_count_stat("""
+        SELECT COALESCE(SUM(amount_rub), 0) as s FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN ('paid','completed','success','succeeded')
+          AND date(created_date) = date('now', '+3 hours')
+          AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin', 'referral')
+          AND (
+              LOWER(COALESCE(json_extract(metadata, '$.action'), '')) IN ('topup', 'top_up')
+              OR LOWER(COALESCE(json_extract(metadata, '$.reason'), '')) = 'external_balance_top_up'
+          )
+    """))
+    stats["today_subscription_purchases"] = float(_get_count_stat("""
+        SELECT COALESCE(SUM(amount_rub), 0) as s FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN ('paid','completed','success','succeeded')
+          AND date(created_date) = date('now', '+3 hours')
+          AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin', 'referral')
+          AND (
+              LOWER(COALESCE(json_extract(metadata, '$.action'), '')) IN ('new', 'extend')
+              OR LOWER(COALESCE(json_extract(metadata, '$.reason'), '')) = 'subscription_purchase_or_extend'
+          )
+    """))
+    stats["today_bought_keys"] = _get_count_stat("""
+        SELECT COUNT(*) as c FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN ('paid','completed','success','succeeded')
+          AND date(created_date) = date('now', '+3 hours')
+          AND LOWER(COALESCE(payment_method, '')) NOT IN ('balance', 'admin', 'referral')
+          AND LOWER(COALESCE(json_extract(metadata, '$.action'), '')) = 'new'
+    """)
+    stats["today_trials"] = _get_count_stat("""
+        SELECT COUNT(*) as c FROM vpn_keys
+        WHERE COALESCE(key_email, '') LIKE 'trial_%'
+          AND date(COALESCE(created_at, updated_at, CURRENT_TIMESTAMP)) = date('now', '+3 hours')
+    """)
     return stats
 # =======================
 
@@ -2908,10 +2941,10 @@ def get_total_spent_by_method(payment_method: str) -> float:
 def get_today_income_by_currency() -> dict:
     rub_methods = ('yookassa', 'platega', 'platega payform')
     crypto_methods = ('telegram stars', 'cryptobot', 'heleket', 'ton connect', 'platega crypto')
-    subscription_filter = """
+    income_filter = """
           AND (
-              LOWER(COALESCE(json_extract(metadata, '$.action'), '')) IN ('new', 'extend')
-              OR LOWER(COALESCE(json_extract(metadata, '$.reason'), '')) = 'subscription_purchase_or_extend'
+              LOWER(COALESCE(json_extract(metadata, '$.action'), '')) IN ('new', 'extend', 'topup', 'top_up')
+              OR LOWER(COALESCE(json_extract(metadata, '$.reason'), '')) IN ('subscription_purchase_or_extend', 'external_balance_top_up')
           )
     """
     rub = _fetch_val(
@@ -2921,7 +2954,7 @@ def get_today_income_by_currency() -> dict:
         WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success', 'succeeded')
           AND date(created_date) = date('now', '+3 hours')
           AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in rub_methods)})
-          {subscription_filter}
+          {income_filter}
         """,
         rub_methods, 0.0, "Не удалось получить рублёвый доход за сегодня"
     )
@@ -2932,7 +2965,7 @@ def get_today_income_by_currency() -> dict:
         WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success', 'succeeded')
           AND date(created_date) = date('now', '+3 hours', '-1 day')
           AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in rub_methods)})
-          {subscription_filter}
+          {income_filter}
         """,
         rub_methods, 0.0, "Не удалось получить рублёвый доход за вчера"
     )
@@ -2943,7 +2976,7 @@ def get_today_income_by_currency() -> dict:
         WHERE LOWER(COALESCE(status, '')) IN ('paid', 'completed', 'success', 'succeeded')
           AND date(created_date) = date('now', '+3 hours')
           AND LOWER(COALESCE(payment_method, '')) IN ({','.join('?' for _ in crypto_methods)})
-          {subscription_filter}
+          {income_filter}
         """,
         crypto_methods, 0.0, "Не удалось получить крипто доход за сегодня"
     )

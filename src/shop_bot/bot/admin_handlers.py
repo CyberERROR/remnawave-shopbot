@@ -69,6 +69,23 @@ def get_admin_router() -> Router:
     admin_router = Router()
 
 
+    def _build_safe_user_tag(user_id: int, username: str | None) -> str:
+        uname = (username or "").strip().lstrip('@')
+        if uname and re.fullmatch(r"[A-Za-z0-9_]{5,32}", uname):
+            safe_uname = html_escape.escape(uname, quote=True)
+            return f"<a href='https://t.me/{safe_uname}'>@{safe_uname}</a>"
+        if uname:
+            safe_uname = html_escape.escape(uname)
+            return f"@{safe_uname}"
+        return f"<a href='tg://user?id={user_id}'>Профиль</a>"
+
+
+    def _format_referred_by(value: object) -> str:
+        if value in (None, ""):
+            return '—'
+        return html_escape.escape(str(value))
+
+
     def _format_user_mention(u: types.User) -> str:
         try:
             if u.username:
@@ -110,7 +127,10 @@ def get_admin_router() -> Router:
         stats = get_admin_stats() or {}
         today_new = stats.get('today_new_users', 0)
         today_income = float(stats.get('today_income', 0) or 0)
-        today_keys = stats.get('today_issued_keys', 0)
+        today_topups = float(stats.get('today_topups', 0) or 0)
+        today_subscription_purchases = float(stats.get('today_subscription_purchases', 0) or 0)
+        today_keys = stats.get('today_bought_keys', 0)
+        today_trials = stats.get('today_trials', 0)
         total_users = stats.get('total_users', 0)
         total_income = float(stats.get('total_income', 0) or 0)
         total_keys = stats.get('total_keys', 0)
@@ -119,12 +139,15 @@ def get_admin_router() -> Router:
         text = (
             "📊 <b>Панель Администратора</b>\n\n"
             "<b>За сегодня:</b>\n"
-            f"👥 Новых пользователей: {today_new}\n"
-            f"💰 Доход: {today_income:.2f} RUB\n"
-            f"🔑 Выдано ключей: {today_keys}\n\n"
+            f"👥 Новые User`s: {today_new}\n"
+            f"💰 Доход: {today_income:.2f}₽\n"
+            f"💎 Пополнения баланса: {today_topups:.2f}₽\n"
+            f"🛍 Покупка подписки: {today_subscription_purchases:.2f}₽\n"
+            f"🔑 Куплено ключей: {today_keys}\n"
+            f"🎁 Выдано пробных: {today_trials}\n\n"
             "<b>За все время:</b>\n"
             f"👥 Всего пользователей: {total_users}\n"
-            f"💰 Общий доход: {total_income:.2f} RUB\n"
+            f"💰 Общий доход: {total_income:.2f}₽\n"
             f"🔑 Всего ключей: {total_keys}\n\n"
             "<b>Состояние ключей:</b>\n"
             f"✅ Активных: {active_keys}"
@@ -1478,11 +1501,7 @@ def get_admin_router() -> Router:
             
         user_id = user_info.get('telegram_id') or user_info.get('user_id') or user_info.get('id')
         
-        if user_info.get('username'):
-            uname = user_info.get('username').lstrip('@')
-            user_tag = f"<a href='https://t.me/{uname}'>@{uname}</a>"
-        else:
-            user_tag = f"<a href='tg://user?id={user_id}'>Профиль</a>"
+        user_tag = _build_safe_user_tag(user_id, user_info.get('username'))
             
         is_banned = user_info.get('is_banned', False)
         total_spent = user_info.get('total_spent', 0)
@@ -1496,7 +1515,7 @@ def get_admin_router() -> Router:
             f"Всего потратил: {float(total_spent):.2f} RUB\n"
             f"Баланс: {float(balance):.2f} RUB\n"
             f"Забанен: {'да' if is_banned else 'нет'}\n"
-            f"Приглашён: {referred_by if referred_by else '—'}\n"
+            f"Приглашён: {_format_referred_by(referred_by)}\n"
             f"Ключей: {keys_count}"
         )
         await message.answer(
@@ -1578,13 +1597,7 @@ def get_admin_router() -> Router:
             await callback.message.answer("❌ Пользователь не найден")
             return
 
-        username = user.get('username') or '—'
-
-        if user.get('username'):
-            uname = user.get('username').lstrip('@')
-            user_tag = f"<a href='https://t.me/{uname}'>@{uname}</a>"
-        else:
-            user_tag = f"<a href='tg://user?id={user_id}'>Профиль</a>"
+        user_tag = _build_safe_user_tag(user_id, user.get('username'))
         is_banned = user.get('is_banned', False)
         total_spent = user.get('total_spent', 0)
         balance = user.get('balance', 0)
@@ -1597,7 +1610,7 @@ def get_admin_router() -> Router:
             f"Всего потратил: {float(total_spent):.2f} RUB\n"
             f"Баланс: {float(balance):.2f} RUB\n"
             f"Забанен: {'да' if is_banned else 'нет'}\n"
-            f"Приглашён: {referred_by if referred_by else '—'}\n"
+            f"Приглашён: {_format_referred_by(referred_by)}\n"
             f"Ключей: {keys_count}"
         )
         await callback.message.edit_text(
@@ -1656,12 +1669,7 @@ def get_admin_router() -> Router:
             return
 
         user = get_user(user_id) or {}
-        username = user.get('username') or '—'
-        if user.get('username'):
-            uname = user.get('username').lstrip('@')
-            user_tag = f"<a href='https://t.me/{uname}'>@{uname}</a>"
-        else:
-            user_tag = f"<a href='tg://user?id={user_id}'>Профиль</a>"
+        user_tag = _build_safe_user_tag(user_id, user.get('username'))
         total_spent = user.get('total_spent', 0)
         balance = user.get('balance', 0)
         referred_by = user.get('referred_by')
@@ -1673,7 +1681,7 @@ def get_admin_router() -> Router:
             f"Всего потратил: {float(total_spent):.2f} RUB\n"
             f"Баланс: {float(balance):.2f} RUB\n"
             f"Забанен: да\n"
-            f"Приглашён: {referred_by if referred_by else '—'}\n"
+            f"Приглашён: {_format_referred_by(referred_by)}\n"
             f"Ключей: {keys_count}"
         )
         try:
@@ -1736,12 +1744,7 @@ def get_admin_router() -> Router:
                     u = get_user(int(aid)) or {}
                 except Exception:
                     u = {}
-                uname = (u.get('username') or '').strip()
-                if uname:
-                    uname_clean = uname.lstrip('@')
-                    tag = f"<a href='https://t.me/{uname_clean}'>@{uname_clean}</a>"
-                else:
-                    tag = f"<a href='tg://user?id={aid}'>Профиль</a>"
+                tag = _build_safe_user_tag(int(aid), u.get('username'))
                 lines.append(f"• ID: {aid} — {tag}")
             text = "📋 <b>Администраторы</b>:\n" + "\n".join(lines)
 
@@ -1784,13 +1787,7 @@ def get_admin_router() -> Router:
             return
 
         user = get_user(user_id) or {}
-        username = user.get('username') or '—'
-
-        if user.get('username'):
-            uname = user.get('username').lstrip('@')
-            user_tag = f"<a href='https://t.me/{uname}'>@{uname}</a>"
-        else:
-            user_tag = f"<a href='tg://user?id={user_id}'>Профиль</a>"
+        user_tag = _build_safe_user_tag(user_id, user.get('username'))
         total_spent = user.get('total_spent', 0)
         balance = user.get('balance', 0)
         referred_by = user.get('referred_by')
@@ -1802,7 +1799,7 @@ def get_admin_router() -> Router:
             f"Всего потратил: {float(total_spent):.2f} RUB\n"
             f"Баланс: {float(balance):.2f} RUB\n"
             f"Забанен: нет\n"
-            f"Приглашён: {referred_by if referred_by else '—'}\n"
+            f"Приглашён: {_format_referred_by(referred_by)}\n"
             f"Ключей: {keys_count}"
         )
         try:
@@ -3745,6 +3742,3 @@ def get_admin_router() -> Router:
         await callback.message.edit_text("\n".join(txt), parse_mode='HTML', reply_markup=kb.as_markup())
 
     return admin_router
-
-
-

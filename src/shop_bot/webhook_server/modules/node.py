@@ -5,6 +5,7 @@ import os
 import json
 import uuid
 import threading
+import base64
 from datetime import datetime, timezone, timedelta
 import re
 from shop_bot.data_manager import remnawave_repository as rw_repo
@@ -104,6 +105,10 @@ def format_uptime(seconds):
     if hours > 0: parts.append(f"{hours}ч")
     if minutes > 0 or not parts: parts.append(f"{minutes}м")
     return ' '.join(parts)
+
+def build_remote_write_command(path, content):
+    encoded = base64.b64encode((content or '').encode('utf-8')).decode('ascii')
+    return f"printf '%s' '{encoded}' | base64 -d > {path}"
 
 def register_node_routes(app, login_required, get_common_template_data):
     from shop_bot.data_manager.remnawave_repository import (
@@ -402,6 +407,292 @@ def register_node_routes(app, login_required, get_common_template_data):
             logger.error(f"Ошибка получения uptime для {server_type}/{name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
 
+    @app.route('/node/servers/details/<server_type>/<name>', methods=['GET'])
+    @login_required
+    def node_server_details(server_type, name):
+        try:
+            server, error = get_ssh_server(name, server_type)
+            if error: return error
+            creds, error = get_ssh_credentials(server)
+            if error: return error
+            host, port, username, password, key_path = creds
+            
+            delimiter = "___"
+            command = (
+                "SYS_OS=$(uname -s || echo 'Linux'); "
+                "SYS_ARCH=$(uname -m || echo 'x86_64'); "
+                "SYS_UPTIME=$(cat /proc/uptime | awk '{print $1}' || echo '0'); "
+                "SYS_MEM=$(free -b | grep Mem | awk '{print $3\" \"$2}' || echo '0 0'); "
+                "SYS_SWAP=$(free -b | grep Swap | awk '{print $3\" \"$2}' || echo '0 0'); "
+                "SYS_IFACE=$(ip route show | grep default | awk '{print $5}' | head -n1); "
+                "if [ -z \"$SYS_IFACE\" ]; then SYS_IFACE=$(ip link | grep -v lo | grep LOWER_UP | awk -F: '{print $2}' | xargs | awk '{print $1}'); fi; "
+                "if [ -z \"$SYS_IFACE\" ]; then SYS_IFACE=\"eth0\"; fi; "
+                "RX_BYTES_TOTAL=$(cat /sys/class/net/$SYS_IFACE/statistics/rx_bytes || echo '0'); "
+                "TX_BYTES_TOTAL=$(cat /sys/class/net/$SYS_IFACE/statistics/tx_bytes || echo '0'); "
+                "RX_1=$(cat /sys/class/net/$SYS_IFACE/statistics/rx_bytes || echo '0'); "
+                "TX_1=$(cat /sys/class/net/$SYS_IFACE/statistics/tx_bytes || echo '0'); "
+                "sleep 0.5; "
+                "RX_2=$(cat /sys/class/net/$SYS_IFACE/statistics/rx_bytes || echo '0'); "
+                "TX_2=$(cat /sys/class/net/$SYS_IFACE/statistics/tx_bytes || echo '0'); "
+                "RX_SPEED=$(( (RX_2 - RX_1) * 2 )); "
+                "TX_SPEED=$(( (TX_2 - TX_1) * 2 )); "
+                "SYS_CPU=$(lscpu | grep 'Model name' | awk -F: '{print $2}' | xargs || grep 'model name' /proc/cpuinfo | head -n1 | awk -F: '{print $2}' | xargs || echo 'Unknown CPU'); "
+                "SYS_KERNEL=$(uname -r || echo 'Unknown'); "
+                "COMPOSE_CONTENT=\"\"; "
+                "if [ -f /opt/remnanode/docker-compose.yml ]; then COMPOSE_CONTENT=$(cat /opt/remnanode/docker-compose.yml | base64 2>/dev/null || echo ''); "
+                "elif [ -f /opt/remnanode/docker-compose.yaml ]; then COMPOSE_CONTENT=$(cat /opt/remnanode/docker-compose.yaml | base64 2>/dev/null || echo ''); fi; "
+                "ENV_CONTENT=\"\"; "
+                "if [ -f /opt/remnanode/.env ]; then ENV_CONTENT=$(cat /opt/remnanode/.env | base64 2>/dev/null || echo ''); fi; "
+                f"echo \"$SYS_OS\"; echo \"{delimiter}\"; "
+                f"echo \"$SYS_ARCH\"; echo \"{delimiter}\"; "
+                f"echo \"$SYS_UPTIME\"; echo \"{delimiter}\"; "
+                f"echo \"$SYS_MEM\"; echo \"{delimiter}\"; "
+                f"echo \"$SYS_SWAP\"; echo \"{delimiter}\"; "
+                f"echo \"$SYS_IFACE\"; echo \"{delimiter}\"; "
+                f"echo \"$RX_BYTES_TOTAL\"; echo \"{delimiter}\"; "
+                f"echo \"$TX_BYTES_TOTAL\"; echo \"{delimiter}\"; "
+                f"echo \"$RX_SPEED\"; echo \"{delimiter}\"; "
+                f"echo \"$TX_SPEED\"; echo \"{delimiter}\"; "
+                f"echo \"$SYS_CPU\"; echo \"{delimiter}\"; "
+                f"echo \"$SYS_KERNEL\"; echo \"{delimiter}\"; "
+                f"echo \"$COMPOSE_CONTENT\"; echo \"{delimiter}\"; "
+                f"echo \"$ENV_CONTENT\""
+            )
+            result = execute_ssh_command(host, port, username, password, command, timeout=20, key_path=key_path)
+            if not result['ok']:
+                return jsonify({'ok': False, 'error': result.get('error', 'Ошибка SSH-подключения')}), 503
+            
+            output_raw = result['output']
+            parts = output_raw.split(delimiter)
+            if len(parts) < 14:
+                return jsonify({'ok': False, 'error': 'Неполные данные от сервера'}), 500
+            
+            def safe_float(val, default=0.0):
+                try:
+                    return float(val.strip())
+                except Exception:
+                    return default
+
+            def safe_int(val, default=0):
+                try:
+                    return int(val.strip())
+                except Exception:
+                    return default
+
+            sys_os = parts[0].strip()
+            sys_arch = parts[1].strip()
+            sys_uptime = safe_float(parts[2])
+            
+            mem_parts = parts[3].strip().split()
+            mem_used = safe_int(mem_parts[0]) if len(mem_parts) >= 2 else 0
+            mem_total = safe_int(mem_parts[1]) if len(mem_parts) >= 2 else 0
+            
+            swap_parts = parts[4].strip().split()
+            swap_used = safe_int(swap_parts[0]) if len(swap_parts) >= 2 else 0
+            swap_total = safe_int(swap_parts[1]) if len(swap_parts) >= 2 else 0
+            
+            sys_iface = parts[5].strip()
+            rx_bytes_total = safe_int(parts[6])
+            tx_bytes_total = safe_int(parts[7])
+            
+            rx_speed = safe_int(parts[8])
+            tx_speed = safe_int(parts[9])
+            
+            sys_cpu = parts[10].strip()
+            sys_kernel = parts[11].strip()
+            
+            def safe_b64decode(val):
+                try:
+                    cleaned = re.sub(r'\s+', '', val.strip())
+                    return base64.b64decode(cleaned).decode('utf-8', errors='replace')
+                except Exception:
+                    return val.strip()
+
+            compose_content = safe_b64decode(parts[12])
+            env_content = safe_b64decode(parts[13])
+            
+            secret_key = ""
+            node_port = ""
+            
+            if env_content:
+                sk_match = re.search(r'SECRET_KEY\s*[:=]\s*["\']?([^"\'\s#\n]+)["\']?', env_content)
+                if sk_match:
+                    secret_key = sk_match.group(1)
+                np_match = re.search(r'(?:NODE_PORT|PORT)\s*[:=]\s*["\']?(\d+)["\']?', env_content)
+                if np_match:
+                    node_port = np_match.group(1)
+            
+            if not secret_key and compose_content:
+                sk_match = re.search(r'SECRET_KEY\s*[:=]\s*["\']?([^"\'\s#\n]+)["\']?', compose_content)
+                if sk_match:
+                    secret_key = sk_match.group(1)
+            
+            if not node_port and compose_content:
+                np_match = re.search(r'NODE_PORT\s*[:=]\s*["\']?(\d+)["\']?', compose_content)
+                if np_match:
+                    node_port = np_match.group(1)
+                else:
+                    ports_match = re.search(r'-\s*["\']?(\d+):2222["\']?', compose_content)
+                    if ports_match:
+                        node_port = ports_match.group(1)
+                    else:
+                        ports_match_generic = re.search(r'-\s*["\']?(\d+):\d+["\']?', compose_content)
+                        if ports_match_generic:
+                            node_port = ports_match_generic.group(1)
+            
+            return jsonify({
+                'ok': True,
+                'name': name,
+                'server_type': server_type,
+                'ssh_host': server.get('ssh_host') or '',
+                'ssh_user': server.get('ssh_user') or server.get('ssh_username') or '',
+                'ssh_password': server.get('ssh_password') or '',
+                'address': host,
+                'country': server.get('country') or '',
+                'description': server.get('description') or '',
+                'sys_os': sys_os,
+                'sys_arch': sys_arch,
+                'sys_uptime': sys_uptime,
+                'sys_uptime_formatted': format_uptime(sys_uptime),
+                'mem_used': mem_used,
+                'mem_total': mem_total,
+                'swap_used': swap_used,
+                'swap_total': swap_total,
+                'sys_iface': sys_iface,
+                'rx_bytes_total': rx_bytes_total,
+                'tx_bytes_total': tx_bytes_total,
+                'rx_speed': rx_speed,
+                'tx_speed': tx_speed,
+                'sys_cpu': sys_cpu,
+                'sys_kernel': sys_kernel,
+                'secret_key': secret_key,
+                'node_port': node_port,
+                'docker_compose': compose_content,
+                'env_content': env_content
+            })
+        except Exception as e:
+            logger.error(f"Ошибка получения деталей сервера {server_type}/{name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @app.route('/node/servers/details/<server_type>/<name>/save', methods=['POST'])
+    @login_required
+    def node_server_details_save(server_type, name):
+        try:
+            internal_name = (request.form.get('internal_name') or '').strip()
+            ssh_host_form = (request.form.get('ssh_host') or '').strip()
+            ssh_user_form = (request.form.get('ssh_user') or '').strip()
+            ssh_password_form = request.form.get('ssh_password')
+            secret_key = (request.form.get('secret_key') or '').strip()
+            node_port = (request.form.get('node_port') or '').strip()
+            docker_compose = (request.form.get('docker_compose') or '').strip()
+            env_content = (request.form.get('env_content') or '').strip()
+            
+            server, error = get_ssh_server(name, server_type)
+            if error: return error
+            creds, error = get_ssh_credentials(server)
+            if error: return error
+            host, port, username, password, key_path = creds
+            compose_content_to_save = docker_compose
+            env_content_to_save = env_content
+
+            if compose_content_to_save:
+                if secret_key:
+                    compose_content_to_save = re.sub(r'(SECRET_KEY\s*[:=]\s*["\']?)[^"\'\n]*((?:["\']\s*)?)', rf'\g<1>{secret_key}\g<2>', compose_content_to_save)
+                if node_port:
+                    compose_content_to_save = re.sub(r'(NODE_PORT\s*[:=]\s*["\']?)\d+((?:["\']\s*)?)', rf'\g<1>{node_port}\g<2>', compose_content_to_save)
+                    compose_content_to_save = re.sub(r'(-\s*["\']?)\d+(:\d+["\']?)', rf'\g<1>{node_port}\g<2>', compose_content_to_save)
+            elif secret_key or node_port:
+                key_candidate = secret_key or "default_secret"
+                port_candidate = node_port or "2222"
+                compose_content_to_save = (
+                    "services:\n"
+                    "  remnanode:\n"
+                    "    container_name: remnanode\n"
+                    "    hostname: remnanode\n"
+                    "    image: remnawave/node:latest\n"
+                    "    network_mode: host\n"
+                    "    restart: always\n"
+                    "    cap_add:\n"
+                    "      - NET_ADMIN\n"
+                    "    ulimits:\n"
+                    "      nofile:\n"
+                    "        soft: 1048576\n"
+                    "        hard: 1048576\n"
+                    "    environment:\n"
+                    "      - NODE_PORT=" + port_candidate + "\n"
+                    f'      - SECRET_KEY="{key_candidate}"'
+                )
+
+            if env_content:
+                if secret_key:
+                    if re.search(r'SECRET_KEY\s*[:=]', env_content_to_save):
+                        env_content_to_save = re.sub(r'(SECRET_KEY\s*[:=]\s*["\']?)[^"\'\n]*((?:["\']\s*)?)', rf'\g<1>{secret_key}\g<2>', env_content_to_save)
+                    else:
+                        env_content_to_save += f'\nSECRET_KEY="{secret_key}"'
+                if node_port:
+                    if re.search(r'NODE_PORT\s*[:=]', env_content_to_save):
+                        env_content_to_save = re.sub(r'(NODE_PORT\s*[:=]\s*["\']?)\d+((?:["\']\s*)?)', rf'\g<1>{node_port}\g<2>', env_content_to_save)
+                    elif re.search(r'PORT\s*[:=]', env_content_to_save):
+                        env_content_to_save = re.sub(r'(PORT\s*[:=]\s*["\']?)\d+((?:["\']\s*)?)', rf'\g<1>{node_port}\g<2>', env_content_to_save)
+                    else:
+                        env_content_to_save += f'\nNODE_PORT={node_port}'
+
+            result_dir = execute_ssh_command(host, port, username, password, 'mkdir -p /opt/remnanode', timeout=15, key_path=key_path)
+            if not result_dir['ok']:
+                return jsonify({'ok': False, 'error': 'Не удалось создать директорию /opt/remnanode'}), 500
+
+            save_commands = []
+            if compose_content_to_save.strip():
+                save_commands.append(build_remote_write_command('/opt/remnanode/docker-compose.yml', compose_content_to_save.strip() + '\n'))
+            if env_content_to_save.strip():
+                save_commands.append(build_remote_write_command('/opt/remnanode/.env', env_content_to_save.strip() + '\n'))
+
+            if save_commands:
+                result_save = execute_ssh_command(host, port, username, password, ' && '.join(save_commands), timeout=30, key_path=key_path)
+                if not result_save['ok']:
+                    return jsonify({'ok': False, 'error': 'Не удалось записать конфигурационные файлы'}), 500
+
+            if server_type == 'ssh':
+                updated_name = internal_name or name
+                if updated_name != name:
+                    rename_ok = rw_repo.rename_ssh_target(name, updated_name)
+                    if not rename_ok:
+                        return jsonify({'ok': False, 'error': 'Не удалось обновить внутреннее имя ноды'}), 400
+                    name = updated_name
+                update_ok = rw_repo.update_ssh_target_fields(
+                    name,
+                    ssh_host=ssh_host_form or None,
+                    ssh_user=ssh_user_form or None,
+                    ssh_password=ssh_password_form if ssh_password_form is not None else None,
+                )
+                if not update_ok:
+                    return jsonify({'ok': False, 'error': 'Не удалось сохранить внутренние SSH-настройки ноды'}), 500
+            elif server_type == 'host':
+                updated_name = internal_name or name
+                if updated_name != name:
+                    rename_ok = rw_repo.update_host_name(name, updated_name)
+                    if not rename_ok:
+                        return jsonify({'ok': False, 'error': 'Не удалось обновить внутреннее имя хоста'}), 400
+                    name = updated_name
+                update_ok = rw_repo.update_host_ssh_settings(
+                    name,
+                    ssh_host=ssh_host_form or None,
+                    ssh_user=ssh_user_form or None,
+                    ssh_password=ssh_password_form if ssh_password_form is not None else None,
+                )
+                if not update_ok:
+                    return jsonify({'ok': False, 'error': 'Не удалось сохранить внутренние SSH-настройки хоста'}), 500
+            
+            restart_cmd = 'cd /opt/remnanode && docker compose down 2>/dev/null || true; docker compose up -d'
+            result_restart = execute_ssh_command(host, port, username, password, restart_cmd, timeout=120, key_path=key_path)
+            if not result_restart['ok']:
+                return jsonify({'ok': False, 'error': 'Файлы сохранены, но не удалось перезапустить контейнеры', 'output': result_restart['output']}), 500
+            
+            return jsonify({'ok': True, 'message': 'Параметры ноды успешно сохранены и применены'})
+        except Exception as e:
+            logger.error(f"Ошибка сохранения деталей сервера {server_type}/{name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
     @app.route('/node/servers/reboot/<server_type>/<name>', methods=['POST'])
     @login_required
     def node_server_reboot(server_type, name):
@@ -416,6 +707,33 @@ def register_node_routes(app, login_required, get_common_template_data):
             return jsonify({'ok': True, 'message': f'Команда перезагрузки отправлена на {name}'})
         except Exception as e:
             logger.error(f"Ошибка перезагрузки {server_type}/{name}: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @app.route('/node/servers/update/<server_type>/<name>', methods=['POST'])
+    @login_required
+    def node_server_update(server_type, name):
+        try:
+            server, error = get_ssh_server(name, server_type)
+            if error: return error
+            creds, error = get_ssh_credentials(server)
+            if error: return error
+            host, port, username, password, key_path = creds
+            command = 'cd /opt/remnanode && docker compose pull && docker compose down && docker compose up -d && docker compose logs --tail=100'
+            logger.info(f"Обновление ноды Remnawave {server_type}/{name} ({host}:{port})")
+            result = execute_ssh_command(host, port, username, password, command, timeout=180, key_path=key_path)
+            if result.get('ok') or result.get('exit_status') == 0:
+                return jsonify({
+                    'ok': True,
+                    'message': 'Нода Remnawave обновлена до актуальной версии',
+                    'output': result.get('output', '')
+                })
+            return jsonify({
+                'ok': False,
+                'error': result.get('error') or 'Не удалось обновить ноду Remnawave',
+                'output': result.get('output', '')
+            }), 500
+        except Exception as e:
+            logger.error(f"Ошибка обновления ноды {server_type}/{name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
 
     @app.route('/node/servers/deploy/check-status/<name>', methods=['GET'])

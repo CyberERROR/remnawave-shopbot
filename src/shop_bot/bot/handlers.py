@@ -289,22 +289,40 @@ async def create_pending_payment(user_id: int, amount: float, payment_method: st
     return payment_id, metadata
 # ===== Конец функции create_pending_payment =====
 
-async def create_yookassa_payment_async(payload: dict, idempotence_key: str, shop_id: str, secret_key: str, timeout_seconds: int = 12) -> dict:
-    timeout = aiohttp.ClientTimeout(total=timeout_seconds, connect=5, sock_read=timeout_seconds)
+async def create_yookassa_payment_async(payload: dict, idempotence_key: str, shop_id: str, secret_key: str, timeout_seconds: int = 20) -> dict:
+    timeout = aiohttp.ClientTimeout(total=timeout_seconds, connect=12, sock_read=timeout_seconds)
     headers = {"Idempotence-Key": str(idempotence_key)}
     auth = aiohttp.BasicAuth(str(shop_id), str(secret_key))
     api_payload = dict(payload)
     if isinstance(api_payload.get("metadata"), dict):
         api_payload["metadata"] = {str(k): "" if v is None else str(v) for k, v in api_payload["metadata"].items()}
     async with aiohttp.ClientSession(timeout=timeout, auth=auth) as session:
-        async with session.post("https://api.yookassa.ru/v3/payments", json=api_payload, headers=headers) as response:
-            raw = await response.text()
-            if response.status >= 400:
-                raise RuntimeError(f"YooKassa HTTP {response.status}: {raw[:500]}")
-            data = json.loads(raw or "{}")
-            if not data.get("confirmation", {}).get("confirmation_url"):
-                raise RuntimeError("YooKassa не вернула confirmation_url")
-            return data
+        last_error = None
+        for attempt in range(3):
+            try:
+                async with session.post("https://api.yookassa.ru/v3/payments", json=api_payload, headers=headers) as response:
+                    raw = await response.text()
+                    if response.status >= 400:
+                        raise RuntimeError(f"YooKassa HTTP {response.status}: {raw[:500]}")
+                    data = json.loads(raw or "{}")
+                    if not data.get("confirmation", {}).get("confirmation_url"):
+                        raise RuntimeError("YooKassa не вернула confirmation_url")
+                    return data
+            except (aiohttp.ClientConnectionError, aiohttp.ServerTimeoutError, asyncio.TimeoutError) as exc:
+                last_error = exc
+                if attempt == 2:
+                    break
+                delay = 1 + attempt
+                logger.warning(
+                    "YooKassa: временная ошибка соединения при создании платежа %s, повтор через %s сек. Попытка %s/3",
+                    idempotence_key,
+                    delay,
+                    attempt + 1,
+                )
+                await asyncio.sleep(delay)
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("YooKassa: не удалось создать платеж")
 
 # ===== ПОЛУЧЕНИЕ КЛАВИАТУРЫ ОПЛАТЫ =====
 # Генерирует соответствующую inline-клавиатуру в зависимости от выбранного метода платежа
