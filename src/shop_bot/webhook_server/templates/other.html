@@ -300,6 +300,10 @@
                             'new_releases'},
                             {'v': 'not_used_trial', 'l': 'Не использовали триал', 's': 'Новые потенциальные клиенты',
                             'i': 'history_toggle_off'},
+                            {'v': 'telegram_ids_include', 'l': 'Только Telegram ID', 's': 'Рассылка по указанному списку ID', 'i':
+                            'alternate_email'},
+                            {'v': 'telegram_ids_exclude', 'l': 'Исключить Telegram ID', 's': 'Рассылка всем, кроме указанного списка ID', 'i':
+                            'person_off'},
                             {'v': 'test', 'l': 'Тестовый режим', 's': 'Только себе (админам)', 'i': 'bug_report'}
                             ] %}
                             <label class="relative cursor-pointer group">
@@ -328,6 +332,16 @@
                                 </div>
                             </label>
                             {% endfor %}
+                        </div>
+
+                        <div id="telegram-ids-selector"
+                            class="mt-6 hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                            <label
+                                class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold mb-4 ml-1">Telegram ID</label>
+                            <textarea id="telegram-ids-input" name="telegram_ids"
+                                class="w-full min-h-[120px] bg-black/20 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-inner"
+                                placeholder="123456789&#10;987654321&#10;или через запятую: 123456789, 987654321"></textarea>
+                            <p class="mt-2 text-[10px] text-white/40 uppercase tracking-wider">Можно вводить по одному ID в строке или списком через запятую</p>
                         </div>
 
                         <!-- Special Mode: Expiring Keys -->
@@ -670,12 +684,19 @@
 
     <div class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl">
         <div class="p-6">
-            <h3 class="text-base font-bold text-white mb-6 flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                    <span class="material-symbols-outlined text-lg">list_alt</span>
-                </div>
-                Существующие промокоды
-            </h3>
+            <div class="mb-6 flex items-center justify-between gap-4">
+                <h3 class="text-base font-bold text-white flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined text-lg">list_alt</span>
+                    </div>
+                    Существующие промокоды
+                </h3>
+                <button onclick="deleteAllPromos()"
+                    class="shrink-0 px-4 py-2 rounded-xl bg-red-500/10 text-red-300 hover:text-white hover:bg-red-500/20 border border-red-500/20 font-bold uppercase tracking-widest text-[11px] transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">delete_sweep</span>
+                    Удалить все
+                </button>
+            </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -2235,7 +2256,12 @@
                 </tbody>
             </table>
         </div>
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-3">
+            <button onclick="copyPromoUsageIds()"
+                class="px-6 py-2.5 rounded-xl bg-primary/10 text-primary hover:text-white hover:bg-primary/20 font-bold transition-all text-sm uppercase tracking-widest border border-primary/20 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">content_copy</span>
+                Скопировать ID
+            </button>
             <button onclick="closeModal('usagePromoModal')"
                 class="px-6 py-2.5 rounded-xl bg-white/5 text-white/70 hover:text-white hover:bg-white/10 font-bold transition-all text-sm uppercase tracking-widest border border-white/10">Закрыть</button>
         </div>
@@ -3303,10 +3329,20 @@
             }
 
             const mode = document.querySelector('input[name="mode"]:checked').value;
+            const telegramIdsInput = document.getElementById('telegram-ids-input');
+
+            if ((mode === 'telegram_ids_include' || mode === 'telegram_ids_exclude') && !telegramIdsInput.value.trim()) {
+                window.showToast('warning', 'Введите хотя бы один Telegram ID');
+                return;
+            }
 
             const confirmed = await window.showConfirm({
                 title: 'Отправка рассылки',
-                message: 'Вы уверены, что хотите отправить рассылку всем пользователям?',
+                message: mode === 'telegram_ids_include'
+                    ? 'Вы уверены, что хотите отправить рассылку только указанным Telegram ID?'
+                    : mode === 'telegram_ids_exclude'
+                        ? 'Вы уверены, что хотите отправить рассылку всем, кроме указанных Telegram ID?'
+                        : 'Вы уверены, что хотите отправить рассылку всем пользователям?',
                 type: 'warning',
                 confirmText: 'Отправить',
                 cancelText: 'Отмена'
@@ -3317,6 +3353,7 @@
             formData.append('csrf_token', window.getCsrfToken());
             formData.append('text', text);
             formData.append('mode', mode);
+            formData.append('telegram_ids', telegramIdsInput.value.trim());
             const skipBanned = document.getElementById('skip-banned-toggle').checked;
             formData.append('skip_banned', skipBanned);
             formData.append('buttons', JSON.stringify(buttons));
@@ -3636,6 +3673,28 @@
             }
         };
 
+        window.copyPromoUsageIds = async function () {
+            const tableBody = document.getElementById('usage-promo-table-body');
+            if (!tableBody) return;
+
+            const ids = Array.from(tableBody.querySelectorAll('tr td:nth-child(2)'))
+                .map(cell => cell.textContent.trim())
+                .filter(id => /^\d+$/.test(id));
+
+            if (!ids.length) {
+                window.showToast('warning', 'Нет ID для копирования');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(ids.join('\n'));
+                window.showToast('success', `Скопировано ID: ${ids.length}`);
+            } catch (err) {
+                console.error('Failed to copy promo usage ids:', err);
+                window.showToast('danger', 'Ошибка копирования');
+            }
+        };
+
         async function loadPromos() {
             try {
                 const resp = await fetch('/other/promo/list');
@@ -3909,6 +3968,37 @@
             } catch (e) {
                 console.error(e);
                 window.showToast('danger', 'Ошибка удаления промокода');
+            }
+        };
+
+        window.deleteAllPromos = async function () {
+            const confirmed = await window.showConfirm({
+                title: 'Удаление всех промокодов',
+                message: 'Вы уверены, что хотите удалить все созданные промокоды?',
+                type: 'danger',
+                confirmText: 'Удалить все',
+                cancelText: 'Отмена'
+            });
+            if (!confirmed) return;
+
+            try {
+                const resp = await fetch('/other/promo/delete-all', {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': window.getCsrfToken()
+                    }
+                });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    window.showToast('success', `Удалено промокодов: ${data.deleted_count || 0}`);
+                    loadPromos();
+                } else {
+                    window.showToast('danger', data.error || 'Ошибка удаления');
+                }
+            } catch (e) {
+                console.error(e);
+                window.showToast('danger', 'Ошибка удаления всех промокодов');
             }
         };
 
@@ -4917,10 +5007,17 @@
         document.querySelectorAll('input[name="mode"]').forEach(radio => {
             radio.addEventListener('change', function () {
                 const expiringDaysSelector = document.getElementById('expiring-days-selector');
+                const telegramIdsSelector = document.getElementById('telegram-ids-selector');
                 if (this.value === 'expiring_keys') {
                     expiringDaysSelector.classList.remove('hidden');
                 } else {
                     expiringDaysSelector.classList.add('hidden');
+                }
+
+                if (this.value === 'telegram_ids_include' || this.value === 'telegram_ids_exclude') {
+                    telegramIdsSelector.classList.remove('hidden');
+                } else {
+                    telegramIdsSelector.classList.add('hidden');
                 }
             });
         });

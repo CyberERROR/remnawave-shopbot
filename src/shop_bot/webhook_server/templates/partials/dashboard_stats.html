@@ -1,214 +1,104 @@
-﻿<!-- Пользователей -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-sky-500/[0.07] rounded-full blur-2xl group-hover:bg-sky-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Пользователей</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('user_count') is not none %}
-                {{ stats.user_count }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-sky-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-sky-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/15 flex items-center justify-center text-sky-400 shadow-lg shadow-sky-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">group</span>
-        </div>
-    </div>
-</div>
+{% set user_count = stats.get('user_count') or 0 %}
+{% set total_keys = stats.get('total_keys') or 0 %}
+{% set total_spent = stats.get('total_spent') or 0 %}
+{% set host_count = stats.get('host_count') or 0 %}
+{% set tickets_count = open_tickets_count or 0 %}
+{% set no_purchases_count = stats.get('no_purchases_count') or 0 %}
+{% set inactive_buyers_count = stats.get('inactive_buyers_count') or 0 %}
+{% set trials_count = stats.get('trials_count') or 0 %}
+{% set active_buyers_count = stats.get('active_buyers_count') or 0 %}
+{% set active_keys_count = stats.get('active_keys_count') or 0 %}
+{% set yookassa_income = stats.get('yookassa_income') or 0 %}
+{% set platega_income = stats.get('platega_income') or 0 %}
+{% set stars_income = stats.get('stars_income') or 0 %}
+{% set cryptobot_income = stats.get('cryptobot_income') or 0 %}
+{% set heleket_income = stats.get('heleket_income') or 0 %}
+{% set tonconnect_income = stats.get('tonconnect_income') or 0 %}
+{% set payment_total = yookassa_income + platega_income + stars_income + cryptobot_income + heleket_income + tonconnect_income %}
+{% set key_ratio = (total_keys * 100 / user_count) if user_count else 0 %}
+{% set host_ratio = (host_count * 100 / total_keys) if total_keys else 0 %}
+{% set tickets_ratio = (tickets_count * 100 / user_count) if user_count else 0 %}
+{% set no_purchases_ratio = (no_purchases_count * 100 / user_count) if user_count else 0 %}
+{% set inactive_buyers_ratio = (inactive_buyers_count * 100 / user_count) if user_count else 0 %}
+{% set trials_ratio = (trials_count * 100 / user_count) if user_count else 0 %}
+{% set active_buyers_ratio = (active_buyers_count * 100 / user_count) if user_count else 0 %}
+{% set active_keys_ratio = (active_keys_count * 100 / user_count) if user_count else 0 %}
 
-<!-- Ключей -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-blue-500/[0.07] rounded-full blur-2xl group-hover:bg-blue-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Ключей</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('total_keys') is not none %}
-                {{ stats.total_keys }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-blue-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-blue-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">vpn_key</span>
-        </div>
-    </div>
-</div>
-
-<!-- Заработано -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-green-500/[0.07] rounded-full blur-2xl group-hover:bg-green-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Заработано</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('total_spent') is not none %}
-                {{ "{:,.0f}".format(stats.total_spent).replace(",", " ") }} ₽
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-green-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-green-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-green-500/10 border border-green-500/15 flex items-center justify-center text-green-400 shadow-lg shadow-green-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">payments</span>
-        </div>
-    </div>
-</div>
-
-<!-- Серверов -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-yellow-500/[0.07] rounded-full blur-2xl group-hover:bg-yellow-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Серверов</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('host_count') is not none %}
-                {{ stats.host_count }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-yellow-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-yellow-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-yellow-500/10 border border-yellow-500/15 flex items-center justify-center text-yellow-400 shadow-lg shadow-yellow-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">dns</span>
-        </div>
-    </div>
-</div>
-
-<!-- Тикеты -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-red-500/[0.07] rounded-full blur-2xl group-hover:bg-red-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Тикеты</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if open_tickets_count is not none %}
-                {{ open_tickets_count }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-red-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-red-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center text-red-400 shadow-lg shadow-red-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">confirmation_number</span>
-        </div>
-    </div>
-</div>
-
-<!-- YooKassa -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-indigo-500/[0.07] rounded-full blur-2xl group-hover:bg-indigo-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">YooKassa</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('yookassa_income') is not none %}
-                {{ "{:,.0f}".format(stats.get('yookassa_income', 0)).replace(",", " ") }} ₽
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-indigo-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-indigo-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/15 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">account_balance_wallet</span>
-        </div>
-    </div>
-</div>
-
-<!-- Platega -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-cyan-500/[0.07] rounded-full blur-2xl group-hover:bg-cyan-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Platega</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('platega_income') is not none %}
-                {{ "{:,.0f}".format(stats.get('platega_income', 0)).replace(",", " ") }} ₽
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-cyan-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-cyan-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">credit_card</span>
-        </div>
-    </div>
-</div>
-
-<!-- TG Stars -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-amber-500/[0.07] rounded-full blur-2xl group-hover:bg-amber-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">TG Stars</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('stars_income') is not none %}
-                {{ "{:,.0f}".format(stats.get('stars_income', 0)).replace(",", " ") }} ₽
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-amber-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-amber-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">grade</span>
-        </div>
-    </div>
-</div>
-
-<!-- CryptoBot -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-violet-500/[0.07] rounded-full blur-2xl group-hover:bg-violet-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">CryptoBot</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('cryptobot_income') is not none %}
-                {{ "{:,.0f}".format(stats.get('cryptobot_income', 0)).replace(",", " ") }} ₽
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-violet-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-violet-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center text-violet-400 shadow-lg shadow-violet-500/5 shrink-0">
-            <span class="material-symbols-outlined text-base">currency_bitcoin</span>
-        </div>
-    </div>
-</div>
-
-<!-- Heleket / TonConnect toggle -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 payment-stat-block"
-    id="toggle-stats-card">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-emerald-500/[0.07] rounded-full blur-2xl group-hover:bg-emerald-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex flex-col h-full">
-        <div class="flex items-start justify-between">
-            <div id="view-stat-heleket" class="stat-view">
-                <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Heleket</p>
-                <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                    {% if stats.get('heleket_income') is not none %}
-                    {{ "{:,.0f}".format(stats.get('heleket_income', 0)).replace(",", " ") }} ₽
-                    {% else %}
-                    <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-emerald-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-emerald-400 animate-spin"></div></div>
+{% macro stat_card(title, value, icon, accent, shell, glow, subtitle='', percent=None, progress=None, suffix='', extra_class='') %}
+<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl {{ extra_class }}">
+    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
+    <div class="absolute -top-10 -right-8 w-24 h-24 {{ glow }} rounded-full blur-3xl opacity-80 pointer-events-none"></div>
+    <div class="relative z-10 flex h-full flex-col">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <p class="truncate text-white/28 text-[9px] font-black uppercase tracking-[0.16em]">{{ title }}</p>
+                    {% if percent is not none %}
+                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(percent) }}%</span>
                     {% endif %}
-                </h4>
+                </div>
+                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ value }}{% if suffix %} {{ suffix }}{% endif %}</h4>
+                {% if subtitle %}
+                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">{{ subtitle }}</p>
+                {% endif %}
+            </div>
+            <div class="w-9 h-9 rounded-xl border flex items-center justify-center {{ accent }} {{ shell }} shadow-lg shrink-0">
+                <span class="material-symbols-outlined text-[16px]">{{ icon }}</span>
+            </div>
+        </div>
+        {% if progress is not none %}
+        <div class="mt-auto pt-2">
+            <div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
+                <div class="h-full rounded-full bg-gradient-to-r {{ accent|replace('text-', 'from-')|replace('-400', '-400/95')|replace('-300', '-300/95') }} to-white/20" style="width: {{ [progress, 100]|min }}%;"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{{ stat_card('Пользователей', user_count, 'group', 'text-sky-300', 'bg-sky-500/10 border-sky-500/15', 'bg-sky-500/[0.10]', 'Базовая аудитория бота') }}
+{{ stat_card('Ключей', total_keys, 'vpn_key', 'text-blue-300', 'bg-blue-500/10 border-blue-500/15', 'bg-blue-500/[0.10]', 'Доля от базы пользователей', key_ratio, key_ratio) }}
+{{ stat_card('Заработано', "{:,.0f}".format(total_spent).replace(',', ' '), 'payments', 'text-emerald-300', 'bg-emerald-500/10 border-emerald-500/15', 'bg-emerald-500/[0.10]', 'Суммарный доход панели', None, None, '₽') }}
+{{ stat_card('Серверов', host_count, 'dns', 'text-amber-300', 'bg-amber-500/10 border-amber-500/15', 'bg-amber-500/[0.10]', 'Соотношение к общему числу ключей', host_ratio, host_ratio) }}
+{{ stat_card('Тикеты', tickets_count, 'confirmation_number', 'text-rose-300', 'bg-rose-500/10 border-rose-500/15', 'bg-rose-500/[0.10]', 'Открытые обращения от общей базы', tickets_ratio, tickets_ratio) }}
+
+{{ stat_card('YooKassa', "{:,.0f}".format(yookassa_income).replace(',', ' '), 'account_balance_wallet', 'text-indigo-300', 'bg-indigo-500/10 border-indigo-500/15', 'bg-indigo-500/[0.10]', 'Доля от общего платежного потока', (yookassa_income * 100 / payment_total) if payment_total else 0, (yookassa_income * 100 / payment_total) if payment_total else 0, '₽', 'payment-stat-block') }}
+{{ stat_card('Platega', "{:,.0f}".format(platega_income).replace(',', ' '), 'credit_card', 'text-cyan-300', 'bg-cyan-500/10 border-cyan-500/15', 'bg-cyan-500/[0.10]', 'Доля от общего платежного потока', (platega_income * 100 / payment_total) if payment_total else 0, (platega_income * 100 / payment_total) if payment_total else 0, '₽', 'payment-stat-block') }}
+{{ stat_card('TG Stars', "{:,.0f}".format(stars_income).replace(',', ' '), 'grade', 'text-amber-300', 'bg-amber-500/10 border-amber-500/15', 'bg-amber-500/[0.10]', 'Доля от общего платежного потока', (stars_income * 100 / payment_total) if payment_total else 0, (stars_income * 100 / payment_total) if payment_total else 0, '₽', 'payment-stat-block') }}
+{{ stat_card('CryptoBot', "{:,.0f}".format(cryptobot_income).replace(',', ' '), 'currency_bitcoin', 'text-violet-300', 'bg-violet-500/10 border-violet-500/15', 'bg-violet-500/[0.10]', 'Доля от общего платежного потока', (cryptobot_income * 100 / payment_total) if payment_total else 0, (cryptobot_income * 100 / payment_total) if payment_total else 0, '₽', 'payment-stat-block') }}
+
+<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block"
+    id="toggle-stats-card">
+    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
+    <div class="absolute -top-10 -right-8 w-24 h-24 bg-emerald-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
+    <div class="relative z-10 flex h-full flex-col">
+        <div class="flex items-start justify-between gap-3">
+            <div id="view-stat-heleket" class="stat-view min-w-0 flex-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Heleket</p>
+                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format((heleket_income * 100 / payment_total) if payment_total else 0) }}%</span>
+                </div>
+                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ "{:,.0f}".format(heleket_income).replace(',', ' ') }} ₽</h4>
+                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Доля от общего платежного потока</p>
+                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-emerald-400/95 to-white/20" style="width: {{ [(heleket_income * 100 / payment_total) if payment_total else 0, 100]|min }}%;"></div></div>
             </div>
 
-            <div id="view-stat-ton" class="stat-view hidden">
-                <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">TonConnect</p>
-                <h4 class="text-xl sm:text-[22px] font-black text-emerald-300 tracking-tight leading-none tabular-nums">
-                    {% if stats.get('tonconnect_income') is not none %}
-                    {{ "{:,.0f}".format(stats.get('tonconnect_income', 0)).replace(",", " ") }} ₽
-                    {% else %}
-                    <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-emerald-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-emerald-400 animate-spin"></div></div>
-                    {% endif %}
-                </h4>
+            <div id="view-stat-ton" class="stat-view hidden min-w-0 flex-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">TonConnect</p>
+                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format((tonconnect_income * 100 / payment_total) if payment_total else 0) }}%</span>
+                </div>
+                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-emerald-300 tracking-tight leading-none tabular-nums">{{ "{:,.0f}".format(tonconnect_income).replace(',', ' ') }} ₽</h4>
+                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Доля от общего платежного потока</p>
+                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-sky-400/95 to-white/20" style="width: {{ [(tonconnect_income * 100 / payment_total) if payment_total else 0, 100]|min }}%;"></div></div>
             </div>
 
             <button onclick="toggleStat(event)"
-                class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/5 hover:bg-emerald-500/20 transition-all duration-300 shrink-0">
-                <span class="material-symbols-outlined text-base" id="toggle-stat-icon">payments</span>
+                class="w-9 h-9 rounded-xl border border-emerald-500/15 bg-emerald-500/10 flex items-center justify-center text-emerald-300 shadow-lg hover:bg-emerald-500/15 transition-all duration-300 shrink-0">
+                <span class="material-symbols-outlined text-[16px]" id="toggle-stat-icon">payments</span>
             </button>
         </div>
     </div>
@@ -247,104 +137,112 @@
     </script>
 </div>
 
-<!-- БЛОКИ: СТАТИСТИКА ПО ГРУППАМ -->
-
-<!-- Не купили ключ -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-gray-500/[0.07] rounded-full blur-2xl group-hover:bg-gray-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Не купили ключ</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('no_purchases_count') is not none %}
-                {{ stats.no_purchases_count }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-gray-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-gray-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
+<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
+    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
+    <div class="absolute -top-10 -right-8 w-24 h-24 bg-slate-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
+    <div class="relative z-10 flex h-full flex-col">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Не купили ключ</p>
+                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(no_purchases_ratio) }}%</span>
+                </div>
+                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ no_purchases_count }}</h4>
+                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Пользователи без первой оплаты</p>
+            </div>
+            <button onclick="openUserGroupModal('no_purchases', 'Не купили ключ')" class="w-9 h-9 rounded-xl border border-slate-500/15 bg-slate-500/10 flex items-center justify-center text-slate-300 shadow-lg hover:bg-slate-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+                <span class="material-symbols-outlined text-[16px]">person_off</span>
+            </button>
         </div>
-        <button onclick="openUserGroupModal('no_purchases', 'Не купили ключ')" class="w-8 h-8 rounded-xl bg-gray-500/10 border border-gray-500/15 flex items-center justify-center text-gray-400 shadow-lg shadow-gray-500/5 hover:bg-gray-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-            <span class="material-symbols-outlined text-base">person_off</span>
-        </button>
+        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-slate-300/95 to-white/20" style="width: {{ [no_purchases_ratio, 100]|min }}%;"></div></div></div>
     </div>
 </div>
 
-<!-- Нет активных -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-orange-500/[0.07] rounded-full blur-2xl group-hover:bg-orange-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Нет активных</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('inactive_buyers_count') is not none %}
-                {{ stats.inactive_buyers_count }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-orange-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-orange-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
+<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
+    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
+    <div class="absolute -top-10 -right-8 w-24 h-24 bg-orange-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
+    <div class="relative z-10 flex h-full flex-col">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Нет активных</p>
+                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(inactive_buyers_ratio) }}%</span>
+                </div>
+                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ inactive_buyers_count }}</h4>
+                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Покупали, но сейчас без активного ключа</p>
+            </div>
+            <button onclick="openUserGroupModal('inactive_buyers', 'Нет активных (Покупали)')" class="w-9 h-9 rounded-xl border border-orange-500/15 bg-orange-500/10 flex items-center justify-center text-orange-300 shadow-lg hover:bg-orange-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+                <span class="material-symbols-outlined text-[16px]">history</span>
+            </button>
         </div>
-        <button onclick="openUserGroupModal('inactive_buyers', 'Нет активных (Покупали)')" class="w-8 h-8 rounded-xl bg-orange-500/10 border border-orange-500/15 flex items-center justify-center text-orange-400 shadow-lg shadow-orange-500/5 hover:bg-orange-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-            <span class="material-symbols-outlined text-base">history</span>
-        </button>
+        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-orange-300/95 to-white/20" style="width: {{ [inactive_buyers_ratio, 100]|min }}%;"></div></div></div>
     </div>
 </div>
 
-<!-- На триале -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-pink-500/[0.07] rounded-full blur-2xl group-hover:bg-pink-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">На триале</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('trials_count') is not none %}
-                {{ stats.trials_count }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-pink-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-pink-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
+<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
+    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
+    <div class="absolute -top-10 -right-8 w-24 h-24 bg-pink-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
+    <div class="relative z-10 flex h-full flex-col">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">На триале</p>
+                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(trials_ratio) }}%</span>
+                </div>
+                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ trials_count }}</h4>
+                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Пользователи с пробным доступом</p>
+            </div>
+            <button onclick="openUserGroupModal('trials', 'Пользователи на триале')" class="w-9 h-9 rounded-xl border border-pink-500/15 bg-pink-500/10 flex items-center justify-center text-pink-300 shadow-lg hover:bg-pink-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+                <span class="material-symbols-outlined text-[16px]">card_giftcard</span>
+            </button>
         </div>
-        <button onclick="openUserGroupModal('trials', 'Пользователи на триале')" class="w-8 h-8 rounded-xl bg-pink-500/10 border border-pink-500/15 flex items-center justify-center text-pink-400 shadow-lg shadow-pink-500/5 hover:bg-pink-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-            <span class="material-symbols-outlined text-base">card_giftcard</span>
-        </button>
+        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-pink-300/95 to-white/20" style="width: {{ [trials_ratio, 100]|min }}%;"></div></div></div>
     </div>
 </div>
 
-<!-- Купили ключ -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-teal-500/[0.07] rounded-full blur-2xl group-hover:bg-teal-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Купили ключ</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('active_buyers_count') is not none %}
-                {{ stats.active_buyers_count }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-teal-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-teal-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
+<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
+    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
+    <div class="absolute -top-10 -right-8 w-24 h-24 bg-teal-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
+    <div class="relative z-10 flex h-full flex-col">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Купили ключ</p>
+                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(active_buyers_ratio) }}%</span>
+                </div>
+                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ active_buyers_count }}</h4>
+                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Покупатели с активным доступом</p>
+            </div>
+            <button onclick="openUserGroupModal('active_buyers', 'Покупатели с активным ключом')" class="w-9 h-9 rounded-xl border border-teal-500/15 bg-teal-500/10 flex items-center justify-center text-teal-300 shadow-lg hover:bg-teal-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+                <span class="material-symbols-outlined text-[16px]">verified_user</span>
+            </button>
         </div>
-        <button onclick="openUserGroupModal('active_buyers', 'Покупатели с активным ключом')" class="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/15 flex items-center justify-center text-teal-400 shadow-lg shadow-teal-500/5 hover:bg-teal-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-            <span class="material-symbols-outlined text-base">verified_user</span>
-        </button>
+        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-teal-300/95 to-white/20" style="width: {{ [active_buyers_ratio, 100]|min }}%;"></div></div></div>
     </div>
 </div>
 
-<!-- Активные ключи -->
-<div class="relative overflow-hidden bg-[#0b0f0e]/80 border border-white/[0.08] rounded-[1.1rem] p-3.5 sm:p-4 min-h-[76px] group hover:-translate-y-0.5 hover:border-white/[0.12] shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-    <div class="absolute -top-6 -right-6 w-20 h-20 bg-fuchsia-500/[0.07] rounded-full blur-2xl group-hover:bg-fuchsia-500/[0.12] transition-colors pointer-events-none"></div>
-    <div class="relative z-10 flex items-start justify-between">
-        <div>
-            <p class="text-white/30 text-[9px] font-black uppercase tracking-[0.18em] mb-2 truncate">Активные ключи</p>
-            <h4 class="text-xl sm:text-[22px] font-black text-white tracking-tight leading-none tabular-nums">
-                {% if stats.get('active_keys_count') is not none %}
-                {{ stats.active_keys_count }}
-                {% else %}
-                <div class="relative w-5 h-5 inline-block"><div class="absolute inset-0 rounded-full border border-fuchsia-500/20"></div><div class="absolute inset-0.5 rounded-full border-2 border-white/5 border-t-fuchsia-400 animate-spin"></div></div>
-                {% endif %}
-            </h4>
+<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
+    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
+    <div class="absolute -top-10 -right-8 w-24 h-24 bg-fuchsia-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
+    <div class="relative z-10 flex h-full flex-col">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 min-w-0">
+                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Активные ключи</p>
+                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(active_keys_ratio) }}%</span>
+                </div>
+                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ active_keys_count }}</h4>
+                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Ключи с текущим активным статусом</p>
+            </div>
+            <button onclick="openUserGroupModal('active_keys', 'Все активные ключи')" class="w-9 h-9 rounded-xl border border-fuchsia-500/15 bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-300 shadow-lg hover:bg-fuchsia-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
+                <span class="material-symbols-outlined text-[16px]">vpn_key</span>
+            </button>
         </div>
-        <button onclick="openUserGroupModal('active_keys', 'Все активные ключи')" class="w-8 h-8 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/15 flex items-center justify-center text-fuchsia-400 shadow-lg shadow-fuchsia-500/5 hover:bg-fuchsia-500/20 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-            <span class="material-symbols-outlined text-base">vpn_key</span>
-        </button>
+        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-fuchsia-300/95 to-white/20" style="width: {{ [active_keys_ratio, 100]|min }}%;"></div></div></div>
     </div>
 </div>

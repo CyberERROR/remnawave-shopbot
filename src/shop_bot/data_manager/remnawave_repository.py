@@ -734,6 +734,14 @@ def delete_promo_code(code: str) -> bool:
         return cursor.rowcount > 0
 
 
+def delete_all_promo_codes() -> int:
+    with _connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM promo_codes")
+        conn.commit()
+        return cursor.rowcount or 0
+
+
 def redeem_promo_code(code: str, user_id: int, *, applied_amount: float, order_id: str | None = None) -> dict | None:
     code_s = (code or "").strip().upper()
     if not code_s:
@@ -985,4 +993,3 @@ def get_user_by_username(username: str) -> dict | None:
         cursor.execute("SELECT * FROM users WHERE LOWER(username) = ?", (username_s,))
         row = cursor.fetchone()
         return dict(row) if row else None
-

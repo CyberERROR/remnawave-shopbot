@@ -1293,8 +1293,8 @@
 </div>
 
 <div id="nodeDetailsModal" class="modal-overlay" style="z-index: 60;">
-    <div class="modal-content max-w-6xl rounded-2xl bg-gradient-to-br from-[#0d2a1d] to-[#081812] border border-white/[0.12] shadow-2xl shadow-black/80 overflow-hidden backdrop-blur-xl animate-fade-in">
-        <div id="node-details-loading-overlay" class="hidden absolute inset-0 z-50 bg-[#06110c]/88 backdrop-blur-sm flex items-center justify-center">
+    <div class="modal-content max-w-6xl rounded-2xl bg-[radial-gradient(circle_at_top_left,_rgba(19,236,128,0.09),_transparent_32%),linear-gradient(135deg,_#143225,_#10271d_55%,_#0c1d16)] border border-white/[0.14] shadow-2xl shadow-black/70 overflow-hidden backdrop-blur-xl animate-fade-in">
+        <div id="node-details-loading-overlay" class="hidden absolute inset-0 z-50 bg-[#0d1d16]/80 backdrop-blur-sm flex items-center justify-center">
             <div class="text-center px-6 py-5 rounded-3xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.08] shadow-2xl shadow-black/50 max-w-md mx-4">
                 <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#13ec80]/[0.08] border border-[#13ec80]/15 mb-4">
                     <span class="material-symbols-outlined animate-spin text-3xl text-[#13ec80]/70">progress_activity</span>
@@ -1310,12 +1310,12 @@
                     <span class="material-symbols-outlined text-[#13ec80] text-xl">dns</span>
                 </div>
                 <div>
-                    <h5 class="text-[13px] font-bold text-white tracking-tight">Детали ноды</h5>
-                    <p class="text-[9px] text-white/25 uppercase tracking-[0.15em] font-semibold mt-0.5 font-mono" id="node-details-subtitle">—</p>
+                    <h5 class="text-[15px] font-bold text-white tracking-tight">Детали ноды</h5>
+                    <p class="text-[10px] text-white/40 uppercase tracking-[0.15em] font-semibold mt-0.5 font-mono" id="node-details-subtitle">—</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/15" id="node-details-badge-2d">2D</span>
+                <span class="px-2.5 py-1 rounded-lg bg-emerald-500/12 text-emerald-300 text-[11px] font-bold border border-emerald-500/20" id="node-details-badge-2d">2D</span>
                 <button onclick="rebootServerFromDetails()" class="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/15 hover:border-red-500/25 flex items-center justify-center text-red-400 transition-all duration-200" title="Перезагрузить">
                     <span class="material-symbols-outlined text-base">restart_alt</span>
                 </button>
@@ -1328,32 +1328,32 @@
         <div class="p-5 max-h-[80vh] overflow-y-auto">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <div class="space-y-4">
-                    <div class="bg-black/35 border border-white/[0.08] rounded-xl p-4 relative">
+                    <div class="bg-white/[0.045] border border-white/[0.10] rounded-xl p-4 relative shadow-lg shadow-black/20">
                         <div class="flex items-center gap-2 mb-4">
                             <span class="material-symbols-outlined text-[#13ec80] text-lg">settings_input_component</span>
-                            <h6 class="text-white font-bold text-[12px] tracking-tight">Параметры ноды</h6>
+                            <h6 class="text-white font-bold text-[13px] tracking-tight">Параметры ноды</h6>
                         </div>
                         
                         <div class="space-y-3">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-[8px] uppercase tracking-[0.15em] text-white/30 font-bold mb-1.5 ml-1">Страна</label>
-                                    <div class="bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2 text-white/70 text-[11px] flex items-center gap-2">
+                                    <label class="block text-[9px] uppercase tracking-[0.15em] text-white/45 font-bold mb-1.5 ml-1">Страна</label>
+                                    <div class="bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-white/80 text-[12px] flex items-center gap-2">
                                         <span id="node-details-country-flag"></span>
                                         <span id="node-details-country-text">—</span>
                                     </div>
                                 </div>
                                 
                                 <div>
-                                    <label class="block text-[8px] uppercase tracking-[0.15em] text-white/30 font-bold mb-1.5 ml-1">Node Port *</label>
-                                    <input type="text" id="node-details-port" class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
+                                    <label class="block text-[9px] uppercase tracking-[0.15em] text-white/45 font-bold mb-1.5 ml-1">Node Port *</label>
+                                    <input type="text" id="node-details-port" class="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-white text-[12px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
                                 </div>
                             </div>
                              
                             <div>
-                                <label class="block text-[8px] uppercase tracking-[0.15em] text-white/30 font-bold mb-1.5 ml-1">Secret Key (SECRET_KEY)</label>
+                                <label class="block text-[9px] uppercase tracking-[0.15em] text-white/45 font-bold mb-1.5 ml-1">Secret Key (SECRET_KEY)</label>
                                 <div class="relative">
-                                    <input type="text" id="node-details-secret" class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2 pr-9 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
+                                    <input type="text" id="node-details-secret" class="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 pr-9 text-white text-[12px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
                                     <button onclick="copyNodeSecret()" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-white/30 hover:text-white/70 transition-all" title="Копировать">
                                         <span class="material-symbols-outlined text-sm">content_copy</span>
                                     </button>
@@ -1363,30 +1363,30 @@
                             <div class="border-t border-white/[0.05] pt-3">
                                 <div class="flex items-center gap-2 mb-3">
                                     <span class="material-symbols-outlined text-amber-400 text-base">badge</span>
-                                    <h6 class="text-white font-bold text-[11px] tracking-tight">Внутренние настройки ноды</h6>
+                                    <h6 class="text-white font-bold text-[12px] tracking-tight">Внутренние настройки ноды</h6>
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-[8px] uppercase tracking-[0.15em] text-white/30 font-bold mb-1.5 ml-1">Внутреннее имя</label>
-                                        <input type="text" id="node-details-name" class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
+                                        <label class="block text-[9px] uppercase tracking-[0.15em] text-white/45 font-bold mb-1.5 ml-1">Внутреннее имя</label>
+                                        <input type="text" id="node-details-name" class="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-white text-[12px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
                                     </div>
                                     <div>
-                                        <label class="block text-[8px] uppercase tracking-[0.15em] text-white/30 font-bold mb-1.5 ml-1">Адрес (IP или Domain)</label>
-                                        <input type="text" id="node-details-address" class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
+                                        <label class="block text-[9px] uppercase tracking-[0.15em] text-white/45 font-bold mb-1.5 ml-1">Адрес (IP или Domain)</label>
+                                        <input type="text" id="node-details-address" class="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-white text-[12px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
                                     </div>
                                     <div>
-                                        <label class="block text-[8px] uppercase tracking-[0.15em] text-white/30 font-bold mb-1.5 ml-1">SSH Host</label>
-                                        <input type="text" id="node-details-ssh-host" class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
+                                        <label class="block text-[9px] uppercase tracking-[0.15em] text-white/45 font-bold mb-1.5 ml-1">SSH Host</label>
+                                        <input type="text" id="node-details-ssh-host" class="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-white text-[12px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
                                     </div>
                                     <div>
-                                        <label class="block text-[8px] uppercase tracking-[0.15em] text-white/30 font-bold mb-1.5 ml-1">user</label>
-                                        <input type="text" id="node-details-ssh-user" class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
+                                        <label class="block text-[9px] uppercase tracking-[0.15em] text-white/45 font-bold mb-1.5 ml-1">user</label>
+                                        <input type="text" id="node-details-ssh-user" class="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-white text-[12px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20">
                                     </div>
                                     <div class="md:col-span-2">
-                                        <label class="block text-[8px] uppercase tracking-[0.15em] text-white/30 font-bold mb-1.5 ml-1">Пароль</label>
+                                        <label class="block text-[9px] uppercase tracking-[0.15em] text-white/45 font-bold mb-1.5 ml-1">Пароль</label>
                                         <div class="relative">
-                                            <input type="password" id="node-details-ssh-password" class="w-full bg-black/30 border border-white/[0.05] rounded-xl pl-3 pr-9 py-2 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20" autocomplete="new-password">
+                                            <input type="password" id="node-details-ssh-password" class="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-3 pr-9 py-2 text-white text-[12px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20" autocomplete="new-password">
                                             <button type="button" onclick="togglePasswordVisibility('node-details-ssh-password')" class="absolute inset-y-0 right-2 flex items-center text-white/20 hover:text-white/60 transition-colors duration-200">
                                                 <span class="material-symbols-outlined text-[14px]">visibility</span>
                                             </button>
@@ -1397,30 +1397,30 @@
                         </div>
                     </div>
                     
-                    <div class="bg-black/35 border border-white/[0.08] rounded-xl p-4">
+                    <div class="bg-white/[0.045] border border-white/[0.10] rounded-xl p-4 shadow-lg shadow-black/20">
                         <div class="flex items-center justify-between mb-3">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-cyan-400 text-lg">code</span>
-                                <h6 class="text-white font-bold text-[12px] tracking-tight">Файл docker-compose.yml</h6>
+                                <h6 class="text-white font-bold text-[13px] tracking-tight">Файл docker-compose.yml</h6>
                             </div>
                             <button type="button" id="btn-toggle-blur-compose" onclick="toggleDetailsTextareaBlur('node-details-compose', this)" class="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-white/30 hover:text-white/70 transition-all" title="Показать/скрыть содержимое">
                                 <span class="material-symbols-outlined text-sm">visibility_off</span>
                             </button>
                         </div>
-                        <textarea id="node-details-compose" rows="10" class="w-full bg-black/45 border border-white/[0.06] rounded-xl p-3 text-white text-[10px] font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20 placeholder:text-white/10 blur-[5px] select-none pointer-events-none transition-all duration-300" placeholder="Загрузка docker-compose.yml..."></textarea>
+                        <textarea id="node-details-compose" rows="10" class="w-full bg-[#13211b]/80 border border-white/[0.08] rounded-xl p-3 text-white/95 text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20 placeholder:text-white/20 blur-[5px] select-none pointer-events-none transition-all duration-300" placeholder="Загрузка docker-compose.yml..."></textarea>
                     </div>
                 </div>
                 
                 <div class="space-y-4">
-                    <div class="bg-black/35 border border-white/[0.08] rounded-xl p-4 relative">
+                    <div class="bg-white/[0.045] border border-white/[0.10] rounded-xl p-4 relative shadow-lg shadow-black/20">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-blue-400 text-lg">computer</span>
-                                <h6 class="text-white font-bold text-[12px] tracking-tight">Система</h6>
+                                <h6 class="text-white font-bold text-[13px] tracking-tight">Система</h6>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="px-2 py-0.5 rounded-lg bg-purple-500/10 text-purple-400 text-[8px] font-bold border border-purple-500/15 uppercase font-mono" id="node-details-sys-os-arch">Linux / x64</span>
-                                <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-[8px] font-bold border border-emerald-500/15 flex items-center gap-0.5" id="node-details-sys-uptime">
+                                <span class="px-2 py-0.5 rounded-lg bg-purple-500/10 text-purple-300 text-[9px] font-bold border border-purple-500/20 uppercase font-mono" id="node-details-sys-os-arch">Linux / x64</span>
+                                <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-300 text-[9px] font-bold border border-emerald-500/20 flex items-center gap-0.5" id="node-details-sys-uptime">
                                     <span class="material-symbols-outlined text-[10px]">schedule</span>
                                     <span>—</span>
                                 </span>
@@ -1430,8 +1430,8 @@
                         <div class="space-y-3.5">
                             <div>
                                 <div class="flex items-center justify-between mb-1">
-                                    <span class="text-[8px] uppercase tracking-[0.12em] text-white/30 font-bold">Память</span>
-                                    <span class="text-[10px] text-white/70 font-mono" id="node-details-mem-text">— / — (—%)</span>
+                                    <span class="text-[9px] uppercase tracking-[0.12em] text-white/40 font-bold">Память</span>
+                                    <span class="text-[11px] text-white/80 font-mono" id="node-details-mem-text">— / — (—%)</span>
                                 </div>
                                 <div class="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                                     <div id="node-details-mem-bar" class="h-full bg-gradient-to-r from-emerald-500/80 to-emerald-400/60 transition-all duration-500" style="width: 0%"></div>
@@ -1440,51 +1440,51 @@
                             
                             <div class="border-t border-white/[0.04] pt-3">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[8px] uppercase tracking-[0.12em] text-white/30 font-bold">Интерфейс</span>
-                                    <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[8px] font-bold border border-blue-500/15 uppercase font-mono" id="node-details-iface-name">eth0</span>
+                                    <span class="text-[9px] uppercase tracking-[0.12em] text-white/40 font-bold">Интерфейс</span>
+                                    <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 text-[9px] font-bold border border-blue-500/20 uppercase font-mono" id="node-details-iface-name">eth0</span>
                                 </div>
                                 
                                 <div class="grid grid-cols-2 gap-4">
-                                    <div class="bg-black/15 border border-white/[0.03] rounded-lg p-2.5">
-                                        <div class="flex items-center gap-1 text-[8px] text-white/30 uppercase font-bold tracking-wider mb-1">
+                                    <div class="bg-white/[0.035] border border-white/[0.05] rounded-lg p-2.5">
+                                        <div class="flex items-center gap-1 text-[9px] text-white/40 uppercase font-bold tracking-wider mb-1">
                                             <span class="material-symbols-outlined text-blue-400 text-[10px]">south</span>
                                             <span>Входящий (RX)</span>
                                         </div>
-                                        <div class="text-[11px] text-white font-bold font-mono" id="node-details-rx-speed">0 Kb/s</div>
-                                        <div class="text-[8px] text-white/30 font-mono mt-0.5" id="node-details-rx-total">Всего: 0 GB</div>
+                                        <div class="text-[12px] text-white font-bold font-mono" id="node-details-rx-speed">0 Kb/s</div>
+                                        <div class="text-[9px] text-white/40 font-mono mt-0.5" id="node-details-rx-total">Всего: 0 GB</div>
                                     </div>
-                                    <div class="bg-black/15 border border-white/[0.03] rounded-lg p-2.5">
-                                        <div class="flex items-center gap-1 text-[8px] text-white/30 uppercase font-bold tracking-wider mb-1">
+                                    <div class="bg-white/[0.035] border border-white/[0.05] rounded-lg p-2.5">
+                                        <div class="flex items-center gap-1 text-[9px] text-white/40 uppercase font-bold tracking-wider mb-1">
                                             <span class="material-symbols-outlined text-orange-400 text-[10px]">north</span>
                                             <span>Исходящий (TX)</span>
                                         </div>
-                                        <div class="text-[11px] text-white font-bold font-mono" id="node-details-tx-speed">0 Kb/s</div>
-                                        <div class="text-[8px] text-white/30 font-mono mt-0.5" id="node-details-tx-total">Всего: 0 GB</div>
+                                        <div class="text-[12px] text-white font-bold font-mono" id="node-details-tx-speed">0 Kb/s</div>
+                                        <div class="text-[9px] text-white/40 font-mono mt-0.5" id="node-details-tx-total">Всего: 0 GB</div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="border-t border-white/[0.04] pt-3 grid grid-cols-1 gap-2.5 text-[10px] text-white/60">
+                            <div class="border-t border-white/[0.04] pt-3 grid grid-cols-1 gap-2.5 text-[11px] text-white/70">
                                 <div class="flex items-start gap-2">
                                     <span class="material-symbols-outlined text-white/20 text-xs mt-0.5">memory</span>
                                     <div>
-                                        <span class="text-white/30 font-bold block text-[8px] uppercase tracking-wider">Процессор (CPU)</span>
-                                        <span class="font-bold text-white/80 text-[10px]" id="node-details-cpu">—</span>
+                                        <span class="text-white/40 font-bold block text-[9px] uppercase tracking-wider">Процессор (CPU)</span>
+                                        <span class="font-bold text-white/85 text-[11px]" id="node-details-cpu">—</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div class="flex items-start gap-2">
                                         <span class="material-symbols-outlined text-white/20 text-xs mt-0.5">terminal</span>
                                         <div>
-                                            <span class="text-white/30 font-bold block text-[8px] uppercase tracking-wider">Ядро Linux</span>
-                                            <span class="font-bold text-white/80 font-mono text-[10px]" id="node-details-kernel">—</span>
+                                            <span class="text-white/40 font-bold block text-[9px] uppercase tracking-wider">Ядро Linux</span>
+                                            <span class="font-bold text-white/85 font-mono text-[11px]" id="node-details-kernel">—</span>
                                         </div>
                                     </div>
                                     <div class="flex items-start gap-2">
                                         <span class="material-symbols-outlined text-white/20 text-xs mt-0.5">lan</span>
                                         <div>
-                                            <span class="text-white/30 font-bold block text-[8px] uppercase tracking-wider">Сеть</span>
-                                            <span class="font-bold text-white/80 font-mono text-[10px]" id="node-details-iface-network">—</span>
+                                            <span class="text-white/40 font-bold block text-[9px] uppercase tracking-wider">Сеть</span>
+                                            <span class="font-bold text-white/85 font-mono text-[11px]" id="node-details-iface-network">—</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1492,17 +1492,17 @@
                         </div>
                     </div>
                     
-                    <div class="bg-black/35 border border-white/[0.08] rounded-xl p-4">
+                    <div class="bg-white/[0.045] border border-white/[0.10] rounded-xl p-4 shadow-lg shadow-black/20">
                         <div class="flex items-center justify-between mb-3">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-emerald-400 text-lg">notes</span>
-                                <h6 class="text-white font-bold text-[12px] tracking-tight">Файл .env</h6>
+                                <h6 class="text-white font-bold text-[13px] tracking-tight">Файл .env</h6>
                             </div>
                             <button type="button" id="btn-toggle-blur-env" onclick="toggleDetailsTextareaBlur('node-details-env', this)" class="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-white/30 hover:text-white/70 transition-all" title="Показать/скрыть содержимое">
                                 <span class="material-symbols-outlined text-sm">visibility_off</span>
                             </button>
                         </div>
-                        <textarea id="node-details-env" rows="10" class="w-full bg-black/45 border border-white/[0.06] rounded-xl p-3 text-white text-[10px] font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20 placeholder:text-white/10 blur-[5px] select-none pointer-events-none transition-all duration-300" placeholder="Загрузка .env..."></textarea>
+                        <textarea id="node-details-env" rows="10" class="w-full bg-[#13211b]/80 border border-white/[0.08] rounded-xl p-3 text-white/95 text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-500/20 placeholder:text-white/20 blur-[5px] select-none pointer-events-none transition-all duration-300" placeholder="Загрузка .env..."></textarea>
                     </div>
                 </div>
             </div>
@@ -1513,7 +1513,7 @@
                         <span>Действия</span>
                         <span class="material-symbols-outlined text-sm">expand_more</span>
                     </button>
-                    <div id="node-details-actions-menu" class="hidden absolute left-0 bottom-full mb-2 w-44 bg-[#05120c]/98 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/80 z-50 p-1.5">
+                    <div id="node-details-actions-menu" class="hidden absolute left-0 bottom-full mb-2 w-44 bg-[#10231b]/95 backdrop-blur-xl border border-white/[0.10] rounded-2xl shadow-2xl shadow-black/60 z-50 p-1.5">
                         <button onclick="updateNodeFromDetails(); toggleDetailsActions()" class="w-full px-3 py-2 text-left text-[11px] text-emerald-400/90 hover:text-emerald-300 hover:bg-emerald-500/10 flex items-center gap-2.5 transition-all duration-200 rounded-xl font-semibold">
                             <span class="material-symbols-outlined text-sm">system_update</span>
                             Обновить ноду

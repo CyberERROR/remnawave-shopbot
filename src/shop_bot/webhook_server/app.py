@@ -640,13 +640,20 @@ def create_webhook_app(bot_controller_instance):
             common_data['open_tickets_count'] = 0
 
         try:
-            from shop_bot.data_manager.database import get_dashboard_user_groups
-            groups = get_dashboard_user_groups()
-            stats["no_purchases_count"] = len(groups["no_purchases"])
-            stats["inactive_buyers_count"] = len(groups["inactive_buyers"])
-            stats["trials_count"] = len(groups["trials"])
-            stats["active_buyers_count"] = len(groups["active_buyers"])
-            stats["active_keys_count"] = len(groups["active_keys"])
+            if not hide_payments:
+                from shop_bot.data_manager.database import get_dashboard_user_groups
+                groups = get_dashboard_user_groups()
+                stats["no_purchases_count"] = len(groups["no_purchases"])
+                stats["inactive_buyers_count"] = len(groups["inactive_buyers"])
+                stats["trials_count"] = len(groups["trials"])
+                stats["active_buyers_count"] = len(groups["active_buyers"])
+                stats["active_keys_count"] = len(groups["active_keys"])
+            else:
+                stats["no_purchases_count"] = 0
+                stats["inactive_buyers_count"] = 0
+                stats["trials_count"] = 0
+                stats["active_buyers_count"] = 0
+                stats["active_keys_count"] = 0
         except Exception as e:
             logger.error(f"Failed to get user groups stats: {e}")
             stats["no_purchases_count"] = 0
@@ -4113,5 +4120,4 @@ def create_webhook_app(bot_controller_instance):
     register_node_routes(flask_app, login_required, get_common_template_data)
 
     return flask_app
-
 

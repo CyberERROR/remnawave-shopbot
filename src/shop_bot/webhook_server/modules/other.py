@@ -4,6 +4,7 @@ import asyncio
 import logging
 import uuid
 import threading
+import re
 from datetime import datetime, timezone, timedelta
 from flask import render_template, request, jsonify, current_app, flash, redirect, url_for
 from werkzeug.utils import secure_filename
@@ -697,6 +698,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def broadcast_send():
         try:
             text, mode, buttons_json, media_filename = request.form.get('text', ''), request.form.get('mode', 'all'), request.form.get('buttons', '[]'), request.form.get('media_filename', '')
+            telegram_ids_raw = request.form.get('telegram_ids', '')
             skip_banned = request.form.get('skip_banned') == 'true'
             
             buttons = json.loads(buttons_json) if buttons_json else []
@@ -781,6 +783,22 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                 all_users = filtered_users
             elif mode == 'not_used_trial':
                 all_users = [u for u in all_users if not u.get('trial_used', 0)]
+            elif mode in ('telegram_ids_include', 'telegram_ids_exclude'):
+                telegram_ids = set()
+                for raw_id in re.split(r'[\s,;]+', telegram_ids_raw.strip()):
+                    if not raw_id:
+                        continue
+                    if not re.fullmatch(r'\d+', raw_id):
+                        return jsonify({'ok': False, 'error': f'Некорректный Telegram ID: {raw_id}'}), 400
+                    telegram_ids.add(int(raw_id))
+
+                if not telegram_ids:
+                    return jsonify({'ok': False, 'error': 'Список Telegram ID пуст'}), 400
+
+                if mode == 'telegram_ids_include':
+                    all_users = [u for u in all_users if u.get('telegram_id') in telegram_ids]
+                else:
+                    all_users = [u for u in all_users if u.get('telegram_id') not in telegram_ids]
             
             if skip_banned:
                 banned_data = get_banned_users_data()
@@ -967,6 +985,16 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             logger.error(f"Ошибка удаления промокода: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
     # ===== Конец роута promo_delete =====
+
+    @flask_app.route('/other/promo/delete-all', methods=['DELETE'])
+    @login_required
+    def promo_delete_all():
+        try:
+            deleted_count = rw_repo.delete_all_promo_codes()
+            return jsonify({'ok': True, 'message': 'Все промокоды удалены', 'deleted_count': deleted_count})
+        except Exception as e:
+            logger.error(f"Ошибка удаления всех промокодов: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
     
     # ===== ОБНОВЛЕНИЕ ПРОМОКОДА =====
     # Пересоздает промокод с новыми параметрами (сохраняя сам код)
