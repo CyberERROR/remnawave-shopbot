@@ -290,11 +290,34 @@ def initialize_db():
                 )
             ''')
             cursor.execute('''
+                CREATE TABLE IF NOT EXISTS telegram_star_charges (
+                    charge_id TEXT PRIMARY KEY,
+                    invoice_payload TEXT,
+                    user_id INTEGER NOT NULL,
+                    stars_amount INTEGER NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'processing',
+                    error TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_telegram_star_charges_user
+                ON telegram_star_charges(user_id, created_at)
+            ''')
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS bot_settings (
                     key TEXT PRIMARY KEY,
                     value TEXT
                 )
             ''')
+            cursor.execute('''
+                INSERT OR IGNORE INTO bot_settings (key, value)
+                VALUES (?, ?)
+            ''', (
+                'telegram_star_charge_registry_started_at',
+                datetime.now(timezone.utc).isoformat(),
+            ))
             # Инициализация дефолтных настроек
             cursor.execute('''
                 INSERT OR IGNORE INTO bot_settings (key, value) 
@@ -2292,6 +2315,30 @@ def get_pending_metadata(payment_id: str) -> dict | None:
 # ================================
 
 
+# ===== GET_PENDING_TRANSACTION_SNAPSHOT =====
+def get_pending_transaction_snapshot(payment_id: str) -> dict | None:
+    """Read one pending row without hiding SQLite or metadata errors."""
+    with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT status, metadata FROM pending_transactions WHERE payment_id = ?",
+            (payment_id,),
+        ).fetchone()
+    if row is None:
+        return None
+    metadata = json.loads(row["metadata"] or "{}")
+    if not isinstance(metadata, dict):
+        raise ValueError("pending transaction metadata must be a JSON object")
+    metadata.setdefault("payment_id", payment_id)
+    return {
+        "status": (row["status"] or "").strip() or None,
+        "metadata": metadata,
+    }
+
+
+# ============================================
+
+
 # ===== GET_PENDING_STATUS =====
 def get_pending_status(payment_id: str) -> str | None:
     row = _fetch_row("SELECT status FROM pending_transactions WHERE payment_id = ?", (payment_id,), f"Не удалось получить статус для ожидающей {payment_id}")
@@ -2303,7 +2350,7 @@ def get_pending_status(payment_id: str) -> str | None:
 # ===== _COMPLETE_PENDING =====
 def _complete_pending(payment_id: str) -> bool:
     cursor = _exec(
-        "UPDATE pending_transactions SET status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE payment_id = ? AND status != 'paid'",
+        "UPDATE pending_transactions SET status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE payment_id = ? AND status = 'pending'",
         (payment_id,),
         f"Не удалось завершить ожидающую транзакцию {payment_id}"
     )
@@ -3044,6 +3091,52 @@ def log_transaction(username: str, transaction_id: str | None, payment_id: str |
 def check_transaction_exists(payment_id: str) -> bool:
     row = _fetch_row("SELECT 1 as ex FROM transactions WHERE payment_id = ? LIMIT 1", (payment_id,), f"Не удалось проверить транзакцию {payment_id}")
     return bool(row)
+
+
+# ===== TELEGRAM STAR CHARGE IDEMPOTENCY =====
+def claim_telegram_star_charge(charge_id: str, invoice_payload: str, user_id: int, stars_amount: int) -> str:
+    """Atomically claim a unique Telegram Stars charge before external side effects."""
+    try:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT status FROM telegram_star_charges WHERE charge_id = ?",
+                (charge_id,),
+            ).fetchone()
+            if row:
+                return str(row[0])
+            conn.execute(
+                """
+                INSERT INTO telegram_star_charges
+                    (charge_id, invoice_payload, user_id, stars_amount, status)
+                VALUES (?, ?, ?, ?, 'processing')
+                """,
+                (charge_id, invoice_payload, int(user_id), int(stars_amount)),
+            )
+            conn.commit()
+            return "claimed"
+    except sqlite3.Error as exc:
+        logging.error("Не удалось зафиксировать Telegram Stars charge: %s", exc)
+        return "error"
+
+
+def set_telegram_star_charge_status(charge_id: str, status: str, error: str | None = None) -> bool:
+    allowed = {"processed", "refunded", "failed"}
+    if status not in allowed:
+        raise ValueError(f"Unsupported Telegram Stars charge status: {status}")
+    cursor = _exec(
+        """
+        UPDATE telegram_star_charges
+        SET status = ?, error = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE charge_id = ?
+        """,
+        (status, (error or "")[:500] or None, charge_id),
+        "Не удалось обновить статус Telegram Stars charge",
+    )
+    return cursor is not None and cursor.rowcount == 1
+
+
+# =============================================
 
 def get_paginated_transactions(page: int = 1, per_page: int = 15) -> tuple[list[dict], int]:
     offset = (page - 1) * per_page
