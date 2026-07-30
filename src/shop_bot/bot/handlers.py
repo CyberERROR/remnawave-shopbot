@@ -31,6 +31,7 @@ from aiogram.enums import ChatMemberStatus
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from shop_bot.bot import keyboards
+from shop_bot.bot.pricing import tier_price_as_decimal
 from shop_bot.modules.platega_api import PlategaAPI
 from shop_bot.modules.heleket_api import create_heleket_payment_request
 from shop_bot.data_manager.remnawave_repository import (
@@ -2771,7 +2772,7 @@ def get_user_router() -> Router:
         months = int(plan.get('months') or 1)
         duration_days = int(plan.get('duration_days') or 0) or (months * 30)
         month_factor = Decimal(str(duration_days)) / Decimal('30')
-        price += Decimal(str(data.get('tier_price', 0))) * month_factor
+        price += tier_price_as_decimal(data.get('tier_price')) * month_factor
         await state.update_data(final_price=float(price))
         
         balance = get_balance(message.chat.id)
