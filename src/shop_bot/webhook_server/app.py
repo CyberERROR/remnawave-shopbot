@@ -71,7 +71,7 @@ from shop_bot.data_manager.remnawave_repository import (
 from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
     delete_button_config, reorder_button_configs, DB_FILE,
-    add_seller_user, get_seller_user, delete_seller_user
+    add_seller_user, get_seller_user, delete_seller_user, update_user_username
 )
 from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id, update_host_button_style
 import sqlite3
@@ -91,7 +91,7 @@ ALL_SETTINGS_KEYS = [
     "telegram_bot_username", "admin_telegram_id", "yookassa_shop_id",
     "yookassa_secret_key", "sbp_enabled", "receipt_email", "cryptobot_token",
     "heleket_merchant_id", "heleket_api_key", "domain", "referral_percentage",
-    "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "trial_host_id", "trial_traffic_limit_gb", "trial_hwid_limit", "enable_referrals", "minimum_withdrawal",
+    "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "trial_host_id", "trial_internal_squad_uuid", "trial_traffic_limit_gb", "trial_hwid_limit", "enable_referrals", "minimum_withdrawal",
 
     "enable_fixed_referral_bonus", "fixed_referral_bonus_amount",
 
@@ -120,11 +120,16 @@ ALL_SETTINGS_KEYS = [
     "btn_admin_button_style", "btn_admin_icon_emoji_id",
     "btn_back_to_menu_button_style", "btn_back_to_menu_icon_emoji_id",
 
-    "backup_interval_days",
+    "backup_interval_days", "backup_interval_unit",
 
     "monitoring_enabled", "monitoring_interval_sec",
     "monitoring_cpu_threshold", "monitoring_mem_threshold", "monitoring_disk_threshold",
     "monitoring_alert_cooldown_sec",
+
+    "payment_button_balance_text", "payment_button_yookassa_text", "payment_button_platega_payform_text",
+    "payment_button_platega_text", "payment_button_platega_crypto_text", "payment_button_cryptobot_text",
+    "payment_button_heleket_text", "payment_button_tonconnect_text", "payment_button_stars_text",
+    "payment_button_yoomoney_text",
 
     "yoomoney_enabled", "yoomoney_wallet", "yoomoney_secret", "stars_per_rub", "stars_enabled",
 
@@ -1401,6 +1406,27 @@ def create_webhook_app(bot_controller_instance):
             logger.error(f"Failed to get user details for {user_id}: {e}")
             return jsonify({"ok": False, "error": str(e)}), 500
 
+    @flask_app.route('/users/<int:user_id>/username', methods=['POST'])
+    @login_required
+    def update_user_username_route(user_id: int):
+        username = (request.form.get('username') or '').strip().lstrip('@').strip()
+        username = re.sub(r'\s+', ' ', username)
+
+        if not username:
+            return jsonify({"ok": False, "message": "Введите имя пользователя."}), 400
+        if len(username) > 64:
+            return jsonify({"ok": False, "message": "Имя не должно быть длиннее 64 символов."}), 400
+        if any(ord(char) < 32 or ord(char) == 127 for char in username):
+            return jsonify({"ok": False, "message": "Имя содержит недопустимые символы."}), 400
+        if not get_user(user_id):
+            return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+        if not update_user_username(user_id, username):
+            return jsonify({"ok": False, "message": "Не удалось обновить имя пользователя."}), 500
+
+        logger.info("User %s username updated by %s", user_id, session.get('panel_login') or 'panel')
+        return jsonify({"ok": True, "username": username, "message": "Имя пользователя обновлено."})
+
     @flask_app.route('/users/<int:user_id>/trial/toggle', methods=['POST'])
     @login_required
     def toggle_trial_used_route(user_id: int):
@@ -2580,7 +2606,8 @@ def create_webhook_app(bot_controller_instance):
                 if key in checkbox_keys or key == 'panel_password':
                     continue
                 if key in request.form:
-                    update_setting(key, request.form.get(key))
+                    values = request.form.getlist(key)
+                    update_setting(key, values[-1] if values else request.form.get(key))
 
             pay_info = {
                 'id': 1 if request.form.get('pay_info_id') else 0,
@@ -4120,4 +4147,3 @@ def create_webhook_app(bot_controller_instance):
     register_node_routes(flask_app, login_required, get_common_template_data)
 
     return flask_app
-

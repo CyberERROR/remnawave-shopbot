@@ -10,6 +10,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from shop_bot.data_manager.remnawave_repository import get_setting
 from shop_bot.data_manager.database import get_button_configs
 from shop_bot.config import get_msk_time
+from shop_bot.modules.payment_methods import get_available_payment_methods
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,10 @@ def _setting_button_extra(prefix: str) -> dict:
 def _setting_button_text(prefix: str, default: str, suffix: str = "") -> str:
     text = get_setting(f"{prefix}_text") or default
     return apply_html_to_button_text(f"{text}{suffix}")
+
+
+def _payment_button_text(method: str, default: str, suffix: str = "") -> str:
+    return _setting_button_text(f"payment_button_{method}", default, suffix)
 
 main_reply_keyboard = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="🏠 Главное меню")]],
@@ -87,6 +92,7 @@ def create_main_menu_keyboard(user_keys: list, trial_available: bool, is_admin: 
 
 def create_admin_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    builder.button(text="💸 Финансы", callback_data="admin_finance")
     builder.button(text="👥 Пользователи", callback_data="admin_users")
     builder.button(text="🌍 Ключи на хосте", callback_data="admin_host_keys")
     builder.button(text="🎁 Выдать ключ", callback_data="admin_gift_key")
@@ -99,7 +105,7 @@ def create_admin_menu_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="📢 Рассылка", callback_data="start_broadcast")
     builder.button(text=_setting_button_text("btn_back_to_menu", "⬅️ Назад в меню"), callback_data="back_to_main_menu", **_setting_button_extra("btn_back_to_menu"))
 
-    builder.adjust(2, 2, 2, 2, 2, 1)
+    builder.adjust(1, 2, 2, 2, 2, 2, 1)
     return builder.as_markup()
 
 def create_admins_menu_keyboard() -> InlineKeyboardMarkup:
@@ -494,54 +500,16 @@ def create_payment_method_keyboard(
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
-
-    pm = {
-        "yookassa": bool((get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or "")),
-        "platega_payform": ((get_setting("platega_payform_enabled") or "false").strip().lower() == "true"),
-        "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
-        "platega_crypto": ((get_setting("platega_crypto_enabled") or "false").strip().lower() == "true"),
-        "heleket": bool((get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or "")),
-        "cryptobot": bool(get_setting("cryptobot_token") or ""),
-        "tonconnect": bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or "")),
-        "yoomoney": ((get_setting("yoomoney_enabled") or "false").strip().lower() == "true"), 
-        "stars": ((get_setting("stars_enabled") or "false").strip().lower() == "true"),
-    }
-
-
-    if show_balance:
-        label = "💼 Оплатить с баланса"
-        if main_balance is not None:
-            try:
-                label += f" ({main_balance:.0f} RUB)"
-            except Exception:
-                pass
-        builder.button(text=label, callback_data="pay_balance")
-
-
-    if pm.get("yookassa"):
-        if (get_setting("sbp_enabled") or "false").strip().lower() == "true":
-            builder.button(text="🏦 СБП / Банковская карта", callback_data="pay_yookassa")
-        else:
-            builder.button(text="🏦 Банковская карта", callback_data="pay_yookassa")
-    
-    if pm.get("platega_payform"):
-        builder.button(text="💳 Platega", callback_data="pay_platega_payform")
-    if pm.get("platega"):
-        builder.button(text="💳 СБП / Platega", callback_data="pay_platega")
-    if pm.get("platega_crypto"):
-        builder.button(text="🪙 Crypto / Platega", callback_data="pay_platega_crypto")
-    if pm.get("cryptobot"):
-        builder.button(text="💎 Криптовалюта", callback_data="pay_cryptobot")
-    elif pm.get("heleket"):
-        builder.button(text="💎 Криптовалюта", callback_data="pay_heleket")
-    if pm.get("tonconnect"):
-        callback_data_ton = "pay_tonconnect"
-        logger.info(f"Creating TON button with callback_data: '{callback_data_ton}'")
-        builder.button(text="🪙 TON Connect", callback_data=callback_data_ton)
-    if pm.get("stars"):
-        builder.button(text="⭐ Telegram Stars", callback_data="pay_stars")
-    if pm.get("yoomoney"):
-        builder.button(text="💜 ЮMoney (кошелёк)", callback_data="pay_yoomoney")
+    for method in get_available_payment_methods(include_balance=bool(show_balance), balance=main_balance):
+        callback_data = method.get("purchase_callback")
+        if not callback_data:
+            continue
+        if method["method"] == "tonconnect":
+            logger.info(f"Creating TON button with callback_data: '{callback_data}'")
+        builder.button(
+            text=_payment_button_text(method["method"], method["bot_default_label"], method.get("suffix", "")),
+            callback_data=callback_data,
+        )
     
 
 
@@ -585,40 +553,14 @@ def create_cryptobot_payment_keyboard(payment_url: str, invoice_id: int | str, b
 def create_topup_payment_method_keyboard(payment_methods: dict) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
-    pm = {
-        "yookassa": bool((get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or "")),
-        "heleket": bool((get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or "")),
-        "cryptobot": bool(get_setting("cryptobot_token") or ""),
-        "tonconnect": bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or "")),
-        "yoomoney": ((get_setting("yoomoney_enabled") or "false").strip().lower() == "true"),
-        "platega_payform": ((get_setting("platega_payform_enabled") or "false").strip().lower() == "true"),
-        "platega": ((get_setting("platega_enabled") or "false").strip().lower() == "true"),
-        "platega_crypto": ((get_setting("platega_crypto_enabled") or "false").strip().lower() == "true"),
-        "stars": ((get_setting("stars_enabled") or "false").strip().lower() == "true"),
-    }
-
-    if pm.get("yookassa"):
-        if (get_setting("sbp_enabled") or "false").strip().lower() == "true":
-            builder.button(text="🏦 СБП / Банковская карта", callback_data="topup_pay_yookassa")
-        else:
-            builder.button(text="🏦 Банковская карта", callback_data="topup_pay_yookassa")
-
-    if pm.get("cryptobot"):
-        builder.button(text="💎 Криптовалюта", callback_data="topup_pay_cryptobot")
-    elif pm.get("heleket"):
-        builder.button(text="💎 Криптовалюта", callback_data="topup_pay_heleket")
-    if pm.get("tonconnect"):
-        builder.button(text="🪙 TON Connect", callback_data="topup_pay_tonconnect")
-    if pm.get("stars"):
-        builder.button(text="⭐ Telegram Stars", callback_data="topup_pay_stars")
-    if pm.get("yoomoney"):
-        builder.button(text="💜 ЮMoney (кошелёк)", callback_data="topup_pay_yoomoney")
-    if pm.get("platega_payform"):
-        builder.button(text="💳 Platega", callback_data="topup_pay_platega_payform")
-    if pm.get("platega"):
-        builder.button(text="💳 СБП / Platega", callback_data="topup_pay_platega")
-    if pm.get("platega_crypto"):
-        builder.button(text="💎 Крипта / Platega", callback_data="topup_pay_platega_crypto")
+    for method in get_available_payment_methods():
+        callback_data = method.get("topup_callback")
+        if not callback_data:
+            continue
+        builder.button(
+            text=_payment_button_text(method["method"], method["bot_default_label"]),
+            callback_data=callback_data,
+        )
 
     builder.button(text="⬅️ Назад", callback_data="show_profile")
     builder.adjust(1)

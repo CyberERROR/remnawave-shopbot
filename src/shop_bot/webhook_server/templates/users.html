@@ -351,9 +351,17 @@
                                     <span class="material-symbols-outlined text-3xl">badge</span>
                                 </div>
                                 <div class="flex-1 min-w-0 pt-1">
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-2 min-w-0">
                                         <h4 class="text-white font-bold text-xl leading-tight truncate select-all"
                                             id="udm-username"></h4>
+                                        <input id="udm-username-input"
+                                            class="hidden min-w-0 w-full bg-black/30 border border-primary/30 rounded-lg px-2 py-1 text-lg font-bold text-white focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                            type="text" maxlength="64" autocomplete="off" />
+                                        <button id="udm-username-edit" type="button"
+                                            class="w-8 h-8 shrink-0 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 hover:text-primary transition-all flex items-center justify-center"
+                                            title="Изменить имя пользователя">
+                                            <span id="udm-username-edit-icon" class="material-symbols-outlined text-base">edit</span>
+                                        </button>
                                         <span id="udm-pinned-badge"
                                             class="hidden material-symbols-outlined text-primary text-lg">push_pin</span>
                                     </div>
@@ -1146,6 +1154,79 @@
             }
         }
 
+        function setUsernameEditMode(isEditing) {
+            const usernameDisplay = document.getElementById('udm-username');
+            const usernameInput = document.getElementById('udm-username-input');
+            const editButton = document.getElementById('udm-username-edit');
+            const editIcon = document.getElementById('udm-username-edit-icon');
+
+            if (!usernameDisplay || !usernameInput || !editButton || !editIcon) return;
+
+            usernameDisplay.classList.toggle('hidden', isEditing);
+            usernameInput.classList.toggle('hidden', !isEditing);
+            editButton.title = isEditing ? 'Сохранить имя пользователя' : 'Изменить имя пользователя';
+            editButton.classList.toggle('text-green-400', isEditing);
+            editButton.classList.toggle('border-green-500/30', isEditing);
+            editButton.classList.toggle('bg-green-500/10', isEditing);
+            editButton.classList.toggle('text-white/50', !isEditing);
+            editButton.classList.toggle('border-white/10', !isEditing);
+            editButton.classList.toggle('bg-white/5', !isEditing);
+            editIcon.textContent = isEditing ? 'check' : 'edit';
+            editButton.dataset.editing = isEditing ? 'true' : 'false';
+
+            if (isEditing) {
+                setTimeout(() => {
+                    usernameInput.focus();
+                    usernameInput.select();
+                }, 0);
+            }
+        }
+
+        async function saveUsername() {
+            const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+            const usernameInput = document.getElementById('udm-username-input');
+            if (!uid || !usernameInput) return;
+
+            const data = await apiRequest(
+                `{{ url_for('update_user_username_route', user_id=0) }}`.replace('/0', `/${uid}`),
+                'POST',
+                { username: usernameInput.value },
+                'Имя пользователя обновлено'
+            );
+            if (!data) return;
+
+            usernameInput.value = data.username;
+            document.getElementById('udm-username').textContent = '@' + data.username;
+            setUsernameEditMode(false);
+
+            const tbody = document.getElementById('users-tbody');
+            if (tbody) {
+                const params = new URLSearchParams(new URL(tbody.getAttribute('data-fetch-url'), location.origin).search);
+                updateTableAndPagination(params);
+            }
+        }
+
+        document.getElementById('udm-username-edit')?.addEventListener('click', () => {
+            const editButton = document.getElementById('udm-username-edit');
+            if (editButton?.dataset.editing === 'true') {
+                saveUsername();
+            } else {
+                setUsernameEditMode(true);
+            }
+        });
+
+        document.getElementById('udm-username-input')?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveUsername();
+            } else if (event.key === 'Escape') {
+                const usernameDisplay = document.getElementById('udm-username');
+                const usernameInput = document.getElementById('udm-username-input');
+                usernameInput.value = usernameDisplay.textContent.replace(/^@/, '');
+                setUsernameEditMode(false);
+            }
+        });
+
         async function setUserBalanceAbsolute(uid, targetBalance) {
             const currentBalanceElement = document.getElementById('udm-balance');
             const currentBalance = parseBalanceValue(currentBalanceElement?.textContent);
@@ -1420,7 +1501,10 @@
                     }
 
                     document.getElementById('udm-telegram-id').textContent = data.user.telegram_id || 'N/A';
-                    document.getElementById('udm-username').textContent = '@' + (data.user.username || 'N/A');
+                    const username = data.user.username || 'N/A';
+                    document.getElementById('udm-username').textContent = '@' + username;
+                    document.getElementById('udm-username-input').value = username;
+                    setUsernameEditMode(false);
                     document.getElementById('udm-registration').textContent = data.user.registration_date || 'N/A';
                     document.getElementById('udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' ₽';
                     document.getElementById('udm-total-months').textContent = (data.user.total_months || 0) + ' мес.';

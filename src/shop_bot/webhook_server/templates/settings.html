@@ -130,7 +130,7 @@
 
                     <div class="space-y-4">
                         <!-- Top Inputs Row -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <div>
                                 <label
                                     class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Логин</label>
@@ -159,9 +159,9 @@
                                 </div>
                             </div>
                             <div>
-                                <label
+                                <label id="backup-interval-label"
                                     class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Автобэкап
-                                    (дни)</label>
+                                    ({{ 'часы' if settings.backup_interval_unit=='hours' else 'дни' }})</label>
                                 <div class="relative group">
                                     <span
                                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">history</span>
@@ -169,7 +169,25 @@
                                         value="{{ settings.backup_interval_days or '1' }}" min="0"
                                         class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
                                 </div>
-                                <p class="text-[9px] text-white/40 mt-1 ml-1 leading-tight">0 — выключить автобэкап</p>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                        <input type="hidden" name="backup_interval_unit" value="days" />
+                                        <input type="checkbox" name="backup_interval_unit" value="hours" {% if
+                                            settings.backup_interval_unit=='hours' %}checked{% endif %} class="sr-only peer"
+                                            id="backup-interval-unit-toggle" />
+                                        <div
+                                            class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                    <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
+                                        <span id="backup-unit-days-label"
+                                            class="{{ 'text-white/30' if settings.backup_interval_unit=='hours' else 'text-primary' }}">Дни</span>
+                                        <span class="text-white/20">/</span>
+                                        <span id="backup-unit-hours-label"
+                                            class="{{ 'text-primary' if settings.backup_interval_unit=='hours' else 'text-white/30' }}">Часы</span>
+                                    </div>
+                                </div>
+                                <p class="text-[9px] text-white/40 mt-1 ml-1 leading-tight">0 - выключить автобэкап</p>
                             </div>
                         </div>
 
@@ -365,7 +383,7 @@
                     </div>
 
                     <div class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
                             <div>
                                 <label
                                     class="block text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Дней</label>
@@ -400,6 +418,24 @@
                                         value="{{ settings.trial_hwid_limit or '0' }}"
                                         class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
                                 </div>
+                            </div>
+                            <div>
+                                <label
+                                    class="flex items-center text-white/40 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">
+                                    UUID
+                                    <span class="group relative ml-1 inline-flex items-center">
+                                        <span
+                                            class="material-symbols-outlined text-[10px] opacity-40 cursor-help hover:text-white/60 transition-colors">info</span>
+                                        <span
+                                            class="absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#091a12] p-2.5 text-[10px] normal-case tracking-normal text-white/60 shadow-xl opacity-0 transition-opacity pointer-events-none group-hover:opacity-100">
+                                            Укажите UUID из <span class="text-primary font-bold">внутренних сквадов</span> с панели <span class="text-primary font-bold">Remnawave</span>.
+                                        </span>
+                                    </span>
+                                </label>
+                                <input type="text" name="trial_internal_squad_uuid"
+                                    value="{{ settings.trial_internal_squad_uuid or '' }}"
+                                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-sm font-mono focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
                             </div>
                         </div>
 
@@ -868,6 +904,96 @@
                                 </label>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-white/5">
+                        <label
+                            class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-2 ml-1">Названия
+                            кнопок способов оплаты</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Баланс</label>
+                                <input type="text" name="payment_button_balance_text"
+                                    value="{{ settings.payment_button_balance_text or '' }}"
+                                    placeholder="💼 Оплатить с баланса"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">YooKassa</label>
+                                <input type="text" name="payment_button_yookassa_text"
+                                    value="{{ settings.payment_button_yookassa_text or '' }}"
+                                    placeholder="🏦 СБП / Банковская карта"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Platega
+                                    Pay-form</label>
+                                <input type="text" name="payment_button_platega_payform_text"
+                                    value="{{ settings.payment_button_platega_payform_text or '' }}"
+                                    placeholder="💳 Platega"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Platega
+                                    СБП</label>
+                                <input type="text" name="payment_button_platega_text"
+                                    value="{{ settings.payment_button_platega_text or '' }}" placeholder="💳 СБП / Platega"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Platega
+                                    Crypto</label>
+                                <input type="text" name="payment_button_platega_crypto_text"
+                                    value="{{ settings.payment_button_platega_crypto_text or '' }}"
+                                    placeholder="🪙 Crypto / Platega"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">CryptoBot</label>
+                                <input type="text" name="payment_button_cryptobot_text"
+                                    value="{{ settings.payment_button_cryptobot_text or '' }}" placeholder="💎 Криптовалюта"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Heleket</label>
+                                <input type="text" name="payment_button_heleket_text"
+                                    value="{{ settings.payment_button_heleket_text or '' }}" placeholder="💎 Криптовалюта"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">TON
+                                    Connect</label>
+                                <input type="text" name="payment_button_tonconnect_text"
+                                    value="{{ settings.payment_button_tonconnect_text or '' }}" placeholder="🪙 TON Connect"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Telegram
+                                    Stars</label>
+                                <input type="text" name="payment_button_stars_text"
+                                    value="{{ settings.payment_button_stars_text or '' }}" placeholder="⭐ Telegram Stars"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">YooMoney</label>
+                                <input type="text" name="payment_button_yoomoney_text"
+                                    value="{{ settings.payment_button_yoomoney_text or '' }}"
+                                    placeholder="💜 ЮMoney (кошелёк)"
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-white/35 mt-2 ml-1">Оставьте поле пустым, чтобы использовать стандартное
+                            название.</p>
                     </div>
                 </div>
             </div>
@@ -2927,6 +3053,21 @@
 
         const backupSelect = document.getElementById('existing_backup');
         if (backupSelect) backupSelect.addEventListener('change', () => document.getElementById('backup-date').textContent = backupSelect.options[backupSelect.selectedIndex].getAttribute('data-mtime') || '—');
+
+        const backupUnitToggle = document.getElementById('backup-interval-unit-toggle');
+        const backupIntervalLabel = document.getElementById('backup-interval-label');
+        const backupDaysLabel = document.getElementById('backup-unit-days-label');
+        const backupHoursLabel = document.getElementById('backup-unit-hours-label');
+        if (backupUnitToggle && backupIntervalLabel && backupDaysLabel && backupHoursLabel) {
+            const syncBackupUnitUi = () => {
+                const isHours = backupUnitToggle.checked;
+                backupIntervalLabel.innerHTML = `Автобэкап (${isHours ? 'часы' : 'дни'})`;
+                backupDaysLabel.className = isHours ? 'text-white/30' : 'text-primary';
+                backupHoursLabel.className = isHours ? 'text-primary' : 'text-white/30';
+            };
+            backupUnitToggle.addEventListener('change', syncBackupUnitUi);
+            syncBackupUnitUi();
+        }
 
         const dbFileBtn = document.getElementById('btn-pick-file'), dbFileInput = document.getElementById('db_file');
         if (dbFileBtn && dbFileInput) {

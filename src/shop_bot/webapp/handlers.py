@@ -142,6 +142,7 @@ async def _send_invoice_stars(user_id: int, title: str, description: str, payloa
 
 from shop_bot.modules.platega_api import PlategaAPI
 from shop_bot.modules.heleket_api import create_heleket_payment_request
+from shop_bot.modules.payment_methods import get_available_payment_methods
 from shop_bot.bot.keyboards import (
     create_payment_keyboard, create_cryptobot_payment_keyboard,
     create_yoomoney_payment_keyboard
@@ -1063,7 +1064,7 @@ async def _render_main_page(user_id: int):
                 
                 details_results = await asyncio.gather(*details_tasks, return_exceptions=True)
                 
-                # --- 2. Fetch Subscription Info (Traffic Stats) using UUID from Details ---
+                # --- 2. Fetch Subscription Info (Traffic Stats) using user ID from Details ---
                 sub_tasks = []
                 # Map results to keys to keep order
                 key_details_map = {}
@@ -1088,13 +1089,12 @@ async def _render_main_page(user_id: int):
                             k['email'] = api_email
                             k['key_email'] = api_email
                         
-                    # Determine UUID for subscription check
-                    # BOT PRIORITY: Use DB UUID first, then API response
-                    target_uuid = k.get('remnawave_user_uuid') or u.get('uuid')
+                    # Use the numeric ID returned by Remnawave v3.
+                    target_user_id = u.get('id') or k.get('remnawave_user_uuid')
                     host = k.get('host_name')
                     
-                    if target_uuid:
-                        sub_tasks.append(remnawave_api.get_subscription_info(str(target_uuid), host_name=host))
+                    if target_user_id:
+                        sub_tasks.append(remnawave_api.get_subscription_info(target_user_id, host_name=host))
                     else:
                         sub_tasks.append(asyncio.sleep(0, None))
 
@@ -1106,7 +1106,7 @@ async def _render_main_page(user_id: int):
                     found_traffic = None
                     if not isinstance(sub_res, Exception) and sub_res and isinstance(sub_res, dict):
                         # check common keys
-                        for key_name in ['trafficUsed', 'traffic', 'used_traffic']:
+                        for key_name in ['usedTrafficBytes', 'trafficUsed', 'traffic', 'used_traffic']:
                             val = sub_res.get(key_name)
                             if val is not None:
                                 found_traffic = val
@@ -1133,20 +1133,21 @@ async def _render_main_page(user_id: int):
 
                     # HWID Usage
                     u = key_details_map.get(k['key_id'])
-                    target_uuid = None
+                    target_user_id = None
                     if u:
-                         target_uuid = u.get('uuid')
-                    if not target_uuid:
-                         target_uuid = k.get('remnawave_user_uuid')
+                         target_user_id = u.get('id')
+                    if not target_user_id:
+                         target_user_id = k.get('remnawave_user_uuid')
                          
                     host = k.get('host_name')
 
-                    if target_uuid and host:
-                         try:
-                              devs = await remnawave_api.get_connected_devices_count(target_uuid, host_name=host)
-                              if devs and 'total' in devs:
-                                   k['used_ips'] = int(devs['total'])
-                         except: pass
+                    if target_user_id and host:
+                        try:
+                            devs = await remnawave_api.get_connected_devices_count(target_user_id, host_name=host)
+                            if devs and 'total' in devs:
+                                k['used_ips'] = int(devs['total'])
+                        except Exception:
+                            pass
             except Exception as e:
                 logger.error(f"[WEBAPP] - Ошибка получения живой статистики для {user_id}: {e}")
 
@@ -1613,45 +1614,17 @@ async def api_get_payment_methods(req: PaymentMethodsRequest):
     user_id = req.user_id
     user = get_user(user_id)
     
-    methods = []
-    
-    # 1. YooKassa
-    if (get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or ""):
-        label = "Банковская карта"
-        if (get_setting("sbp_enabled") or "false").strip().lower() == "true":
-            label = "СБП / Банковская карта"
-        methods.append({"id": "pay_yookassa", "name": label, "icon": "credit_card"})
-
-    # 2. Platega
-    if (get_setting("platega_payform_enabled") or "false").strip().lower() == "true":
-        methods.append({"id": "pay_platega_payform", "name": "Platega", "icon": "credit_card"})
-    if (get_setting("platega_enabled") or "false").strip().lower() == "true":
-        methods.append({"id": "pay_platega", "name": "СБП / Platega", "icon": "payments"})
-    if (get_setting("platega_crypto_enabled") or "false").strip().lower() == "true":
-        methods.append({"id": "pay_platega_crypto", "name": "Крипта / Platega", "icon": "payments"})
-
-    # 3. CryptoBot
-    if get_setting("cryptobot_token"):
-        methods.append({"id": "pay_cryptobot", "name": "Криптовалюта", "icon": "currency_bitcoin"})
-    # 3.1 Heleket (alternative crypto)
-    elif (get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or ""):
-        methods.append({"id": "pay_heleket", "name": "Криптовалюта", "icon": "currency_bitcoin"})
-
-    # 4. TON Connect
-    if (get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or ""):
-        methods.append({"id": "pay_tonconnect", "name": "TON Connect", "icon": "wallet"})
-
-    # 5. Telegram Stars
-    if (get_setting("stars_enabled") or "false").strip().lower() == "true":
-        methods.append({"id": "pay_stars", "name": "Telegram Stars", "icon": "star"})
-
-    # 6. YooMoney
-    if (get_setting("yoomoney_enabled") or "false").strip().lower() == "true":
-        methods.append({"id": "pay_yoomoney", "name": "ЮMoney (кошелёк)", "icon": "account_balance_wallet"})
-
-    # 7. Balance
     balance = float(user.get('balance', 0)) if user else 0
-    methods.append({"id": "pay_balance", "name": f"Баланс ({balance:.0f} RUB)", "icon": "account_balance", "balance": balance})
+
+    methods = []
+    for method in get_available_payment_methods(include_balance=True, balance=balance):
+        custom_name = get_setting(f"payment_button_{method['method']}_text") or method["webapp_default_label"]
+        methods.append({
+            "id": method["webapp_id"],
+            "name": f"{custom_name}{method.get('suffix', '')}",
+            "icon": method["icon"],
+            "balance": balance if method["method"] == "balance" else None,
+        })
 
     return {"ok": True, "methods": methods, "balance": balance}
 
@@ -1754,8 +1727,6 @@ async def api_create_payment(req: CreatePaymentRequest):
         if method_id == "pay_yookassa":
             shop_id, secret = get_setting("yookassa_shop_id"), get_setting("yookassa_secret_key")
             if not shop_id or not secret: return {"ok": False, "error": "YooKassa не настроена"}
-            YookassaConfiguration.account_id = shop_id
-            YookassaConfiguration.secret_key = secret
             pid = str(uuid.uuid4())
             meta = {
                 "user_id": user_id, "months": months, "price": float(final_price),
@@ -1771,8 +1742,10 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "capture": True, "description": comment, "metadata": meta
             }
             try:
-                pay_obj = YookassaPayment.create(payload, pid)
-                pay_url = pay_obj.confirmation.confirmation_url
+                from shop_bot.bot.handlers import create_yookassa_payment_async
+
+                pay_obj = await create_yookassa_payment_async(payload, pid, shop_id, secret)
+                pay_url = pay_obj["confirmation"]["confirmation_url"]
                 
                 kb = create_payment_keyboard(pay_url)
                 await _send_telegram_message(user_id, f"<b>Оплата через ЮKassa</b>\n\nСумма: <b>{final_price:.2f} RUB</b>\n\n<i>Вы можете оплатить счет здесь или в WebApp.</i>", kb)

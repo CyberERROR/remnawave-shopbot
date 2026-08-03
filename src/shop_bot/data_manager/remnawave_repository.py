@@ -160,7 +160,7 @@ def record_key_from_payload(
     if not payload:
         return None
     squad_uuid = (payload.get('squad_uuid') or payload.get('squadUuid') or '').strip()
-    remnawave_user_uuid = (payload.get('client_uuid') or payload.get('uuid') or payload.get('id') or '').strip()
+    remnawave_user_uuid = str(payload.get('client_uuid') or payload.get('uuid') or payload.get('id') or '').strip()
     email = payload.get('email') or payload.get('accountEmail') or ''
     expire_at_ms = payload.get('expiry_timestamp_ms')
     if expire_at_ms is None:

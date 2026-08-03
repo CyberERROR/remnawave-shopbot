@@ -222,6 +222,7 @@ def initialize_db():
                 CREATE TABLE IF NOT EXISTS users (
                     telegram_id INTEGER PRIMARY KEY,
                     username TEXT,
+                    username_manually_set BOOLEAN DEFAULT 0,
                     total_spent REAL DEFAULT 0,
                     total_months INTEGER DEFAULT 0,
                     trial_used BOOLEAN DEFAULT 0,
@@ -513,6 +514,7 @@ def initialize_db():
                 "referral_reward_type": "percent_purchase",
                 "referral_on_start_referrer_amount": "20",
                 "backup_interval_days": "1",
+                "backup_interval_unit": "days",
 
                 "monitoring_enabled": "true",
                 "monitoring_interval_sec": "300",
@@ -520,6 +522,18 @@ def initialize_db():
                 "monitoring_mem_threshold": "90",
                 "monitoring_disk_threshold": "90",
                 "monitoring_alert_cooldown_sec": "3600",
+
+                "payment_button_balance_text": None,
+                "payment_button_yookassa_text": None,
+                "payment_button_platega_payform_text": None,
+                "payment_button_platega_text": None,
+                "payment_button_platega_crypto_text": None,
+                "payment_button_cryptobot_text": None,
+                "payment_button_heleket_text": None,
+                "payment_button_tonconnect_text": None,
+                "payment_button_stars_text": None,
+                "payment_button_yoomoney_text": None,
+
                 "remnawave_base_url": None,
                 "remnawave_api_token": None,
                 "remnawave_cookies": "{}",
@@ -672,6 +686,7 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
         "referral_start_bonus_received": "BOOLEAN DEFAULT 0",
         "is_pinned": "BOOLEAN DEFAULT 0",
         "seller_active": "INTEGER DEFAULT 0",
+        "username_manually_set": "BOOLEAN DEFAULT 0",
         "auth_token": "TEXT",
         "auth_email": "TEXT",
         "auth_pass": "TEXT",
@@ -1077,6 +1092,85 @@ def _ensure_pending_transactions_table(cursor: sqlite3.Cursor) -> None:
 
 # ===== _ENSURE_DEFAULT_BUTTON_CONFIGS =====
 def _ensure_default_button_configs(cursor: sqlite3.Cursor) -> None:
+    def ensure_button(menu_type, button_id, text, callback_data, row_pos, col_pos, sort_order, button_width):
+        cursor.execute(
+            """
+                INSERT OR IGNORE INTO button_configs
+                (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """,
+            (menu_type, button_id, text, callback_data, row_pos, col_pos, sort_order, button_width),
+        )
+
+    def normalize_admin_menu_default_layout():
+        expected_layout = {
+            "finance": (0, 0, 0, 2),
+            "users": (1, 0, 1, 1),
+            "host_keys": (1, 1, 2, 1),
+            "gift_key": (2, 0, 3, 1),
+            "promo": (2, 1, 4, 1),
+            "speedtest": (3, 0, 5, 1),
+            "monitor": (3, 1, 6, 1),
+            "backup": (4, 0, 7, 1),
+            "restore": (4, 1, 8, 1),
+            "admins": (5, 0, 9, 1),
+            "broadcast": (5, 1, 10, 1),
+            "back_to_menu": (6, 0, 11, 3),
+        }
+        old_default_layout = {
+            "users": (0, 0, 0, 1),
+            "host_keys": (0, 1, 1, 1),
+            "gift_key": (1, 0, 2, 1),
+            "promo": (1, 1, 3, 1),
+            "speedtest": (2, 0, 4, 1),
+            "monitor": (2, 1, 5, 1),
+            "backup": (3, 0, 6, 1),
+            "restore": (3, 1, 7, 1),
+            "admins": (4, 0, 8, 1),
+            "broadcast": (4, 1, 9, 1),
+            "back_to_menu": (5, 0, 10, 3),
+        }
+        broken_layout = {
+            "finance": (0, 0, 0, 2),
+            "users": (0, 0, 0, 1),
+            "host_keys": (0, 1, 1, 1),
+            "gift_key": (1, 0, 2, 1),
+            "promo": (1, 1, 3, 1),
+            "speedtest": (2, 0, 4, 1),
+            "monitor": (2, 1, 5, 1),
+            "backup": (3, 0, 6, 1),
+            "restore": (3, 1, 7, 1),
+            "admins": (4, 0, 8, 1),
+            "broadcast": (4, 1, 9, 1),
+            "back_to_menu": (5, 0, 10, 3),
+        }
+
+        cursor.execute(
+            """
+            SELECT button_id, row_position, column_position, sort_order, button_width
+            FROM button_configs
+            WHERE menu_type = 'admin_menu'
+            """
+        )
+        layout = {
+            row[0]: (row[1], row[2], row[3], row[4])
+            for row in cursor.fetchall()
+            if row[0] in expected_layout
+        }
+        if layout == expected_layout:
+            return
+        if layout != old_default_layout and layout != broken_layout:
+            return
+        for button_id, (row_pos, col_pos, sort_order, button_width) in expected_layout.items():
+            cursor.execute(
+                """
+                UPDATE button_configs
+                SET row_position = ?, column_position = ?, sort_order = ?, button_width = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE menu_type = 'admin_menu' AND button_id = ?
+                """,
+                (row_pos, col_pos, sort_order, button_width, button_id),
+            )
+
     def menu_has_buttons(m_type):
         cursor.execute("SELECT 1 FROM button_configs WHERE menu_type = ? LIMIT 1", (m_type,))
         return cursor.fetchone() is not None
@@ -1106,17 +1200,18 @@ def _ensure_default_button_configs(cursor: sqlite3.Cursor) -> None:
 
     if not menu_has_buttons("admin_menu"):
         admin_menu_buttons = [
-            ("users", "👥 Пользователи", "admin_users", 0, 0, 0, 1),
-            ("host_keys", "🌍 Ключи на хосте", "admin_host_keys", 0, 1, 1, 1),
-            ("gift_key", "🎁 Выдать ключ", "admin_gift_key", 1, 0, 2, 1),
-            ("promo", "🎟 Промокоды", "admin_promo_menu", 1, 1, 3, 1),
-            ("speedtest", "⚡ Тест скорости", "admin_speedtest", 2, 0, 4, 1),
-            ("monitor", "📊 Мониторинг", "admin_monitor", 2, 1, 5, 1),
-            ("backup", "🗄 Бэкап БД", "admin_backup_db", 3, 0, 6, 1),
-            ("restore", "♻️ Восстановить БД", "admin_restore_db", 3, 1, 7, 1),
-            ("admins", "👮 Администраторы", "admin_admins_menu", 4, 0, 8, 1),
-            ("broadcast", "📢 Рассылка", "start_broadcast", 4, 1, 9, 1),
-            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 5, 0, 10, 3),
+            ("finance", "💸 Финансы", "admin_finance", 0, 0, 0, 2),
+            ("users", "👥 Пользователи", "admin_users", 1, 0, 1, 1),
+            ("host_keys", "🌍 Ключи на хосте", "admin_host_keys", 1, 1, 2, 1),
+            ("gift_key", "🎁 Выдать ключ", "admin_gift_key", 2, 0, 3, 1),
+            ("promo", "🎟 Промокоды", "admin_promo_menu", 2, 1, 4, 1),
+            ("speedtest", "⚡ Тест скорости", "admin_speedtest", 3, 0, 5, 1),
+            ("monitor", "📊 Мониторинг", "admin_monitor", 3, 1, 6, 1),
+            ("backup", "🗄 Бэкап БД", "admin_backup_db", 4, 0, 7, 1),
+            ("restore", "♻️ Восстановить БД", "admin_restore_db", 4, 1, 8, 1),
+            ("admins", "👮 Администраторы", "admin_admins_menu", 5, 0, 9, 1),
+            ("broadcast", "📢 Рассылка", "start_broadcast", 5, 1, 10, 1),
+            ("back_to_menu", "⬅️ Назад в меню", "back_to_main_menu", 6, 0, 11, 3),
         ]
         
         for button_id, text, callback_data, row_pos, col_pos, sort_order, button_width in admin_menu_buttons:
@@ -1125,6 +1220,9 @@ def _ensure_default_button_configs(cursor: sqlite3.Cursor) -> None:
                 (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, ("admin_menu", button_id, text, callback_data, row_pos, col_pos, sort_order, button_width))
+    else:
+        ensure_button("admin_menu", "finance", "💸 Финансы", "admin_finance", 0, 0, 0, 2)
+        normalize_admin_menu_default_layout()
     
 
     if not menu_has_buttons("profile_menu"):
@@ -2655,7 +2753,11 @@ def register_user_if_not_exists(telegram_id: int, username: str, referrer_id):
             f"Не удалось зарегистрировать пользователя {telegram_id}"
         )
     else:
-        _exec("UPDATE users SET username = ? WHERE telegram_id = ?", (username, telegram_id), "")
+        _exec(
+            "UPDATE users SET username = ? WHERE telegram_id = ? AND NOT COALESCE(username_manually_set, 0)",
+            (username, telegram_id),
+            ""
+        )
         
         current_ref = row['referred_by']
         if referrer_id and (current_ref is None or str(current_ref).strip() == "") and int(referrer_id) != int(telegram_id):
@@ -2767,6 +2869,18 @@ def get_user(telegram_id: int):
     row = _fetch_row("SELECT * FROM users WHERE telegram_id = ?", (telegram_id,), f"Не удалось получить пользователя {telegram_id}")
     return dict(row) if row else None
 # ==================
+
+
+# ===== UPDATE_USER_USERNAME =====
+def update_user_username(telegram_id: int, username: str) -> bool:
+    cursor = _exec(
+        "UPDATE users SET username = ?, username_manually_set = 1 WHERE telegram_id = ?",
+        (username, telegram_id),
+        f"Не удалось обновить имя пользователя {telegram_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
+# ================================
+
 
 # ===== GET_USER_BY_EMAIL =====
 def get_user_by_email(email: str):
@@ -2982,6 +3096,287 @@ def get_today_income_by_currency() -> dict:
     )
     return {"rub": float(rub or 0), "yesterday_rub": float(yesterday_rub or 0), "crypto": float(crypto or 0)}
 # ========================================
+
+
+# ===== GET_ADMIN_FINANCIAL_STATS =====
+def get_admin_financial_stats() -> dict:
+    paid_statuses = "('paid', 'completed', 'success', 'succeeded')"
+    excluded_methods = "('balance', 'admin', 'referral')"
+    income_action_filter = """
+          AND (
+              LOWER(COALESCE(json_extract(metadata, '$.action'), '')) IN ('new', 'extend', 'topup', 'top_up')
+              OR LOWER(COALESCE(json_extract(metadata, '$.reason'), '')) IN ('subscription_purchase_or_extend', 'external_balance_top_up')
+          )
+    """
+
+    admin_stats = get_admin_stats()
+    user_groups = get_dashboard_user_groups()
+
+    def income_sum(date_filter: str = "") -> float:
+        return float(_fetch_val(
+            f"""
+            SELECT COALESCE(SUM(amount_rub), 0.0)
+            FROM transactions
+            WHERE LOWER(COALESCE(status, '')) IN {paid_statuses}
+              AND LOWER(COALESCE(payment_method, '')) NOT IN {excluded_methods}
+              {date_filter}
+              {income_action_filter}
+            """,
+            (),
+            0.0,
+            "Не удалось получить финансовую сумму для админской сводки",
+        ) or 0)
+
+    def referral_income_sum(date_filter: str = "") -> float:
+        return float(_fetch_val(
+            f"""
+            SELECT COALESCE(SUM(amount_rub), 0.0)
+            FROM transactions
+            WHERE LOWER(COALESCE(status, '')) IN {paid_statuses}
+              AND LOWER(COALESCE(payment_method, '')) = 'referral'
+              {date_filter}
+            """,
+            (),
+            0.0,
+            "Не удалось получить доход партнеров для админской сводки",
+        ) or 0)
+
+    total_income = income_sum()
+    today_income = income_sum("AND date(created_date) = date('now', '+3 hours')")
+    yesterday_income = income_sum("AND date(created_date) = date('now', '+3 hours', '-1 day')")
+    week_income = income_sum("AND date(created_date) >= date('now', '+3 hours', '-6 day')")
+    month_income = income_sum("AND strftime('%Y-%m', created_date) = strftime('%Y-%m', datetime('now', '+3 hours'))")
+    last_month_income = income_sum("AND strftime('%Y-%m', created_date) = strftime('%Y-%m', datetime('now', '+3 hours', '-1 month'))")
+    year_income = income_sum("AND strftime('%Y', created_date) = strftime('%Y', datetime('now', '+3 hours'))")
+    today_topups = _fetch_val(
+        f"""
+        SELECT COALESCE(SUM(amount_rub), 0.0)
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN {paid_statuses}
+          AND date(created_date) = date('now', '+3 hours')
+          AND LOWER(COALESCE(payment_method, '')) NOT IN {excluded_methods}
+          AND (
+              LOWER(COALESCE(json_extract(metadata, '$.action'), '')) IN ('topup', 'top_up')
+              OR LOWER(COALESCE(json_extract(metadata, '$.reason'), '')) = 'external_balance_top_up'
+          )
+        """,
+        (),
+        0.0,
+        "Не удалось получить пополнения за сегодня для финансовой сводки",
+    )
+    today_subscriptions = _fetch_val(
+        f"""
+        SELECT COALESCE(SUM(amount_rub), 0.0)
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN {paid_statuses}
+          AND date(created_date) = date('now', '+3 hours')
+          AND LOWER(COALESCE(payment_method, '')) NOT IN {excluded_methods}
+          AND (
+              LOWER(COALESCE(json_extract(metadata, '$.action'), '')) IN ('new', 'extend')
+              OR LOWER(COALESCE(json_extract(metadata, '$.reason'), '')) = 'subscription_purchase_or_extend'
+          )
+        """,
+        (),
+        0.0,
+        "Не удалось получить покупки подписок за сегодня для финансовой сводки",
+    )
+    pending_amount = _fetch_val(
+        """
+        SELECT COALESCE(SUM(amount_rub), 0.0)
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) = 'pending'
+        """,
+        (),
+        0.0,
+        "Не удалось получить сумму ожидающих платежей",
+    )
+    pending_count = _fetch_val(
+        """
+        SELECT COUNT(*)
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) = 'pending'
+        """,
+        (),
+        0,
+        "Не удалось получить количество ожидающих платежей",
+    )
+    user_balance_total = _fetch_val(
+        """
+        SELECT COALESCE(SUM(balance), 0.0)
+        FROM users
+        """,
+        (),
+        0.0,
+        "Не удалось получить суммарный баланс пользователей",
+    )
+    trial_used_total = _fetch_val(
+        """
+        SELECT COUNT(DISTINCT telegram_id)
+        FROM users
+        WHERE COALESCE(trial_used, 0) = 1
+           OR EXISTS (
+                SELECT 1 FROM vpn_keys k
+                WHERE k.user_id = users.telegram_id AND COALESCE(k.key_email, '') LIKE 'trial_%'
+           )
+        """,
+        (),
+        0,
+        "Не удалось получить количество пользователей с trial",
+    )
+    partners_with_referrals = _fetch_val(
+        """
+        SELECT COUNT(*)
+        FROM (
+            SELECT referred_by
+            FROM users
+            WHERE referred_by IS NOT NULL
+            GROUP BY referred_by
+        ) q
+        """,
+        (),
+        0,
+        "Не удалось получить количество партнеров с рефералами",
+    )
+    total_referred = _fetch_val(
+        "SELECT COUNT(*) FROM users WHERE referred_by IS NOT NULL",
+        (),
+        0,
+        "Не удалось получить количество приглашенных пользователей",
+    )
+    partner_balance = _fetch_val(
+        "SELECT COALESCE(SUM(referral_balance), 0.0) FROM users",
+        (),
+        0.0,
+        "Не удалось получить партнерский баланс",
+    )
+    partners_earned_total = _fetch_val(
+        "SELECT COALESCE(SUM(referral_balance_all), 0.0) FROM users",
+        (),
+        0.0,
+        "Не удалось получить общий заработок партнеров",
+    )
+    partners_earned_month = referral_income_sum("AND strftime('%Y-%m', created_date) = strftime('%Y-%m', datetime('now', '+3 hours'))")
+    top_partner = _fetch_row(
+        """
+        SELECT u.telegram_id, u.username, COUNT(*) AS referrals_count
+        FROM users r
+        JOIN users u ON u.telegram_id = r.referred_by
+        WHERE r.referred_by IS NOT NULL
+        GROUP BY u.telegram_id, u.username
+        ORDER BY referrals_count DESC, u.telegram_id ASC
+        LIMIT 1
+        """,
+        (),
+        "Не удалось получить топ партнера",
+    )
+    top_user = _fetch_row(
+        f"""
+        SELECT u.telegram_id, u.username,
+               COALESCE(SUM(COALESCE(
+                   CAST(json_extract(t.metadata, '$.months') AS INTEGER),
+                   (SELECT p.months FROM plans p WHERE p.plan_id = CAST(json_extract(t.metadata, '$.plan_id') AS INTEGER)),
+                   0
+               )), 0) AS months_total
+        FROM users u
+        JOIN transactions t ON t.user_id = u.telegram_id
+        WHERE LOWER(COALESCE(t.status, '')) IN {paid_statuses}
+          AND LOWER(COALESCE(t.payment_method, '')) NOT IN ('admin', 'referral')
+          AND (
+              LOWER(COALESCE(json_extract(t.metadata, '$.action'), '')) IN ('new', 'extend')
+              OR LOWER(COALESCE(json_extract(t.metadata, '$.reason'), '')) = 'subscription_purchase_or_extend'
+              OR json_extract(t.metadata, '$.plan_id') IS NOT NULL
+              OR json_extract(t.metadata, '$.key_id') IS NOT NULL
+          )
+        GROUP BY u.telegram_id, u.username
+        ORDER BY months_total DESC, u.telegram_id ASC
+        LIMIT 1
+        """,
+        (),
+        "Не удалось получить топ пользователя по месяцам",
+    )
+    payment_rows = _fetch_list(
+        f"""
+        SELECT LOWER(COALESCE(payment_method, '')) AS method, COALESCE(SUM(amount_rub), 0.0) AS total
+        FROM transactions
+        WHERE LOWER(COALESCE(status, '')) IN {paid_statuses}
+          AND LOWER(COALESCE(payment_method, '')) NOT IN {excluded_methods}
+          {income_action_filter}
+        GROUP BY LOWER(COALESCE(payment_method, ''))
+        ORDER BY total DESC, method ASC
+        """,
+        (),
+        "Не удалось получить разбивку дохода по методам",
+    )
+    payment_totals = {
+        "yookassa": 0.0,
+        "yoomoney": 0.0,
+        "platega_all": 0.0,
+        "cryptobot": 0.0,
+        "heleket": 0.0,
+        "ton_connect": 0.0,
+        "telegram_stars": 0.0,
+    }
+    for row in payment_rows:
+        method = (row.get("method") or "").strip().lower()
+        total = float(row.get("total") or 0)
+        if method == "yookassa":
+            payment_totals["yookassa"] += total
+        elif method == "yoomoney":
+            payment_totals["yoomoney"] += total
+        elif method in {"platega", "platega payform", "platega crypto"}:
+            payment_totals["platega_all"] += total
+        elif method == "cryptobot":
+            payment_totals["cryptobot"] += total
+        elif method == "heleket":
+            payment_totals["heleket"] += total
+        elif method == "ton connect":
+            payment_totals["ton_connect"] += total
+        elif method == "telegram stars":
+            payment_totals["telegram_stars"] += total
+
+    return {
+        "total_users": int(admin_stats.get("total_users", 0) or 0),
+        "total_keys": int(admin_stats.get("total_keys", 0) or 0),
+        "active_keys": int(admin_stats.get("active_keys", 0) or 0),
+        "total_income": float(total_income or 0),
+        "no_purchases": len(user_groups.get("no_purchases", [])),
+        "inactive_buyers": len(user_groups.get("inactive_buyers", [])),
+        "trials": len(user_groups.get("trials", [])),
+        "active_buyers": len(user_groups.get("active_buyers", [])),
+        "active_keys_total": len(user_groups.get("active_keys", [])),
+        "trial_used_total": int(trial_used_total or 0),
+        "today_income": float(today_income or 0),
+        "yesterday_income": float(yesterday_income or 0),
+        "week_income": float(week_income or 0),
+        "month_income": float(month_income or 0),
+        "last_month_income": float(last_month_income or 0),
+        "year_income": float(year_income or 0),
+        "today_topups": float(today_topups or 0),
+        "today_subscriptions": float(today_subscriptions or 0),
+        "today_new_users": int(admin_stats.get("today_new_users", 0) or 0),
+        "today_bought_keys": int(admin_stats.get("today_bought_keys", 0) or 0),
+        "today_trials": int(admin_stats.get("today_trials", 0) or 0),
+        "pending_amount": float(pending_amount or 0),
+        "pending_count": int(pending_count or 0),
+        "user_balance_total": float(user_balance_total or 0),
+        "partners_with_referrals": int(partners_with_referrals or 0),
+        "total_referred": int(total_referred or 0),
+        "partner_balance": float(partner_balance or 0),
+        "partners_earned_total": float(partners_earned_total or 0),
+        "partners_earned_month": float(partners_earned_month or 0),
+        "top_partner": {
+            "telegram_id": int(top_partner["telegram_id"]) if top_partner and top_partner["telegram_id"] is not None else 0,
+            "username": top_partner["username"] if top_partner else None,
+            "referrals_count": int(top_partner["referrals_count"]) if top_partner and top_partner["referrals_count"] is not None else 0,
+        },
+        "top_user": {
+            "telegram_id": int(top_user["telegram_id"]) if top_user and top_user["telegram_id"] is not None else 0,
+            "username": top_user["username"] if top_user else None,
+            "months_total": int(top_user["months_total"]) if top_user and top_user["months_total"] is not None else 0,
+        },
+        "payment_totals": payment_totals,
+    }
+# ====================================
 
 
 # ===== CREATE_PENDING_TRANSACTION =====

@@ -180,7 +180,7 @@ async def sync_keys_with_panels():
                 local_uuid = (db_key.get('remnawave_user_uuid') or '').strip()
                 if local_uuid:
                     for rem_email_norm, (rem_email, rem_user) in list(remote_by_email.items()):
-                        rem_uuid = (rem_user.get('uuid') or rem_user.get('id') or rem_user.get('client_uuid') or '').strip()
+                        rem_uuid = str(rem_user.get('uuid') or rem_user.get('id') or rem_user.get('client_uuid') or '').strip()
                         if rem_uuid and rem_uuid == local_uuid:
                             remote_entry = remote_by_email.pop(rem_email_norm)
                             remote_email, remote_user = remote_entry
@@ -297,7 +297,7 @@ async def sync_keys_with_panels():
                      # Здесь нужен метод репозитория для поиска по username, но его может не быть.
                      # Пока оставим как есть, но без user_id мы не можем привязать.
                      pass
-                remote_uuid = (remote_user.get('uuid') or remote_user.get('id') or remote_user.get('client_uuid') or '').strip()
+                remote_uuid = str(remote_user.get('uuid') or remote_user.get('id') or remote_user.get('client_uuid') or '').strip()
                 
                 # Ищем существующий ключ в базе по Email или UUID
                 existing_key = None
@@ -658,17 +658,21 @@ async def _maybe_collect_resource_metrics(bot: Bot | None):
 
 
 async def _maybe_run_daily_backup(bot: Bot):
-    """Ежедневный автобэкап базы и отправка админам. Интервал задаётся в настройках backup_interval_days."""
+    """Автобэкап базы и отправка админам. Интервал задаётся в настройках backup_interval_days и backup_interval_unit."""
     global _last_backup_run_at
     now = get_msk_time()
     try:
         s = rw_repo.get_setting("backup_interval_days") or "1"
-        days = int(str(s).strip() or "1")
+        interval_value = int(str(s).strip() or "1")
     except Exception:
-        days = 1
-    if days <= 0:
+        interval_value = 1
+    if interval_value <= 0:
         return
-    interval_seconds = max(1, days) * 24 * 3600
+    unit = (rw_repo.get_setting("backup_interval_unit") or "days").strip().lower()
+    if unit == "hours":
+        interval_seconds = max(1, interval_value) * 3600
+    else:
+        interval_seconds = max(1, interval_value) * 24 * 3600
     if _last_backup_run_at and (now - _last_backup_run_at).total_seconds() < interval_seconds:
         return
     try:
@@ -849,6 +853,4 @@ async def _send_alert(bot: Bot, scope: str, name: str, issues: list[dict], level
             await bot.send_message(admin_id, text, parse_mode='HTML')
         except Exception:
             continue
-
-
 

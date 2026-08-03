@@ -1658,28 +1658,50 @@
             class="bg-white/5 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl transition-all duration-500">
             <div class="p-5">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                    <div class="flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
-                            id="logs-status-dot"></div>
-                        <span class="text-[10px] uppercase tracking-widest font-bold text-white/40"
-                            id="logs-status-text">Disconnected</span>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                                id="logs-status-dot"></div>
+                            <span class="text-[10px] uppercase tracking-widest font-bold text-white/40"
+                                id="logs-status-text">Disconnected</span>
+                        </div>
+                        <div id="logs-source-tabs" class="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/5">
+                            {% for source in [
+                            {'label': 'Бот', 'id': 'bot'},
+                            {'label': 'Webapp', 'id': 'webapp'}
+                            ] %}
+                            <button type="button" data-log-source="{{ source.id }}"
+                                class="log-source-btn px-3 py-1.5 rounded-lg border border-transparent transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider {% if source.id == 'bot' %}bg-primary/20 border-primary/30 text-white{% else %}text-white/65 hover:bg-white/5 hover:border-white/10{% endif %}">
+                                {{ source.label }}
+                            </button>
+                            {% endfor %}
+                        </div>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <div class="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/5">
+                        <div id="logs-filter-tabs" class="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/5">
                             {% for level in [
+                            {'l': 'Общие', 'id': 'ALL', 'color': 'white/70', 'icon': 'subject'},
                             {'l': 'WARNING', 'id': 'WARNING', 'color': 'yellow-400', 'icon': 'warning'},
-                            {'l': 'ERROR', 'id': 'ERROR', 'color': 'red-400', 'icon': 'error'},
-                            {'l': 'ВСЁ', 'id': 'ALL', 'color': 'white/70', 'icon': 'content_copy'}
+                            {'l': 'ERROR', 'id': 'ERROR', 'color': 'red-400', 'icon': 'error'}
                             ] %}
-                            <button type="button" onclick="copyLogsByLevel('{{ level.id }}')"
-                                class="px-3 py-1.5 rounded-lg hover:bg-white/5 text-{{ level.color }} border border-transparent hover:border-white/10 transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider"
-                                title="Копировать {{ level.l }}">
+                            <button type="button" data-log-filter="{{ level.id }}"
+                                data-active-class="{% if level.id == 'ALL' %}text-white{% elif level.id == 'WARNING' %}text-yellow-400{% else %}text-red-400{% endif %}"
+                                data-inactive-class="{% if level.id == 'ALL' %}text-white/70{% elif level.id == 'WARNING' %}text-yellow-400{% else %}text-red-400{% endif %}"
+                                class="log-filter-btn px-3 py-1.5 rounded-lg border border-transparent transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider {% if level.id == 'ALL' %}bg-white/10 text-white hover:bg-white/15 border-white/10{% else %}hover:bg-white/5 text-{{ level.color }} hover:border-white/10{% endif %}"
+                                title="Показать {{ level.l }}">
                                 <span class="material-symbols-outlined text-sm">{{ level.icon }}</span>
                                 {{ level.l }}
                             </button>
                             {% endfor %}
                         </div>
+
+                        <button type="button" id="btn-copy-logs"
+                            class="px-4 py-2 rounded-xl bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5 transition-all text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
+                            title="Копировать текущий раздел логов">
+                            <span class="material-symbols-outlined text-sm">content_copy</span>
+                            Копировать
+                        </button>
 
                         <button type="button" id="btn-clear-logs"
                             class="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:border-red-500/40 border border-red-500/20 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all">
@@ -2377,35 +2399,110 @@
         const logsStatusDot = document.getElementById('logs-status-dot');
         const logsStatusText = document.getElementById('logs-status-text');
         const btnClearLogs = document.getElementById('btn-clear-logs');
+        const logsFilterButtons = Array.from(document.querySelectorAll('.log-filter-btn'));
+        const logsSourceButtons = Array.from(document.querySelectorAll('.log-source-btn'));
+        const btnCopyLogs = document.getElementById('btn-copy-logs');
+        let currentLogFilter = 'ALL';
+        let currentLogSource = 'bot';
 
-        async function copyLogsByLevel(level) {
+        function getLogLevel(text) {
+            if (text.includes('[ERROR]') || text.includes('ERROR')) {
+                return 'ERROR';
+            }
+            if (text.includes('[WARNING]') || text.includes('WARNING')) {
+                return 'WARNING';
+            }
+            return 'INFO';
+        }
+
+        function matchesLogFilter(level) {
+            return currentLogFilter === 'ALL' || currentLogFilter === level;
+        }
+
+        function applyLogFilterToLine(line) {
+            const lineLevel = line.dataset.logLevel || 'INFO';
+            line.classList.toggle('hidden', !matchesLogFilter(lineLevel));
+        }
+
+        function refreshLogFilter() {
             if (!logsContainer) return;
-            const lines = Array.from(logsContainer.children);
-            let filteredText = "";
-
-            lines.forEach(line => {
-                const text = line.textContent;
-                if (level === 'ALL') {
-                    filteredText += text + "\n";
-                } else if (text.includes(level)) {
-                    filteredText += text + "\n";
+            Array.from(logsContainer.children).forEach(line => {
+                if (!line.classList.contains('history-loader-status')) {
+                    applyLogFilterToLine(line);
                 }
             });
 
+            logsFilterButtons.forEach(btn => {
+                const isActive = btn.dataset.logFilter === currentLogFilter;
+                const activeClass = btn.dataset.activeClass || 'text-white';
+                const inactiveClass = btn.dataset.inactiveClass || 'text-white/70';
+                btn.classList.remove('text-white', 'text-white/70', 'text-yellow-400', 'text-red-400');
+                btn.classList.toggle('bg-white/10', isActive);
+                btn.classList.toggle('border-white/10', isActive);
+                btn.classList.toggle('hover:bg-white/15', isActive);
+                btn.classList.toggle('hover:bg-white/5', !isActive);
+                btn.classList.toggle('hover:border-white/10', !isActive);
+                btn.classList.add(isActive ? activeClass : inactiveClass);
+            });
+
+            performLogsSearch();
+        }
+
+        function refreshLogSourceButtons() {
+            logsSourceButtons.forEach(btn => {
+                const isActive = btn.dataset.logSource === currentLogSource;
+                btn.classList.toggle('bg-primary/20', isActive);
+                btn.classList.toggle('border-primary/30', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('text-white/65', !isActive);
+                btn.classList.toggle('hover:bg-white/5', !isActive);
+                btn.classList.toggle('hover:border-white/10', !isActive);
+            });
+        }
+
+        async function copyCurrentLogs() {
+            if (!logsContainer) return;
+            const lines = Array.from(logsContainer.children).filter(line => !line.classList.contains('hidden') && !line.classList.contains('history-loader-status'));
+            let filteredText = "";
+
+            lines.forEach(line => {
+                filteredText += line.textContent + "\n";
+            });
+
             if (!filteredText.trim()) {
-                window.showToast('warning', 'Нет логов с уровнем ' + level);
+                const labels = { ALL: 'Общие', WARNING: 'WARNING', ERROR: 'ERROR' };
+                window.showToast('warning', 'Нет логов в разделе ' + (labels[currentLogFilter] || currentLogFilter));
                 return;
             }
 
             try {
                 await navigator.clipboard.writeText(filteredText);
-                window.showToast('success', 'Логи (' + level + ') скопированы (' + filteredText.split('\n').length + ' стр.)');
+                window.showToast('success', 'Логи скопированы (' + lines.length + ' стр.)');
             } catch (err) {
                 console.error('Failed to copy logs:', err);
                 window.showToast('danger', 'Ошибка копирования');
             }
         }
-        window.copyLogsByLevel = copyLogsByLevel;
+        if (btnCopyLogs) {
+            btnCopyLogs.addEventListener('click', copyCurrentLogs);
+        }
+        logsFilterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentLogFilter = btn.dataset.logFilter || 'ALL';
+                refreshLogFilter();
+            });
+        });
+        logsSourceButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const nextSource = btn.dataset.logSource || 'bot';
+                if (nextSource === currentLogSource) return;
+                currentLogSource = nextSource;
+                refreshLogSourceButtons();
+                if (location.hash === '#logs' || new URLSearchParams(window.location.search).get('tab') === 'logs' || localStorage.getItem('remnawave_other_active_tab') === 'logs') {
+                    startLogStream();
+                }
+            });
+        });
 
         let logEventSource = null;
         let logsOffset = 0;
@@ -2518,14 +2615,17 @@
 
         function createLogLine(text) {
             const line = document.createElement('div');
-            if (text.includes('[ERROR]') || text.includes('ERROR')) {
+            const level = getLogLevel(text);
+            line.dataset.logLevel = level;
+            if (level === 'ERROR') {
                 line.className = 'whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-red-500/20 bg-red-500/10 transition-colors px-1 text-red-300';
-            } else if (text.includes('[WARNING]') || text.includes('WARNING')) {
+            } else if (level === 'WARNING') {
                 line.className = 'whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-white/5 transition-colors px-1 text-yellow-300';
             } else {
                 line.className = 'whitespace-pre-wrap border-b border-white/5 pb-1 mb-1 hover:bg-white/5 transition-colors px-1 text-white/80';
             }
             line.textContent = text;
+            applyLogFilterToLine(line);
             return line;
         }
 
@@ -2577,7 +2677,7 @@
         function performLogsSearch() {
             const query = document.getElementById('logs-search-input').value.toLowerCase();
             const countEl = document.getElementById('logs-search-count');
-            const lines = Array.from(logsContainer.querySelectorAll('div:not(.text-center)'));
+            const lines = Array.from(logsContainer.querySelectorAll('div:not(.text-center):not(.hidden)'));
 
             searchResults = [];
             currentSearchIndex = -1;
@@ -2654,7 +2754,7 @@
             logsContainer.insertBefore(loading, logsContainer.firstChild);
 
             try {
-                const resp = await fetch(`/other/logs/history?lines=${linesCount}&offset=${currentLines}`);
+                const resp = await fetch(`/other/logs/history?source=${encodeURIComponent(currentLogSource)}&lines=${linesCount}&offset=${currentLines}`);
                 const data = await resp.json();
 
                 if (logsContainer.contains(loading)) logsContainer.removeChild(loading);
@@ -2714,7 +2814,7 @@
             if (logsContainer) logsContainer.innerHTML = '';
             updateLogStatus(true);
 
-            logEventSource = new EventSource('/other/logs/stream');
+            logEventSource = new EventSource(`/other/logs/stream?source=${encodeURIComponent(currentLogSource)}`);
 
             logEventSource.onmessage = function (event) {
                 logReconnectDelay = 5000;
@@ -2735,10 +2835,14 @@
                 logReconnectTimer = setTimeout(() => {
                     logReconnectTimer = null;
                     logReconnectDelay = Math.min(logReconnectDelay * 2, 60000);
-                    if (location.hash === '#logs') startLogStream();
+                    const currentTab = new URLSearchParams(window.location.search).get('tab') || localStorage.getItem('remnawave_other_active_tab') || location.hash.slice(1);
+                    if (currentTab === 'logs') startLogStream();
                 }, logReconnectDelay);
             };
         }
+
+        refreshLogSourceButtons();
+        refreshLogFilter();
 
         let isLogsFullscreen = false;
 
@@ -2932,13 +3036,14 @@
                 if (!confirmed) return;
 
                 try {
-                    const resp = await fetch('/other/logs/clear', {
+                    const clearUrl = `/other/logs/clear?source=${encodeURIComponent(currentLogSource)}`;
+                    const resp2 = await fetch(clearUrl, {
                         method: 'POST',
                         headers: {
                             'X-CSRFToken': window.getCsrfToken()
                         }
                     });
-                    const data = await resp.json();
+                    const data = await resp2.json();
 
                     if (data.ok) {
                         window.showToast('success', 'Логи успешно очищены');

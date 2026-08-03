@@ -52,6 +52,16 @@ def main():
     root = logging.getLogger()
     root.setLevel(logging.INFO)
 
+    class LoggerNameFilter(logging.Filter):
+        def __init__(self, prefixes, include=True):
+            super().__init__()
+            self.prefixes = tuple(prefixes)
+            self.include = include
+
+        def filter(self, record: logging.LogRecord) -> bool:
+            matched = record.name.startswith(self.prefixes)
+            return matched if self.include else not matched
+
     for h in list(root.handlers):
         root.removeHandler(h)
     ch = logging.StreamHandler()
@@ -65,7 +75,14 @@ def main():
     fh.setLevel(logging.INFO)
     file_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
     fh.setFormatter(file_formatter)
+    fh.addFilter(LoggerNameFilter(('uvicorn.', 'shop_bot.webapp'), include=False))
     root.addHandler(fh)
+
+    webapp_fh = RotatingFileHandler('logs/webapp.log', maxBytes=5*1024*1024, backupCount=1, encoding='utf-8')
+    webapp_fh.setLevel(logging.INFO)
+    webapp_fh.setFormatter(file_formatter)
+    webapp_fh.addFilter(LoggerNameFilter(('uvicorn.', 'shop_bot.webapp'), include=True))
+    root.addHandler(webapp_fh)
 
 
     logging.getLogger('werkzeug').setLevel(logging.WARNING)

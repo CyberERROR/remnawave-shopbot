@@ -295,13 +295,11 @@ def _to_iso(dt: datetime) -> str:
 async def get_user_by_email(email: str, *, host_name: str | None = None) -> dict[str, Any] | None:
     if not email:
         return None
-    encoded_email = quote(email.strip())
+    params = {"email": email.strip(), "size": 1}
     if host_name:
-        response = await _request_for_host(host_name, "GET", f"/api/users/by-email/{encoded_email}", expected_status=(200, 404))
+        response = await _request_for_host(host_name, "GET", "/api/users/stream", params=params)
     else:
-        response = await _request("GET", f"/api/users/by-email/{encoded_email}", expected_status=(200, 404))
-    if response.status_code == 404:
-        return None
+        response = await _request("GET", "/api/users/stream", params=params)
     payload = response.json()
 
     data: Any
@@ -311,6 +309,8 @@ async def get_user_by_email(email: str, *, host_name: str | None = None) -> dict
     else:
         data = payload
 
+    if isinstance(data, dict):
+        data = data.get("users") or data.get("data") or []
     if isinstance(data, list):
 
         for item in data:
@@ -320,25 +320,25 @@ async def get_user_by_email(email: str, *, host_name: str | None = None) -> dict
     return data if isinstance(data, dict) else None
 
 
-async def get_user_by_uuid(user_uuid: str, *, host_name: str | None = None) -> dict[str, Any] | None:
-    if not user_uuid:
+async def get_user_by_uuid(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    if not user_id:
         return None
-    encoded_uuid = quote(user_uuid.strip())
+    encoded_user_id = quote(str(user_id))
     if host_name:
-        response = await _request_for_host(host_name, "GET", f"/api/users/{encoded_uuid}", expected_status=(200, 404))
+        response = await _request_for_host(host_name, "GET", f"/api/users/{encoded_user_id}", expected_status=(200, 404))
     else:
-        response = await _request("GET", f"/api/users/{encoded_uuid}", expected_status=(200, 404))
+        response = await _request("GET", f"/api/users/{encoded_user_id}", expected_status=(200, 404))
     if response.status_code == 404:
         return None
     payload = response.json()
     return payload.get("response") if isinstance(payload, dict) else None
 
 
-async def get_connected_devices_count(user_uuid: str, *, host_name: str | None = None) -> dict[str, Any] | None:
-    if not user_uuid:
+async def get_connected_devices_count(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    if not user_id:
         return None
-    encoded_uuid = quote(user_uuid.strip())
-    path = f"/api/hwid/devices/{encoded_uuid}"
+    encoded_user_id = quote(str(user_id))
+    path = f"/api/hwid/devices/{encoded_user_id}"
     
     if host_name:
         response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
@@ -355,11 +355,11 @@ async def get_connected_devices_count(user_uuid: str, *, host_name: str | None =
     return None
 
 
-async def get_user_devices(user_uuid: str, *, host_name: str | None = None) -> list[dict[str, Any]]:
-    if not user_uuid:
+async def get_user_devices(user_id: int | str, *, host_name: str | None = None) -> list[dict[str, Any]]:
+    if not user_id:
         return []
-    encoded_uuid = quote(user_uuid.strip())
-    path = f"/api/hwid/devices/{encoded_uuid}"
+    encoded_user_id = quote(str(user_id))
+    path = f"/api/hwid/devices/{encoded_user_id}"
 
     if host_name:
         response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
@@ -401,11 +401,11 @@ async def delete_user_device(device_id: str, *, host_name: str | None = None) ->
     return False
 
 
-async def get_subscription_info(user_uuid: str, *, host_name: str | None = None) -> dict[str, Any] | None:
-    if not user_uuid:
+async def get_subscription_info(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    if not user_id:
         return None
-    encoded_uuid = quote(user_uuid.strip())
-    path = f"/api/subscriptions/by-uuid/{encoded_uuid}"
+    encoded_user_id = quote(str(user_id))
+    path = f"/api/subscriptions/by-id/{encoded_user_id}"
     
     if host_name:
         response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
@@ -476,13 +476,13 @@ async def ensure_user(
         logger.info(
             "Remnawave: найден пользователь %s (%s) на '%s' — обновляю срок до %s",
             email,
-            current.get("uuid"),
+            current.get("id"),
             host_name,
             expire_iso,
         )
 
         payload = {
-            "uuid": current.get("uuid"),
+            "id": current.get("id"),
             "status": "ACTIVE",
             "expireAt": expire_iso,
             "activeInternalSquads": [squad_uuid],
@@ -566,7 +566,7 @@ async def ensure_user(
     logger.info(
         "Remnawave: пользователь %s (%s) на '%s' успешно %s. Истекает: %s",
         email,
-        result.get("uuid"),
+        result.get("id"),
         host_name,
         action,
         result.get("expireAt"),
@@ -631,64 +631,63 @@ async def list_users(host_name: str, squad_uuid: str | None = None, size: int | 
         return filtered
         
     return all_users
-async def delete_user(user_uuid: str) -> bool:
+async def delete_user(user_id: int | str) -> bool:
     """Глобальный вариант (устарел): удаление без привязки к хосту.
     Сохраняется для обратной совместимости, но предпочтительно использовать host-specific путь ниже.
     """
-    if not user_uuid:
+    if not user_id:
         return False
-    encoded_uuid = quote(user_uuid.strip())
-    response = await _request("DELETE", f"/api/users/{encoded_uuid}", expected_status=(200, 204, 404))
+    encoded_user_id = quote(str(user_id))
+    response = await _request("DELETE", f"/api/users/{encoded_user_id}", expected_status=(204, 404))
     if response.status_code == 404:
-        logger.info("Remnawave: пользователь %s не найден при удалении (возможно, уже удалён)", user_uuid)
-    elif response.status_code in (200, 204):
-        logger.info("Remnawave: пользователь %s успешно удалён (HTTP %s)", user_uuid, response.status_code)
+        logger.info("Remnawave: пользователь %s не найден при удалении (возможно, уже удалён)", user_id)
+    elif response.status_code == 204:
+        logger.info("Remnawave: пользователь %s успешно удалён (HTTP %s)", user_id, response.status_code)
     return True
 
 
-async def delete_user_on_host(host_name: str, user_uuid: str) -> bool:
+async def delete_user_on_host(host_name: str, user_id: int | str) -> bool:
     """Удаление пользователя на конкретном хосте, используя конфиг хоста."""
-    if not user_uuid:
+    if not user_id:
         return False
-    encoded_uuid = quote(user_uuid.strip())
-    response = await _request_for_host(host_name, "DELETE", f"/api/users/{encoded_uuid}", expected_status=(200, 204, 404))
+    encoded_user_id = quote(str(user_id))
+    response = await _request_for_host(host_name, "DELETE", f"/api/users/{encoded_user_id}", expected_status=(204, 404))
     if response.status_code == 404:
-        logger.info("Remnawave[%s]: пользователь %s не найден при удалении (возможно, уже удалён)", host_name, user_uuid)
-    elif response.status_code in (200, 204):
-        logger.info("Remnawave[%s]: пользователь %s успешно удалён (HTTP %s)", host_name, user_uuid, response.status_code)
+        logger.info("Remnawave[%s]: пользователь %s не найден при удалении (возможно, уже удалён)", host_name, user_id)
+    elif response.status_code == 204:
+        logger.info("Remnawave[%s]: пользователь %s успешно удалён (HTTP %s)", host_name, user_id, response.status_code)
     return True
 
 
-async def reset_user_traffic(user_uuid: str) -> bool:
-    if not user_uuid:
+async def reset_user_traffic(user_id: int | str) -> bool:
+    if not user_id:
         return False
-    encoded_uuid = quote(user_uuid.strip())
-    await _request("POST", f"/api/users/{encoded_uuid}/actions/reset-traffic", expected_status=(200, 204))
+    encoded_user_id = quote(str(user_id))
+    await _request("POST", f"/api/users/{encoded_user_id}/actions/reset-traffic")
     return True
 
 
-async def set_user_status(user_uuid: str, active: bool) -> bool:
-    if not user_uuid:
+async def set_user_status(user_id: int | str, active: bool) -> bool:
+    if not user_id:
         return False
-    encoded_uuid = quote(user_uuid.strip())
+    encoded_user_id = quote(str(user_id))
     action = "enable" if active else "disable"
-    await _request("POST", f"/api/users/{encoded_uuid}/actions/{action}", expected_status=(200, 204))
+    await _request("POST", f"/api/users/{encoded_user_id}/actions/{action}")
     return True
 
 
-async def add_users_to_external_squad(host_name: str, squad_uuid: str, user_uuids: list[str]) -> bool:
-    if not squad_uuid or not user_uuids:
+async def add_users_to_external_squad(host_name: str, squad_uuid: str, user_ids: list[int]) -> bool:
+    if not squad_uuid or not user_ids:
         return False
     
     try:
-        path = "/api/external-squads/add-users"
+        path = f"/api/external-squads/{quote(squad_uuid)}/bulk-actions/add-users"
         payload = {
-            "squadUuid": squad_uuid,
-            "userUuids": user_uuids
+            "userIds": user_ids
         }
         
-        response = await _request_for_host(host_name, "POST", path, json_payload=payload, expected_status=(200, 201))
-        logger.info(f"Remnawave[{host_name}]: добавлено {len(user_uuids)} пользователей в external squad {squad_uuid}")
+        await _request_for_host(host_name, "POST", path, json_payload=payload, expected_status=(202,))
+        logger.info(f"Remnawave[{host_name}]: добавлено {len(user_ids)} пользователей в external squad {squad_uuid}")
         return True
     except RemnawaveAPIError as e:
         logger.error(f"Remnawave[{host_name}]: ошибка добавления во external squad {squad_uuid}: {e}")
@@ -716,6 +715,7 @@ async def create_or_update_key_on_host(
     hwid_limit: int | None = None,  # Added
     traffic_limit_gb: int | None = None,  # Added
     external_squad_uuid: str | None = None,  # Added for seller
+    internal_squad_uuid: str | None = None,
 ) -> dict | None:
     """Legacy совместимость: создаёт/обновляет пользователя Remnawave и возвращает данные по ключу."""
     
@@ -735,7 +735,7 @@ async def create_or_update_key_on_host(
         if not squad:
             logger.error("Remnawave: не найден сквад/хост '%s'", host_name)
             return None
-        squad_uuid = (squad.get('squad_uuid') or '').strip()
+        squad_uuid = (internal_squad_uuid or squad.get('squad_uuid') or '').strip()
         if not squad_uuid:
             logger.error("Remnawave: сквад '%s' не имеет squad_uuid", host_name)
             return None
@@ -815,7 +815,7 @@ async def create_or_update_key_on_host(
         expiry_ts_ms = int(expire_dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
 
         return {
-            'client_uuid': user_payload.get('uuid'),
+            'client_uuid': user_payload.get('id'),
             'short_uuid': user_payload.get('shortUuid'),
             'email': email,
             'host_name': squad.get('host_name') or host_name,
@@ -895,13 +895,13 @@ async def delete_client_on_host(host_name: str, client_email: str) -> bool:
         if isinstance(user_payload, list):
 
             user_payload = next((u for u in user_payload if isinstance(u, dict)), None)
-        user_uuid = user_payload.get('uuid') if isinstance(user_payload, dict) else None
-        if not user_uuid:
-            logger.warning("Remnawave: нет uuid для пользователя %s", client_email)
+        user_id = user_payload.get('id') if isinstance(user_payload, dict) else None
+        if not user_id:
+            logger.warning("Remnawave: нет id для пользователя %s", client_email)
             return False
-        logger.info("Remnawave: удаляю пользователя %s (%s) на '%s'...", client_email, user_uuid, host_name)
-        await delete_user_on_host(host_name, user_uuid)
-        logger.info("Remnawave: пользователь %s (%s) успешно удалён на '%s'", client_email, user_uuid, host_name)
+        logger.info("Remnawave: удаляю пользователя %s (%s) на '%s'...", client_email, user_id, host_name)
+        await delete_user_on_host(host_name, user_id)
+        logger.info("Remnawave: пользователь %s (%s) успешно удалён на '%s'", client_email, user_id, host_name)
         return True
     except RemnawaveAPIError as exc:
         logger.error("Remnawave: ошибка удаления пользователя %s: %s", client_email, exc)
@@ -910,16 +910,16 @@ async def delete_client_on_host(host_name: str, client_email: str) -> bool:
     return False
 
 
-async def get_user_devices(user_uuid: str, host_name: str | None = None) -> list[dict[str, Any]]:
+async def get_user_devices(user_id: int | str, host_name: str | None = None) -> list[dict[str, Any]]:
     """Получает список подключенных устройств для пользователя (ключа)."""
-    if not user_uuid:
+    if not user_id:
         return []
         
     try:
         if host_name:
-            response = await _request_for_host(host_name, "GET", f"/api/hwid/devices/{user_uuid}", expected_status=(200,))
+            response = await _request_for_host(host_name, "GET", f"/api/hwid/devices/{quote(str(user_id))}", expected_status=(200,))
         else:
-            response = await _request("GET", f"/api/hwid/devices/{user_uuid}", expected_status=(200,))
+            response = await _request("GET", f"/api/hwid/devices/{quote(str(user_id))}", expected_status=(200,))
 
         payload = response.json() or {}
         data = payload.get("response") if isinstance(payload.get("response"), dict) else payload
@@ -927,20 +927,20 @@ async def get_user_devices(user_uuid: str, host_name: str | None = None) -> list
         
         return devices if isinstance(devices, list) else []
     except Exception as e:
-        logger.error(f"Remnawave: ошибка получения устройств для {user_uuid}: {e}")
+        logger.error(f"Remnawave: ошибка получения устройств для {user_id}: {e}")
         return []
 
 
-async def delete_user_device(user_uuid: str, hwid: str, host_name: str | None = None) -> bool:
-    """Удаляет устройство по HWID и UUID пользователя."""
-    if not user_uuid or not hwid:
+async def delete_user_device(user_id: int | str, hwid: str, host_name: str | None = None) -> bool:
+    """Удаляет устройство по HWID и ID пользователя."""
+    if not user_id or not hwid:
         return False
         
     try:
         # Эндпоинт: POST /api/hwid/devices/delete
-        # Body: { "userUuid": "...", "hwid": "..." }
+        # Body: { "userId": 123, "hwid": "..." }
         payload = {
-            "userUuid": user_uuid,
+            "userId": user_id,
             "hwid": hwid
         }
         
@@ -949,11 +949,11 @@ async def delete_user_device(user_uuid: str, hwid: str, host_name: str | None = 
         if host_name:
             response = await _request_for_host(host_name, "POST", path, json_payload=payload, expected_status=(200, 204))
         else:
-            response = await _request("POST", path, json=payload, expected_status=(200, 204))
+            response = await _request("POST", path, json_payload=payload, expected_status=(200, 204))
             
         if response.status_code in (200, 201, 204):
             return True
         return False
     except Exception as e:
-        logger.error(f"Remnawave: ошибка удаления устройства {hwid} (user {user_uuid}): {e}")
+        logger.error(f"Remnawave: ошибка удаления устройства {hwid} (user {user_id}): {e}")
         return False
