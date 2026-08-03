@@ -236,6 +236,7 @@ def initialize_db():
                     referral_start_bonus_received BOOLEAN DEFAULT 0,
                     is_pinned BOOLEAN DEFAULT 0,
                     seller_active INTEGER DEFAULT 0,
+                    app_theme TEXT DEFAULT 'forest',
                     auth_token TEXT,
                     auth_email TEXT,
                     auth_pass TEXT
@@ -271,7 +272,8 @@ def initialize_db():
                     traffic_limit_strategy TEXT DEFAULT 'NO_RESET',
                     tag TEXT,
                     description TEXT,
-                    comment_key TEXT
+                    comment_key TEXT,
+                    is_pinned BOOLEAN DEFAULT 0
                 )
             ''')
 
@@ -686,6 +688,7 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
         "referral_start_bonus_received": "BOOLEAN DEFAULT 0",
         "is_pinned": "BOOLEAN DEFAULT 0",
         "seller_active": "INTEGER DEFAULT 0",
+        "app_theme": "TEXT DEFAULT 'forest'",
         "username_manually_set": "BOOLEAN DEFAULT 0",
         "auth_token": "TEXT",
         "auth_email": "TEXT",
@@ -799,6 +802,16 @@ def _ensure_support_tickets_columns(cursor: sqlite3.Cursor) -> None:
 # ===========================================
 
 
+# ===== _ENSURE_SUPPORT_MESSAGES_COLUMNS =====
+def _ensure_support_messages_columns(cursor: sqlite3.Cursor) -> None:
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='support_messages'")
+    if not cursor.fetchone(): return
+    _ensure_table_column(cursor, "support_messages", "media", "TEXT")
+
+
+# ============================================
+
+
 # ===== _FINALIZE_VPN_KEY_INDEXES =====
 def _finalize_vpn_key_indexes(cursor: sqlite3.Cursor) -> None:
     _ensure_unique_index(cursor, "uq_vpn_keys_email", "vpn_keys", "email")
@@ -837,7 +850,8 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
             traffic_limit_strategy TEXT DEFAULT 'NO_RESET',
             tag TEXT,
             description TEXT,
-            comment_key TEXT
+            comment_key TEXT,
+            is_pinned BOOLEAN DEFAULT 0
         )
     ''')
     old_columns = _get_table_columns(cursor, "vpn_keys_legacy")
@@ -873,6 +887,7 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
         f"{col('tag')} AS tag",
         f"{col('description')} AS description",
         f"{col('comment_key')} AS comment_key",
+        f"{col('is_pinned', '0')} AS is_pinned",
     ])
 
     cursor.execute(
@@ -894,7 +909,8 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
             traffic_limit_strategy,
             tag,
             description,
-            comment_key
+            comment_key,
+            is_pinned
         )
         SELECT
             {select_clause}
@@ -934,12 +950,14 @@ def _ensure_vpn_keys_schema(cursor: sqlite3.Cursor) -> None:
                 traffic_limit_strategy TEXT DEFAULT 'NO_RESET',
                 tag TEXT,
                 description TEXT,
-                comment_key TEXT
+                comment_key TEXT,
+                is_pinned BOOLEAN DEFAULT 0
             )
         ''')
         _finalize_vpn_key_indexes(cursor)
         return
     _rebuild_vpn_keys_table(cursor)
+    _ensure_table_column(cursor, "vpn_keys", "is_pinned", "BOOLEAN DEFAULT 0")
 
 
 # ===================================
@@ -956,6 +974,7 @@ def _ensure_webapp_settings_table(cursor: sqlite3.Cursor):
                 webapp_title TEXT DEFAULT 'VPN',
                 webapp_domen TEXT DEFAULT '',
                 webapp_enable INTEGER DEFAULT 0,
+                webapp_theme TEXT DEFAULT '',
                 webapp_logo TEXT DEFAULT '',
                 webapp_icon TEXT DEFAULT '',
                 tg_fullscreen INTEGER DEFAULT 0
@@ -971,6 +990,8 @@ def _ensure_webapp_settings_table(cursor: sqlite3.Cursor):
             cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_domen TEXT DEFAULT ''")
         if "webapp_enable" not in columns:
             cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_enable INTEGER DEFAULT 0")
+        if "webapp_theme" not in columns:
+            cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_theme TEXT DEFAULT ''")
         if "webapp_logo" not in columns:
             cursor.execute("ALTER TABLE webapp_settings ADD COLUMN webapp_logo TEXT DEFAULT ''")
         if "webapp_icon" not in columns:
@@ -1001,8 +1022,10 @@ def run_migration():
             _ensure_device_tiers_table(cursor)
             _ensure_plans_columns(cursor)
             _ensure_support_tickets_columns(cursor)
+            _ensure_support_messages_columns(cursor)
             _ensure_vpn_keys_schema(cursor)
             _ensure_table_column(cursor, "vpn_keys", "comment_key", "TEXT")
+            _ensure_table_column(cursor, "vpn_keys", "is_pinned", "BOOLEAN DEFAULT 0")
             _ensure_ssh_targets_table(cursor)
             _ensure_host_speedtests_table(cursor)
             _ensure_resource_metrics_table(cursor)
@@ -2468,6 +2491,15 @@ def get_referrals_for_user(user_id: int) -> list[dict]:
 # ====================================
 
 
+def detach_referrals_from_user(user_id: int) -> int:
+    cursor = _exec(
+        "UPDATE users SET referred_by = NULL WHERE referred_by = ?",
+        (int(user_id),),
+        f"Не удалось отвязать рефералов пользователя {user_id}",
+    )
+    return cursor.rowcount if cursor else 0
+
+
 # ===== GET_ALL_SETTINGS =====
 def get_all_settings() -> dict:
     rows = _fetch_list("SELECT key, value FROM bot_settings", (), "Не удалось получить все настройки")
@@ -2748,8 +2780,8 @@ def register_user_if_not_exists(telegram_id: int, username: str, referrer_id):
     
     if not row:
         _exec(
-            "INSERT INTO users (telegram_id, username, registration_date, referred_by) VALUES (?, ?, ?, ?)",
-            (telegram_id, username, get_msk_time().replace(tzinfo=None).replace(microsecond=0), referrer_id),
+            "INSERT INTO users (telegram_id, username, registration_date, referred_by, app_theme) VALUES (?, ?, ?, ?, ?)",
+            (telegram_id, username, get_msk_time().replace(tzinfo=None).replace(microsecond=0), referrer_id, "forest"),
             f"Не удалось зарегистрировать пользователя {telegram_id}"
         )
     else:
@@ -2871,6 +2903,16 @@ def get_user(telegram_id: int):
 # ==================
 
 
+def update_user_app_theme(telegram_id: int, app_theme: str) -> bool:
+    cursor = _exec(
+        "UPDATE users SET app_theme = ? WHERE telegram_id = ?",
+        (app_theme, telegram_id),
+        f"Не удалось обновить тему пользователя {telegram_id}",
+    )
+    return cursor is not None and cursor.rowcount > 0
+# ================================
+
+
 # ===== UPDATE_USER_USERNAME =====
 def update_user_username(telegram_id: int, username: str) -> bool:
     cursor = _exec(
@@ -2897,8 +2939,8 @@ def create_user_by_email(email: str, password_hash: str) -> dict | None:
             break
             
     cursor = _exec(
-        "INSERT INTO users (telegram_id, username, registration_date, auth_email, auth_pass) VALUES (?, ?, ?, ?, ?)",
-        (telegram_id, "", get_msk_time().replace(tzinfo=None).replace(microsecond=0), email.strip(), password_hash),
+        "INSERT INTO users (telegram_id, username, registration_date, auth_email, auth_pass, app_theme) VALUES (?, ?, ?, ?, ?, ?)",
+        (telegram_id, "", get_msk_time().replace(tzinfo=None).replace(microsecond=0), email.strip(), password_hash, "forest"),
         f"Не удалось зарегистрировать пользователя {email}"
     )
     if cursor:
@@ -3563,6 +3605,7 @@ def update_key_fields(
     tag: str | None = None,
     description: str | None = None,
     comment_key: str | None = None,
+    is_pinned: bool | None = None,
 ) -> bool:
     updates: dict[str, Any] = {}
     if user_id is not None:
@@ -3594,6 +3637,8 @@ def update_key_fields(
         updates["description"] = description
     if comment_key is not None:
         updates["comment_key"] = comment_key
+    if is_pinned is not None:
+        updates["is_pinned"] = 1 if is_pinned else 0
     return _apply_key_updates(key_id, updates)
 # ===========================
 
@@ -3631,6 +3676,25 @@ def get_key_by_id(key_id: int) -> dict | None:
     )
     return _normalize_key_row(row)
 # =========================
+
+
+def get_key_by_subscription_url(subscription_url: str) -> dict | None:
+    """Find a key by its exact, secret subscription URL."""
+    lookup = (subscription_url or "").strip()
+    if not lookup:
+        return None
+    with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(vpn_keys)")}
+    has_connection_string = "connection_string" in columns
+    row = _fetch_row(
+        "SELECT * FROM vpn_keys WHERE subscription_url = ?"
+        + (" OR connection_string = ?" if has_connection_string else "")
+        + " LIMIT 1",
+        (lookup, lookup) if has_connection_string else (lookup,),
+        "Не удалось получить ключ по ссылке подписки",
+    )
+    return _normalize_key_row(row)
+# ================================
 
 
 # ===== GET_KEY_BY_EMAIL =====
@@ -3978,10 +4042,10 @@ def get_or_create_open_ticket(user_id: int, subject: str | None = None) -> tuple
 
 
 # ===== ADD_SUPPORT_MESSAGE =====
-def add_support_message(ticket_id: int, sender: str, content: str) -> int | None:
+def add_support_message(ticket_id: int, sender: str, content: str, media: str | None = None) -> int | None:
     cursor = _exec(
-        "INSERT INTO support_messages (ticket_id, sender, content) VALUES (?, ?, ?)",
-        (ticket_id, sender, content),
+        "INSERT INTO support_messages (ticket_id, sender, content, media) VALUES (?, ?, ?, ?)",
+        (ticket_id, sender, content, media),
         f"Не удалось добавить сообщение в тикет {ticket_id}"
     )
     if cursor and cursor.lastrowid: mid = cursor.lastrowid; _exec("UPDATE support_tickets SET updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?", (ticket_id,), "Не удалось обновить время тикета"); return mid
@@ -4294,7 +4358,7 @@ def get_webapp_settings() -> dict:
     return dict(row) if row else {}
 
 # Обновление настроек веб-приложения
-def update_webapp_settings(webapp_title: str = None, webapp_domen: str = None, webapp_enable: int = None, webapp_logo: str = None, webapp_icon: str = None, tg_fullscreen: int = None) -> bool:
+def update_webapp_settings(webapp_title: str = None, webapp_domen: str = None, webapp_enable: int = None, webapp_theme: str = None, webapp_logo: str = None, webapp_icon: str = None, tg_fullscreen: int = None) -> bool:
     try:
         updates = []
         params = []
@@ -4307,6 +4371,9 @@ def update_webapp_settings(webapp_title: str = None, webapp_domen: str = None, w
         if webapp_enable is not None:
             updates.append("webapp_enable = ?")
             params.append(int(webapp_enable))
+        if webapp_theme is not None:
+            updates.append("webapp_theme = ?")
+            params.append(webapp_theme)
         if webapp_logo is not None:
             updates.append("webapp_logo = ?")
             params.append(webapp_logo)

@@ -1426,6 +1426,23 @@
                                         placeholder="Напр: Remna VPN">
                                 </div>
 
+                                <div class="space-y-2">
+                                    <label
+                                        class="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-white/40 font-black ml-1">
+                                        <span class="material-symbols-outlined text-sm">palette</span>
+                                        Тема шаблона
+                                    </label>
+                                    <select name="webapp_theme" id="webapp_theme"
+                                        class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all font-medium">
+                                        {% for theme_name in available_webapp_themes %}
+                                        <option value="{{ theme_name }}" {{ 'selected' if theme_name == active_webapp_theme else '' }}>{{ theme_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <p class="text-[10px] text-white/35 ml-1">Список папок определяется автоматически из <code>webapp/themes/</code>.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <!-- Domain Input -->
                                 <div class="space-y-2">
                                     <label
@@ -1718,9 +1735,9 @@
 
                             <button type="button" id="btn-load-more-logs" onclick="loadMoreLogsHistory()"
                                 class="ml-1 p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-primary transition-all flex items-center gap-1"
-                                title="Загрузить +200 строк истории">
+                                title="Загрузить +800 строк истории">
                                 <span class="material-symbols-outlined text-sm">history</span>
-                                <span class="text-[9px] font-bold">+200</span>
+                                <span class="text-[9px] font-bold">+800</span>
                             </button>
 
                             <div class="flex items-center gap-1 border-l border-white/10 ml-2 pl-2">
@@ -2789,7 +2806,7 @@
         }
 
         window.loadMoreLogsHistory = function () {
-            loadHistory(200);
+            loadHistory(800);
         };
 
         logsContainer.addEventListener('scroll', () => {
@@ -5432,6 +5449,7 @@
                 formData.append('tg_fullscreen', document.getElementById('tg_fullscreen').checked);
                 formData.append('title', document.getElementById('webapp_title').value);
                 formData.append('domen', document.getElementById('webapp_domen').value);
+                formData.append('theme', document.getElementById('webapp_theme').value);
                 formData.append('logo', document.getElementById('webapp_logo').value);
                 formData.append('icon', document.getElementById('webapp_icon').value);
 

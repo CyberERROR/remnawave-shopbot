@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram import Bot
+from aiogram.exceptions import TelegramForbiddenError
 
 from shop_bot.bot_controller import BotController
 from shop_bot.data_manager import remnawave_repository as rw_repo
@@ -71,9 +72,13 @@ async def send_subscription_notification(bot: Bot, user_id: int, key_id: int, ti
         
         await bot.send_message(chat_id=user_id, text=message, reply_markup=builder.as_markup(), parse_mode='Markdown')
         logger.debug(f"Scheduler: Отправлено уведомление пользователю {user_id} по ключу {key_id} (осталось {time_left_hours} ч).")
-        
+        return True
+    except TelegramForbiddenError:
+        logger.info("Scheduler: пользователь %s заблокировал бота; уведомление по ключу %s пропущено.", user_id, key_id)
+        return True
     except Exception as e:
         logger.error(f"Scheduler: Ошибка отправки уведомления пользователю {user_id}: {e}")
+        return False
 
 def _cleanup_notified_users(all_db_keys: list[dict]):
     if not notified_users:
@@ -126,8 +131,8 @@ async def check_expiring_subscriptions(bot: Bot):
                     notified_users.setdefault(user_id, {}).setdefault(key_id, set())
                     
                     if hours_mark not in notified_users[user_id][key_id]:
-                        await send_subscription_notification(bot, user_id, key_id, hours_mark, expiry_date)
-                        notified_users[user_id][key_id].add(hours_mark)
+                        if await send_subscription_notification(bot, user_id, key_id, hours_mark, expiry_date):
+                            notified_users[user_id][key_id].add(hours_mark)
                     break 
                     
         except Exception as e:
@@ -853,4 +858,3 @@ async def _send_alert(bot: Bot, scope: str, name: str, issues: list[dict], level
             await bot.send_message(admin_id, text, parse_mode='HTML')
         except Exception:
             continue
-

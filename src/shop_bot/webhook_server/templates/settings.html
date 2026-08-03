@@ -134,7 +134,7 @@
                             <div>
                                 <label
                                     class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1.5 ml-1">Логин</label>
-                                <div class="relative group">
+                                 <div class="relative group">
                                     <span
                                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">person</span>
                                     <input type="text" name="panel_login" value="{{ settings.panel_login or '' }}"
@@ -719,10 +719,11 @@
                                 <div class="relative group">
                                     <span
                                         class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm group-focus-within:text-primary transition-colors">badge</span>
-                                    <input type="text" name="admin_telegram_id"
-                                        value="{{ settings.admin_telegram_id or '' }}" required autocomplete="off"
-                                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
-                                </div>
+                                     <input type="text" name="admin_telegram_id"
+                                         value="{{ settings.admin_telegram_id or '' }}" required autocomplete="off"
+                                         class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
+                                 </div>
+                                 <p class="text-[9px] text-white/40 mt-1 ml-1 leading-tight">Укажите ID администратора: <code>5655651566</code></p>
                             </div>
                         </div>
                     </div>
@@ -779,8 +780,7 @@
                                         value="{{ settings.support_forum_chat_id or '' }}" autocomplete="off"
                                         class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-white text-sm focus:ring-1 focus:ring-primary/40 outline-none transition-all" />
                                 </div>
-                                <p class="text-[9px] text-white/40 mt-1 ml-1 leading-tight">Для вывода тикетов в
-                                    обсуждения (forum)</p>
+                                <p class="text-[9px] text-white/40 mt-1 ml-1 leading-tight">Укажите ID темы (forum-чата): <code>-1003955999510</code>. Бот должен быть администратором чата.</p>
                             </div>
                         </div>
                     </div>
@@ -2056,9 +2056,9 @@
                                         </div>
                                     </div>
 
-                                    <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/5">
+                                    <div class="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-white/5">
                                         <button type="button"
-                                            class="px-4 py-1.5 rounded-lg bg-white/5 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1 border border-white/10"
+                                            class="px-2 py-1.5 rounded-lg bg-white/5 text-white font-bold text-[10px] uppercase tracking-normal whitespace-nowrap hover:bg-white/10 transition-all flex items-center justify-center gap-1 border border-white/10"
                                             onclick="document.getElementById('view-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('edit-plan-{{ plan.plan_id }}').classList.remove('hidden')">
                                             <span class="material-symbols-outlined text-sm">edit</span> Изменить
                                         </button>
@@ -2066,7 +2066,7 @@
                                             method="post" class="w-full">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                             <button type="submit"
-                                                class="w-full px-4 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 transition-all flex items-center justify-center gap-1 border border-red-500/10">
+                                                class="w-full px-2 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-normal whitespace-nowrap hover:bg-red-500/20 transition-all flex items-center justify-center gap-1 border border-red-500/10">
                                                 <span class="material-symbols-outlined text-sm">delete</span> Удалить
                                             </button>
                                         </form>
@@ -2101,12 +2101,12 @@
                                                 class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                                         </div>
                                         <div class="space-y-1.5">
-                                            <div class="flex gap-1 items-center flex-wrap">
+                                            <div class="flex justify-center gap-1 items-center flex-wrap">
                                                 {% set p_style = plan.button_style or '' %}
                                                 {% for val, lbl, cls in [('', '—', 'swatch-default'), ('danger', '🔴', 'swatch-danger'), ('success', '🟢', 'swatch-success'), ('primary', '🔵', 'swatch-primary')] %}
                                                 <label class="cursor-pointer">
                                                     <input type="radio" name="button_style" value="{{ val }}" class="sr-only peer" {% if p_style == val %}checked{% endif %} />
-                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold border peer-checked:ring-2 peer-checked:ring-primary peer-checked:border-primary border-white/10 hover:border-white/30 {{ cls }}">{{ lbl }}</span>
+                                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded text-[9px] font-bold border border-white/5 peer-checked:ring-1 peer-checked:ring-primary peer-checked:border-primary hover:border-white/20 {{ cls }}">{{ lbl }}</span>
                                                 </label>
                                                 {% endfor %}
                                             </div>
@@ -2856,6 +2856,8 @@
                         }
                     } else {
                         showToast('success', res.message || 'Настройки сохранены');
+                        // Refresh the embedded plan forms and CSRF token without reloading the page.
+                        await reloadContent();
                     }
                 } else {
                     showToast('danger', res.error || 'Ошибка');
@@ -3334,14 +3336,8 @@
                     const cardHtml = renderPlanCard(plan, csrfToken);
 
                     if (isUpdate) {
-                        const oldCard = document.getElementById('plan-card-' + plan.plan_id);
-                        if (oldCard) {
-                            oldCard.outerHTML = cardHtml;
-                            const viewDiv = document.getElementById('view-plan-' + plan.plan_id);
-                            const editDiv = document.getElementById('edit-plan-' + plan.plan_id);
-                            if (viewDiv) viewDiv.classList.remove('hidden');
-                            if (editDiv) editDiv.classList.add('hidden');
-                        }
+                        window.location.reload();
+                        return;
                     } else {
                         const hostName = formData.get('host_name');
                         const gridId = 'plans-grid-' + hostName;
@@ -3405,16 +3401,16 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/5">
+                <div class="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-white/5">
                     <button type="button"
                         onclick="document.getElementById('view-plan-${plan.plan_id}').classList.add('hidden'); document.getElementById('edit-plan-${plan.plan_id}').classList.remove('hidden')"
-                        class="px-4 py-1.5 rounded-lg bg-white/5 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-1 border border-white/10">
+                        class="px-2 py-1.5 rounded-lg bg-white/5 text-white font-bold text-[10px] uppercase tracking-normal whitespace-nowrap hover:bg-white/10 transition-all flex items-center justify-center gap-1 border border-white/10">
                         <span class="material-symbols-outlined text-sm">edit</span> Изменить
                     </button>
                     <form action="/delete-plan/${plan.plan_id}" method="post" data-confirm="Удалить тариф '${plan.plan_name}'?" class="w-full">
                         <input type="hidden" name="csrf_token" value="${csrfToken}" />
                         <button type="submit"
-                            class="w-full px-4 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 transition-all flex items-center justify-center gap-1 border border-red-500/10">
+                            class="w-full px-2 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-normal whitespace-nowrap hover:bg-red-500/20 transition-all flex items-center justify-center gap-1 border border-red-500/10">
                             <span class="material-symbols-outlined text-sm">delete</span> Удалить
                         </button>
                     </form>
@@ -3439,6 +3435,15 @@
                         <input type="number" name="hwid_limit" value="${plan.hwid_limit || ''}" placeholder="HWID"
                             class="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                     </div>
+                    <select name="button_style"
+                        class="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none">
+                        <option value="" ${!plan.button_style ? 'selected' : ''}>Стандартный цвет</option>
+                        <option value="primary" ${plan.button_style === 'primary' ? 'selected' : ''}>Основной</option>
+                        <option value="success" ${plan.button_style === 'success' ? 'selected' : ''}>Зелёный</option>
+                        <option value="danger" ${plan.button_style === 'danger' ? 'selected' : ''}>Красный</option>
+                    </select>
+                    <input type="text" name="icon_emoji_id" value="${plan.icon_emoji_id || ''}" placeholder="Emoji ID (необязательно)"
+                        class="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-primary/40 focus:outline-none" />
                     <div class="grid grid-cols-2 gap-2 mt-auto pt-2">
                         <button type="submit"
                             class="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 hover:text-white hover:border-primary/30 transition-all">ОК</button>

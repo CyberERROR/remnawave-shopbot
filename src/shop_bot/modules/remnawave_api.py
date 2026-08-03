@@ -320,10 +320,39 @@ async def get_user_by_email(email: str, *, host_name: str | None = None) -> dict
     return data if isinstance(data, dict) else None
 
 
-async def get_user_by_uuid(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
-    if not user_id:
+async def _resolve_user_id(user_id: int | str | None, *, host_name: str | None = None) -> int | None:
+    """Return a Remnawave v3 numeric user ID, repairing legacy UUID records by email."""
+    if user_id is None:
         return None
-    encoded_user_id = quote(str(user_id))
+
+    value = str(user_id).strip()
+    if value.isdigit():
+        return int(value)
+
+    legacy_key = rw_repo.get_key_by_remnawave_uuid(value)
+    email = (legacy_key or {}).get("key_email") or (legacy_key or {}).get("email")
+    if not email:
+        logger.warning("Remnawave: UUID %s cannot be resolved to a numeric user ID without an email", value)
+        return None
+
+    user = await get_user_by_email(email, host_name=host_name)
+    remote_id = user.get("id") if isinstance(user, dict) else None
+    if remote_id is None or not str(remote_id).isdigit():
+        logger.warning("Remnawave: user %s has no numeric ID", email)
+        return None
+
+    resolved_id = int(remote_id)
+    if legacy_key and str(legacy_key.get("remnawave_user_uuid")) != str(resolved_id):
+        rw_repo.update_key(legacy_key["key_id"], remnawave_user_uuid=str(resolved_id))
+        logger.info("Remnawave: migrated legacy UUID for key %s to user ID %s", legacy_key["key_id"], resolved_id)
+    return resolved_id
+
+
+async def get_user_by_id(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return None
+    encoded_user_id = quote(str(resolved_id))
     if host_name:
         response = await _request_for_host(host_name, "GET", f"/api/users/{encoded_user_id}", expected_status=(200, 404))
     else:
@@ -334,10 +363,15 @@ async def get_user_by_uuid(user_id: int | str, *, host_name: str | None = None) 
     return payload.get("response") if isinstance(payload, dict) else None
 
 
+# Kept while callers migrate away from the legacy name.
+get_user_by_uuid = get_user_by_id
+
+
 async def get_connected_devices_count(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
-    if not user_id:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
         return None
-    encoded_user_id = quote(str(user_id))
+    encoded_user_id = quote(str(resolved_id))
     path = f"/api/hwid/devices/{encoded_user_id}"
     
     if host_name:
@@ -355,56 +389,11 @@ async def get_connected_devices_count(user_id: int | str, *, host_name: str | No
     return None
 
 
-async def get_user_devices(user_id: int | str, *, host_name: str | None = None) -> list[dict[str, Any]]:
-    if not user_id:
-        return []
-    encoded_user_id = quote(str(user_id))
-    path = f"/api/hwid/devices/{encoded_user_id}"
-
-    if host_name:
-        response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
-    else:
-        response = await _request("GET", path, expected_status=(200, 404))
-
-    if response.status_code == 404:
-        return []
-
-    payload = response.json()
-    if isinstance(payload, dict):
-        response_data = payload.get("response")
-        if isinstance(response_data, dict):
-            devices = response_data.get("devices")
-            if isinstance(devices, list):
-                return devices
-    return []
-
-
-async def delete_user_device(device_id: str, *, host_name: str | None = None) -> bool:
-    if not device_id:
-        return False
-    encoded_id = quote(device_id.strip())
-    path = f"/api/hwid/devices/{encoded_id}"
-
-    if host_name:
-        response = await _request_for_host(host_name, "DELETE", path, expected_status=(200, 204, 404))
-        log_prefix = f"Remnawave[{host_name}]"
-    else:
-        response = await _request("DELETE", path, expected_status=(200, 204, 404))
-        log_prefix = "Remnawave"
-
-    if response.status_code == 404:
-        logger.info("%s: устройство %s не найдено при удалении (возможно, уже удалено)", log_prefix, device_id)
-        return False
-    elif response.status_code in (200, 204):
-        logger.info("%s: устройство %s успешно удалено (HTTP %s)", log_prefix, device_id, response.status_code)
-        return True
-    return False
-
-
 async def get_subscription_info(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
-    if not user_id:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
         return None
-    encoded_user_id = quote(str(user_id))
+    encoded_user_id = quote(str(resolved_id))
     path = f"/api/subscriptions/by-id/{encoded_user_id}"
     
     if host_name:
@@ -513,6 +502,9 @@ async def ensure_user(
         if tag:
             payload["tag"] = tag
         method = "PATCH"
+        user_id = current.get("id")
+        if user_id is None or not str(user_id).isdigit():
+            raise RemnawaveAPIError(f"Remnawave user {email} has no numeric ID")
         path = "/api/users"
     else:
         logger.info(
@@ -912,14 +904,18 @@ async def delete_client_on_host(host_name: str, client_email: str) -> bool:
 
 async def get_user_devices(user_id: int | str, host_name: str | None = None) -> list[dict[str, Any]]:
     """Получает список подключенных устройств для пользователя (ключа)."""
-    if not user_id:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
         return []
         
     try:
         if host_name:
-            response = await _request_for_host(host_name, "GET", f"/api/hwid/devices/{quote(str(user_id))}", expected_status=(200,))
+            response = await _request_for_host(host_name, "GET", f"/api/hwid/devices/{quote(str(resolved_id))}", expected_status=(200, 404))
         else:
-            response = await _request("GET", f"/api/hwid/devices/{quote(str(user_id))}", expected_status=(200,))
+            response = await _request("GET", f"/api/hwid/devices/{quote(str(resolved_id))}", expected_status=(200, 404))
+
+        if response.status_code == 404:
+            return []
 
         payload = response.json() or {}
         data = payload.get("response") if isinstance(payload.get("response"), dict) else payload
@@ -933,14 +929,15 @@ async def get_user_devices(user_id: int | str, host_name: str | None = None) -> 
 
 async def delete_user_device(user_id: int | str, hwid: str, host_name: str | None = None) -> bool:
     """Удаляет устройство по HWID и ID пользователя."""
-    if not user_id or not hwid:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None or not hwid:
         return False
         
     try:
         # Эндпоинт: POST /api/hwid/devices/delete
         # Body: { "userId": 123, "hwid": "..." }
         payload = {
-            "userId": user_id,
+            "userId": resolved_id,
             "hwid": hwid
         }
         

@@ -34,14 +34,13 @@ import re
 from decimal import Decimal
 import logging
 from urllib.parse import urlencode
+from shop_bot.webapp.themes import get_webapp_template_path
 
 
 logger = logging.getLogger(__name__)
 
 # In-memory storage for temporary auth tokens: {token: user_id}
 TEMP_AUTH_TOKENS = {}
-
-
 # ===== Utility Functions =====
 def get_transaction_comment(user_data: dict, action_type: str, value: any, host_name: str = None) -> str:
     from shop_bot.bot.handlers import get_transaction_comment as bot_get_comment
@@ -232,19 +231,11 @@ def _process_template_placeholders(html: str, user_id: int, webapp_settings: dic
         "{{ webapp_logo }}": context_data.get("webapp_logo", ""),
         "{{ webapp_icon }}": context_data.get("webapp_icon", ""),
         "{{ logo_hidden }}": "hidden" if not context_data.get("webapp_logo") else "",
+        "{{ fire_logo_fallback }}": "" if context_data.get("webapp_logo") else '<span class="material-icons-round">local_fire_department</span>',
         "{{ user_id }}": str(user_id),
-        "{{ tg_fullscreen_css }}": """
-    <style>
-        .tg-miniapp #main-page,
-        .tg-miniapp #purchase-page,
-        .tg-miniapp #renew-page,
-        .tg-miniapp #setup-page,
-        .tg-miniapp #profile-page,
-        .tg-miniapp #support-page {
-            padding-top: max(env(safe-area-inset-top), 70px) !important;
-        }
-    </style>
-        """ if webapp_settings.get("tg_fullscreen") else "",
+        "{{ tg_fullscreen_class }}": "tg-fullscreen" if webapp_settings.get("tg_fullscreen") else "",
+        "{{ subscriptions_json }}": json.dumps(context_data.get("subscriptions", []), ensure_ascii=False).replace("</", "<\\/"),
+        "{{ user_app_theme }}": context_data.get("user_app_theme", "forest"),
     }
     
     # Selected key display variants
@@ -261,6 +252,37 @@ def _process_template_placeholders(html: str, user_id: int, webapp_settings: dic
     
     return html
 
+
+def _get_subscription_data(keys: list[dict]) -> list[dict]:
+    """Build data for theme-owned subscription components without HTML markup."""
+    subscriptions = []
+    for key in keys:
+        data = _process_key_data(key)
+        subscriptions.append({
+            "id": data["key_id"],
+            "name": data["name"],
+            "expires": data["expire_date_str"],
+            "days_left": data["days_left"],
+            "remaining": data["remaining_str"],
+            "traffic": data["traffic_info"],
+            "devices": data["hwid_info"].replace(" уст.", ""),
+            "url": data["sub_url"],
+            "host": data["host_name"],
+            "status": data["status_text"],
+            "is_active": data["is_active"],
+            "is_pinned": bool(key.get("is_pinned")),
+            "created_at": key.get("created_at") or "",
+        })
+    return subscriptions
+
+def _subscription_sort_key(key: dict) -> tuple[bool, datetime]:
+    try:
+        created_at = datetime.strptime(key.get("created_at", ""), "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        created_at = datetime.min
+    return bool(key.get("is_pinned")), created_at
+
+
 def _process_key_data(key: dict) -> dict:
     # 1. Calculate expiry
     try:
@@ -276,6 +298,7 @@ def _process_key_data(key: dict) -> dict:
     
     # 2. Days left & Detailed remaining
     delta = expire_dt - now
+    is_active = delta.total_seconds() > 0
     days_left = delta.days
     if days_left < 0:
         days_left = 0
@@ -350,17 +373,17 @@ def _process_key_data(key: dict) -> dict:
     # Safety: Created Date String
     created_date_str = created_dt.strftime("%d.%m.%Y")
 
-    if days_left > 5:
+    if is_active and days_left > 5:
         status_text = "Активен"
         status_color = "text-emerald-500"
         status_bg = "bg-emerald-500/10"
-    elif days_left > 0:
+    elif is_active:
         status_text = "Скоро"
         status_color = "text-yellow-500"
         status_bg = "bg-yellow-500/10"
     else:
         status_text = "Истек"
-        status_color = "text-red-500"
+        status_color = "text-red-400"
         status_bg = "bg-red-500/10"
 
     return {
@@ -379,6 +402,7 @@ def _process_key_data(key: dict) -> dict:
         "status_text": status_text,
         "status_color": status_color,
         "status_bg": status_bg,
+        "is_active": is_active,
         "comment_key": key.get('comment_key') or "",
         "host_name": key.get('host_name') or "",
     }
@@ -494,17 +518,15 @@ def _get_profile_card_html(user: dict | None, referral_count: int, keys_count: i
          '''
 
     return f"""
-            <!-- Modern Balanced User Card -->
-            <div class="glass-card border border-white/10 rounded-[1.6rem] p-4 relative overflow-hidden shadow-xl">
+            <div class="fire-profile-card relative overflow-hidden">
                 <!-- Decoration -->
                 <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
 
-                <div class="flex flex-col gap-3.5 relative z-10">
+                <div class="fire-profile-card-content flex flex-col gap-3.5 relative z-10">
                     <!-- Top: ID and Status -->
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <div
-                                class="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20 shrink-0">
+                            <div class="fire-profile-avatar w-9 h-9 flex items-center justify-center shrink-0">
                                 <span class="material-icons-round text-primary text-[19px]">person</span>
                             </div>
                             <div class="min-w-0">
@@ -520,21 +542,18 @@ def _get_profile_card_html(user: dict | None, referral_count: int, keys_count: i
                     </div>
 
                     <!-- Middle: Main Stats -->
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <div
-                            class="bg-white/5 border border-white/5 rounded-xl p-2 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
+                    <div class="fire-profile-stats grid grid-cols-3 gap-1.5">
+                        <div class="fire-profile-stat flex flex-col items-center justify-center text-center">
                             <span class="material-icons-round text-emerald-400 text-[13px] mb-0.5 opacity-80">group</span>
                             <div class="text-[8px] text-gray-400 uppercase font-black tracking-tight leading-none mb-0.5">Рефералы</div>
                             <div class="text-[10px] font-black text-white">{referral_count} чел.</div>
                         </div>
-                        <div
-                            class="bg-white/5 border border-white/5 rounded-xl p-2 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
+                        <div class="fire-profile-stat flex flex-col items-center justify-center text-center">
                             <span class="material-icons-round text-yellow-400 text-[13px] mb-0.5 opacity-80">payments</span>
                             <div class="text-[8px] text-gray-400 uppercase font-black tracking-tight leading-none mb-0.5">Доход</div>
                             <div class="text-[10px] font-black text-white truncate w-full px-1">{earned_str}</div>
                         </div>
-                        <div
-                            class="bg-white/5 border border-white/5 rounded-xl p-2 flex flex-col items-center justify-center text-center transition-all hover:bg-white/[0.08]">
+                        <div class="fire-profile-stat flex flex-col items-center justify-center text-center">
                             <span class="material-icons-round text-primary text-[13px] mb-0.5 opacity-80">vpn_key</span>
                             <div class="text-[8px] text-gray-400 uppercase font-black tracking-tight leading-none mb-0.5">Ключи</div>
                             <div class="text-[10px] font-black text-white">{keys_count} шт.</div>
@@ -543,7 +562,7 @@ def _get_profile_card_html(user: dict | None, referral_count: int, keys_count: i
 
                     <!-- Bottom: Meta Info -->
                     <button type="button" data-ref-link="{referral_link}" onclick="copyReferralLink(this)"
-                        class="w-full bg-primary/5 border border-primary/10 rounded-xl p-2 flex items-center gap-2 hover:bg-primary/10 active:scale-[0.99] transition-all">
+                        class="fire-profile-referral w-full p-2 flex items-center gap-2 active:scale-[0.99] transition-all">
                         <span class="material-icons-round text-[15px] text-primary shrink-0">ios_share</span>
                         <div class="min-w-0 flex-1 text-left">
                             <div class="text-[8px] text-gray-500 uppercase font-black tracking-widest">Реферальная ссылка</div>
@@ -606,12 +625,12 @@ def _get_profile_keys_html(keys: list) -> str:
                         <!-- Row 1: Time -->
                         <div class="flex flex-wrap justify-between items-center gap-x-2 gap-y-1 border-b border-white/5 pb-1.5 mb-1.5 opacity-90">
                             <div class="flex items-center gap-1">
-                                <span class="text-gray-500 font-medium shrink-0">⏳ Осталось:</span>
+                                <span class="flex items-center gap-1 text-gray-500 font-medium shrink-0"><span class="material-icons-round text-[12px] text-primary">schedule</span> Осталось:</span>
                                 <span class="text-gray-200 font-mono tracking-tight whitespace-nowrap">{data['remaining_str']}</span>
                             </div>
                             <div class="w-px h-3 bg-white/10"></div>
                             <div class="flex items-center gap-1">
-                                <span class="text-gray-500 font-medium shrink-0">➕ Куплен:</span>
+                                <span class="flex items-center gap-1 text-gray-500 font-medium shrink-0"><span class="material-icons-round text-[12px] text-primary">event</span> Куплен:</span>
                                 <span class="text-gray-200 font-mono tracking-tight whitespace-nowrap">{data['elapsed_str']}</span>
                             </div>
                         </div>
@@ -619,12 +638,12 @@ def _get_profile_keys_html(keys: list) -> str:
                         <!-- Row 2: Limits -->
                         <div class="flex justify-between items-center opacity-90">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-gray-500 whitespace-nowrap">🛰 Лимит:</span>
+                                <span class="flex items-center gap-1 text-gray-500 whitespace-nowrap"><span class="material-icons-round text-[12px] text-primary">data_usage</span> Лимит:</span>
                                 <span class="text-gray-300 font-mono whitespace-nowrap">{data['traffic_info']}</span>
                             </div>
                             <div class="w-px h-3 bg-white/10 mx-1"></div>
                             <div class="flex items-center gap-1.5">
-                                <span class="text-gray-500 whitespace-nowrap">📱 Лимит:</span>
+                                <span class="flex items-center gap-1 text-gray-500 whitespace-nowrap"><span class="material-icons-round text-[12px] text-primary">devices</span> Лимит:</span>
                                 <span class="text-gray-300 font-mono whitespace-nowrap">{data['hwid_info']}</span>
                             </div>
                         </div>
@@ -784,7 +803,7 @@ def _get_renew_keys_html(keys: list, user_id: int | None = None) -> tuple[str, s
 
         options_html += f"""
         <button
-            class="dropdown-option w-full p-2.5 flex items-center justify-between rounded-lg hover:bg-white/5 transition-colors"
+            class="dropdown-option fire-dropdown-option w-full p-2.5 flex items-center justify-between rounded-lg hover:bg-white/5 transition-colors"
             data-key="#{data['key_id']}" data-name="{data['name']}" data-date="{data['expire_date_str']}" data-host="{host_name}" data-index="{index}">
             <div class="flex items-center gap-2.5 overflow-hidden">
                 <span class="material-icons-round {icon_color} text-sm shrink-0">vpn_key</span>
@@ -844,7 +863,7 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
 
     active_plans = [p for p in plans if p.get('is_active')]
 
-    html = f'<div id="{container_id}" class="server-plans-container grid grid-cols-2 gap-2 mt-1" style="display: {display_style};">'
+    html = f'<div id="{container_id}" class="server-plans-container fire-plan-grid grid grid-cols-2 gap-2 mt-1" style="display: {display_style};">'
 
     if not active_plans:
         html += '<div class="col-span-2 text-center text-[10px] text-gray-500 py-3 glass-card border border-white/5 rounded-xl">Нет доступных тарифов</div>'
@@ -861,21 +880,31 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
                 continue
 
             month_label = "месяц" if months == 1 else ("месяца" if 1 < months < 5 else "месяцев")
+            plan_icon = {
+                1: "bolt",
+                3: "calendar_month",
+                6: "rocket_launch",
+                12: "diamond",
+            }.get(months, "event")
 
             is_last_odd = (plan_idx == plan_count - 1) and (plan_count % 2 == 1)
             span_class = " col-span-2" if is_last_odd else ""
 
             html += f"""
             <button
-                class="plan-btn glass-card border border-white/10 rounded-2xl p-3.5 flex flex-col items-center justify-center text-center transition-all active:scale-95 hover:border-primary/40 hover:bg-white/5 group{span_class}"
+                class="plan-btn fire-plan-tile group{span_class}"
                 data-host="{host_name}" data-plan-id="{plan['plan_id']}" data-price="{final_price}" data-plan-name="{plan.get('plan_name', '')}"
                 data-months="{months}" data-month-factor="{month_factor}"
                 onclick="selectPlan(this)">
-                <span
-                    class="plan-label text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5 group-hover:text-gray-300 transition-colors">{months} {month_label}</span>
-                <div class="flex items-baseline gap-0.5">
-                    <span class="plan-price text-xl font-bold text-white">{final_price}</span>
-                    <span class="text-xs font-medium text-gray-400">₽</span>
+                <span class="fire-plan-check material-icons-round">check</span>
+                <span class="fire-plan-head">
+                    <span class="fire-plan-icon material-icons-round">{plan_icon}</span>
+                    <span class="plan-label fire-plan-duration">{months} {month_label}</span>
+                </span>
+                <div class="fire-plan-price-row">
+                    <span class="plan-price fire-plan-price">{final_price}</span>
+                    <span class="fire-plan-currency">₽</span>
+                    <span class="fire-plan-action material-icons-round">arrow_outward</span>
                 </div>
             </button>
             """
@@ -907,7 +936,7 @@ def _get_servers_and_plans_html(user_id: int | None = None):
         
         server_options_html += f"""
         <button
-            class="server-option w-full p-2.5 flex items-center justify-between rounded-lg hover:bg-white/5 transition-colors"
+            class="server-option fire-dropdown-option w-full p-2.5 flex items-center justify-between rounded-lg hover:bg-white/5 transition-colors"
             data-server="{host_name}" data-index="{index}" onclick="selectServer(this)">
             <div class="flex items-center gap-2.5">
                 <span class="material-icons-round {icon_color} text-sm">public</span>
@@ -1035,6 +1064,7 @@ async def _render_main_page(user_id: int):
     renew_selected_key = "Нет активных ключей"
     renew_plans_html_data = _get_no_key_html()
     keys = []
+    subscriptions = []
     
     if user_id:
         keys = get_user_keys(user_id)
@@ -1172,6 +1202,17 @@ async def _render_main_page(user_id: int):
 
         # --- GENERATE SECTIONS ---
         if keys:
+            # The home carousel is ordered by purchase date, newest first.
+            try:
+                carousel_keys = sorted(
+                    keys,
+                    key=_subscription_sort_key,
+                    reverse=True,
+                )
+            except (TypeError, ValueError):
+                carousel_keys = keys
+            subscriptions = _get_subscription_data(carousel_keys)
+
             # For the main monitoring section, show only the soonest active key
             if active_keys:
                 key_section = _get_key_html(active_keys[0])
@@ -1190,7 +1231,9 @@ async def _render_main_page(user_id: int):
         ref_earned = user.get("referral_balance_all") or 0.0
         profile_card = _get_profile_card_html(user, ref_count, len(keys), ref_earned)
     
-    p = os.path.join(os.path.dirname(__file__), "app.html")
+    p = get_webapp_template_path("app.html", webapp_settings)
+    if p is None:
+        return HTMLResponse(content="<h1>WebApp theme app.html not found</h1>", status_code=404)
     with open(p, "r", encoding="utf-8") as f:
         content = f.read()
     
@@ -1204,7 +1247,9 @@ async def _render_main_page(user_id: int):
         "renew_selected_display": renew_selected_display if 'renew_selected_display' in locals() else renew_selected_key,
         "min_price": f"{int(min_price_val)} ₽" if min_price_val > 0 else "0 ₽",
         "webapp_logo": webapp_settings.get("webapp_logo") or "",
-        "webapp_icon": webapp_settings.get("webapp_icon") or ""
+        "webapp_icon": webapp_settings.get("webapp_icon") or "",
+        "subscriptions": subscriptions,
+        "user_app_theme": (user or {}).get("app_theme") or "forest",
     }
     
     content = _process_template_placeholders(content, user_id, webapp_settings, context)
@@ -1223,8 +1268,8 @@ async def index(request: Request, user_id: int | None = None, token: str | None 
         
         # 2. If no user_id (and no valid token), serve login.html
         if user_id is None:
-            p = os.path.join(os.path.dirname(__file__), "login.html")
-            if os.path.exists(p):
+            p = get_webapp_template_path("login.html")
+            if p is not None:
                 with open(p, "r", encoding="utf-8") as f:
                     content = f.read()
                 
@@ -1235,9 +1280,12 @@ async def index(request: Request, user_id: int | None = None, token: str | None 
                     "webapp_icon": webapp_settings.get("webapp_icon") or ""
                 }
                 content = _process_template_placeholders(content, 0, webapp_settings, context)
-                return HTMLResponse(content=content)
+                return HTMLResponse(
+                    content=content,
+                    headers={"Cache-Control": "private, max-age=300, stale-while-revalidate=86400"},
+                )
             else:
-                return HTMLResponse(content="<h1>Login page not found</h1>", status_code=404)
+                return HTMLResponse(content="<h1>WebApp theme login.html not found</h1>", status_code=404)
 
         webapp_settings = get_webapp_settings()
         user = get_user(user_id)
@@ -1264,6 +1312,11 @@ class SupportMessageSendRequest(BaseModel):
     ticket_id: int
     message: str
 
+
+class SupportTicketCloseRequest(BaseModel):
+    user_id: int
+    ticket_id: int
+
 class PaymentMethodsRequest(BaseModel):
     user_id: int
 
@@ -1276,6 +1329,9 @@ class TelegramDirectAuthRequest(BaseModel):
 class EmailAuthRequest(BaseModel):
     email: str
     password: str
+
+class SubscriptionAuthRequest(BaseModel):
+    subscription_url: str
 
 class PasswordResetRequest(BaseModel):
     email: str
@@ -1424,6 +1480,28 @@ async def api_create_token(req: TokenRequest):
     # Ensure it's unique (highly likely with UUID4)
     database.update_user_auth_token(user_id, token)
 
+    return {"ok": True, "token": token}
+
+
+@app.post("/api/auth/subscription")
+async def api_subscription_login(req: SubscriptionAuthRequest):
+    """Authenticate the owner of an exact subscription URL without exposing key data."""
+    subscription_url = req.subscription_url.strip()
+    if not subscription_url or len(subscription_url) > 2048:
+        return {"ok": False, "error": "Не удалось войти по этой ссылке"}
+
+    from shop_bot.data_manager import database
+
+    key = database.get_key_by_subscription_url(subscription_url)
+    user_id = key.get("user_id") if key else None
+    user = get_user(user_id) if user_id else None
+    if not user or user.get("is_banned"):
+        return {"ok": False, "error": "Не удалось войти по этой ссылке"}
+
+    token = database.get_auth_token_by_user_id(user_id)
+    if not token:
+        token = str(uuid.uuid4())
+        database.update_user_auth_token(user_id, token)
     return {"ok": True, "token": token}
 
 
@@ -2097,6 +2175,15 @@ class KeyActionRequest(BaseModel):
     key_id: int
     host_name: str | None = None
 
+class KeyPinRequest(BaseModel):
+    user_id: int
+    key_id: int
+    pinned: bool
+
+class UserThemeRequest(BaseModel):
+    user_id: int
+    theme: str
+
 class DeleteDeviceRequest(BaseModel):
     user_id: int
     key_id: int
@@ -2134,6 +2221,34 @@ async def api_key_devices(req: KeyActionRequest):
     except Exception as e:
         logger.error(f"[WEBAPP] - Ошибка получения устройств для ключа {req.key_id}: {e}")
         return {"ok": False, "error": str(e)}
+
+@app.post("/api/key/pin")
+async def api_key_pin(req: KeyPinRequest):
+    try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+        key = get_key_by_id(req.key_id)
+        if not key or key.get("user_id") != req.user_id:
+            return {"ok": False, "error": "Ключ не найден"}
+        if not rw_repo.update_key(req.key_id, is_pinned=req.pinned):
+            return {"ok": False, "error": "Не удалось обновить закрепление"}
+        return {"ok": True, "pinned": req.pinned}
+    except Exception as e:
+        logger.error(f"[WEBAPP] - Ошибка закрепления ключа {req.key_id}: {e}")
+        return {"ok": False, "error": str(e)}
+
+@app.post("/api/user/theme")
+async def api_user_theme(req: UserThemeRequest):
+    allowed_themes = {"ember", "ocean", "violet", "forest", "rose", "gold"}
+    if req.theme not in allowed_themes:
+        return {"ok": False, "error": "Неизвестная тема"}
+    user = get_user(req.user_id)
+    if not user or user.get("is_banned"):
+        return {"ok": False, "error": "Access denied"}
+    if not rw_repo.update_user_app_theme(req.user_id, req.theme):
+        return {"ok": False, "error": "Не удалось сохранить тему"}
+    return {"ok": True, "theme": req.theme}
 
 @app.post("/api/key/device/delete")
 async def api_key_device_delete(req: DeleteDeviceRequest):
@@ -2355,6 +2470,28 @@ async def api_support_send(req: SupportMessageSendRequest):
         logger.error(f"[WEBAPP] - Ошибка отправки сообщения в поддержку для {req.user_id}: {e}")
         return {"ok": False, "error": str(e)}
 
+
+@app.post("/api/support/close")
+async def api_support_close(req: SupportTicketCloseRequest):
+    try:
+        user = get_user(req.user_id)
+        if not user or user.get('is_banned'):
+            return {"ok": False, "error": "Access denied"}
+
+        from shop_bot.data_manager.remnawave_repository import get_ticket, set_ticket_status
+        ticket = get_ticket(req.ticket_id)
+        if not ticket or ticket.get('user_id') != req.user_id:
+            return {"ok": False, "error": "Тикет не найден"}
+        if ticket.get('status') != 'open':
+            return {"ok": False, "error": "Тикет уже закрыт"}
+        if not set_ticket_status(req.ticket_id, 'closed'):
+            return {"ok": False, "error": "Не удалось закрыть тикет"}
+
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"[WEBAPP] - Ошибка закрытия тикета {req.ticket_id} для {req.user_id}: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.get("/api/user-status")
 async def api_user_status(user_id: int):
     try:
@@ -2387,21 +2524,24 @@ async def dynamic_route(request: Request, path_param: str):
                     return _render_banned_page(webapp_settings)
                 return await _render_main_page(user['telegram_id'])
             else:
-                 # Token not valid or expired -> Render Login Page
-                 p = os.path.join(os.path.dirname(__file__), "login.html")
-                 if os.path.exists(p):
-                     with open(p, "r", encoding="utf-8") as f:
-                         content = f.read()
-                     
-                     webapp_settings = get_webapp_settings()
-                     context = {
+                # Token not valid or expired -> Render Login Page
+                p = get_webapp_template_path("login.html")
+                if p is not None:
+                    with open(p, "r", encoding="utf-8") as f:
+                        content = f.read()
+
+                    webapp_settings = get_webapp_settings()
+                    context = {
                         "webapp_logo": webapp_settings.get("webapp_logo") or "",
                         "webapp_icon": webapp_settings.get("webapp_icon") or ""
-                     }
-                     content = _process_template_placeholders(content, 0, webapp_settings, context)
-                     return HTMLResponse(content=content)
-                 else:
-                     return HTMLResponse(content="<h1>Login page not found</h1>", status_code=404)
+                    }
+                    content = _process_template_placeholders(content, 0, webapp_settings, context)
+                    return HTMLResponse(
+                        content=content,
+                        headers={"Cache-Control": "private, max-age=300, stale-while-revalidate=86400"},
+                    )
+                else:
+                    return HTMLResponse(content="<h1>WebApp theme login.html not found</h1>", status_code=404)
         
         # Pass through to 404 naturally or handle other dynamic routes
         return HTMLResponse(content="<h1>404 Not Found</h1>", status_code=404)

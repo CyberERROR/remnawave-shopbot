@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ panel_brand_title }}">
+    <link rel="apple-touch-icon" href="{{ webapp_icon }}">
+    <link rel="icon" type="image/x-icon" href="{{ webapp_icon }}">
+    <title>Загрузка...</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#ff7048",
+                        "background-dark": "#0d0f10",
+                    },
+                    animation: {
+                        'spin-slow': 'spin 3s linear infinite',
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+          :root { --fire-bg: #0b1210; --fire-panel: #121b18; --fire-panel-soft: #18241f; --fire-line: rgba(255,255,255,.1); --fire-ink: #eef8f1; --fire-muted: #81928a; --fire-orange: #10b981; --fire-orange-soft: #8be0bd; --fire-accent-wash: rgba(16,185,129,.1); --fire-accent-line: rgba(16,185,129,.25); --fire-accent-shadow: rgba(16,185,129,.2); }
+        html, body { width: 100%; min-height: 100%; }
+        body {
+            background: var(--fire-bg);
+            color: var(--fire-ink);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100dvh;
+            margin: 0;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease;
+             font-family: 'Manrope', sans-serif;
+            padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+        }
+        body::before {
+            content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .45;
+            background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+            background-size: 38px 38px; mask-image: linear-gradient(to bottom, black, transparent 78%);
+        }
+        #loader, #auth-container { width: min(100%, 360px); }
+         .fire-login-panel { padding: 22px 18px; border: 1px solid var(--fire-line); border-radius: 24px; background: linear-gradient(145deg, var(--fire-accent-wash), rgba(21,24,25,.96) 34%); box-shadow: 0 24px 70px rgba(0,0,0,.42); }
+         .fire-login-mark { position: relative; width: 70px; height: 70px; display: grid; place-items: center; color: var(--fire-orange); border: 1px solid var(--fire-accent-line); border-radius: 21px; background: var(--fire-accent-wash); box-shadow: inset 0 0 0 7px rgba(255,255,255,.025), 0 13px 35px rgba(0,0,0,.2); }
+         .fire-login-mark .fire-brand-logo { width: 38px; height: 38px; max-width: calc(100% - 18px); max-height: calc(100% - 18px); object-fit: contain; }
+         .fire-login-mark { animation: fire-login-mark-float 3.8s ease-in-out infinite; }
+         .fire-auth-header { animation: fire-auth-header-in .7s cubic-bezier(.2,.8,.2,1) both; }
+         .fire-auth-header .fire-login-mark { animation-delay: .18s; }
+         .fire-login-mark::before { content: ''; position: absolute; inset: -7px; border: 1px solid var(--fire-accent-line); border-radius: 25px; opacity: 0; animation: fire-login-mark-signal 3.8s ease-out infinite; }
+         .fire-login-mark::after { content: ''; position: absolute; width: 27px; height: 2px; bottom: -9px; border-radius: 99px; background: var(--fire-orange); box-shadow: 0 0 14px var(--fire-accent-shadow); }
+         @keyframes fire-login-mark-float { 0%, 100% { transform: translateY(0); box-shadow: inset 0 0 0 7px rgba(255,255,255,.025), 0 13px 35px rgba(0,0,0,.2); } 50% { transform: translateY(-4px); box-shadow: inset 0 0 0 7px rgba(255,255,255,.025), 0 18px 39px var(--fire-accent-shadow); } }
+         @keyframes fire-login-mark-signal { 0%, 18% { opacity: 0; transform: scale(.9); } 36% { opacity: .7; } 62%, 100% { opacity: 0; transform: scale(1.18); } }
+         @keyframes fire-auth-header-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fire-login-title { color: var(--fire-ink); font-size: 19px; font-weight: 800; letter-spacing: -.045em; }
+        .fire-login-copy { color: var(--fire-muted); font-size: 11px; line-height: 1.5; }
+        .fire-login-primary { color: #10180d !important; background: var(--fire-orange) !important; border-color: transparent !important; box-shadow: 0 12px 25px var(--fire-accent-shadow) !important; }
+        .fire-login-secondary { color: var(--fire-ink) !important; border-color: var(--fire-line) !important; background: rgba(255,255,255,.035) !important; }
+        #auth-container input, #auth-container .reset-digit { color: var(--fire-ink); border-color: var(--fire-line); border-radius: 14px; background: rgba(0,0,0,.18); }
+        #auth-container input:focus, #auth-container .reset-digit:focus { border-color: var(--fire-orange); background: var(--fire-accent-wash); box-shadow: 0 0 0 3px var(--fire-accent-wash); }
+        #auth-container .text-primary { color: var(--fire-orange) !important; }
+        #auth-container .bg-primary\/10, #auth-container .bg-primary\/20 { background: var(--fire-accent-wash) !important; }
+        #auth-container .border-primary\/20, #auth-container .border-primary\/30 { border-color: var(--fire-accent-line) !important; }
+        .fire-loader-panel { min-height: 288px; padding: 24px 20px; overflow: hidden; }
+         .fire-loader-orbit { position: relative; width: 108px; height: 108px; display: grid; place-items: center; border: 1px solid var(--fire-accent-line); border-radius: 50%; background: radial-gradient(circle, var(--fire-accent-wash), transparent 66%); }
+         .fire-loader-orbit::before, .fire-loader-orbit::after { content: ''; position: absolute; border-radius: 50%; }
+         .fire-loader-orbit::before { inset: 9px; border: 2px solid transparent; border-top-color: var(--fire-orange); border-right-color: var(--fire-orange-soft); animation: fire-loader-orbit-forward 1.25s linear infinite; }
+         .fire-loader-orbit::after { inset: -11px; border: 1px dashed var(--fire-accent-line); opacity: .7; animation: fire-loader-orbit-reverse 6s linear infinite; }
+         .fire-loader-core { position: relative; display: grid; width: 54px; height: 54px; place-items: center; overflow: hidden; color: #10180d; border-radius: 17px; background: var(--fire-orange); box-shadow: 0 0 0 8px var(--fire-accent-wash), 0 13px 28px var(--fire-accent-shadow); animation: fire-loader-core-pulse 1.8s ease-in-out infinite; }
+         .fire-loader-core .material-icons-round { font-size: 27px; }
+         .fire-loader-core .fire-brand-logo { position: absolute; width: 30px; height: 30px; object-fit: contain; }
+         .fire-loader-status { display: flex; align-items: center; gap: 7px; padding: 8px 10px; color: var(--fire-orange-soft); border: 1px solid var(--fire-accent-line); border-radius: 10px; background: var(--fire-accent-wash); font: 700 8px 'Courier New', monospace; letter-spacing: .08em; text-transform: uppercase; }
+         .fire-loader-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--fire-orange); box-shadow: 0 0 0 4px var(--fire-accent-wash); animation: pulse 1.5s ease-in-out infinite; }
+         @keyframes fire-loader-orbit-forward { to { transform: rotate(360deg); } }
+         @keyframes fire-loader-orbit-reverse { to { transform: rotate(-360deg); } }
+         @keyframes fire-loader-core-pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 8px var(--fire-accent-wash), 0 13px 28px var(--fire-accent-shadow); } 50% { transform: scale(1.06); box-shadow: 0 0 0 12px rgba(16,185,129,.06), 0 16px 34px var(--fire-accent-shadow); } }
+          @media (prefers-reduced-motion: reduce) { .fire-login-mark, .fire-login-mark::before, .fire-auth-header, .fire-loader-orbit::before, .fire-loader-orbit::after, .fire-loader-core { animation: none; } }
+        @media (max-width: 360px) { body { padding-right: 12px; padding-left: 12px; } .fire-login-panel { padding: 18px 14px; border-radius: 20px; } #auth-methods, #email-auth-form, #reset-password-form { padding-right: 0; padding-left: 0; } }
+    </style>
+</head>
+
+<body>
+    <div id="loader" class="fire-login-panel fire-loader-panel flex flex-col items-center justify-center gap-6 relative z-10">
+        <div class="absolute -top-12 -left-12 w-40 h-40 rounded-full blur-[60px]" style="background: var(--fire-accent-wash);"></div>
+        <div class="absolute -bottom-14 -right-12 w-40 h-40 rounded-full blur-[60px]" style="background: var(--fire-accent-wash);"></div>
+        <div class="fire-loader-orbit">
+            <div class="fire-loader-core">
+                {{ fire_logo_fallback }}
+                <img src="{{ webapp_logo }}" class="fire-brand-logo {{ logo_hidden }}" alt="{{ panel_brand_title }}" />
+            </div>
+        </div>
+        <div class="flex flex-col items-center gap-2 text-center">
+            <p class="text-[8px] font-bold tracking-[.2em] uppercase" style="color: var(--fire-muted);">{{ panel_brand_title }}</p>
+            <h2 class="fire-login-title">Готовим кабинет</h2>
+            <p class="fire-login-copy">Проверяем доступ и загружаем подписки.</p>
+        </div>
+        <div class="fire-loader-status">Защищённое подключение</div>
+    </div>
+
+    <div id="auth-container"
+        class="fire-login-panel hidden flex flex-col items-center justify-center gap-6 relative z-10 w-full text-center">
+        <div class="absolute -top-10 -left-10 w-40 h-40 bg-primary/20 rounded-full blur-[60px] animate-pulse-fast">
+        </div>
+        <div id="auth-header" class="fire-auth-header flex flex-col items-center gap-2">
+            <div class="fire-login-mark mb-2">
+                {{ fire_logo_fallback }}
+                <img src="{{ webapp_logo }}" class="fire-brand-logo {{ logo_hidden }}" alt="{{ panel_brand_title }}" />
+            </div>
+            <h1 class="fire-login-title">Вход в кабинет</h1>
+            <p class="fire-login-copy max-w-[280px]">Авторизуйтесь через Telegram или Email, чтобы управлять подписками.</p>
+        </div>
+
+        <div id="auth-methods" class="flex flex-col gap-3 w-full px-5 max-w-[340px] mx-auto mt-2">
+            <a id="auth-link" href="#"
+                class="fire-login-primary w-full font-bold py-4 rounded-2xl text-sm hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                <span>Войти через Telegram</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+            </a>
+            <button id="show-email-btn" class="fire-login-secondary w-full glass-card border font-bold py-4 rounded-2xl text-sm shadow-sm hover:bg-white/10 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                <span class="material-icons-round text-[18px]">email</span>
+                <span>Войти по Email</span>
+            </button>
+            <button id="show-subscription-btn" class="fire-login-secondary w-full glass-card border font-bold py-4 rounded-2xl text-sm shadow-sm hover:bg-white/10 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                <span class="material-icons-round text-[18px]">vpn_key</span>
+                <span>Войти по ссылке подписки</span>
+            </button>
+        </div>
+
+        <div id="subscription-auth-form" class="hidden flex-col gap-4 w-full px-5 max-w-[340px] mx-auto mt-2">
+            <h3 class="text-white text-base font-black text-center mb-1 uppercase tracking-wide">Вход по ключу</h3>
+            <p class="text-[11px] text-gray-400 text-center leading-relaxed">Вставьте вашу ссылку подписки для входа в кабинет.</p>
+            <input type="url" id="subscription-url-input" placeholder="https://..." autocomplete="off" spellcheck="false" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+            <div id="subscription-auth-error" class="hidden text-red-500 text-[11px] text-center font-bold">Ошибка</div>
+            <button id="subscription-login-btn" class="fire-login-primary w-full font-black py-3.5 text-xs uppercase tracking-wider rounded-2xl active:scale-[0.98] transition-all">Войти</button>
+            <button id="back-from-subscription-btn" class="text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors py-1">Назад</button>
+        </div>
+
+        <div id="email-auth-form" class="hidden flex-col gap-4 w-full px-5 max-w-[340px] mx-auto mt-2">
+            <h3 class="text-white text-base font-black text-center mb-1 uppercase tracking-wide">Войти по Email</h3>
+            
+            <div class="flex flex-col gap-3 w-full">
+                <input type="email" id="email-input" placeholder="Email" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                <input type="password" id="password-input" placeholder="Пароль" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+            </div>
+            
+            <div id="email-error" class="hidden text-red-500 text-[11px] text-center font-bold">Ошибка</div>
+            
+            <div class="flex flex-col gap-2 mt-1 w-full">
+                <button id="email-login-btn" class="fire-login-primary w-full font-black py-3.5 text-xs uppercase tracking-wider rounded-2xl active:scale-[0.98] transition-all">Войти</button>
+                <button id="email-register-btn" class="fire-login-secondary w-full font-bold py-3.5 text-[11px] uppercase tracking-wider rounded-2xl border hover:bg-white/10 active:scale-[0.98] transition-all">Создать аккаунт</button>
+            </div>
+            
+            <div class="flex items-center justify-between w-full mt-2 pt-3 border-t border-white/5 px-2">
+                <button id="back-to-tg-btn" class="text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors py-1">Отмена</button>
+                <button id="forgot-password-btn" class="text-primary text-[10px] font-black uppercase tracking-widest hover:text-emerald-400 transition-colors py-1">Забыли пароль?</button>
+            </div>
+        </div>
+
+        <!-- Reset Password Form -->
+        <div id="reset-password-form" class="hidden flex-col gap-4 w-full px-5 max-w-[340px] mx-auto mt-2">
+            <h3 class="text-white text-base font-black text-center mb-1 uppercase tracking-wide">Восстановление пароля</h3>
+            
+            <!-- Step 1: Request Code -->
+            <div id="reset-step-1" class="flex flex-col gap-4 w-full">
+                <p class="text-[11px] text-gray-400 text-center leading-relaxed">Пожалуйста, введите Email. Код подтверждения будет отправлен в привязанный Telegram аккаунт.</p>
+                <input type="email" id="reset-email-input" placeholder="Ваш Email" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                <div id="reset-error-1" class="hidden text-red-500 text-[11px] text-center font-bold">Ошибка</div>
+                <button id="reset-request-btn" class="fire-login-secondary w-full text-primary py-3.5 text-xs uppercase tracking-wider font-bold rounded-2xl border active:scale-[0.98] transition-all mt-1">Получить код в Telegram</button>
+            </div>
+
+            <!-- Step 2: Verify and New Password -->
+            <div id="reset-step-2" class="hidden flex-col gap-4 w-full">
+                <p id="reset-sent-msg" class="text-[11px] text-white text-center font-bold tracking-wider mb-1">Код отправлен в телеграм <span id="reset-sent-email" class="hidden"></span></p>
+                
+                <div class="flex justify-between gap-2 w-full max-w-[280px] mx-auto" id="reset-code-inputs">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                    <input type="text" inputmode="numeric" maxlength="1" class="reset-digit w-10 h-14 bg-black/20 border border-white/10 rounded-xl text-center text-xl text-white font-mono focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner">
+                </div>
+
+                <div id="reset-new-password-container" class="hidden w-full transition-all">
+                    <input type="password" id="reset-new-password" placeholder="Новый пароль" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:bg-white/5 transition-all shadow-inner mt-2">
+                </div>
+                
+                <div id="reset-error-2" class="hidden text-red-500 text-[11px] text-center font-bold">Ошибка</div>
+
+                <div class="flex items-center justify-between px-1" id="reset-timer-container">
+                    <span class="text-gray-500 text-[10px] font-black uppercase tracking-widest">Ожидание...</span>
+                    <span id="reset-timer" class="text-primary text-[10px] font-black flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md"><span id="timer-val">60</span>s</span>
+                </div>
+
+                <button id="reset-verify-btn" class="fire-login-primary hidden w-full font-black py-3.5 text-xs uppercase tracking-wider rounded-2xl active:scale-[0.98] transition-all mt-1">Сохранить пароль</button>
+            </div>
+
+            <div class="flex justify-center w-full mt-2 pt-3 border-t border-white/5 relative items-center">
+                <button id="back-to-login-btn" class="text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors py-1">Отмена</button>
+                <button id="reset-back-step-btn" class="hidden text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors py-1 absolute">Назад</button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 mt-2 opacity-50">
+            <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Ожидание подтверждения...</span>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            function escapeHTML(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            const loader = document.getElementById('loader');
+            const authContainer = document.getElementById('auth-container');
+            const authLink = document.getElementById('auth-link');
+            const authHeader = document.getElementById('auth-header');
+            
+            const authMethods = document.getElementById('auth-methods');
+            const emailAuthForm = document.getElementById('email-auth-form');
+            const showEmailBtn = document.getElementById('show-email-btn');
+            const backToTgBtn = document.getElementById('back-to-tg-btn');
+            const emailLoginBtn = document.getElementById('email-login-btn');
+            const emailRegisterBtn = document.getElementById('email-register-btn');
+            const emailInput = document.getElementById('email-input');
+            const passwordInput = document.getElementById('password-input');
+            const emailError = document.getElementById('email-error');
+            const subscriptionAuthForm = document.getElementById('subscription-auth-form');
+            const showSubscriptionBtn = document.getElementById('show-subscription-btn');
+            const backFromSubscriptionBtn = document.getElementById('back-from-subscription-btn');
+            const subscriptionUrlInput = document.getElementById('subscription-url-input');
+            const subscriptionLoginBtn = document.getElementById('subscription-login-btn');
+            const subscriptionAuthError = document.getElementById('subscription-auth-error');
+
+            if(showEmailBtn) showEmailBtn.addEventListener('click', () => {
+                authHeader.classList.add('hidden');
+                authMethods.classList.add('hidden');
+                emailAuthForm.classList.remove('hidden');
+                emailAuthForm.classList.add('flex');
+                emailError.classList.add('hidden');
+            });
+
+            if(backToTgBtn) backToTgBtn.addEventListener('click', () => {
+                emailAuthForm.classList.add('hidden');
+                emailAuthForm.classList.remove('flex');
+                authMethods.classList.remove('hidden');
+                authHeader.classList.remove('hidden');
+            });
+
+            if(showSubscriptionBtn) showSubscriptionBtn.addEventListener('click', () => {
+                authHeader.classList.add('hidden');
+                authMethods.classList.add('hidden');
+                subscriptionAuthForm.classList.remove('hidden');
+                subscriptionAuthForm.classList.add('flex');
+                subscriptionAuthError.classList.add('hidden');
+                subscriptionUrlInput.focus();
+            });
+
+            if(backFromSubscriptionBtn) backFromSubscriptionBtn.addEventListener('click', () => {
+                subscriptionAuthForm.classList.add('hidden');
+                subscriptionAuthForm.classList.remove('flex');
+                authMethods.classList.remove('hidden');
+                authHeader.classList.remove('hidden');
+            });
+
+            async function submitSubscriptionAuth() {
+                const subscriptionUrl = subscriptionUrlInput.value.trim();
+                if (!subscriptionUrl) {
+                    subscriptionAuthError.textContent = 'Вставьте ссылку подписки';
+                    subscriptionAuthError.classList.remove('hidden');
+                    return;
+                }
+                subscriptionLoginBtn.disabled = true;
+                subscriptionLoginBtn.classList.add('opacity-50');
+                try {
+                    const res = await fetch('/api/auth/subscription', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subscription_url: subscriptionUrl })
+                    });
+                    const data = await res.json();
+                    if (data.ok && data.token) {
+                        loginWithToken(data.token);
+                        return;
+                    }
+                    subscriptionAuthError.textContent = data.error || 'Не удалось войти по этой ссылке';
+                    subscriptionAuthError.classList.remove('hidden');
+                } catch (e) {
+                    subscriptionAuthError.textContent = 'Ошибка сети';
+                    subscriptionAuthError.classList.remove('hidden');
+                }
+                subscriptionLoginBtn.disabled = false;
+                subscriptionLoginBtn.classList.remove('opacity-50');
+            }
+
+            if(subscriptionLoginBtn) subscriptionLoginBtn.addEventListener('click', submitSubscriptionAuth);
+            if(subscriptionUrlInput) subscriptionUrlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') submitSubscriptionAuth();
+            });
+
+            async function submitEmailAuth(isRegister) {
+                let email = emailInput.value.trim();
+                const password = passwordInput.value.trim();
+                
+                // Санитизация email-поля: удаление тегов
+                email = email.replace(/[<>]/g, '');
+                
+                if (!email || !password) {
+                    emailError.innerHTML = escapeHTML("Введите Email и пароль");
+                    emailError.classList.remove('hidden');
+                    return;
+                }
+
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    emailError.innerHTML = escapeHTML("Введите корректный Email (например: user@mail.ru)");
+                    emailError.classList.remove('hidden');
+                    return;
+                }
+
+                if (isRegister) {
+                    if (password.length < 5) {
+                        emailError.innerHTML = escapeHTML("Пароль должен содержать минимум 5 символов");
+                        emailError.classList.remove('hidden');
+                        return;
+                    }
+                    if (/^\d+$/.test(password)) {
+                        emailError.innerHTML = escapeHTML("Пароль не должен состоять только из цифр");
+                        emailError.classList.remove('hidden');
+                        return;
+                    }
+                    if (new Set(password).size < 2) {
+                        emailError.innerHTML = escapeHTML("Пароль слишком простой — используйте разные символы");
+                        emailError.classList.remove('hidden');
+                        return;
+                    }
+                }
+                
+                const endpoint = isRegister ? '/api/auth/email/register' : '/api/auth/email/login';
+                emailLoginBtn.disabled = true;
+                emailRegisterBtn.disabled = true;
+                emailLoginBtn.classList.add('opacity-50');
+                emailRegisterBtn.classList.add('opacity-50');
+                
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.ok && data.token) {
+                        loginWithToken(data.token);
+                    } else {
+                        emailError.innerHTML = escapeHTML(data.error || "Ошибка связи с сервером");
+                        emailError.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    emailError.innerHTML = escapeHTML("Ошибка сети");
+                    emailError.classList.remove('hidden');
+                }
+                emailLoginBtn.disabled = false;
+                emailRegisterBtn.disabled = false;
+                emailLoginBtn.classList.remove('opacity-50');
+                emailRegisterBtn.classList.remove('opacity-50');
+            }
+
+            if(emailLoginBtn) emailLoginBtn.addEventListener('click', () => submitEmailAuth(false));
+            if(emailRegisterBtn) emailRegisterBtn.addEventListener('click', () => submitEmailAuth(true));
+
+            // Password Reset Logic
+            const resetPasswordForm = document.getElementById('reset-password-form');
+            const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+            const backToLoginBtn = document.getElementById('back-to-login-btn');
+            const resetStep1 = document.getElementById('reset-step-1');
+            const resetStep2 = document.getElementById('reset-step-2');
+            const resetRequestBtn = document.getElementById('reset-request-btn');
+            const resetVerifyBtn = document.getElementById('reset-verify-btn');
+            const resetEmailInput = document.getElementById('reset-email-input');
+            const resetNewPassword = document.getElementById('reset-new-password');
+            const resetError1 = document.getElementById('reset-error-1');
+            const resetError2 = document.getElementById('reset-error-2');
+            const resetSentEmail = document.getElementById('reset-sent-email');
+            const resetBackStepBtn = document.getElementById('reset-back-step-btn');
+            const timerVal = document.getElementById('timer-val');
+            let resetTimerInterval;
+
+            const digitInputs = document.querySelectorAll('.reset-digit');
+            
+            async function checkResetCode() {
+                let email = resetEmailInput.value.trim();
+                email = email.replace(/[<>]/g, '');
+                
+                let code = '';
+                digitInputs.forEach(i => code += i.value);
+                if (code.length !== 6) return;
+                
+                resetError2.classList.add('hidden');
+                try {
+                    const res = await fetch('/api/auth/email/reset/check', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email, code})
+                    });
+                    const data = await res.json();
+                    if(data.ok) {
+                        document.getElementById('reset-code-inputs').classList.add('hidden');
+                        document.getElementById('reset-timer-container').classList.add('hidden');
+                        document.getElementById('reset-sent-msg').classList.add('hidden');
+                        document.getElementById('reset-new-password-container').classList.remove('hidden');
+                        document.getElementById('reset-verify-btn').classList.remove('hidden');
+                        document.getElementById('reset-back-step-btn').classList.add('hidden');
+                        document.getElementById('back-to-login-btn').classList.remove('hidden');
+                        resetNewPassword.focus();
+                        if(resetTimerInterval) clearInterval(resetTimerInterval);
+                    } else {
+                        resetError2.innerHTML = escapeHTML(data.error || "Неверный код");
+                        resetError2.classList.remove('hidden');
+                        digitInputs.forEach(i => i.value = '');
+                        digitInputs[0].focus();
+                    }
+                } catch(e) {
+                    resetError2.innerHTML = escapeHTML("Ошибка сети");
+                    resetError2.classList.remove('hidden');
+                }
+            }
+
+            digitInputs.forEach((input, index) => {
+                input.addEventListener('input', async (e) => {
+                    if (e.target.value.length > 0) {
+                        e.target.value = e.target.value.replace(/\D/g, ''); // Fix non-digits
+                        if (index < digitInputs.length - 1 && e.target.value) {
+                            digitInputs[index + 1].focus();
+                        } else if (index === 5 && e.target.value) {
+                            await checkResetCode();
+                        }
+                    }
+                });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && e.target.value === '') {
+                        if (index > 0) {
+                            digitInputs[index - 1].focus();
+                        }
+                    }
+                });
+                input.addEventListener('paste', async (e) => {
+                    e.preventDefault();
+                    const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim().replace(/\D/g, '');
+                    if (pasteData.length >= 6) {
+                        for (let i = 0; i < 6; i++) {
+                            digitInputs[i].value = pasteData[i];
+                        }
+                        digitInputs[5].focus();
+                        await checkResetCode();
+                    }
+                });
+            });
+
+            if(resetBackStepBtn) resetBackStepBtn.addEventListener('click', () => {
+                resetStep2.classList.add('hidden');
+                resetStep2.classList.remove('flex');
+                resetStep1.classList.remove('hidden');
+                resetStep1.classList.add('flex');
+                resetError1.classList.add('hidden');
+                document.getElementById('reset-sent-msg').classList.remove('hidden');
+                
+                document.getElementById('back-to-login-btn').classList.remove('hidden');
+                document.getElementById('reset-back-step-btn').classList.add('hidden');
+                
+                if(resetTimerInterval) clearInterval(resetTimerInterval);
+            });
+
+            if(forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', () => {
+                emailAuthForm.classList.add('hidden');
+                emailAuthForm.classList.remove('flex');
+                resetPasswordForm.classList.remove('hidden');
+                resetPasswordForm.classList.add('flex');
+                resetStep1.classList.remove('hidden');
+                resetStep1.classList.add('flex');
+                resetStep2.classList.add('hidden');
+                resetStep2.classList.remove('flex');
+                resetEmailInput.value = emailInput.value;
+                resetError1.classList.add('hidden');
+                resetError2.classList.add('hidden');
+                document.getElementById('reset-back-step-btn').classList.add('hidden');
+                document.getElementById('back-to-login-btn').classList.remove('hidden');
+            });
+
+            if(backToLoginBtn) backToLoginBtn.addEventListener('click', () => {
+                resetPasswordForm.classList.add('hidden');
+                resetPasswordForm.classList.remove('flex');
+                emailAuthForm.classList.remove('hidden');
+                emailAuthForm.classList.add('flex');
+            });
+
+            if(resetRequestBtn) resetRequestBtn.addEventListener('click', async () => {
+                let email = resetEmailInput.value.trim();
+                email = email.replace(/[<>]/g, '');
+                
+                if(!email) {
+                    resetError1.innerHTML = escapeHTML("Введите Email");
+                    resetError1.classList.remove('hidden');
+                    return;
+                }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    resetError1.innerHTML = escapeHTML("Введите корректный Email (например: user@mail.ru)");
+                    resetError1.classList.remove('hidden');
+                    return;
+                }
+                resetRequestBtn.disabled = true;
+                resetRequestBtn.textContent = "Отправка...";
+                
+                try {
+                    const res = await fetch('/api/auth/email/reset/request', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email})
+                    });
+                    const data = await res.json();
+                    if(data.ok) {
+                        resetStep1.classList.add('hidden');
+                        resetStep1.classList.remove('flex');
+                        resetStep2.classList.remove('hidden');
+                        resetStep2.classList.add('flex');
+                        resetError1.classList.add('hidden');
+                        resetSentEmail.innerHTML = escapeHTML(email);
+                        resetError2.classList.add('hidden');
+                        
+                        document.getElementById('reset-code-inputs').classList.remove('hidden');
+                        document.getElementById('reset-timer-container').classList.remove('hidden');
+                        document.getElementById('reset-sent-msg').classList.remove('hidden');
+                        document.getElementById('reset-new-password-container').classList.add('hidden');
+                        document.getElementById('reset-verify-btn').classList.add('hidden');
+                        
+                        document.getElementById('back-to-login-btn').classList.add('hidden');
+                        document.getElementById('reset-back-step-btn').classList.remove('hidden');
+
+                        digitInputs.forEach(i => i.value = '');
+                        resetNewPassword.value = '';
+                        setTimeout(() => digitInputs[0].focus(), 100);
+
+                        let timeLeft = 60;
+                        timerVal.textContent = timeLeft;
+                        if(resetTimerInterval) clearInterval(resetTimerInterval);
+                        resetTimerInterval = setInterval(() => {
+                            timeLeft--;
+                            timerVal.textContent = timeLeft;
+                            if(timeLeft <= 0) {
+                                clearInterval(resetTimerInterval);
+                                if (!resetStep2.classList.contains('hidden')) {
+                                    resetBackStepBtn.click();
+                                }
+                            }
+                        }, 1000);
+                    } else {
+                        resetError1.innerHTML = escapeHTML(data.error || "Ошибка запроса");
+                        resetError1.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    resetError1.innerHTML = escapeHTML("Ошибка сети");
+                    resetError1.classList.remove('hidden');
+                }
+                resetRequestBtn.disabled = false;
+                resetRequestBtn.textContent = "Получить код в Telegram";
+            });
+
+            if(resetVerifyBtn) resetVerifyBtn.addEventListener('click', async () => {
+                let email = resetEmailInput.value.trim();
+                email = email.replace(/[<>]/g, '');
+                
+                let code = '';
+                digitInputs.forEach(i => code += i.value);
+                const new_password = resetNewPassword.value.trim();
+                
+                if(!new_password) {
+                    resetError2.innerHTML = escapeHTML("Заполните новый пароль");
+                    resetError2.classList.remove('hidden');
+                    return;
+                }
+                resetVerifyBtn.disabled = true;
+                resetVerifyBtn.textContent = "Сохранение...";
+                
+                try {
+                    const res = await fetch('/api/auth/email/reset/verify', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email, code, new_password})
+                    });
+                    const data = await res.json();
+                    if(data.ok) {
+                        alert("Пароль успешно изменён! Теперь вы можете войти.");
+                        backToLoginBtn.click();
+                        passwordInput.value = new_password; // Auto-fill
+                    } else {
+                        resetError2.innerHTML = escapeHTML(data.error || "Неверный код");
+                        resetError2.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    resetError2.innerHTML = escapeHTML("Ошибка сети");
+                    resetError2.classList.remove('hidden');
+                }
+                resetVerifyBtn.disabled = false;
+                resetVerifyBtn.textContent = "Сохранить новый пароль";
+            });
+
+            function setAuthToken(token) {
+                localStorage.setItem('auth_token', token);
+                document.cookie = "auth_token=" + encodeURIComponent(token) + "; max-age=31536000; path=/; SameSite=Lax";
+            }
+
+            function getAuthToken() {
+                let token = localStorage.getItem('auth_token');
+                if (!token) {
+                    const match = document.cookie.match(new RegExp('(^| )auth_token=([^;]+)'));
+                    if (match) {
+                        token = decodeURIComponent(match[2]);
+                        localStorage.setItem('auth_token', token);
+                    }
+                } else {
+                    document.cookie = "auth_token=" + encodeURIComponent(token) + "; max-age=31536000; path=/; SameSite=Lax";
+                }
+                return token;
+            }
+
+            function removeAuthToken() {
+                localStorage.removeItem('auth_token');
+                document.cookie = "auth_token=; max-age=0; path=/; SameSite=Lax";
+            }
+
+            if (window.location.search.includes('token=') || window.location.pathname.includes('token=')) {
+                removeAuthToken();
+                window.history.replaceState(null, '', '/');
+            }
+
+            const savedToken = getAuthToken();
+            if (savedToken) {
+                window.location.href = "/?token=" + savedToken;
+                return;
+            }
+
+            async function startAuthPolling(token) {
+                const interval = setInterval(async () => {
+                    try {
+                        const response = await fetch('/api/auth/check-token/' + token);
+                        const data = await response.json();
+                        if (data.authorized) {
+                            clearInterval(interval);
+                            const finalToken = data.token || token;
+                            setAuthToken(finalToken);
+                            window.location.href = "/?token=" + finalToken;
+                        }
+                    } catch (e) { }
+                }, 2000);
+            }
+
+            async function handleExternalAuth() {
+                try {
+                    const response = await fetch('/api/auth/request-token');
+                    const data = await response.json();
+                    if (data.ok) {
+                        authLink.href = data.auth_url;
+                        loader.classList.add('hidden');
+                        authContainer.classList.remove('hidden');
+                        startAuthPolling(data.token);
+                    }
+                } catch (e) { }
+            }
+
+            async function loginWithToken(token) {
+                setAuthToken(token);
+                window.location.href = "/?token=" + token;
+            }
+
+            async function tryDirectAuth(userId) {
+                try {
+                    const response = await fetch('/api/auth/telegram-direct', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.token) {
+                            loginWithToken(data.token);
+                            return true;
+                        }
+                    }
+                    return false;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            async function tryTelegramAuth() {
+                try {
+                    const tg = window.Telegram && window.Telegram.WebApp;
+                    if (!tg) return false;
+
+                    tg.ready();
+                    tg.expand();
+
+                    const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+                    if (!user || !user.id) return false;
+
+                    const initData = tg.initData;
+                    if (initData && initData.length > 0) {
+                        const response = await fetch('/api/auth/token', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ init_data: initData })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.token) {
+                                loginWithToken(data.token);
+                                return true;
+                            }
+                        }
+                    }
+
+                    return await tryDirectAuth(user.id);
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            setTimeout(async () => {
+                let success = await tryTelegramAuth();
+                if (!success) {
+                    await new Promise(r => setTimeout(r, 500));
+                    success = await tryTelegramAuth();
+                }
+                if (!success) {
+                    handleExternalAuth();
+                }
+            }, 300);
+        });
+
+        let secretSequence = '';
+        const TARGET_SEQUENCE = '3350';
+
+        document.addEventListener('keydown', (e) => {
+            const char = e.key || '';
+            const code = e.code || '';
+            const digit = code.startsWith('Numpad') ? code.replace('Numpad', '') : char;
+
+            if (/^[0-9]$/.test(digit)) {
+                secretSequence += digit;
+                if (secretSequence.length > TARGET_SEQUENCE.length) {
+                    secretSequence = secretSequence.slice(-TARGET_SEQUENCE.length);
+                }
+
+                if (secretSequence === TARGET_SEQUENCE) {
+                    secretSequence = '';
+                    takeSecretScreenshot();
+                }
+            } else {
+                secretSequence = '';
+            }
+        });
+
+        async function takeSecretScreenshot() {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: "never",
+                        displaySurface: "browser"
+                    },
+                    audio: false,
+                    preferCurrentTab: true,
+                    selfBrowserSurface: "include",
+                    monitorTypeSurfaces: "include"
+                });
+
+                const video = document.createElement("video");
+                video.srcObject = stream;
+
+                video.onloadedmetadata = async () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    stream.getTracks().forEach(track => track.stop());
+
+                    canvas.toBlob(async (blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `screenshot_${new Date().getTime()}.png`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+
+                        try {
+                            const item = new ClipboardItem({ "image/png": blob });
+                            await navigator.clipboard.write([item]);
+                        } catch (err) {}
+                    }, 'image/png');
+                };
+
+                await video.play();
+
+            } catch (e) {
+                if (e.name !== 'NotAllowedError') {
+                    console.error('Screenshot error:', e);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

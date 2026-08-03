@@ -14,6 +14,8 @@ class BanMiddleware(BaseMiddleware):
         user = data.get('event_from_user')
         if not user:
             return await handler(event, data)
+        if user.is_bot:
+            return
 
         user_data = get_user(user.id)
         if user_data and user_data.get('is_banned'):

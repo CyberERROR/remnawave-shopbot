@@ -162,6 +162,7 @@ def create_admin_user_actions_keyboard(user_id: int, is_banned: bool | None = No
     builder.button(text="➖ Списать баланс", callback_data=f"admin_deduct_balance_{user_id}")
     builder.button(text="🎁 Выдать ключ", callback_data=f"admin_gift_key_{user_id}")
     builder.button(text="🤝 Рефералы пользователя", callback_data=f"admin_user_referrals_{user_id}")
+    builder.button(text="🔗 Отвязать рефералов", callback_data=f"admin_detach_referrals_{user_id}")
     if is_banned is True:
         builder.button(text="✅ Разбанить", callback_data=f"admin_unban_user_{user_id}")
     else:
@@ -170,7 +171,7 @@ def create_admin_user_actions_keyboard(user_id: int, is_banned: bool | None = No
     builder.button(text="⬅️ К списку", callback_data="admin_users")
     builder.button(text="⬅️ В админ-меню", callback_data="admin_menu")
 
-    builder.adjust(2, 2, 2, 2, 1)
+    builder.adjust(2, 2, 2, 2, 1, 1)
     return builder.as_markup()
 
 def create_admin_user_keys_keyboard(user_id: int, keys: list[dict]) -> InlineKeyboardMarkup:

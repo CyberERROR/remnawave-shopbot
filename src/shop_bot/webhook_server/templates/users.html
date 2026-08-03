@@ -617,6 +617,12 @@
                                     </span>
                                 </div>
 
+                                <button id="udm-detach-referrals" type="button"
+                                    class="mb-3 w-full py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 hover:text-red-200 transition-all flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">link_off</span>
+                                    Отвязать рефералов
+                                </button>
+
                                 <div class="custom-scroll pr-1 -mr-1 overflow-y-auto h-[222px]">
                                     <ul id="udm-referrals-list" class="space-y-2 pb-2"></ul>
                                 </div>
@@ -2003,6 +2009,24 @@
                 };
                 openModal('banConfirmModal');
             }
+        });
+
+        document.getElementById('udm-detach-referrals')?.addEventListener('click', async function () {
+            const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+            if (!uid || !confirm('Отвязать всех рефералов от этого пользователя? Пользователи не будут удалены.')) return;
+
+            const data = await apiRequest(
+                `{{ url_for('detach_user_referrals_route', user_id=0) }}`.replace('/0/', `/${uid}/`),
+                'POST',
+                {},
+                'Рефералы отвязаны'
+            );
+            if (!data) return;
+
+            document.getElementById('udm-referrals-list').innerHTML = '';
+            document.getElementById('udm-ref-count').textContent = '0';
+            document.getElementById('udm-refs-total').textContent = '0';
+            document.getElementById('udm-ref-count-badge').classList.add('hidden');
         });
 
         document.getElementById('udm-balance-edit')?.addEventListener('click', async function () {

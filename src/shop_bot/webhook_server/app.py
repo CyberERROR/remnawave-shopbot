@@ -60,7 +60,7 @@ from shop_bot.data_manager.remnawave_repository import (
     update_host_url, update_host_name, update_host_ssh_settings, get_latest_speedtest, get_speedtests,
     update_host_description, update_host_traffic_settings,
     get_all_keys, get_keys_for_user, delete_key_by_id, update_key_comment,
-    get_balance, adjust_user_balance, get_referrals_for_user, log_transaction,
+    get_balance, adjust_user_balance, get_referrals_for_user, detach_referrals_from_user, log_transaction,
 
     get_users_paginated, get_keys_counts_for_users,
 
@@ -980,6 +980,17 @@ def create_webhook_app(bot_controller_instance):
             refs = get_referrals_for_user(user_id) or []
             return jsonify({"ok": True, "items": refs, "count": len(refs)})
         except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+
+    @flask_app.route('/users/<int:user_id>/referrals/detach', methods=['POST'])
+    @login_required
+    def detach_user_referrals_route(user_id: int):
+        try:
+            detached_count = detach_referrals_from_user(user_id)
+            return jsonify({"ok": True, "detached_count": detached_count})
+        except Exception as e:
+            logger.error("Failed to detach referrals for user %s: %s", user_id, e)
             return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -3357,8 +3368,9 @@ def create_webhook_app(bot_controller_instance):
             hwid_limit = int(request.form.get('hwid_limit') or 0)
             traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
             
-            button_style = (request.form.get('button_style') or '').strip() or None
-            icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip() or None
+            current_plan = get_plan_by_id(plan_id)
+            button_style = (request.form.get('button_style') or '').strip() if 'button_style' in request.form else (current_plan or {}).get('button_style')
+            icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip() if 'icon_emoji_id' in request.form else (current_plan or {}).get('icon_emoji_id')
             new_plan_id = create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb, button_style=button_style, icon_emoji_id=icon_emoji_id)
             
             wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'

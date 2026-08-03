@@ -37,6 +37,7 @@ from shop_bot.data_manager.remnawave_repository import (
     get_referral_count,
     get_referral_balance_all,
     get_referrals_for_user,
+    detach_referrals_from_user,
     create_promo_code,
     list_promo_codes,
     update_promo_code_status,
@@ -1960,6 +1961,25 @@ def get_admin_router() -> Router:
             await callback.message.edit_text(text, reply_markup=kb.as_markup())
         except Exception:
             await callback.message.answer(text, reply_markup=kb.as_markup())
+
+    @admin_router.callback_query(F.data.startswith("admin_detach_referrals_"))
+    async def admin_detach_referrals(callback: types.CallbackQuery):
+        if not is_admin(callback.from_user.id):
+            await callback.answer("У вас нет прав.", show_alert=True)
+            return
+        try:
+            user_id = int(callback.data.split("_")[-1])
+        except ValueError:
+            await callback.answer("Неверный формат user_id", show_alert=True)
+            return
+        detached_count = detach_referrals_from_user(user_id)
+        await callback.answer(f"Отвязано рефералов: {detached_count}", show_alert=True)
+        await callback.message.edit_reply_markup(
+            reply_markup=keyboards.create_admin_user_actions_keyboard(
+                user_id,
+                (get_user(user_id) or {}).get("is_banned"),
+            )
+        )
 
     @admin_router.callback_query(F.data.startswith("admin_edit_key_"))
     async def admin_edit_key(callback: types.CallbackQuery):

@@ -1,4 +1,7 @@
 import logging
+import json
+from pathlib import Path
+import uuid
 from aiogram import Bot, Router, F, types, html
 from aiogram.types import FSInputFile
 import os
@@ -28,6 +31,7 @@ from shop_bot.data_manager.remnawave_repository import (
     ban_user,
     unban_user,
 )
+from shop_bot.data_manager.database import DB_FILE
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +116,67 @@ def get_support_router() -> Router:
 
     def _extract_content(message: types.Message) -> str:
         text = (message.text or message.caption or "").strip()
-        if message.photo: return f"[Фото] {text}".strip()
-        if message.video: return f"[Видео] {text}".strip()
+        media_labels = (
+            (message.photo, "Фото"),
+            (message.video, "Видео"),
+            (message.animation, "Анимация"),
+            (message.voice, "Голосовое сообщение"),
+            (message.video_note, "Видеосообщение"),
+            (message.document, "Документ"),
+            (message.audio, "Аудио"),
+            (message.sticker, "Стикер"),
+        )
+        for media, label in media_labels:
+            if media:
+                return f"[{label}] {text}".strip()
         return text
+
+    def _get_message_media(message: types.Message):
+        if message.photo:
+            return message.photo[-1], "photo", ".jpg"
+        if message.video:
+            return message.video, "video", ".mp4"
+        if message.animation:
+            return message.animation, "animation", ".gif"
+        if message.voice:
+            return message.voice, "voice", ".ogg"
+        if message.video_note:
+            return message.video_note, "video_note", ".mp4"
+        if message.document:
+            return message.document, "document", Path(message.document.file_name or "").suffix or ".bin"
+        if message.audio:
+            return message.audio, "audio", Path(message.audio.file_name or "").suffix or ".mp3"
+        if message.sticker:
+            extension = ".tgs" if message.sticker.is_animated else ".webm" if message.sticker.is_video else ".webp"
+            return message.sticker, "sticker", extension
+        return None
+
+    async def _save_support_media(bot: Bot, message: types.Message, ticket_id: int) -> str | None:
+        media_info = _get_message_media(message)
+        if not media_info:
+            return None
+
+        media, media_type, extension = media_info
+        media_root = Path(os.environ.get("SHOPBOT_SUPPORT_MEDIA_DIR", DB_FILE.parent / "support_media"))
+        relative_path = Path(str(ticket_id)) / f"{uuid.uuid4().hex}{extension.lower()}"
+        destination = media_root / relative_path
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            await bot.download(media, destination=destination)
+        except Exception as e:
+            logger.warning(f"Не удалось сохранить вложение тикета {ticket_id}: {e}")
+            return None
+
+        metadata = {
+            "type": media_type,
+            "path": relative_path.as_posix(),
+            "file_id": media.file_id,
+            "file_unique_id": media.file_unique_id,
+            "file_name": getattr(media, "file_name", None),
+            "mime_type": getattr(media, "mime_type", None),
+            "file_size": getattr(media, "file_size", None),
+        }
+        return json.dumps({key: value for key, value in metadata.items() if value is not None}, ensure_ascii=True)
 
     def _support_contact_markup() -> types.InlineKeyboardMarkup | None:
         support = (get_setting("support_bot_username") or get_setting("support_user") or "").strip()
@@ -357,9 +419,9 @@ def get_support_router() -> Router:
                  await bot.copy_message(
                     chat_id=user_id,
                     from_chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    caption=full_text
-                )
+                    message_id=message.message_id
+                 )
+                 await bot.send_message(chat_id=user_id, text=full_text)
         except Exception as e:
             logger.warning(f"Failed to send reply to user {user_id}: {e}")
             raise e
@@ -492,7 +554,8 @@ def get_support_router() -> Router:
 
     async def _process_ticket_message_flow(bot: Bot, message: types.Message, state: FSMContext, ticket_id: int, subject: str, created_new: bool):
         content = _extract_content(message)
-        add_support_message(ticket_id, sender="user", content=content)
+        media = await _save_support_media(bot, message, ticket_id)
+        add_support_message(ticket_id, sender="user", content=content, media=media)
         
         forum_chat_id, thread_id = await _ensure_forum_topic(bot, ticket_id, subject, message.from_user)
         if forum_chat_id and thread_id:
@@ -813,9 +876,10 @@ def get_support_router() -> Router:
                 pass
             if not (is_admin_by_setting or is_admin_in_chat):
                 return
-            content = (message.text or message.caption or "").strip()
+            content = _extract_content(message)
+            media = await _save_support_media(bot, message, int(ticket['ticket_id']))
             if content:
-                add_support_message(ticket_id=int(ticket['ticket_id']), sender='admin', content=content)
+                add_support_message(ticket_id=int(ticket['ticket_id']), sender='admin', content=content, media=media)
             await _send_admin_reply_to_user(bot, user_id, int(ticket['ticket_id']), message, content)
         except Exception as e:
             logger.warning(f"Не удалось передать сообщение темы форума: {e}")
@@ -980,7 +1044,7 @@ def get_support_router() -> Router:
             await state.clear()
             return
             
-        content = (message.text or message.caption or "").strip()
+        content = _extract_content(message)
         if not content:
             await message.answer("⚠️ <b>Сообщение не может быть пустым.</b>")
             return
@@ -993,7 +1057,8 @@ def get_support_router() -> Router:
 
         user_id = int(ticket['user_id'])
         
-        add_support_message(ticket_id=ticket_id, sender='admin', content=content)
+        media = await _save_support_media(bot, message, ticket_id)
+        add_support_message(ticket_id=ticket_id, sender='admin', content=content, media=media)
         
         try:
             await _send_admin_reply_to_user(bot, user_id, ticket_id, message, content)

@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 from aiogram.types import FSInputFile
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, TelegramAPIError
 from shop_bot.data_manager import remnawave_repository as rw_repo
+from shop_bot.webapp.themes import get_available_webapp_themes, resolve_webapp_theme
 
 logger = logging.getLogger(__name__)
 
@@ -441,8 +442,10 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def other_page():
         common_data = get_common_template_data()
         webapp = rw_repo.get_webapp_settings()
+        available_webapp_themes = get_available_webapp_themes()
+        active_webapp_theme = resolve_webapp_theme(webapp)
         ssh_targets = rw_repo.get_all_ssh_targets()
-        return render_template('other.html', webapp=webapp, ssh_targets=ssh_targets, **common_data)
+        return render_template('other.html', webapp=webapp, ssh_targets=ssh_targets, available_webapp_themes=available_webapp_themes, active_webapp_theme=active_webapp_theme, **common_data)
     # ===== Конец роута other_page =====
 
     # ===== СОХРАНЕНИЕ НАСТРОЕК WEBAPP =====
@@ -454,13 +457,17 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             tg_fullscreen = request.form.get('tg_fullscreen') == 'true'
             title = request.form.get('title', '').strip()
             domen = request.form.get('domen', '').strip()
+            theme = request.form.get('theme', '').strip()
             logo = request.form.get('logo', '').strip()
             icon = request.form.get('icon', '').strip()
+            available_themes = get_available_webapp_themes()
+            theme = theme if theme in available_themes else (available_themes[0] if available_themes else '')
             
             rw_repo.update_webapp_settings(
                 webapp_title=title,
                 webapp_domen=domen,
                 webapp_enable=1 if enable else 0,
+                webapp_theme=theme,
                 webapp_logo=logo,
                 webapp_icon=icon,
                 tg_fullscreen=1 if tg_fullscreen else 0
@@ -1480,7 +1487,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def logs_history():
         try:
             lines_count = int(request.args.get('lines', 50))
-            lines_count = min(lines_count, 200) # Принудительное ограничение
+            lines_count = min(lines_count, 800) # Принудительное ограничение
             offset = int(request.args.get('offset', 0))
         except ValueError: return jsonify({'ok': False, 'error': 'Некорректные параметры'})
 
