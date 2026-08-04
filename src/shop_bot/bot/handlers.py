@@ -42,6 +42,8 @@ from shop_bot.data_manager.remnawave_repository import (
     get_next_key_number,
     create_payload_pending,
     get_pending_status,
+    get_pending_metadata,
+    get_pending_transaction_snapshot,
     find_and_complete_pending_transaction,
     get_user_keys,
     get_balance,
@@ -65,6 +67,8 @@ from shop_bot.data_manager.remnawave_repository import (
     is_admin,
     get_host,
     check_transaction_exists,
+    claim_telegram_star_charge,
+    set_telegram_star_charge_status,
     get_device_tiers,
     get_device_tier_by_id,
     redeem_universal_promo,
@@ -283,6 +287,8 @@ async def create_pending_payment(user_id: int, amount: float, payment_method: st
         "promo_discount": metadata_source.get("promo_discount"),
         "tier_device_count": metadata_source.get("tier_device_count"),
         "tier_price": metadata_source.get("tier_price"),
+        "stars_amount": metadata_source.get("stars_amount"),
+        "currency": metadata_source.get("currency"),
     }
     create_payload_pending(payment_id, user_id, float(amount), metadata)
     logger.info(f"Платеж: Создан ожидающий платеж {payment_id} для пользователя {user_id} на сумму {amount} ({action})")
@@ -601,6 +607,326 @@ def registration_required(f):
             else: await event.answer(message_text)
     return decorated_function
 # ===== Конец декоратора registration_required =====
+
+
+async def _refund_stars_payment(bot: Bot, user_id: int, charge_id: str, reason: str) -> bool:
+    """Refund a Stars charge that cannot be safely matched to an active order."""
+    try:
+        await bot.refund_star_payment(
+            user_id=user_id,
+            telegram_payment_charge_id=charge_id,
+        )
+        logger.warning("Stars Success: платеж пользователя %s возвращён: %s", user_id, reason)
+        try:
+            await bot.send_message(
+                user_id,
+                "↩️ <b>Платёж возвращён</b>\n"
+                "Этот счёт уже отменён или его данные устарели. Создайте новый счёт в боте.",
+            )
+        except Exception:
+            pass
+        return True
+    except Exception as exc:
+        logger.error(
+            "Stars Success: не удалось вернуть платёж пользователя %s: %s",
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        try:
+            await bot.send_message(
+                user_id,
+                "❌ Платёж получен, но не обработан автоматически. Обратитесь в поддержку.",
+            )
+        except Exception:
+            pass
+        return False
+
+
+async def _refund_claimed_stars_payment(bot: Bot, user_id: int, charge_id: str, reason: str) -> bool:
+    refunded = await _refund_stars_payment(bot, user_id, charge_id, reason)
+    final_status = "refunded" if refunded else "failed"
+    if not set_telegram_star_charge_status(charge_id, final_status, None if refunded else reason):
+        logger.error("Stars Success: не удалось сохранить итоговый статус charge пользователя %s", user_id)
+    return refunded
+
+
+async def _notify_stars_manual_review(bot: Bot, user_id: int) -> None:
+    try:
+        await bot.send_message(
+            user_id,
+            "⏳ <b>Платёж получен и отправлен на проверку</b>\n"
+            "Не оплачивайте счёт повторно. Поддержка проверит операцию вручную.",
+        )
+    except Exception:
+        pass
+
+
+async def _hold_claimed_stars_payment(bot: Bot, user_id: int, charge_id: str, reason: str) -> bool:
+    if not set_telegram_star_charge_status(charge_id, "failed", reason):
+        logger.error("Stars Success: не удалось оставить charge пользователя %s для ручной сверки", user_id)
+    logger.error("Stars Success: charge пользователя %s требует ручной сверки: %s", user_id, reason)
+    await _notify_stars_manual_review(bot, user_id)
+    return False
+
+
+def _stars_message_is_after_registry_start(message: types.Message) -> bool:
+    """Return False when a successful payment may predate the durable charge registry."""
+    try:
+        started_raw = get_setting("telegram_star_charge_registry_started_at")
+        message_date = getattr(message, "date", None)
+        if not started_raw or not isinstance(message_date, datetime):
+            return False
+        started_at = datetime.fromisoformat(str(started_raw).replace("Z", "+00:00"))
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        if message_date.tzinfo is None:
+            message_date = message_date.replace(tzinfo=timezone.utc)
+        return message_date.astimezone(timezone.utc) > started_at.astimezone(timezone.utc)
+    except (TypeError, ValueError):
+        return False
+
+
+async def _handle_stars_pre_checkout(pre_checkout_q: PreCheckoutQuery) -> bool:
+    """Reject invalid or uncertain Stars invoices before Telegram charges the user."""
+    payload = getattr(pre_checkout_q, "invoice_payload", None)
+    sender = getattr(pre_checkout_q, "from_user", None)
+    user_id = int(getattr(sender, "id", 0) or 0)
+    total_stars = int(getattr(pre_checkout_q, "total_amount", 0) or 0)
+
+    snapshot = None
+    snapshot_error = None
+    if payload:
+        try:
+            snapshot = get_pending_transaction_snapshot(payload)
+        except Exception as exc:
+            snapshot_error = exc
+            logger.error(
+                "Stars PreCheckout: ошибка чтения invoice пользователя %s: %s",
+                user_id,
+                type(exc).__name__,
+            )
+
+    metadata = snapshot.get("metadata") if snapshot else None
+    status = snapshot.get("status") if snapshot else None
+    error_message = None
+    if not payload:
+        error_message = "Счёт не найден. Создайте новый счёт в боте."
+    elif snapshot_error is not None:
+        error_message = "Не удалось проверить счёт. Повторите попытку позже."
+    elif snapshot is None or not metadata:
+        error_message = "Счёт не найден. Создайте новый счёт в боте."
+    elif status == "cancelled":
+        error_message = "Этот счёт отменён. Создайте новый счёт в боте."
+    elif status not in {"pending", "paid"}:
+        error_message = "Статус счёта недействителен. Создайте новый счёт в боте."
+    else:
+        try:
+            metadata_user_id = int(metadata.get("user_id") or 0)
+        except (TypeError, ValueError):
+            metadata_user_id = 0
+        if metadata_user_id != user_id:
+            error_message = "Этот счёт создан для другого пользователя."
+        elif metadata.get("payment_method") != "Telegram Stars":
+            error_message = "Для этого счёта выбран другой способ оплаты."
+        elif metadata.get("stars_amount") not in (None, ""):
+            try:
+                if int(metadata["stars_amount"]) != total_stars:
+                    error_message = "Сумма счёта изменилась. Создайте новый счёт в боте."
+            except (TypeError, ValueError):
+                error_message = "Счёт повреждён. Создайте новый счёт в боте."
+
+    try:
+        if error_message:
+            await pre_checkout_q.answer(ok=False, error_message=error_message)
+            logger.warning("Stars PreCheckout: платёж пользователя %s отклонён: %s", user_id, error_message)
+            return False
+        await pre_checkout_q.answer(ok=True)
+        return True
+    except Exception as exc:
+        logger.error("Stars PreCheckout: ошибка ответа Telegram для пользователя %s: %s", user_id, exc)
+        return False
+
+
+_STARS_USER_LOCKS: dict[int, asyncio.Lock] = {}
+
+
+async def _handle_stars_success_payment(message: types.Message, bot: Bot) -> bool:
+    sender = getattr(message, "from_user", None)
+    user_id = int(getattr(sender, "id", 0) or 0)
+    if user_id <= 0:
+        return await _process_stars_success_payment(message, bot)
+    lock = _STARS_USER_LOCKS.setdefault(user_id, asyncio.Lock())
+    async with lock:
+        return await _process_stars_success_payment(message, bot)
+
+
+async def _process_stars_success_payment(message: types.Message, bot: Bot) -> bool:
+    """Process a Telegram Stars payment using the unique charge id for idempotency."""
+    payment = getattr(message, "successful_payment", None)
+    sender = getattr(message, "from_user", None)
+    payload = getattr(payment, "invoice_payload", None)
+    charge_id = getattr(payment, "telegram_payment_charge_id", None)
+    total_stars = int(getattr(payment, "total_amount", 0) or 0)
+    user_id = int(getattr(sender, "id", 0) or 0)
+
+    if not payload or not charge_id or total_stars <= 0 or user_id <= 0:
+        logger.error("Stars Success: неполные данные successful_payment, обработка остановлена")
+        return False
+
+    if check_transaction_exists(charge_id):
+        logger.warning("Stars Success: повторный webhook для уже обработанного charge пользователя %s", user_id)
+        return True
+
+    claim_status = claim_telegram_star_charge(charge_id, payload, user_id, total_stars)
+    if claim_status == "error":
+        logger.error("Stars Success: результат claim пользователя %s неопределён; refund и услуга остановлены", user_id)
+        await _notify_stars_manual_review(bot, user_id)
+        return False
+    if claim_status != "claimed":
+        logger.warning(
+            "Stars Success: charge пользователя %s уже зарегистрирован со статусом %s",
+            user_id,
+            claim_status,
+        )
+        return True
+
+    try:
+        snapshot = get_pending_transaction_snapshot(payload)
+    except Exception as exc:
+        return await _hold_claimed_stars_payment(
+            bot,
+            user_id,
+            charge_id,
+            f"ошибка чтения invoice: {type(exc).__name__}",
+        )
+
+    pending_status = snapshot.get("status") if snapshot else None
+    metadata = snapshot.get("metadata") if snapshot else None
+
+    if not _stars_message_is_after_registry_start(message):
+        return await _hold_claimed_stars_payment(
+            bot,
+            user_id,
+            charge_id,
+            "successful_payment создан до инициализации charge registry",
+        )
+
+    if pending_status == "cancelled":
+        return await _refund_claimed_stars_payment(bot, user_id, charge_id, "invoice отменён")
+
+    if pending_status == "pending":
+        completed_metadata = find_and_complete_pending_transaction(payload)
+        if completed_metadata:
+            metadata = completed_metadata
+        else:
+            try:
+                refreshed = get_pending_transaction_snapshot(payload)
+            except Exception as exc:
+                return await _hold_claimed_stars_payment(
+                    bot,
+                    user_id,
+                    charge_id,
+                    f"ошибка повторного чтения invoice: {type(exc).__name__}",
+                )
+            if refreshed and refreshed.get("status") == "paid" and refreshed.get("metadata"):
+                pending_status = "paid"
+                metadata = refreshed["metadata"]
+            else:
+                return await _hold_claimed_stars_payment(
+                    bot,
+                    user_id,
+                    charge_id,
+                    "pending invoice не удалось атомарно завершить",
+                )
+    elif pending_status == "paid":
+        if not metadata:
+            return await _hold_claimed_stars_payment(
+                bot,
+                user_id,
+                charge_id,
+                "у paid invoice отсутствует metadata",
+            )
+        logger.info("Stars Success: повторная оплата ранее оплаченного invoice пользователем %s", user_id)
+    elif pending_status:
+        return await _refund_claimed_stars_payment(
+            bot,
+            user_id,
+            charge_id,
+            f"недопустимый статус invoice: {pending_status}",
+        )
+    elif snapshot is not None:
+        return await _hold_claimed_stars_payment(
+            bot,
+            user_id,
+            charge_id,
+            "у invoice отсутствует статус",
+        )
+
+    if metadata:
+        try:
+            metadata_user_id = int(metadata.get("user_id") or 0)
+        except (TypeError, ValueError):
+            metadata_user_id = 0
+        if metadata_user_id != user_id:
+            return await _refund_claimed_stars_payment(bot, user_id, charge_id, "invoice принадлежит другому пользователю")
+        if metadata.get("payment_method") != "Telegram Stars":
+            return await _refund_claimed_stars_payment(bot, user_id, charge_id, "invoice создан для другого способа оплаты")
+
+        expected_stars = metadata.get("stars_amount")
+        if expected_stars not in (None, ""):
+            try:
+                if int(expected_stars) != total_stars:
+                    return await _refund_claimed_stars_payment(bot, user_id, charge_id, "сумма Stars не совпадает со счётом")
+            except (TypeError, ValueError):
+                return await _refund_claimed_stars_payment(bot, user_id, charge_id, "повреждена сумма Stars в счёте")
+    else:
+        try:
+            stars_ratio = Decimal(get_setting("stars_per_rub") or "0")
+        except Exception:
+            stars_ratio = Decimal("0")
+        if stars_ratio <= 0:
+            return await _refund_claimed_stars_payment(bot, user_id, charge_id, "не удалось восстановить сумму платежа")
+        amount_rub = (Decimal(total_stars) / stars_ratio).quantize(Decimal("0.01"))
+        metadata = {
+            "user_id": user_id,
+            "price": float(amount_rub),
+            "action": "top_up",
+            "payment_method": "Telegram Stars",
+        }
+        logger.warning("Stars Success: неизвестный invoice восстановлен как пополнение на %s RUB", amount_rub)
+
+    metadata = dict(metadata)
+    metadata.update(
+        {
+            "payment_id": charge_id,
+            "invoice_payload": payload,
+            "telegram_payment_charge_id": charge_id,
+            "stars_amount": total_stars,
+            "currency": "XTR",
+            "pending_status_before_payment": pending_status,
+        }
+    )
+    if getattr(sender, "username", None):
+        metadata.setdefault("tg_username", sender.username)
+
+    try:
+        processed = bool(await process_successful_payment(bot, metadata))
+    except Exception as exc:
+        set_telegram_star_charge_status(charge_id, "failed", str(exc))
+        logger.error("Stars Success: необработанное исключение для пользователя %s: %s", user_id, exc, exc_info=True)
+        return False
+
+    if processed and check_transaction_exists(charge_id):
+        if not set_telegram_star_charge_status(charge_id, "processed"):
+            logger.error("Stars Success: не удалось отметить charge пользователя %s обработанным", user_id)
+        return True
+
+    reason = "обработчик вернул ошибку" if not processed else "операция выполнена без записи transactions"
+    set_telegram_star_charge_status(charge_id, "failed", reason)
+    logger.error("Stars Success: charge пользователя %s оставлен для ручной сверки: %s", user_id, reason)
+    return False
+
 
 def get_user_router() -> Router:
     user_router = Router()
@@ -1102,7 +1428,9 @@ def get_user_router() -> Router:
         months = int(plan['months'])
         
         try:
-            payment_id, _ = await create_pending_payment(user_id=user_id, amount=float(price_rub), payment_method="Telegram Stars", action=data.get('action'), metadata_source=data, plan_id=data.get('plan_id'), months=months)
+            stars_metadata = dict(data)
+            stars_metadata.update({"stars_amount": stars_amount, "currency": "XTR"})
+            payment_id, _ = await create_pending_payment(user_id=user_id, amount=float(price_rub), payment_method="Telegram Stars", action=data.get('action'), metadata_source=stars_metadata, plan_id=data.get('plan_id'), months=months)
             logger.info(f"Оплата (Stars): пользователь {user_id}, план {data.get('plan_id')}, сумма {price_rub} RUB")
             description_str = get_transaction_comment(callback.from_user, 'new' if data.get('action') == 'new' else 'extend', months, data.get('host_name'))
             title = f"{'Подписка' if data.get('action') == 'new' else 'Продление'} на {months} мес."
@@ -1143,7 +1471,9 @@ def get_user_router() -> Router:
         stars_amount = max(1, int((amount_rub * stars_ratio).quantize(Decimal('1'), rounding=ROUND_HALF_UP)))
         
         try:
-            payment_id, _ = await create_pending_payment(user_id=user_id, amount=float(amount_rub), payment_method="Telegram Stars", action="top_up", metadata_source=data)
+            stars_metadata = dict(data)
+            stars_metadata.update({"stars_amount": stars_amount, "currency": "XTR"})
+            payment_id, _ = await create_pending_payment(user_id=user_id, amount=float(amount_rub), payment_method="Telegram Stars", action="top_up", metadata_source=stars_metadata)
             logger.info(f"Пополнение (Stars): пользователь {user_id}, сумма {amount_rub} RUB")
             description_str = get_transaction_comment(callback.from_user, 'topup', f"{amount_rub:.2f}")
 
@@ -1160,51 +1490,14 @@ def get_user_router() -> Router:
     # Подтверждает готовность системы к проведению транзакции Telegram Payments
     @user_router.pre_checkout_query()
     async def pre_checkout_handler(pre_checkout_q: PreCheckoutQuery):
-        try: await pre_checkout_q.answer(ok=True)
-        except Exception: pass
+        await _handle_stars_pre_checkout(pre_checkout_q)
     # ===== Конец функции pre_checkout_handler =====
 
     # ===== ОБРАБОТКА УСПЕШНОЙ ОПЛАТЫ STARS =====
     # Обрабатывает уведомление об успешной транзакции Stars и активирует услугу или баланс
     @user_router.message(F.successful_payment)
     async def stars_success_handler(message: types.Message, bot: Bot):
-        try: payload = message.successful_payment.invoice_payload if message.successful_payment else None
-        except Exception: payload = None
-        if not payload: return
-        
-        metadata = find_and_complete_pending_transaction(payload)
-        if not metadata:
-            logger.warning(f"Stars Success: Транзакция {payload} не найдена в базе.")
-            try: fallback = get_latest_pending_for_user(message.from_user.id)
-            except Exception as e:
-                fallback = None
-                logger.error(f"Stars Success: Ошибка при поиске резервных данных для {message.from_user.id}: {e}")
-            
-            if fallback and (fallback.get('payment_method') == 'Telegram Stars'):
-                pid = fallback.get('payment_id') or payload
-                logger.info(f"Stars Success: Использование резервных данных для {message.from_user.id}, pid={pid}")
-                metadata = find_and_complete_pending_transaction(pid)
-        
-        if not metadata:
-            try: total_stars = int(getattr(message.successful_payment, 'total_amount', 0) or 0)
-            except Exception: total_stars = 0
-            try:
-                stars_ratio_raw = get_setting("stars_per_rub") or '0'
-                stars_ratio = Decimal(stars_ratio_raw)
-            except Exception: stars_ratio = Decimal('0')
-            
-            if total_stars > 0 and stars_ratio > 0:
-                amount_rub = (Decimal(total_stars) / stars_ratio).quantize(Decimal('0.01'))
-                metadata = {"user_id": message.from_user.id, "price": float(amount_rub), "action": "top_up", "payment_method": "Telegram Stars", "payment_id": payload}
-                logger.info(f"Stars Success: Реконструкция пополнения — {amount_rub} RUB")
-            else:
-                logger.warning("Stars Success: Данные платежа не восстановлены, обработка прекращена.")
-                return
-
-        try:
-            if message.from_user and message.from_user.username: metadata.setdefault('tg_username', message.from_user.username)
-        except Exception: pass
-        await process_successful_payment(bot, metadata)
+        await _handle_stars_success_payment(message, bot)
     # ===== Конец функции stars_success_handler =====
 
     # ===== ГЕНЕРАЦИЯ ССЫЛКИ YOOMONEY =====
@@ -3414,7 +3707,9 @@ async def process_successful_payment(bot: Bot | None, metadata: dict) -> bool:
                 "delta": float(price),
                 "reason": "external_balance_top_up"
             })
-            log_transaction(username=username, transaction_id=None, payment_id=pay_id or str(uuid.uuid4()), user_id=uid, status='paid', amount_rub=float(price), amount_currency=None, currency_name=None, payment_method=pay_method or 'Unknown', metadata=json.dumps(topup_meta, ensure_ascii=False))
+            stars_amount = float(metadata.get('stars_amount')) if pay_method == 'Telegram Stars' and metadata.get('stars_amount') not in (None, '') else None
+            currency_name = 'XTR' if stars_amount is not None else None
+            log_transaction(username=username, transaction_id=None, payment_id=pay_id or str(uuid.uuid4()), user_id=uid, status='paid', amount_rub=float(price), amount_currency=stars_amount, currency_name=currency_name, payment_method=pay_method or 'Unknown', metadata=json.dumps(topup_meta, ensure_ascii=False))
             
             # Реферальные начисления за пополнение
             if (pay_method or '').lower() != 'balance':
@@ -3620,7 +3915,9 @@ async def process_successful_payment(bot: Bot | None, metadata: dict) -> bool:
                 if p_obj:
                     tx_meta['plan_name'] = p_obj.get('plan_name')
             
-            log_transaction(username=(get_user(uid) or {}).get('username', 'N/A'), transaction_id=None, payment_id=p_log_id, user_id=uid, status='paid', amount_rub=float(price), amount_currency=None, currency_name=None, payment_method=pay_method or 'Unknown', metadata=json.dumps(tx_meta, ensure_ascii=False))
+            stars_amount = float(metadata.get('stars_amount')) if pay_method == 'Telegram Stars' and metadata.get('stars_amount') not in (None, '') else None
+            currency_name = 'XTR' if stars_amount is not None else None
+            log_transaction(username=(get_user(uid) or {}).get('username', 'N/A'), transaction_id=None, payment_id=p_log_id, user_id=uid, status='paid', amount_rub=float(price), amount_currency=stars_amount, currency_name=currency_name, payment_method=pay_method or 'Unknown', metadata=json.dumps(tx_meta, ensure_ascii=False))
             
             # Промокоды
             promo_val = (metadata.get('promo_code') or '').strip()
