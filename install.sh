@@ -470,15 +470,6 @@ fi
 
 echo ""
 
-if command -v ufw >/dev/null 2>&1 && sudo ufw status 2>/dev/null | grep -q 'Status: active'; then
-    run_with_spinner "Открытие портов UFW (80, 443, 1488, 8443)" \
-        sudo bash -c "ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 1488/tcp && ufw allow 8443/tcp" || {
-        log_warn "Не удалось настроить UFW"
-    }
-fi
-
-echo ""
-
 if [[ -d "/etc/letsencrypt/live/${DOMAIN}" ]]; then
     log_success "SSL сертификаты уже существуют для $DOMAIN"
 else
@@ -496,13 +487,20 @@ else
 fi
 
 echo ""
-log_input "Порт для вебхуков YooKassa [443/8443] (default: 8443): "
+log_input "Порт для вебхуков YooKassa [1-65535] (default: 8443): "
 read -r YOOKASSA_PORT_INPUT < /dev/tty || true
 YOOKASSA_PORT="${YOOKASSA_PORT_INPUT:-8443}"
 
-if [[ "$YOOKASSA_PORT" != "443" && "$YOOKASSA_PORT" != "8443" ]]; then
-    log_warn "Неподдерживаемый порт, используется 8443"
-    YOOKASSA_PORT=8443
+if ! [[ "$YOOKASSA_PORT" =~ ^[0-9]+$ ]] || (( YOOKASSA_PORT < 1 || YOOKASSA_PORT > 65535 )); then
+    log_error "Порт должен быть целым числом от 1 до 65535."
+    exit 1
+fi
+
+if command -v ufw >/dev/null 2>&1 && sudo ufw status 2>/dev/null | grep -q 'Status: active'; then
+    run_with_spinner "Открытие портов UFW (80, 443, 1488, ${YOOKASSA_PORT})" \
+        sudo bash -c "ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 1488/tcp && ufw allow ${YOOKASSA_PORT}/tcp" || {
+        log_warn "Не удалось настроить UFW"
+    }
 fi
 
 echo ""
