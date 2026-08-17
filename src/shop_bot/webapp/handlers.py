@@ -13,6 +13,8 @@ from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, FSInputFile, LabeledPrice
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import json
+import html
+import html as html_escape
 import traceback
 from shop_bot.bot.keyboards import (
     create_payment_keyboard, 
@@ -38,6 +40,19 @@ from shop_bot.webapp.themes import get_webapp_template_path
 
 
 logger = logging.getLogger(__name__)
+
+KEY_COMMENT_MAX_LENGTH = 20
+
+
+def normalize_key_comment(comment: str, *, allow_empty: bool = False) -> str:
+    comment = comment.strip()
+    if not comment and not allow_empty:
+        raise ValueError("Комментарий не может быть пустым")
+    if len(comment) > KEY_COMMENT_MAX_LENGTH:
+        raise ValueError(f"Комментарий должен быть не длиннее {KEY_COMMENT_MAX_LENGTH} символов")
+    if any(ord(char) < 32 or ord(char) == 127 for char in comment):
+        raise ValueError("Комментарий содержит недопустимые символы")
+    return comment
 
 # In-memory storage for temporary auth tokens: {token: user_id}
 TEMP_AUTH_TOKENS = {}
@@ -590,6 +605,7 @@ def _get_profile_keys_html(keys: list) -> str:
     
     for key in keys:
         data = _process_key_data(key)
+        comment = html_escape.escape(data.get('comment_key') or '', quote=True)
         
         html += f"""
         <div class="glass-card border border-white/10 rounded-2xl relative overflow-hidden shadow-lg transition-all hover:border-primary/30 group mb-3">
@@ -656,7 +672,7 @@ def _get_profile_keys_html(keys: list) -> str:
                          </div>
                          <div class="absolute left-1/2 -translate-x-1/2 w-px h-3 bg-white/10 shrink-0"></div>
                          <div class="w-1/2 pl-2 text-right overflow-hidden flex justify-end">
-                             <span id="comment-text-{data['key_id']}" class="text-[10px] text-gray-300 break-words">{data.get('comment_key', '')}</span>
+                              <span id="comment-text-{data['key_id']}" class="text-[10px] text-gray-300 break-words">{comment}</span>
                          </div>
                      </div>
 
@@ -683,7 +699,7 @@ def _get_profile_keys_html(keys: list) -> str:
                              <span class="material-icons-round text-sm">devices</span>
                              <span>Устройства</span>
                          </button>
-                         <button onclick="openActionModal('comment', {data['key_id']}, '{data.get('comment_key', '')}')"
+                          <button onclick="openActionModal('comment', {data['key_id']})"
                              class="w-full bg-white/5 text-white py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-white/10 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 border border-white/5 hover:border-white/10">
                              <span class="material-icons-round text-sm">edit_note</span>
                              <span>Комментарии</span>
@@ -702,6 +718,7 @@ def _get_setup_keys_html(keys: list) -> str:
     html = ""
     for key in keys:
         data = _process_key_data(key)
+        comment = html_escape.escape(data.get('comment_key') or '', quote=True)
         
         if data['days_left'] <= 0:
             continue
@@ -742,7 +759,7 @@ def _get_setup_keys_html(keys: list) -> str:
                          </div>
                          <div class="absolute left-1/2 -translate-x-1/2 w-px h-3 bg-white/10 shrink-0"></div>
                          <div class="w-1/2 pl-2 text-right overflow-hidden flex justify-end">
-                             <span id="comment-text-{data['key_id']}" class="text-[10px] text-gray-300 break-words">{data.get('comment_key', '')}</span>
+                              <span id="comment-text-{data['key_id']}" class="text-[10px] text-gray-300 break-words">{comment}</span>
                          </div>
                      </div>
 
@@ -769,7 +786,7 @@ def _get_setup_keys_html(keys: list) -> str:
                              <span class="material-icons-round text-sm">devices</span>
                              <span>Устройства</span>
                          </button>
-                         <button onclick="openActionModal('comment', {data['key_id']}, '{data.get('comment_key', '')}')"
+                          <button onclick="openActionModal('comment', {data['key_id']})"
                              class="w-full bg-white/5 text-white py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-white/10 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 border border-white/5 hover:border-white/10">
                              <span class="material-icons-round text-sm">edit_note</span>
                              <span>Комментарии</span>
@@ -2279,6 +2296,7 @@ async def api_key_device_delete(req: DeleteDeviceRequest):
 @app.post("/api/key/comment")
 async def api_key_comment(req: CommentRequest):
     try:
+        comment = normalize_key_comment(req.comment, allow_empty=True)
         user = get_user(req.user_id)
         if not user or user.get('is_banned'):
             return {"ok": False, "error": "Access denied"}
@@ -2288,8 +2306,10 @@ async def api_key_comment(req: CommentRequest):
         if not key or key.get("user_id") != req.user_id:
             return {"ok": False, "error": "Ключ не найден"}
             
-        update_key(req.key_id, comment_key=req.comment)
+        update_key(req.key_id, comment_key=comment)
         return {"ok": True}
+    except ValueError as e:
+        return {"ok": False, "error": str(e)}
     except Exception as e:
         logger.error(f"[WEBAPP] - Ошибка обновления комментария для ключа {req.key_id}: {e}")
         return {"ok": False, "error": str(e)}

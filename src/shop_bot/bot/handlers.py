@@ -3090,7 +3090,8 @@ def get_user_router() -> Router:
         if not kid: return await state.clear()
 
         val = (message.text or "").strip()
-        if not val or len(val) > 20: return await message.answer("⚠️ Текст должен быть от 1 до 20 символов.")
+        if not val or len(val) > 20 or any(ord(char) < 32 or ord(char) == 127 for char in val):
+            return await message.answer("⚠️ Текст должен быть от 1 до 20 символов без служебных символов.")
 
         rw_repo.update_key(kid, comment_key=val); prompt_id = data.get('prompt_message_id')
         await state.clear()

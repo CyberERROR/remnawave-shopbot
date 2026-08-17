@@ -75,7 +75,63 @@ sanitize_domain() {
     echo "$1" | sed -e 's%^https\?://%%' -e 's%/.*$%%' | tr -cd 'A-Za-z0-9.-' | tr '[:upper:]' '[:lower:]'
 }
 
+get_server_ipv4() {
+    local ip
+    for service in https://api.ipify.org https://ifconfig.me/ip https://icanhazip.com; do
+        ip=$(curl -4fsS --max-time 10 "$service" 2>/dev/null | tr -d '[:space:]') || continue
+        if [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+            echo "$ip"
+            return 0
+        fi
+    done
+    return 1
+}
+
+get_domain_ipv4() {
+    getent ahostsv4 "$1" 2>/dev/null | awk 'NR == 1 { print $1 }'
+}
+
+verify_domain_dns() {
+    local domain="$1"
+    local server_ip
+    local domain_ip
+
+    server_ip=$(get_server_ipv4) || {
+        log_error "Не удалось автоматически определить публичный IPv4 сервера."
+        return 1
+    }
+    domain_ip=$(get_domain_ipv4 "$domain") || true
+
+    if [[ -z "$domain_ip" ]]; then
+        log_error "Для ${domain} не найдена IPv4 A-запись. Создайте A-запись: ${domain} → ${server_ip}."
+        return 1
+    fi
+    if [[ "$domain_ip" != "$server_ip" ]]; then
+        log_error "A-запись ${domain} указывает на ${domain_ip}, но IPv4 этого сервера: ${server_ip}."
+        log_info "Измените A-запись: ${domain} → ${server_ip}, дождитесь обновления DNS и запустите скрипт снова."
+        return 1
+    fi
+    log_success "DNS проверен: ${domain} → ${server_ip}"
+}
+
+wait_for_package_manager() {
+    local timeout=600
+    local elapsed=0
+    local locks=(/var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock /var/cache/apt/archives/lock)
+
+    while fuser "${locks[@]}" >/dev/null 2>&1; do
+        if ((elapsed >= timeout)); then
+            log_error "Менеджер пакетов занят более 10 минут. Дождитесь завершения системного обновления и запустите скрипт повторно."
+            return 1
+        fi
+        log_warn "Ожидание завершения системного обновления: ${elapsed}/${timeout} сек."
+        sleep 10
+        ((elapsed += 10))
+    done
+}
+
 ensure_packages() {
+    wait_for_package_manager
     run_with_spinner "Обновление списка пакетов" sudo apt-get update -qq
     
     declare -A packages=( 
@@ -84,17 +140,44 @@ ensure_packages() {
         [python3-certbot-nginx]='python3-certbot-nginx'
     )
     local missing=()
+    local installed=()
     
     for cmd in "${!packages[@]}"; do
         if ! dpkg -l | grep -q "${packages[$cmd]}"; then
             missing+=("${packages[$cmd]}")
+        else
+            installed+=("${packages[$cmd]}")
         fi
     done
 
     if ((${#missing[@]})); then
+        wait_for_package_manager
         run_with_spinner "Установка зависимостей (${missing[*]})" \
             sudo bash -c "export DEBIAN_FRONTEND=noninteractive && apt-get install -y --no-install-recommends ${missing[*]}"
-    else
+    fi
+
+    if ((${#installed[@]})); then
+        local action=""
+        while [[ "$action" != "1" && "$action" != "2" ]]; do
+            echo ""
+            log_info "Установленные зависимости: ${installed[*]}"
+            echo "1) Пропустить установленные зависимости"
+            echo "2) Обновить установленные зависимости"
+            log_input "Выберите действие [1-2]: "
+            read -r action < /dev/tty || true
+            if [[ "$action" != "1" && "$action" != "2" ]]; then
+                log_warn "Введите 1 или 2."
+            fi
+        done
+
+        if [[ "$action" == "2" ]]; then
+            wait_for_package_manager
+            run_with_spinner "Обновление зависимостей (${installed[*]})" \
+                sudo bash -c "export DEBIAN_FRONTEND=noninteractive && apt-get install -y --only-upgrade ${installed[*]}"
+        else
+            log_success "Установленные зависимости пропущены"
+        fi
+    elif (( ! ${#missing[@]} )); then
         log_success "Необходимые пакеты уже установлены"
     fi
 }
@@ -176,11 +259,10 @@ while [[ -z "$DOMAIN" ]]; do
     fi
 done
 
-EMAIL=""
-while [[ -z "$EMAIL" ]]; do
-    log_input "Введите Email для SSL (Let's Encrypt): "
-    read -r EMAIL < /dev/tty || true
-done
+verify_domain_dns "$DOMAIN"
+
+EMAIL="admin@${DOMAIN}"
+log_info "Email для SSL: ${EMAIL}"
 
 echo ""
 configure_nginx "$DOMAIN"

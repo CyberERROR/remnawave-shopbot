@@ -33,6 +33,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -93,6 +94,14 @@
         textarea,
         select {
             font-family: "Inter", "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important;
+        }
+
+        img.emoji {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            margin-left: 3px;
+            vertical-align: -1px;
         }
 
         canvas {
@@ -630,6 +639,7 @@
                             {{ nav_link('settings_page', 'Настройки', 'settings') }}
                             {{ nav_link('monitor_page', 'Мониторинг', 'monitoring') }}
                             {{ nav_link('node_page', 'Ноды', 'dns') }}
+                            {{ nav_link('premna_page', 'Remnawave', 'graphic_eq') }}
 
 
 
@@ -687,8 +697,6 @@
                                         {{ accordion_link(url_for('other_page') ~ '?tab=webapp', 'WebApp', 'language',
                                         'webapp') }}
                                         {% endif %}
-                                        {{ accordion_link(url_for('other_page') ~ '?tab=remnawave', 'Remnawave',
-                                        'graphic_eq', 'remnawave') }}
                                     </div>
                                 </div>
                                 <script>
@@ -925,6 +933,7 @@
                                     {{ nav_link_header('support_list_page', 'Поддержка', 'support_agent',
                                     ['support_ticket_page']) }}
                                     {{ nav_link_header('settings_page', 'Настройки', 'settings') }}
+                                    {{ nav_link_header('premna_page', 'Remnawave', 'graphic_eq') }}
                                 </div>
 
                                 <div
@@ -993,13 +1002,6 @@
                                                 <span class="text-[12px] font-semibold">WebApp</span>
                                             </a>
                                             {% endif %}
-                                            <a href="{{ url_for('other_page') }}?tab=remnawave"
-                                                data-base-url="{{ url_for('other_page') }}"
-                                                onclick="handleOtherPageNav(event, 'remnawave')"
-                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                                <span class="material-symbols-outlined text-[16px]">graphic_eq</span>
-                                                <span class="text-[12px] font-semibold">Remnawave</span>
-                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -1983,6 +1985,19 @@
                     localStorage.setItem('accordion-more-expanded', 'false');
                 }
             }
+        </script>
+
+        <script>
+            window.renderSvgEmoji = function (container = document.body) {
+                if (!window.twemoji || !container) return;
+                twemoji.parse(container, {
+                    folder: 'svg',
+                    ext: '.svg',
+                    base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
+                });
+            };
+
+            document.addEventListener('DOMContentLoaded', () => window.renderSvgEmoji());
         </script>
 
         {% block scripts %}{% endblock %}

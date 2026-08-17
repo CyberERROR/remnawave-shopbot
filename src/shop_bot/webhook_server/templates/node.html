@@ -94,7 +94,7 @@
                                 </div>
                             </div>
                             <div class="space-y-1.5">
-                                <label class="block text-white/40 text-[9px] font-bold uppercase tracking-[0.15em] ml-1">Пароль (опц.)</label>
+                                <label class="block text-white/40 text-[9px] font-bold uppercase tracking-[0.15em] ml-1">Пароль SSH (обязателен для синхронизированных)</label>
                                 <div class="relative group">
                                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary transition-colors text-sm">key</span>
                                     <input type="password" name="ssh_password" placeholder="••••••••"
@@ -162,8 +162,11 @@
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5">
-                                <h4 class="text-[13px] font-bold text-white truncate tracking-tight">{{ t.target_name }}</h4>
-                                <span class="text-sm flex-shrink-0" id="flag-jinja-{{ loop.index }}"></span>
+                                 <h4 class="text-[13px] font-bold text-white truncate tracking-tight">{{ t.target_name }}</h4>
+                                 {% if t.metadata and 'remnawave' in t.metadata %}
+                                 <span class="material-symbols-outlined text-emerald-400 text-base flex-shrink-0" title="Синхронизировано из Remnawave">graphic_eq</span>
+                                 {% endif %}
+                                 <span class="node-flag-emoji text-sm flex-shrink-0" data-node-name="{{ t.target_name }}" data-node-description="{{ t.description or '' }}"></span>
                             </div>
                             <div onclick="navigator.clipboard.writeText('{{ t.ssh_host }}:{{ t.ssh_port or 22 }}'); window.showToast('success', 'IP скопирован'); event.stopPropagation()"
                                 class="text-white/30 hover:text-primary text-[10px] font-mono truncate mt-0.5 cursor-copy transition-colors flex items-center gap-1"
@@ -172,7 +175,7 @@
                                 <span>{{ t.ssh_host }}:{{ t.ssh_port or 22 }}</span>
                             </div>
                             {% if t.description %}
-                            <div class="text-[9px] text-primary/60 uppercase font-bold tracking-[0.1em] flex items-center gap-0.5 mt-0.5 truncate">
+                            <div class="text-[9px] {% if t.metadata and 'remnawave' in t.metadata %}text-red-400{% else %}text-primary/60{% endif %} uppercase font-bold tracking-[0.1em] flex items-center gap-0.5 mt-0.5 truncate">
                                 <span class="material-symbols-outlined text-[10px]">description</span>{{ t.description }}
                             </div>
                             {% endif %}
@@ -260,7 +263,7 @@
                             </div>
                             <div class="relative">
                                 <input type="password" name="ssh_password" id="pass-{{ t.target_name }}"
-                                    value="{{ t.ssh_password or '' }}" placeholder="Пароль"
+                                    value="{{ t.ssh_password or '' }}" placeholder="Требуется для синхронизированных нод"
                                     autocomplete="new-password"
                                     class="w-full bg-black/30 border border-white/[0.08] rounded-xl pl-3 pr-8 py-2 text-white text-[10px] focus:ring-1 focus:ring-primary/40 focus:outline-none transition-all" />
                                 <button type="button"
@@ -285,26 +288,6 @@
                     </form>
                 </div>
             </div>
-            <script>
-                (function() {
-                    const text = ('{{ t.target_name }}' + ' ' + '{{ t.description or "" }}').toLowerCase();
-                    let flag = '';
-                    if (text.includes('germany') || text.includes('de') || text.includes('герман')) flag = '🇩🇪';
-                    else if (text.includes('finland') || text.includes('fi') || text.includes('финлянд')) flag = '🇫🇮';
-                    else if (text.includes('estonia') || text.includes('ee') || text.includes('эстон')) flag = '🇪🇪';
-                    else if (text.includes('netherlands') || text.includes('nl') || text.includes('нидерланд') || text.includes('голлан')) flag = '🇳🇱';
-                    else if (text.includes('russia') || text.includes('ru') || text.includes('росси') || text.includes(' рф') || text.includes('vds') || text.includes('mts')) flag = '🇷🇺';
-                    else if (text.includes('ukraine') || text.includes('ua') || text.includes('украин')) flag = '🇺🇦';
-                    else if (text.includes('usa') || text.includes('us') || text.includes('сша') || text.includes('америк')) flag = '🇺🇸';
-                    else if (text.includes('uk') || text.includes('gb') || text.includes('англия') || text.includes('великобрит')) flag = '🇬🇧';
-                    else if (text.includes('france') || text.includes('fr') || text.includes('франц')) flag = '🇫🇷';
-                    else if (text.includes('poland') || text.includes('pl') || text.includes('польш')) flag = '🇵🇱';
-                    else if (text.includes('singapore') || text.includes('sg') || text.includes('сингапур')) flag = '🇸🇬';
-                    else if (text.includes('turkey') || text.includes('tr') || text.includes('турци')) flag = '🇹🇷';
-                    else if (text.includes('kazakhstan') || text.includes('kz') || text.includes('казахст')) flag = '🇰🇿';
-                    document.getElementById('flag-jinja-{{ loop.index }}').textContent = flag;
-                })();
-            </script>
             {% endfor %}
         </div>
         {% else %}
@@ -340,6 +323,11 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5">
+                        <button type="button" id="btn-sync-remnawave-nodes"
+                            class="px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/15 hover:border-blue-500/25 text-blue-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 transition-all duration-300" title="Добавить ноды Remnawave в SSH-цели">
+                            <span class="material-symbols-outlined text-sm">sync</span>
+                            <span class="hidden sm:inline">Синхронизировать ноды</span>
+                        </button>
                         <span class="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/15 tabular-nums"
                             id="remna-hosts-count">0</span>
                         <div id="btn-toggle-remna-hosts"
@@ -668,9 +656,18 @@
                     </p>
                 </div>
                 <form id="swap-install-form">
-                    <label class="block text-[9px] uppercase tracking-[0.15em] text-white/30 font-bold mb-2 ml-1">Размер SWAP (MB)</label>
-                    <input type="number" name="size_mb" value="2048" min="512" step="512"
-                        class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2.5 text-white text-[12px] placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500/40 focus:border-purple-500/20 transition-all duration-200 mb-4" />
+                    <div class="grid grid-cols-2 gap-2.5 mb-4">
+                        <div>
+                            <label class="block text-[9px] uppercase tracking-[0.15em] text-white/30 font-bold mb-2 ml-1">Размер SWAP (MB)</label>
+                            <input type="number" name="size_mb" value="2048" min="512" step="512"
+                                class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2.5 text-white text-[12px] placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500/40 focus:border-purple-500/20 transition-all duration-200" />
+                        </div>
+                        <div>
+                            <label class="block text-[9px] uppercase tracking-[0.15em] text-white/30 font-bold mb-2 ml-1">Swappiness (0-100%)</label>
+                            <input type="number" name="swappiness" value="60" min="0" max="100"
+                                class="w-full bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2.5 text-white text-[12px] placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500/40 focus:border-purple-500/20 transition-all duration-200" />
+                        </div>
+                    </div>
                     <button type="submit" id="btn-swap-install"
                         class="w-full px-4 py-2.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/15 hover:border-purple-500/25 text-purple-400 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2">
                         <span class="material-symbols-outlined text-sm">add_circle</span>
@@ -1656,20 +1653,18 @@
 <script>
     function getFlagEmoji(name, description) {
         const text = ((name || '') + ' ' + (description || '')).toLowerCase();
-        if (text.includes('germany') || text.includes('de') || text.includes('герман')) return '🇩🇪';
-        if (text.includes('finland') || text.includes('fi') || text.includes('финлянд')) return '🇫🇮';
-        if (text.includes('estonia') || text.includes('ee') || text.includes('эстон')) return '🇪🇪';
-        if (text.includes('netherlands') || text.includes('nl') || text.includes('нидерланд') || text.includes('голлан')) return '🇳🇱';
-        if (text.includes('russia') || text.includes('ru') || text.includes('росси') || text.includes(' рф') || text.includes('vds') || text.includes('mts')) return '🇷🇺';
-        if (text.includes('ukraine') || text.includes('ua') || text.includes('украин')) return '🇺🇦';
-        if (text.includes('usa') || text.includes('us') || text.includes('сша') || text.includes('америк')) return '🇺🇸';
-        if (text.includes('uk') || text.includes('gb') || text.includes('англия') || text.includes('великобрит')) return '🇬🇧';
-        if (text.includes('france') || text.includes('fr') || text.includes('франц')) return '🇫🇷';
-        if (text.includes('poland') || text.includes('pl') || text.includes('польш')) return '🇵🇱';
-        if (text.includes('singapore') || text.includes('sg') || text.includes('сингапур')) return '🇸🇬';
-        if (text.includes('turkey') || text.includes('tr') || text.includes('турци')) return '🇹🇷';
-        if (text.includes('kazakhstan') || text.includes('kz') || text.includes('казахст')) return '🇰🇿';
+        const hasCode = (code) => new RegExp(`(^|[\\s_.-])${code}($|[\\s_.-])`).test(text);
+        const countries = {
+            ad: ['андорр'], ae: ['оаэ', 'emirates'], af: ['афган'], ag: ['антигуа'], al: ['албан'], am: ['армени'], ao: ['ангол'], ar: ['аргентин'], at: ['австри'], au: ['австрал'], az: ['азербайджан'], ba: ['босни'], bb: ['барбадос'], bd: ['бангладеш'], be: ['бельги'], bf: ['буркина'], bg: ['болгари'], bh: ['бахрейн'], bi: ['бурунди'], bj: ['бенин'], bn: ['бруней'], bo: ['боливи'], br: ['бразил'], bs: ['багам'], bt: ['бутан'], bw: ['ботсван'], by: ['беларус'], bz: ['белиз'], ca: ['канада'], cd: ['конго'], cf: ['африкан'], cg: ['конго'], ch: ['швейцар'], ci: ['кот-дивуар'], cl: ['чили'], cm: ['камерун'], cn: ['китай'], co: ['колумби'], cr: ['коста-рик'], cu: ['куб'], cv: ['кабо-верде'], cy: ['кипр'], cz: ['чех'], de: ['герман', 'germany'], dj: ['джибути'], dk: ['дани'], dm: ['доминик'], do: ['доминикан'], dz: ['алжир'], ec: ['эквадор'], ee: ['эстони'], eg: ['егип'], er: ['эритре'], es: ['испан'], et: ['эфиоп'], fi: ['финлянд'], fj: ['фиджи'], fm: ['микронези'], fr: ['франц'], ga: ['габон'], gb: ['англи', 'великобрит', 'britain'], gd: ['гренада'], ge: ['грузи'], gh: ['ган'], gm: ['гамби'], gn: ['гвине'], gq: ['экваториальн'], gr: ['греци'], gt: ['гватемал'], gw: ['гвинея-бисау'], gy: ['гайан'], hk: ['гонконг'], hn: ['гондурас'], hr: ['хорват'], ht: ['гаити'], hu: ['венгри'], id: ['индонези'], ie: ['ирланди'], il: ['израил'], in: ['инди'], iq: ['ирак'], ir: ['иран'], is: ['исланд'], it: ['итали'], jm: ['ямайк'], jo: ['иордан'], jp: ['япон'], ke: ['кени'], kg: ['киргиз'], kh: ['камбодж'], ki: ['кирибати'], km: ['комор'], kn: ['сент-китс'], kp: ['северн.*коре'], kr: ['южн.*коре', 'корея'], kw: ['кувейт'], kz: ['казахст'], la: ['лаос'], lb: ['ливан'], lc: ['сент-люси'], li: ['лихтенштейн'], lk: ['шри-ланк'], lr: ['либери'], ls: ['лесото'], lt: ['литв'], lu: ['люксембург'], lv: ['латви'], ly: ['ливи'], ma: ['марокко'], mc: ['монако'], md: ['молдав'], me: ['черногор'], mg: ['мадагаскар'], mh: ['маршалл'], mk: ['македон'], ml: ['мали'], mm: ['мьянм'], mn: ['монгол'], mo: ['макао'], mr: ['мавритан'], mt: ['мальт'], mu: ['маврики'], mv: ['мальдив'], mw: ['малави'], mx: ['мексик'], my: ['малайзи'], mz: ['мозамбик'], na: ['намиби'], ne: ['нигер'], ng: ['нигери'], ni: ['никарагуа'], nl: ['нидерланд', 'голланд'], no: ['норвеги'], np: ['непал'], nr: ['науру'], nz: ['нов.*зеланд'], om: ['оман'], pa: ['панам'], pe: ['перу'], pg: ['папуа'], ph: ['филиппин'], pk: ['пакистан'], pl: ['польш'], pt: ['португал'], pw: ['палау'], py: ['парагва'], qa: ['катар'], ro: ['румын'], rs: ['серби'], ru: ['росси'], rw: ['руанд'], sa: ['саудов'], sb: ['соломон'], sc: ['сейшел'], sd: ['судан'], se: ['швеци'], sg: ['сингапур'], si: ['словени'], sk: ['словаки'], sl: ['сьерра'], sm: ['сан-марино'], sn: ['сенегал'], so: ['сомали'], sr: ['суринам'], ss: ['южн.*судан'], st: ['сан-томе'], sv: ['сальвадор'], sy: ['сири'], sz: ['эсватини'], td: ['чад'], tg: ['тог'], th: ['таиланд'], tj: ['таджики'], tl: ['тимор'], tm: ['туркмен'], tn: ['тунис'], to: ['тонга'], tr: ['турци'], tt: ['тринидад'], tv: ['тувалу'], tw: ['тайван'], tz: ['танзани'], ua: ['украин'], ug: ['уганда'], us: ['сша', 'америк'], uy: ['уругва'], uz: ['узбеки'], va: ['ватикан'], vc: ['сент-винсент'], ve: ['венесуэл'], vn: ['вьетнам'], vu: ['вануату'], ws: ['самоа'], ye: ['йемен'], za: ['южн.*африк'], zm: ['замби'], zw: ['зимбабв']
+        };
+        const countryCodes = ['ad', 'ae', 'af', 'ag', 'ai', 'al', 'am', 'ao', 'aq', 'ar', 'as', 'at', 'au', 'aw', 'ax', 'az', 'ba', 'bb', 'bd', 'be', 'bf', 'bg', 'bh', 'bi', 'bj', 'bl', 'bm', 'bn', 'bo', 'bq', 'br', 'bs', 'bt', 'bv', 'bw', 'by', 'bz', 'ca', 'cc', 'cd', 'cf', 'cg', 'ch', 'ci', 'ck', 'cl', 'cm', 'cn', 'co', 'cr', 'cu', 'cv', 'cw', 'cx', 'cy', 'cz', 'de', 'dj', 'dk', 'dm', 'do', 'dz', 'ec', 'ee', 'eg', 'eh', 'er', 'es', 'et', 'fi', 'fj', 'fk', 'fm', 'fo', 'fr', 'ga', 'gb', 'gd', 'ge', 'gf', 'gg', 'gh', 'gi', 'gl', 'gm', 'gn', 'gp', 'gq', 'gr', 'gs', 'gt', 'gu', 'gw', 'gy', 'hk', 'hm', 'hn', 'hr', 'ht', 'hu', 'id', 'ie', 'il', 'im', 'in', 'io', 'iq', 'ir', 'is', 'it', 'je', 'jm', 'jo', 'jp', 'ke', 'kg', 'kh', 'ki', 'km', 'kn', 'kp', 'kr', 'kw', 'ky', 'kz', 'la', 'lb', 'lc', 'li', 'lk', 'lr', 'ls', 'lt', 'lu', 'lv', 'ly', 'ma', 'mc', 'md', 'me', 'mf', 'mg', 'mh', 'mk', 'ml', 'mm', 'mn', 'mo', 'mp', 'mq', 'mr', 'ms', 'mt', 'mu', 'mv', 'mw', 'mx', 'my', 'mz', 'na', 'nc', 'ne', 'nf', 'ng', 'ni', 'nl', 'no', 'np', 'nr', 'nu', 'nz', 'om', 'pa', 'pe', 'pf', 'pg', 'ph', 'pk', 'pl', 'pm', 'pn', 'pr', 'ps', 'pt', 'pw', 'py', 'qa', 're', 'ro', 'rs', 'ru', 'rw', 'sa', 'sb', 'sc', 'sd', 'se', 'sg', 'sh', 'si', 'sj', 'sk', 'sl', 'sm', 'sn', 'so', 'sr', 'ss', 'st', 'sv', 'sx', 'sy', 'sz', 'tc', 'td', 'tf', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tr', 'tt', 'tv', 'tw', 'tz', 'ua', 'ug', 'um', 'us', 'uy', 'uz', 'va', 'vc', 've', 'vg', 'vi', 'vn', 'vu', 'wf', 'ws', 'ye', 'yt', 'za', 'zm', 'zw'];
+        const code = countryCodes.find((countryCode) => hasCode(countryCode) || countries[countryCode]?.some((countryName) => new RegExp(countryName).test(text)));
+        if (code) return String.fromCodePoint(...code.toUpperCase().split('').map((letter) => 0x1F1A5 + letter.charCodeAt(0)));
         return '';
+    }
+
+    function renderNodeFlagEmoji(container = document) {
+        window.renderSvgEmoji(container);
     }
 
     let sshTargetsData = [];
@@ -1688,9 +1683,11 @@
     let currentSchedulerTarget = null;
     let pageStayedRefreshTimer = null;
     let serversAutoRefresh = null;
+    let serversRefreshPromise = null;
     let isNodeDetailsLocked = false;
     const SERVERS_CACHE_KEY = 'remnawave_servers_cache';
     const SERVERS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+    const NODE_ERROR_RETRY_MS = 5 * 60 * 1000;
 
     function getServersCache() {
         const cachedData = localStorage.getItem(SERVERS_CACHE_KEY);
@@ -1738,6 +1735,30 @@
                 cachedObj.ssh_targets[tIdx].uptime_cached_at = now;
             }
         }
+        saveServersCache(cachedObj);
+    }
+
+    function updateCachedNodeError(type, name, error) {
+        const cachedObj = getServersCache();
+        if (!cachedObj) return;
+        const nodes = type === 'host' ? cachedObj.hosts : cachedObj.ssh_targets;
+        const node = (nodes || []).find(item => (type === 'host' ? item.host_name : item.target_name) === name);
+        if (!node) return;
+        node.uptime_error = error;
+        node.uptime_error_at = Date.now();
+        saveServersCache(cachedObj);
+    }
+
+    function updateCachedSshTarget(name, changes = {}, newName = name) {
+        const cachedObj = getServersCache();
+        if (!cachedObj) return;
+        const target = (cachedObj.ssh_targets || []).find(item => item.target_name === name);
+        if (!target) return;
+        Object.assign(target, changes, { target_name: newName });
+        delete target.uptime_data;
+        delete target.uptime_cached_at;
+        delete target.country;
+        delete target.country_code;
         saveServersCache(cachedObj);
     }
 
@@ -1863,13 +1884,14 @@
         });
     };
 
-    async function loadServers(forceFresh = false) {
+    async function loadServers(forceFresh = false, refreshStatistics = true) {
         const cachedObj = !forceFresh ? getServersCache() : null;
         if (cachedObj) {
             sshTargetsData = cachedObj.ssh_targets || [];
             renderHosts(cachedObj.hosts || [], true);
             renderSshTargets(cachedObj.ssh_targets || [], true);
             updateClearCacheBtn();
+            if (refreshStatistics) refreshAllServersWithDelay();
             schedulePageStayedRefresh();
             return;
         }
@@ -1883,6 +1905,7 @@
                 sshTargetsData = data.ssh_targets || [];
                 renderHosts(cached.hosts || [], true);
                 renderSshTargets(cached.ssh_targets || [], true);
+                if (refreshStatistics) refreshAllServersWithDelay();
                 schedulePageStayedRefresh();
             }
         } catch (e) {
@@ -1891,26 +1914,44 @@
     }
 
     async function refreshAllServersWithDelay() {
+        if (serversRefreshPromise) return serversRefreshPromise;
         const hostCards = document.querySelectorAll('.host-card');
         const targetCards = document.querySelectorAll('.ssh-target-card');
+        const activeSshTargetNames = new Set(
+            sshTargetsData
+                .filter(target => target.ssh_ready !== false)
+                .map(target => target.target_name)
+        );
+        const requests = [
+            ...Array.from(hostCards).map((card, idx) => ['host', card.dataset.hostName, idx]),
+            ...Array.from(targetCards)
+                .filter(card => activeSshTargetNames.has(card.dataset.targetName))
+                .map((card, idx) => ['ssh', card.dataset.targetName, idx])
+        ].filter(([, name]) => name);
+        const concurrency = Math.min(4, requests.length);
+        let nextIndex = 0;
+        serversRefreshPromise = (async () => {
+            const worker = async () => {
+                while (nextIndex < requests.length) {
+                    const [type, name, idx] = requests[nextIndex++];
+                    await loadUptime(type, name, idx);
+                }
+            };
+            await Promise.all(Array.from({ length: concurrency }, worker));
+        })();
+        try {
+            await serversRefreshPromise;
+        } finally {
+            serversRefreshPromise = null;
+        }
+    }
 
-        let delay = 0;
-
-        hostCards.forEach((card, idx) => {
-            const name = card.dataset.hostName;
-            if (name) {
-                setTimeout(() => loadUptime('host', name, idx, true), delay);
-                delay += 100;
-            }
-        });
-
-        targetCards.forEach((card, idx) => {
-            const name = card.dataset.targetName;
-            if (name) {
-                setTimeout(() => loadUptime('ssh', name, idx, true), delay);
-                delay += 100;
-            }
-        });
+    function isRemnawaveSshTarget(target) {
+        try {
+            return JSON.parse(target.metadata || '{}').source === 'remnawave';
+        } catch (e) {
+            return false;
+        }
     }
 
     function renderHosts(hosts, fromCache = false) {
@@ -1952,7 +1993,7 @@
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5">
                                 <span class="text-white font-bold text-[13px] truncate tracking-tight">${host.host_name}</span>
-                                <span class="text-sm flex-shrink-0">${getFlagEmoji(host.host_name, '')}</span>
+                                <span class="node-flag-emoji text-sm flex-shrink-0">${getFlagEmoji(host.country_code || host.host_name, host.country || '')}</span>
                             </div>
                             <div class="text-white/30 text-[10px] font-mono truncate mt-0.5 flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[10px]">language</span>
@@ -2000,6 +2041,7 @@
     `;
 
         hosts.forEach((host, idx) => renderCachedUptimeCard('host', idx, host.uptime_data));
+        renderNodeFlagEmoji(listEl);
 
         initHostsDragAndDrop();
     }
@@ -2125,7 +2167,8 @@
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5">
                                 <span class="ssh-sensitive ssh-sensitive-name text-white font-bold text-[13px] truncate tracking-tight transition-all duration-300">${target.target_name}</span>
-                                <span class="text-sm flex-shrink-0">${getFlagEmoji(target.target_name, target.description)}</span>
+                                ${isRemnawaveSshTarget(target) ? '<span class="material-symbols-outlined text-emerald-400 text-base flex-shrink-0" title="Синхронизировано из Remnawave">graphic_eq</span>' : ''}
+                                <span class="node-flag-emoji text-sm flex-shrink-0">${getFlagEmoji(target.country_code || target.target_name, target.country || target.description)}</span>
                             </div>
                             <div onclick="navigator.clipboard.writeText('${target.ssh_host}:${target.ssh_port || 22}'); window.showToast('success', 'IP скопирован'); event.stopPropagation()"
                                 class="ssh-sensitive ssh-sensitive-address text-white/30 hover:text-primary text-[10px] font-mono truncate mt-0.5 cursor-copy transition-all transition-colors duration-300 flex items-center gap-1"
@@ -2205,6 +2248,7 @@
     `;
 
         targets.forEach((target, idx) => renderCachedUptimeCard('ssh', idx, target.uptime_data));
+        renderNodeFlagEmoji(listEl);
         applySshTargetsPrivacy();
 
         initSshDragAndDrop();
@@ -2396,7 +2440,7 @@
         }
         updateClearCacheBtn();
         window.showToast('success', 'Кеш серверов очищен');
-        loadServers(true);
+        loadServers(true, true);
     };
 
     window.refreshAllServersNow = async function () {
@@ -2674,6 +2718,20 @@
             }
         }
 
+        const cachedObj = getServersCache();
+        const cachedNode = type === 'host'
+            ? (cachedObj?.hosts || []).find(h => h.host_name === name)
+            : (cachedObj?.ssh_targets || []).find(t => t.target_name === name);
+        if (!forceRefresh && cachedNode?.uptime_error_at && Date.now() - cachedNode.uptime_error_at < NODE_ERROR_RETRY_MS) {
+            if (uptimeEl) {
+                uptimeEl.innerHTML = `<div class="flex items-center justify-center gap-2 text-red-400 py-2"><span class="material-symbols-outlined text-sm">error</span><span class="text-xs font-semibold">${cachedNode.uptime_error || 'Недоступен'}</span></div>`;
+            }
+            if (statusEl) {
+                statusEl.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-red-500 shadow-lg shadow-red-500/50';
+            }
+            return;
+        }
+
         try {
             const resp = await fetch(`/node/servers/uptime/${type}/${encodeURIComponent(name)}`);
             const responseText = await resp.text();
@@ -2704,6 +2762,7 @@
                 if (statusEl) {
                     statusEl.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-red-500 shadow-lg shadow-red-500/50';
                 }
+                updateCachedNodeError(type, name, (data && data.error) || 'Недоступен');
             }
         } catch (e) {
             console.error('Failed to load uptime:', e);
@@ -2713,14 +2772,17 @@
             if (statusEl) {
                 statusEl.className = 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0d1f17] bg-red-500 shadow-lg shadow-red-500/50';
             }
+            updateCachedNodeError(type, name, 'Ошибка загрузки');
         }
     }
 
     window.refreshHostUptime = function (name, idx) {
+        updateCachedNodeError('host', name, '');
         loadUptime('host', name, idx, true);
     };
 
     window.refreshTargetUptime = function (name, idx) {
+        updateCachedNodeError('ssh', name, '');
         loadUptime('ssh', name, idx, true);
     };
 
@@ -4156,8 +4218,6 @@
             return '<span class="text-white/90">' + text + '</span>';
         }
 
-        appendTerminalLine('<span class="text-emerald-400/60">$ </span><span class="text-white">' + command.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>');
-
         document.getElementById('exec-command-input').value = '';
         document.getElementById('exec-command-input').style.height = '';
 
@@ -4309,6 +4369,33 @@
     };
 
     function initNodePage() {
+        document.querySelectorAll('.node-flag-emoji[data-node-name]').forEach(flagEl => {
+            flagEl.textContent = getFlagEmoji(flagEl.dataset.nodeName, flagEl.dataset.nodeDescription);
+        });
+        renderNodeFlagEmoji();
+
+        document.querySelectorAll('form[action*="/ssh-targets/"][action$="/update"]').forEach(form => {
+            form.addEventListener('submit', () => {
+                const actionParts = form.action.split('/');
+                const currentName = decodeURIComponent(actionParts[actionParts.length - 2]);
+                const formData = new FormData(form);
+                updateCachedSshTarget(currentName, {
+                    ssh_host: formData.get('ssh_host') || '',
+                    ssh_port: formData.get('ssh_port') || '',
+                    ssh_user: formData.get('ssh_user') || '',
+                    ssh_password: formData.get('ssh_password') || '',
+                    ssh_key_path: formData.get('ssh_key_path') || '',
+                    description: formData.get('description') || ''
+                }, formData.get('new_target_name') || currentName);
+            });
+        });
+
+        document.querySelectorAll('form[action*="/ssh-targets/"][action$="/delete"]').forEach(form => {
+            form.addEventListener('submit', () => {
+                localStorage.removeItem(SERVERS_CACHE_KEY);
+            });
+        });
+
         document.querySelectorAll('.ssh-edit-btn').forEach(btn => {
             btn.onclick = () => {
                 const target = btn.dataset.target;
@@ -4498,8 +4585,10 @@
                 }
                 const data = await res.json();
                 
-                document.getElementById('node-details-country-flag').textContent = getFlagEmoji(data.name, data.country);
-                document.getElementById('node-details-country-text').textContent = data.country || 'Германия';
+                const countryFlagEl = document.getElementById('node-details-country-flag');
+                countryFlagEl.textContent = getFlagEmoji(data.country_code || data.name, data.country);
+                renderNodeFlagEmoji(countryFlagEl);
+                document.getElementById('node-details-country-text').textContent = data.country || 'Не определена';
                 document.getElementById('node-details-address').value = data.address || '';
                 document.getElementById('node-details-ssh-host').value = data.ssh_host || data.address || '';
                 document.getElementById('node-details-ssh-user').value = data.ssh_user || 'root';
@@ -4539,6 +4628,7 @@
         window.saveNodeDetails = async function() {
             const btn = document.getElementById('btn-save-node-details');
             const originalHTML = btn.innerHTML;
+            const savedNodeName = currentDetailsNodeName;
             btn.disabled = true;
             btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">sync</span><span>Сохранение...</span>';
             
@@ -4560,6 +4650,14 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.ok) {
+                    currentDetailsNodeName = data.name || currentDetailsNodeName;
+                    if (currentDetailsServerType === 'ssh') {
+                        updateCachedSshTarget(savedNodeName, {
+                            ssh_host: formData.get('ssh_host') || '',
+                            ssh_user: formData.get('ssh_user') || '',
+                            ssh_password: formData.get('ssh_password') || ''
+                        }, data.name || currentDetailsNodeName);
+                    }
                     window.showToast('success', 'Параметры ноды успешно сохранены и применены');
                     closeModal('nodeDetailsModal');
                     loadServers();
@@ -4789,6 +4887,7 @@
         }
 
         const btnToggleRemnaHosts = document.getElementById('btn-toggle-remna-hosts');
+        const btnSyncRemnawaveNodes = document.getElementById('btn-sync-remnawave-nodes');
         const remnaHostsHeader = document.getElementById('remna-hosts-header');
         const remnaHostsList = document.getElementById('remna-hosts-list');
 
@@ -4809,6 +4908,34 @@
             btnToggleRemnaHosts.addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleRemnaHosts();
+            });
+        }
+
+        if (btnSyncRemnawaveNodes) {
+            btnSyncRemnawaveNodes.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (btnSyncRemnawaveNodes.disabled) return;
+                btnSyncRemnawaveNodes.disabled = true;
+                const icon = btnSyncRemnawaveNodes.querySelector('.material-symbols-outlined');
+                icon?.classList.add('animate-spin');
+                try {
+                    const response = await fetch('/node/ssh-targets/sync-remnawave', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': window.getCsrfToken() }
+                    });
+                    const data = await response.json();
+                    if (!data.ok) throw new Error(data.error || 'Не удалось синхронизировать ноды');
+                    localStorage.removeItem(SERVERS_CACHE_KEY);
+                    updateClearCacheBtn();
+                    await loadServers(true);
+                    window.showToast('success', data.message);
+                    setTimeout(() => window.location.reload(), 3000);
+                } catch (error) {
+                    window.showToast('danger', error.message || 'Не удалось синхронизировать ноды');
+                } finally {
+                    icon?.classList.remove('animate-spin');
+                    btnSyncRemnawaveNodes.disabled = false;
+                }
             });
         }
 

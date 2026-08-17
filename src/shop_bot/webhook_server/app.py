@@ -79,6 +79,7 @@ from .modules.other import register_other_routes
 from .modules.update import register_update_routes
 from .modules.gemini import register_gemini_routes
 from .modules.node import register_node_routes
+from .modules.premna import register_premna_routes
 from .modules import security
 
 
@@ -87,7 +88,7 @@ _support_bot_controller = SupportBotController()
 
 ALL_SETTINGS_KEYS = [
     "panel_login", "panel_password", "about_text", "terms_url", "privacy_url",
-    "support_user", "support_text", "channel_url", "telegram_bot_token",
+    "support_user", "support_text", "support_enabled", "support_schedule_enabled", "support_schedule_start", "support_schedule_end", "channel_url", "telegram_bot_token",
     "telegram_bot_username", "admin_telegram_id", "yookassa_shop_id",
     "yookassa_secret_key", "sbp_enabled", "receipt_email", "cryptobot_token",
     "heleket_merchant_id", "heleket_api_key", "domain", "referral_percentage",
@@ -837,32 +838,38 @@ def create_webhook_app(bot_controller_instance):
         per_page = 12
         tickets, total = get_tickets_paginated(page=page, per_page=per_page, status=status)
         total_pages = ceil(total / per_page) if per_page else 1
+        encoded_status = urllib.parse.quote(status or '', safe='')
         
-         
+        
         if is_mobile:
             table_html = ""
-            for ticket in tickets: 
+            for ticket in tickets:
+                username = ticket['username'] or ''
+                user_label = '@' + username if username else 'User #' + str(ticket['user_id'])
+                avatar = username[0].upper() if username else 'U'
+                subject = ticket['subject'] or 'Без темы'
+                updated_at = (ticket['updated_at'] or ticket['created_at'] or "").split(' ')[1][:5]
                 table_html += f"""
                 <div class="relative">
                     <a href="/support/{ticket['ticket_id']}" class="chat-item pr-14 {'ring-1 ring-yellow-500/30 bg-yellow-500/5' if ticket['status'] == 'open' and ticket['last_sender'] == 'user' else ''}">
                         <div class="chat-avatar {'grayscale opacity-50' if ticket['status'] != 'open' else ''} relative">
-                            {(ticket['username'][0].upper() if ticket['username'] else 'U')}
+                            {html_escape.escape(avatar)}
                             {'<div class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-yellow-500 border-2 border-[#0a110d] animate-pulse"></div>' if ticket['status'] == 'open' and ticket['last_sender'] == 'user' else ''}
                         </div>
                         <div class="chat-content">
                             <div class="chat-header items-start">
-                                <span class="chat-name">{'@'+ticket['username'] if ticket['username'] else 'User #'+str(ticket['user_id'])}</span>
+                                <span class="chat-name">{html_escape.escape(user_label)}</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="chat-preview {'highlight' if ticket['status'] == 'open' and ticket['last_sender'] == 'user' else ''}">
-                                    {ticket['subject'] or 'Без темы'}
+                                     {html_escape.escape(subject)}
                                 </span>
                             </div>
                         </div>
                     </a>
                     <div class="absolute right-1 top-0 bottom-0 flex flex-col justify-center z-30">
                         <div class="flex flex-col items-end gap-1 p-3">
-                            <span class="chat-time text-[10px] opacity-30 font-bold">{ (ticket['updated_at'] or ticket['created_at'] or "").split(' ')[1][:5] }</span>
+                            <span class="chat-time text-[10px] opacity-30 font-bold">{html_escape.escape(updated_at)}</span>
                             <button type="button" onclick="toggleSupportMenu(event, 'm-support-menu-{ticket['ticket_id']}')" class="w-10 h-10 flex items-center justify-center text-white/40 active:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
                         </div>
                     </div>
@@ -884,10 +891,10 @@ def create_webhook_app(bot_controller_instance):
             if total_pages > 1:
                 pagination_html = f'<div class="flex items-center justify-center gap-4 py-8">'
                 if page > 1:
-                    pagination_html += f'<a href="/support?status={status or ""}&page={page-1}" class="ajax-pagination w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40"><span class="material-symbols-outlined">chevron_left</span></a>'
+                    pagination_html += f'<a href="/support?status={encoded_status}&page={page-1}" class="ajax-pagination w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40"><span class="material-symbols-outlined">chevron_left</span></a>'
                 pagination_html += f'<span class="text-sm font-black text-white">{page} / {total_pages}</span>'
                 if page < total_pages:
-                    pagination_html += f'<a href="/support?status={status or ""}&page={page+1}" class="ajax-pagination w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40"><span class="material-symbols-outlined">chevron_right</span></a>'
+                    pagination_html += f'<a href="/support?status={encoded_status}&page={page+1}" class="ajax-pagination w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40"><span class="material-symbols-outlined">chevron_right</span></a>'
                 pagination_html += '</div>'
             table_html += pagination_html
         else:
@@ -896,9 +903,9 @@ def create_webhook_app(bot_controller_instance):
             if total_pages > 1:
                 pagination_html = f'<span class="text-[10px] font-black text-white/20 uppercase tracking-widest">Страница {page} из {total_pages}</span><div class="flex gap-2">'
                 if page > 1:
-                    pagination_html += f'<a href="/support?status={status or ""}&page={page-1}" class="ajax-pagination px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs font-bold hover:bg-white/10 transition-all uppercase tracking-widest">Назад</a>'
+                    pagination_html += f'<a href="/support?status={encoded_status}&page={page-1}" class="ajax-pagination px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs font-bold hover:bg-white/10 transition-all uppercase tracking-widest">Назад</a>'
                 if page < total_pages:
-                    pagination_html += f'<a href="/support?status={status or ""}&page={page+1}" class="ajax-pagination px-4 py-2 rounded-xl bg-primary text-background-dark text-xs font-bold hover:bg-primary/90 transition-all uppercase tracking-widest">Вперед</a>'
+                    pagination_html += f'<a href="/support?status={encoded_status}&page={page+1}" class="ajax-pagination px-4 py-2 rounded-xl bg-primary text-background-dark text-xs font-bold hover:bg-primary/90 transition-all uppercase tracking-widest">Вперед</a>'
                 pagination_html += '</div>'
             
         return jsonify({
@@ -4157,5 +4164,6 @@ def create_webhook_app(bot_controller_instance):
     register_update_routes(flask_app, login_required)
     register_gemini_routes(flask_app, login_required)
     register_node_routes(flask_app, login_required, get_common_template_data)
+    register_premna_routes(flask_app, login_required, get_common_template_data)
 
     return flask_app

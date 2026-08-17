@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Remnawave{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+        <div class="mb-2 flex items-center gap-2 text-primary">
+            <span class="material-symbols-outlined text-xl">graphic_eq</span>
+            <span class="text-[10px] font-bold uppercase tracking-[0.24em]">Панель Remnawave</span>
+        </div>
+        <h2 class="text-3xl font-bold tracking-tight text-white">Статистика сети</h2>
+        <p class="mt-2 text-sm text-white/40">Данные поступают напрямую из API Remnawave.</p>
+    </div>
+    <button id="premna-refresh" type="button" class="inline-flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-5 py-3 text-xs font-bold uppercase tracking-wider text-primary transition hover:bg-primary hover:text-background-dark">
+        <span class="material-symbols-outlined text-base">refresh</span>
+        Обновить
+    </button>
+</div>
+
+<div id="premna-error" class="{% if not statistics_error %}hidden {% endif %}mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-200">{{ statistics_error or '' }}</div>
+
+<div id="premna-content" class="{% if not statistics %}hidden {% endif %}">
+    <div class="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        {% set cards = [
+            ('online', 'Онлайн', 'wifi', 'text-primary'),
+            ('active', 'Активных', 'person_check', 'text-emerald-400'),
+            ('total', 'Всего в панели', 'group', 'text-sky-400'),
+            ('expired', 'Истекла', 'event_busy', 'text-orange-400'),
+            ('disabled', 'Отключено', 'person_off', 'text-red-400'),
+            ('limited', 'Лимит', 'speed', 'text-yellow-300'),
+            ('nodes', 'Нод в списке', 'dns', 'text-violet-400'),
+            ('never_online', 'Никогда', 'history_toggle_off', 'text-white/50'),
+            ('today', 'Сегодня', 'today', 'text-cyan-300')
+        ] %}
+        {% for key, label, icon, color in cards %}
+        <div class="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur-sm">
+            <span class="material-symbols-outlined absolute -right-2 -top-2 text-6xl opacity-[0.04]">{{ icon }}</span>
+            <div class="mb-5 flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">{{ label }}</span>
+                <span class="material-symbols-outlined text-lg {{ color }}">{{ icon }}</span>
+            </div>
+            <strong class="text-3xl font-bold tracking-tight text-white" data-stat="{{ key }}">{% if key == 'nodes' %}{{ statistics.nodes }}{% else %}{{ statistics.users[key] }}{% endif %}</strong>
+        </div>
+        {% endfor %}
+        <div class="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur-sm">
+            <span class="material-symbols-outlined absolute -right-2 -top-2 text-6xl opacity-[0.04]">memory</span>
+            <div class="mb-5 flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">Память</span>
+                <span class="material-symbols-outlined text-lg text-pink-400">memory</span>
+            </div>
+            <strong class="text-xl font-bold tracking-tight text-white"><span data-stat="memory-used">{{ statistics.memory.used }}</span><span class="text-white/35"> / </span><span data-stat="memory-total">{{ statistics.memory.total }}</span></strong>
+        </div>
+    </div>
+
+    <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-xl backdrop-blur-sm sm:p-7">
+        <div class="mb-6 flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><span class="material-symbols-outlined">swap_vert</span></div>
+            <div><h3 class="font-bold text-white">Трафик</h3><p class="text-xs text-white/40">Текущий период и значение предыдущего периода</p></div>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {% set traffic_cards = [
+                ('today', 'Сегодня', 'со вчерашнего дня'),
+                ('week', 'Последние 7 дней', 'с прошлой недели'),
+                ('month', 'Последние 30 дней', 'с прошлого месяца'),
+                ('year', 'Текущий год', 'с прошлого года')
+            ] %}
+            {% for key, label, previous_label in traffic_cards %}
+            <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-white/40">{{ label }}</p>
+                <p class="mt-3 text-2xl font-bold text-white" data-traffic-current="{{ key }}">{{ statistics.traffic[key].current }}</p>
+                <p class="mt-2 flex items-center gap-1.5 text-xs text-white/40">
+                    <span>{{ previous_label }}:</span>
+                    <span class="material-symbols-outlined text-base {% if statistics.traffic[key].trend == 'down' %}text-emerald-400{% elif statistics.traffic[key].trend == 'up' %}text-red-400{% else %}text-white/50{% endif %}" data-traffic-trend="{{ key }}">{% if statistics.traffic[key].trend == 'down' %}trending_down{% elif statistics.traffic[key].trend == 'up' %}trending_up{% else %}trending_flat{% endif %}</span>
+                    <span class="font-semibold {% if statistics.traffic[key].trend == 'down' %}text-emerald-400{% elif statistics.traffic[key].trend == 'up' %}text-red-400{% else %}text-white/70{% endif %}" data-traffic-previous="{{ key }}">{{ statistics.traffic[key].previous }}</span>
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    const refreshButton = document.getElementById('premna-refresh');
+    const content = document.getElementById('premna-content');
+    const errorBox = document.getElementById('premna-error');
+
+    function updateStatistics(statistics) {
+        Object.entries(statistics.users).forEach(([key, value]) => {
+            const element = document.querySelector(`[data-stat="${key}"]`);
+            if (element) element.textContent = value;
+        });
+        document.querySelector('[data-stat="nodes"]').textContent = statistics.nodes;
+        document.querySelector('[data-stat="memory-used"]').textContent = statistics.memory.used;
+        document.querySelector('[data-stat="memory-total"]').textContent = statistics.memory.total;
+        Object.entries(statistics.traffic).forEach(([key, value]) => {
+            document.querySelector(`[data-traffic-current="${key}"]`).textContent = value.current;
+            const previous = document.querySelector(`[data-traffic-previous="${key}"]`);
+            const trend = document.querySelector(`[data-traffic-trend="${key}"]`);
+            previous.textContent = value.previous;
+            previous.className = `font-semibold ${value.trend === 'down' ? 'text-emerald-400' : value.trend === 'up' ? 'text-red-400' : 'text-white/70'}`;
+            trend.textContent = value.trend === 'down' ? 'trending_down' : value.trend === 'up' ? 'trending_up' : 'trending_flat';
+            trend.className = `material-symbols-outlined text-base ${value.trend === 'down' ? 'text-emerald-400' : value.trend === 'up' ? 'text-red-400' : 'text-white/50'}`;
+        });
+    }
+
+    async function refreshStatistics() {
+        refreshButton.disabled = true;
+        refreshButton.querySelector('.material-symbols-outlined').classList.add('animate-spin');
+        try {
+            const response = await fetch('{{ url_for("premna_statistics_json") }}', { headers: { Accept: 'application/json' } });
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) throw new Error(payload.error || 'Не удалось получить статистику.');
+            updateStatistics(payload.statistics);
+            errorBox.classList.add('hidden');
+            content.classList.remove('hidden');
+        } catch (error) {
+            errorBox.textContent = error.message;
+            errorBox.classList.remove('hidden');
+        } finally {
+            refreshButton.disabled = false;
+            refreshButton.querySelector('.material-symbols-outlined').classList.remove('animate-spin');
+        }
+    }
+
+    refreshButton.addEventListener('click', refreshStatistics);
+</script>
+{% endblock %}

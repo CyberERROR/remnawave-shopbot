@@ -3357,10 +3357,11 @@
 
             } else if (type === 'comment') {
                 titleEl.innerHTML = '<span class="material-icons-round text-primary text-sm mr-1">edit_note</span> Комментарий';
+                extraData = document.getElementById(`comment-text-${keyId}`)?.textContent || '';
 
                 contentEl.innerHTML = `
                     <div class="flex flex-col gap-3">
-                        <textarea id="action-comment-input" style="outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent !important; -webkit-appearance: none; border-color: rgba(255,255,255,0.1) !important;" class="w-full h-24 bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-0 focus:ring-transparent focus:border-white/10 transition-colors resize-none" placeholder="Ваш комментарий...">${extraData}</textarea>
+                        <textarea id="action-comment-input" maxlength="20" style="outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent !important; -webkit-appearance: none; border-color: rgba(255,255,255,0.1) !important;" class="w-full h-24 bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-0 focus:ring-transparent focus:border-white/10 transition-colors resize-none" placeholder="Ваш комментарий..."></textarea>
                         <div class="flex gap-2 w-full">
                             <button onclick="saveComment(${keyId}, true)" class="w-12 bg-red-500/10 text-red-500 py-2.5 rounded-xl flex items-center justify-center hover:bg-red-500/20 active:scale-[0.98] transition-all shrink-0">
                                 <span class="material-icons-round text-sm">delete</span>
@@ -3372,6 +3373,7 @@
                         </div>
                     </div>
                 `;
+                document.getElementById('action-comment-input').value = extraData;
             }
         }
 

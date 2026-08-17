@@ -294,8 +294,11 @@
                         </div>
                         <div>
                             <div class="text-white font-bold text-[15px] tracking-tight flex items-center gap-2">
-                                {{ t.target_name }}
-                                <span
+                                 {{ t.target_name }}
+                                 {% if t.metadata and 'remnawave' in t.metadata %}
+                                 <span class="material-symbols-outlined text-[14px] text-emerald-400" title="Синхронизировано из Remnawave">graphic_eq</span>
+                                 {% endif %}
+                                 <span
                                     class="material-symbols-outlined text-[14px] text-white/30 group-hover:text-yellow-500 transition-colors">code</span>
                             </div>
                             <div class="text-white/30 text-[10px] font-mono mt-0.5 truncate max-w-[200px]">{{ t.ssh_host

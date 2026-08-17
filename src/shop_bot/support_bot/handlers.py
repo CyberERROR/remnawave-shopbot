@@ -6,6 +6,7 @@ from aiogram import Bot, Router, F, types, html
 from aiogram.types import FSInputFile
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -103,6 +104,7 @@ def get_support_router() -> Router:
     TXT_ALREADY_OPEN = "⚠️ <b>Тикет уже открыт.</b>"
     TXT_BAN_RESTRICTED = "<b>🚫 Доступ ограничен</b>\n\nВаш аккаунт заблокирован. Вы не можете обращаться в поддержку."
     TXT_BAN_ERROR = "❌ Не удалось изменить статус блокировки: {}"
+    TXT_SUPPORT_OFFLINE = "<b>👨‍💻 Техническая поддержка сейчас не на связи.</b>\n\nПожалуйста, попробуйте обратиться позже. Спасибо за понимание."
     
     # ==========================================
     # 2) UNIVERSAL FUNCTIONS (HELPERS)
@@ -288,6 +290,38 @@ def get_support_router() -> Router:
              else:
                  await event.answer(TXT_BAN_RESTRICTED)
         
+        if state:
+            await state.clear()
+        return True
+
+    def _get_support_unavailable_text() -> str | None:
+        schedule_enabled = get_setting("support_schedule_enabled") == "true"
+        if not schedule_enabled:
+            return TXT_SUPPORT_OFFLINE if get_setting("support_enabled") == "false" else None
+        try:
+            start = datetime.strptime(get_setting("support_schedule_start") or "10:00", "%H:%M").time()
+            end = datetime.strptime(get_setting("support_schedule_end") or "23:00", "%H:%M").time()
+        except ValueError:
+            return TXT_SUPPORT_OFFLINE if get_setting("support_enabled") == "false" else None
+        now = datetime.now(timezone(timedelta(hours=3))).time()
+        is_available = start <= now < end if start < end else now >= start or now < end
+        if is_available and get_setting("support_enabled") != "false":
+            return None
+        return (
+            "<b>👨‍💻 Техническая поддержка сейчас не на связи.</b>\n\n"
+            f"Мы работаем с {start.strftime('%H:%M')} до {end.strftime('%H:%M')} по московскому времени. "
+            "Пожалуйста, обратитесь в рабочее время."
+        )
+
+    async def _check_support_available(event: types.Message | types.CallbackQuery, state: FSMContext = None) -> bool:
+        text = _get_support_unavailable_text()
+        if not text:
+            return False
+        if isinstance(event, types.CallbackQuery):
+            await event.answer()
+            await event.message.answer(text, reply_markup=_user_main_reply_kb())
+        else:
+            await event.answer(text, reply_markup=_user_main_reply_kb())
         if state:
             await state.clear()
         return True
@@ -633,13 +667,15 @@ def get_support_router() -> Router:
         return ticket, ticket_id
 
     async def _start_ticket_creation_flow(event: types.Message | types.CallbackQuery, state: FSMContext):
-         if isinstance(event, types.CallbackQuery):
-             await event.answer()
-         if await _check_banned(event, state):
-             return
-         if await _check_active_ticket(event, event.from_user.id):
-             return
-         await _send_subject_prompt(event, state)
+          if await _check_banned(event, state):
+              return
+          if await _check_support_available(event, state):
+              return
+          if isinstance(event, types.CallbackQuery):
+              await event.answer()
+          if await _check_active_ticket(event, event.from_user.id):
+              return
+          await _send_subject_prompt(event, state)
 
     @router.message(CommandStart(), F.chat.type == "private")
     async def start_handler(message: types.Message, state: FSMContext, bot: Bot):
@@ -698,6 +734,8 @@ def get_support_router() -> Router:
 
         if await _check_banned(message, state):
             return
+        if await _check_support_available(message, state):
+            return
 
         subject = (message.text or "").strip()
         if subject in ["✍️ Новое обращение", "📨 Мои обращения"]:
@@ -731,6 +769,8 @@ def get_support_router() -> Router:
             return
 
         if await _check_banned(message, state):
+            return
+        if await _check_support_available(message, state):
             return
         
         text_content = (message.text or "").strip()
@@ -801,16 +841,18 @@ def get_support_router() -> Router:
 
     @router.callback_query(F.data.startswith("support_reply_"))
     async def support_reply_prompt_handler(callback: types.CallbackQuery, state: FSMContext):
-        await callback.answer()
         ticket_id = int(callback.data.split("_")[-1])
         ticket = get_ticket(ticket_id)
         if await _check_banned(callback, state):
-             markup = _support_contact_markup()
-             if markup:
+            markup = _support_contact_markup()
+            if markup:
                 await callback.message.edit_text(TXT_BAN_RESTRICTED, reply_markup=markup)
-             else:
+            else:
                 await callback.message.edit_text(TXT_BAN_RESTRICTED)
-             return
+            return
+        if await _check_support_available(callback, state):
+            return
+        await callback.answer()
         if not ticket or ticket.get('user_id') != callback.from_user.id or ticket.get('status') != 'open':
             await _safe_edit(callback, TXT_CANNOT_REPLY)
             return
@@ -825,6 +867,8 @@ def get_support_router() -> Router:
     @router.message(SupportDialog.waiting_for_reply, F.chat.type == "private")
     async def support_reply_received(message: types.Message, state: FSMContext, bot: Bot):
         if await _check_banned(message, state):
+            return
+        if await _check_support_available(message, state):
             return
         data = await state.get_data()
         ticket_id = data.get('reply_ticket_id')
@@ -1208,6 +1252,8 @@ def get_support_router() -> Router:
             return
 
         if await _check_banned(message, state):
+            return
+        if await _check_support_available(message, state):
             return
 
         content = (message.text or message.caption or '')

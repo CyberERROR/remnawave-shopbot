@@ -488,6 +488,10 @@ def initialize_db():
                 "privacy_url": None,
                 "support_user": None,
                 "support_text": None,
+                "support_enabled": "true",
+                "support_schedule_enabled": "false",
+                "support_schedule_start": "10:00",
+                "support_schedule_end": "23:00",
                 "channel_url": None,
                 "force_subscription": "true",
                 "receipt_email": "example@example.com",
@@ -2077,13 +2081,14 @@ def create_ssh_target(
     *,
     sort_order: int | None = 0,
     is_active: int | None = 1,
+    metadata: str | None = None,
 ) -> bool:
     name = normalize_host_name(target_name)
     cursor = _exec(
         """
         INSERT INTO speedtest_ssh_targets
-            (target_name, ssh_host, ssh_port, ssh_user, ssh_password, ssh_key_path, description, is_active, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (target_name, ssh_host, ssh_port, ssh_user, ssh_password, ssh_key_path, description, is_active, sort_order, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             name,
@@ -2095,6 +2100,7 @@ def create_ssh_target(
             (description or None),
             1 if (is_active is None or int(is_active) != 0) else 0,
             int(sort_order or 0),
+            metadata,
         ),
         f"Не удалось создать SSH-цель '{target_name}'"
     )

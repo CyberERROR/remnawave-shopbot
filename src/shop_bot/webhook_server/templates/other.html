@@ -23,8 +23,7 @@
             {'id': 'broadcast', 'label': 'Рассылка', 'icon': 'send'},
             {'id': 'promo', 'label': 'Промо коды', 'icon': 'confirmation_number'},
             {'id': 'logs', 'label': 'Логи Бота', 'icon': 'article'},
-            {'id': 'webapp', 'label': 'WebApp', 'icon': 'language'} if webapp_exists else none,
-            {'id': 'remnawave', 'label': 'Remnawave', 'icon': 'graphic_eq'}
+            {'id': 'webapp', 'label': 'WebApp', 'icon': 'language'} if webapp_exists else none
             ]
             %}
             {% if item %}
@@ -1584,72 +1583,6 @@
 </section>
 {% endif %}
 
-<section id="tab-remnawave" class="tab-content hidden">
-    <div class="space-y-6">
-        <div
-            class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-            <div
-                class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
-            </div>
-            <div class="relative flex items-center gap-4">
-                <div
-                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
-                    <span class="material-symbols-outlined text-3xl">graphic_eq</span>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">Remnawave</h3>
-                    <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Интеграция и управление
-                        панелью управления</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="relative w-full mt-6">
-            <div
-                class="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-10 md:p-14 shadow-2xl backdrop-blur-xl overflow-hidden group hover:border-primary/20 transition-all duration-500">
-                <div
-                    class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                </div>
-
-                <div class="relative z-10">
-                    <div class="flex items-center gap-8 mb-10">
-                        <div
-                            class="w-24 h-24 rounded-full bg-black flex items-center justify-center text-primary shadow-2xl border-4 border-white/5 shrink-0 transform group-hover:scale-105 transition-transform duration-500">
-                            <span class="material-symbols-outlined text-5xl">graphic_eq</span>
-                        </div>
-
-                        <div>
-                            <h3 class="text-3xl font-bold text-white tracking-tight">В разработке</h3>
-                            <p class="text-primary text-base uppercase tracking-[0.2em] font-bold mt-1 opacity-80">Under
-                                Construction</p>
-                        </div>
-                    </div>
-
-                    <p class="text-white/80 text-xl font-bold tracking-tight mb-4">
-                        Данный раздел находится в процессе активной разработки.
-                    </p>
-
-                    <div class="relative pl-6 py-2 mb-10 border-l-2 border-primary/30 bg-primary/5 rounded-r-2xl">
-                        <p class="text-white/60 text-base md:text-lg leading-relaxed font-medium italic">
-                            Вы можете установить панель с помощью нашего автоматического установщика в Telegram-канале.
-                            Он включает все необходимые конфигурации для стабильной работы бота с Remnawave без ошибок.
-                        </p>
-                    </div>
-
-                    <div class="mt-10">
-                        <a href="https://t.me/+gwNP6nFYuYo4MDUy" target="_blank"
-                            class="inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-primary/10 text-white border border-primary/20 font-black uppercase tracking-widest hover:bg-primary/20 hover:scale-105 transition-all shadow-lg shadow-black/50">
-                            <span class="material-symbols-outlined font-bold">campaign</span>
-                            Наш Telegram канал
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-</section>
-
-
-
 <section id="tab-logs" class="tab-content hidden">
     <div class="space-y-6">
         <div
@@ -3088,7 +3021,7 @@
             initialTab = localStorage.getItem('remnawave_other_active_tab');
         }
 
-        const validTabs = ['broadcast', 'promo', 'logs', 'webapp', 'remnawave'];
+            const validTabs = ['broadcast', 'promo', 'logs', 'webapp'];
         if (!validTabs.includes(initialTab)) {
             initialTab = 'broadcast';
         }

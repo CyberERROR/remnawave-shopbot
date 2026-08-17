@@ -6,20 +6,29 @@ import json
 import uuid
 import threading
 import base64
+import ipaddress
+import socket
+from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import quote
+from urllib.request import urlopen
 from datetime import datetime, timezone, timedelta
 import re
 from shop_bot.data_manager import remnawave_repository as rw_repo
+from shop_bot.webhook_server.modules.premna import load_remnawave_nodes
 
 node_bp = Blueprint('node', __name__)
 logger = logging.getLogger(__name__)
 
 ssh_sessions = {}
 ssh_sessions_lock = threading.Lock()
+server_country_cache = {}
+server_country_cache_lock = threading.Lock()
 
 def clean_ansi(text):
     if not text: return ""
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])|\x1B\(B|\x1B\][0-2];[^\x07]*\x07')
-    return ansi_escape.sub('', text)
+    text = re.sub(r'\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)', '', text)
+    text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
+    return re.sub(r'\x1b[()][0-9A-Z]', '', text)
 
 def get_msk_time() -> datetime:
     return datetime.now(timezone(timedelta(hours=3)))
@@ -38,16 +47,76 @@ def get_ssh_server(name, server_type):
     return None, (jsonify({'ok': False, 'error': 'Неверный тип сервера'}), 400)
 
 def get_ssh_credentials(server):
-    host = server.get('ssh_host')
+    host = (server.get('ssh_host') or '').strip()
     port = server.get('ssh_port', 22)
-    username = server.get('ssh_user') or server.get('ssh_username', 'root')
-    password = server.get('ssh_password')
-    key_path = server.get('ssh_key_path')
+    username = (server.get('ssh_user') or server.get('ssh_username') or 'root').strip()
+    password = (server.get('ssh_password') or '').strip() or None
+    key_path = (server.get('ssh_key_path') or '').strip() or None
     if not host or (not password and not key_path): 
         return None, (jsonify({'ok': False, 'error': 'Параметры SSH не настроены'}), 400)
     return (host, port, username, password, key_path), None
 
+def has_ssh_credentials(server):
+    return bool(
+        (server.get('ssh_host') or '').strip()
+        and ((server.get('ssh_password') or '').strip() or (server.get('ssh_key_path') or '').strip())
+    )
+
+def get_server_country(host):
+    with server_country_cache_lock:
+        cached_country = server_country_cache.get(host)
+    if cached_country is not None:
+        return cached_country
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        try:
+            address = ipaddress.ip_address(socket.gethostbyname(host))
+        except OSError:
+            country = ('', '')
+            with server_country_cache_lock:
+                server_country_cache[host] = country
+            return country
+    if not address.is_global:
+        country = ('', '')
+        with server_country_cache_lock:
+            server_country_cache[host] = country
+        return country
+    try:
+        with urlopen(f'https://ipwho.is/{quote(str(address))}', timeout=3) as response:
+            data = json.loads(response.read().decode('utf-8'))
+        if data.get('success') is False:
+            country = ('', '')
+        else:
+            country = ((data.get('country') or '').strip(), (data.get('country_code') or '').strip().lower())
+        with server_country_cache_lock:
+            server_country_cache[host] = country
+        return country
+    except Exception as error:
+        logger.warning(f'Не удалось определить страну IP {address}: {error}')
+        return '', ''
+
+def get_ssh_error_message(error):
+    error_text = str(error or '').strip()
+    error_lower = error_text.lower()
+    if any(value in error_lower for value in ('authentication failed', 'authentication exception', 'auth failed', 'permission denied')):
+        return 'Неверные данные для входа'
+    if 'no authentication methods available' in error_lower:
+        return 'Не настроен способ авторизации SSH'
+    if any(value in error_lower for value in ('timed out', 'timeout', 'banner timeout')):
+        return 'Таймаут подключения к серверу'
+    if any(value in error_lower for value in ('connection refused', 'refused')):
+        return 'Сервер отклонил SSH-подключение'
+    if any(value in error_lower for value in ('no valid connections', 'network is unreachable', 'no route to host', 'name or service not known', 'getaddrinfo failed')):
+        return 'Не удается подключиться к серверу'
+    if any(value in error_lower for value in ('error reading ssh protocol banner', 'incompatible ssh peer', 'ssh protocol')):
+        return 'Сервер не поддерживает SSH-подключение'
+    if 'host key' in error_lower:
+        return 'Не удалось проверить ключ SSH-сервера'
+    return 'Не удается авторизоваться или выполнить SSH-подключение'
+
 def execute_ssh_command(host, port, username, password, command, timeout=10, key_path=None):
+    client = None
     try:
         import paramiko
         client = paramiko.SSHClient()
@@ -79,25 +148,28 @@ def execute_ssh_command(host, port, username, password, command, timeout=10, key
             connect_kwargs['password'] = password
 
         import time
-        retries = 3
+        retries = 2
         for attempt in range(retries):
             try:
                 client.connect(**connect_kwargs)
                 break
             except Exception as conn_err:
-                if attempt == retries - 1:
+                error_message = get_ssh_error_message(conn_err)
+                if attempt == retries - 1 or error_message in ('Неверные данные для входа', 'Не настроен способ авторизации SSH', 'Сервер отклонил SSH-подключение', 'Сервер не поддерживает SSH-подключение', 'Не удалось проверить ключ SSH-сервера'):
                     raise conn_err
-                time.sleep(1.5)
+                time.sleep(0.3)
 
         stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
         output = stdout.read().decode('utf-8').strip()
         error = stderr.read().decode('utf-8').strip()
         exit_status = stdout.channel.recv_exit_status()
-        client.close()
         return {'ok': exit_status == 0, 'output': output, 'error': error, 'exit_status': exit_status}
     except Exception as e:
         logger.error(f"Ошибка команды SSH ({host}:{port}): {e}")
-        return {'ok': False, 'output': '', 'error': str(e), 'exit_status': -1}
+        return {'ok': False, 'output': '', 'error': get_ssh_error_message(e), 'exit_status': -1}
+    finally:
+        if client:
+            client.close()
 def format_uptime(seconds):
     days, hours, minutes = int(seconds // 86400), int((seconds % 86400) // 3600), int((seconds % 3600) // 60)
     parts = []
@@ -109,6 +181,29 @@ def format_uptime(seconds):
 def build_remote_write_command(path, content):
     encoded = base64.b64encode((content or '').encode('utf-8')).decode('ascii')
     return f"printf '%s' '{encoded}' | base64 -d > {path}"
+
+def resolve_ipv4_addresses(host):
+    value = (host or '').strip().strip('[]')
+    if not value:
+        return set()
+    try:
+        address = ipaddress.ip_address(value)
+        return {str(address)} if address.version == 4 else set()
+    except ValueError:
+        try:
+            return set(socket.gethostbyname_ex(value)[2])
+        except OSError:
+            return set()
+
+def make_unique_ssh_target_name(name, existing_names):
+    base_name = (name or '').strip() or 'Remnawave node'
+    candidate = base_name
+    number = 2
+    while rw_repo.normalize_host_name(candidate) in existing_names:
+        candidate = f'{base_name} {number}'
+        number += 1
+    existing_names.add(rw_repo.normalize_host_name(candidate))
+    return candidate
 
 def register_node_routes(app, login_required, get_common_template_data):
     from shop_bot.data_manager.remnawave_repository import (
@@ -167,6 +262,49 @@ def register_node_routes(app, login_required, get_common_template_data):
             return jsonify({'ok': ok, 'message': 'SSH-цель добавлена' if ok else 'Не удалось добавить SSH-цель'})
         flash('SSH-цель добавлена.' if ok else 'Не удалось добавить SSH-цель.', 'success' if ok else 'danger')
         return redirect(url_for('node_page'))
+
+    @app.route('/node/ssh-targets/sync-remnawave', methods=['POST'])
+    @login_required
+    def node_sync_remnawave_nodes_route():
+        try:
+            nodes = asyncio.run(load_remnawave_nodes())
+            ssh_targets = rw_repo.get_all_ssh_targets()
+            hosts = rw_repo.list_squads(active_only=False)
+            known_ips = set()
+            existing_names = set()
+            for target in ssh_targets + hosts:
+                existing_names.add(rw_repo.normalize_host_name(target.get('target_name') or ''))
+                known_ips.update(resolve_ipv4_addresses(target.get('ssh_host')))
+
+            added = 0
+            skipped = 0
+            failed = 0
+            for node in nodes:
+                address = (node.get('address') or '').strip()
+                node_ips = resolve_ipv4_addresses(address)
+                if not node_ips or known_ips.intersection(node_ips):
+                    skipped += 1
+                    continue
+                target_name = make_unique_ssh_target_name(node.get('name'), existing_names)
+                if rw_repo.create_ssh_target(
+                    target_name=target_name,
+                    ssh_host=address,
+                    ssh_port=22,
+                    ssh_user='root',
+                    description='RemaNode: требуется пароль SSH',
+                    metadata='{"source":"remnawave"}',
+                ):
+                    known_ips.update(node_ips)
+                    added += 1
+                else:
+                    failed += 1
+            message = f'Синхронизация завершена: добавлено {added}, пропущено {skipped}'
+            if failed:
+                message += f', ошибок сохранения {failed}'
+            return jsonify({'ok': failed == 0, 'added': added, 'skipped': skipped, 'failed': failed, 'message': message})
+        except Exception as error:
+            logger.error(f'Ошибка синхронизации нод Remnawave: {error}')
+            return jsonify({'ok': False, 'error': 'Не удалось синхронизировать ноды Remnawave'}), 502
 
     @app.route('/admin/ssh-targets/<target_name>/update', methods=['POST'], endpoint='update_ssh_target_route')
     @app.route('/node/ssh-targets/<target_name>/update', methods=['POST'])
@@ -297,8 +435,16 @@ def register_node_routes(app, login_required, get_common_template_data):
     def node_servers_list():
         try:
             hosts, ssh_targets = rw_repo.list_squads(active_only=False), rw_repo.get_all_ssh_targets()
-            filtered_hosts = [h for h in hosts if h.get('ssh_host') and (h.get('ssh_password') or h.get('ssh_key_path'))]
-            filtered_ssh_targets = [t for t in ssh_targets if t.get('ssh_host') and (t.get('ssh_password') or t.get('ssh_key_path'))]
+            filtered_hosts = [host for host in hosts if has_ssh_credentials(host)]
+            filtered_ssh_targets = [target for target in ssh_targets if has_ssh_credentials(target)]
+            for server in filtered_hosts + filtered_ssh_targets:
+                server['ssh_ready'] = True
+            servers = filtered_hosts + filtered_ssh_targets
+            with ThreadPoolExecutor(max_workers=min(8, len(servers) or 1)) as executor:
+                countries = list(executor.map(lambda server: get_server_country(server['ssh_host']), servers))
+            for server, (country, country_code) in zip(servers, countries):
+                server['country'] = country
+                server['country_code'] = country_code
             return jsonify({'ok': True, 'hosts': filtered_hosts, 'ssh_targets': filtered_ssh_targets})
         except Exception as e:
             logger.error(f"Ошибка получения списка серверов: {e}")
@@ -344,15 +490,17 @@ def register_node_routes(app, login_required, get_common_template_data):
             delimiter = "___"
             command = (
                 f"cat /proc/uptime || echo '0 0'; echo '{delimiter}'; "
-                f"top -bn1 | grep 'Cpu(s)' | awk '{{print $2}}' || echo '0.0'; echo '{delimiter}'; "
+                f"CPU_1=$(awk '/^cpu / {{idle=$5+$6; total=0; for (i=2; i<=NF; i++) total+=$i; print total \" \" idle; exit}}' /proc/stat); "
                 f"nproc || echo '1'; echo '{delimiter}'; "
                 f"free -m | grep Mem | awk '{{print $3 \" \" $2}}' || echo '0 0'; echo '{delimiter}'; "
                 f"free -m | grep Swap | awk '{{print $3 \" \" $2}}' || echo '0 0'; echo '{delimiter}'; "
                 f"cat /proc/sys/vm/swappiness || echo '-1'; echo '{delimiter}'; "
                 f"awk 'NR>2 && $1 !~ /lo/ {{rx += $2; tx += $10}} END {{print rx \" \" tx}}' /proc/net/dev || echo '0 0'; echo '{delimiter}'; "
-                f"sleep 1; awk 'NR>2 && $1 !~ /lo/ {{rx += $2; tx += $10}} END {{print rx \" \" tx}}' /proc/net/dev || echo '0 0'"
+                f"sleep 0.5; CPU_2=$(awk '/^cpu / {{idle=$5+$6; total=0; for (i=2; i<=NF; i++) total+=$i; print total \" \" idle; exit}}' /proc/stat); "
+                f"echo \"$CPU_1 $CPU_2\" | awk '{{total=$3-$1; idle=$4-$2; if (total > 0) printf \"%.1f\\n\", (total-idle)*100/total; else print \"0.0\"}}'; echo '{delimiter}'; "
+                f"awk 'NR>2 && $1 !~ /lo/ {{rx += $2; tx += $10}} END {{print rx \" \" tx}}' /proc/net/dev || echo '0 0'"
             )
-            result = execute_ssh_command(host, port, username, password, command, timeout=20, key_path=key_path)
+            result = execute_ssh_command(host, port, username, password, command, timeout=12, key_path=key_path)
             if result['ok']:
                 try:
                     output_raw = result['output'].strip()
@@ -362,19 +510,19 @@ def register_node_routes(app, login_required, get_common_template_data):
                         return jsonify({'ok': False, 'error': 'Неполные данные о системе'}), 500
                     uptime_parts = parts[0].strip().split()
                     uptime_seconds = float(uptime_parts[0]) if (uptime_parts and uptime_parts[0]) else 0
-                    cpu_str = parts[1].strip().replace(',', '.')
+                    cpu_str = parts[6].strip().replace(',', '.')
                     cpu_str = re.sub(r'[^0-9.]', '', cpu_str)
                     cpu_usage = float(cpu_str) if (cpu_str and cpu_str != '') else 0.0
-                    cpu_cores = int(parts[2].strip()) if parts[2].strip().isdigit() else 1
-                    ram_str = parts[3].strip().split()
+                    cpu_cores = int(parts[1].strip()) if parts[1].strip().isdigit() else 1
+                    ram_str = parts[2].strip().split()
                     ram_used, ram_total = (int(ram_str[0]), int(ram_str[1])) if len(ram_str) >= 2 else (0, 0)
                     ram_percent = (ram_used / ram_total * 100) if ram_total > 0 else 0
-                    swap_str = parts[4].strip().split()
+                    swap_str = parts[3].strip().split()
                     swap_used, swap_total = (int(swap_str[0]), int(swap_str[1])) if len(swap_str) >= 2 else (0, 0)
                     swap_percent = (swap_used / swap_total * 100) if swap_total > 0 else 0
-                    swappiness_str = parts[5].strip()
+                    swappiness_str = parts[4].strip()
                     swappiness = int(swappiness_str) if (swappiness_str and swappiness_str.replace('-','').isdigit()) else -1
-                    net1_str = parts[6].strip().split()
+                    net1_str = parts[5].strip().split()
                     rx1, tx1 = (int(float(net1_str[0])), int(float(net1_str[1]))) if len(net1_str) >= 2 else (0, 0)
                     net2_str = parts[7].strip().split()
                     rx2, tx2 = (int(float(net2_str[0])), int(float(net2_str[1]))) if len(net2_str) >= 2 else (0, 0)
@@ -397,10 +545,10 @@ def register_node_routes(app, login_required, get_common_template_data):
                     logger.exception(f"Ошибка парсинга системной инфо для {name}: {parse_error}")
                     return jsonify({'ok': False, 'error': f'Ошибка обработки данных: {parse_error}'}), 500
             else:
-                error_msg = result.get('error', 'Неизвестная ошибка')
-                if 'timed out' in error_msg.lower() or 'timeout' in error_msg.lower():
+                error_msg = result.get('error', 'Не удается авторизоваться или выполнить SSH-подключение')
+                if error_msg == 'Таймаут подключения к серверу':
                     logger.warning(f"Таймаут SSH для {server_type}/{name}: {error_msg}")
-                    return jsonify({'ok': False, 'error': 'Таймаут подключения к серверу'}), 503
+                    return jsonify({'ok': False, 'error': error_msg}), 503
                 logger.error(f"Ошибка SSH команды для {server_type}/{name}: {error_msg}")
                 return jsonify({'ok': False, 'error': error_msg}), 503
         except Exception as e:
@@ -539,6 +687,8 @@ def register_node_routes(app, login_required, get_common_template_data):
                         ports_match_generic = re.search(r'-\s*["\']?(\d+):\d+["\']?', compose_content)
                         if ports_match_generic:
                             node_port = ports_match_generic.group(1)
+
+            country, country_code = get_server_country(host)
             
             return jsonify({
                 'ok': True,
@@ -548,7 +698,8 @@ def register_node_routes(app, login_required, get_common_template_data):
                 'ssh_user': server.get('ssh_user') or server.get('ssh_username') or '',
                 'ssh_password': server.get('ssh_password') or '',
                 'address': host,
-                'country': server.get('country') or '',
+                'country': country,
+                'country_code': country_code,
                 'description': server.get('description') or '',
                 'sys_os': sys_os,
                 'sys_arch': sys_arch,
@@ -652,12 +803,12 @@ def register_node_routes(app, login_required, get_common_template_data):
                 if not result_save['ok']:
                     return jsonify({'ok': False, 'error': 'Не удалось записать конфигурационные файлы'}), 500
 
+            updated_name = internal_name or name
             if server_type == 'ssh':
-                updated_name = internal_name or name
                 if updated_name != name:
                     rename_ok = rw_repo.rename_ssh_target(name, updated_name)
                     if not rename_ok:
-                        return jsonify({'ok': False, 'error': 'Не удалось обновить внутреннее имя ноды'}), 400
+                        return jsonify({'ok': False, 'error': 'Нода применена, но не удалось обновить внутреннее имя'}), 400
                     name = updated_name
                 update_ok = rw_repo.update_ssh_target_fields(
                     name,
@@ -666,13 +817,12 @@ def register_node_routes(app, login_required, get_common_template_data):
                     ssh_password=ssh_password_form if ssh_password_form is not None else None,
                 )
                 if not update_ok:
-                    return jsonify({'ok': False, 'error': 'Не удалось сохранить внутренние SSH-настройки ноды'}), 500
+                    return jsonify({'ok': False, 'error': 'Нода применена, но не удалось сохранить SSH-настройки'}), 500
             elif server_type == 'host':
-                updated_name = internal_name or name
                 if updated_name != name:
                     rename_ok = rw_repo.update_host_name(name, updated_name)
                     if not rename_ok:
-                        return jsonify({'ok': False, 'error': 'Не удалось обновить внутреннее имя хоста'}), 400
+                        return jsonify({'ok': False, 'error': 'Нода применена, но не удалось обновить внутреннее имя'}), 400
                     name = updated_name
                 update_ok = rw_repo.update_host_ssh_settings(
                     name,
@@ -681,14 +831,9 @@ def register_node_routes(app, login_required, get_common_template_data):
                     ssh_password=ssh_password_form if ssh_password_form is not None else None,
                 )
                 if not update_ok:
-                    return jsonify({'ok': False, 'error': 'Не удалось сохранить внутренние SSH-настройки хоста'}), 500
-            
-            restart_cmd = 'cd /opt/remnanode && docker compose down 2>/dev/null || true; docker compose up -d'
-            result_restart = execute_ssh_command(host, port, username, password, restart_cmd, timeout=120, key_path=key_path)
-            if not result_restart['ok']:
-                return jsonify({'ok': False, 'error': 'Файлы сохранены, но не удалось перезапустить контейнеры', 'output': result_restart['output']}), 500
-            
-            return jsonify({'ok': True, 'message': 'Параметры ноды успешно сохранены и применены'})
+                    return jsonify({'ok': False, 'error': 'Нода применена, но не удалось сохранить SSH-настройки'}), 500
+             
+            return jsonify({'ok': True, 'name': name, 'message': 'Параметры ноды успешно сохранены и применены'})
         except Exception as e:
             logger.error(f"Ошибка сохранения деталей сервера {server_type}/{name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
@@ -1098,7 +1243,9 @@ def register_node_routes(app, login_required, get_common_template_data):
     def node_swap_install(name):
         try:
             size_mb = request.form.get('size_mb', '2048')
+            swappiness = request.form.get('swappiness', '60')
             if not size_mb.isdigit(): return jsonify({'ok': False, 'error': 'Некорректный размер'}), 400
+            if not swappiness.isdigit() or not (0 <= int(swappiness) <= 100): return jsonify({'ok': False, 'error': 'Некорректное значение swappiness (0-100)'}), 400
             server, error = get_ssh_server(name, 'ssh')
             if error: return error
             creds, error = get_ssh_credentials(server)
@@ -1106,7 +1253,10 @@ def register_node_routes(app, login_required, get_common_template_data):
             host, port, username, password, key_path = creds
             cmd = (f"fallocate -l {size_mb}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count={size_mb}; "
                    "chmod 600 /swapfile; mkswap /swapfile; swapon /swapfile; "
-                   "grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab")
+                   "grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab; "
+                   f"sysctl vm.swappiness={swappiness}; "
+                   f"if grep -q 'vm.swappiness' /etc/sysctl.conf; then sed -i 's/^vm.swappiness.*/vm.swappiness={swappiness}/' /etc/sysctl.conf; "
+                   f"else echo 'vm.swappiness={swappiness}' >> /etc/sysctl.conf; fi")
             logger.info(f"Установка SWAP ({size_mb}MB) на {name}")
             result = execute_ssh_command(host, port, username, password, cmd, timeout=120, key_path=key_path)
             if result['ok']: return jsonify({'ok': True, 'message': 'SWAP установлен'})
@@ -1313,6 +1463,9 @@ def register_node_routes(app, login_required, get_common_template_data):
                         while channel.recv_ready(): channel.recv(4096)
                     channel.send(command + '\n')
                     start_time, idle_count, max_idle, timeout = time.time(), 0, 50, 30
+                    shell_prompt = None
+                    shell_prompt_sent = False
+                    compose_progress_active = False
                     while True:
                         try:
                             if channel.recv_ready():
@@ -1336,15 +1489,30 @@ def register_node_routes(app, login_required, get_common_template_data):
                                                 parts = seg.split('\r')
                                                 last_part = parts[-1]
                                                 if last_part.rstrip():
-                                                    result_lines.append(last_part.rstrip())
+                                                    result_lines.append((last_part.rstrip(), True))
                                             elif seg.rstrip():
-                                                result_lines.append(seg.rstrip())
+                                                result_lines.append((seg.rstrip(), False))
                                         # Send clear command if screen was cleared (full redraw like top)
                                         if has_clear_screen and result_lines:
                                             yield f"data: \x01CLEAR\x01\n\n"
                                         elif max_up > 0 and result_lines:
                                             yield f"data: \x01REPLACE:{max_up}\x01\n\n"
-                                        for line in result_lines:
+                                        for line, is_progress_update in result_lines:
+                                            if re.match(r'^[^\n\r]*[#$]\s*$', line):
+                                                shell_prompt = line
+                                                if not shell_prompt_sent:
+                                                    yield f"data: {line}\n\n"
+                                                    shell_prompt_sent = True
+                                                continue
+                                            if re.match(r'^\[\+\]\s+(pull|down|up)\s+\d+/\d+$', line):
+                                                if compose_progress_active:
+                                                    yield "data: \x01REPLACE:2\x01\n\n"
+                                                compose_progress_active = True
+                                            elif compose_progress_active and not is_progress_update:
+                                                compose_progress_active = False
+                                            if is_progress_update:
+                                                yield f"data: \x01CR\x01{line}\n\n"
+                                                continue
                                             yield f"data: {line}\n\n"
                                         yield f"data: \x01FLUSH\x01\n\n"  # Force flush marker
                                     except Exception as ex: logger.error(f"Ошибка декодирования вывода: {ex}")
@@ -1359,6 +1527,8 @@ def register_node_routes(app, login_required, get_common_template_data):
                         except Exception as loop_ex:
                             logger.error(f"Ошибка цикла SSH: {loop_ex}")
                             break
+                    if shell_prompt and shell_prompt_sent:
+                        yield f"data: {shell_prompt}\n\n"
                 except Exception as e:
                     logger.error(f"Ошибка выполнения команды на {server_type}/{name}: {e}")
                     yield f"data: [ERROR] {str(e)}\n\n"

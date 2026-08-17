@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, render_template
 from shop_bot.data_manager.database import get_setting, update_setting, get_other_setting, update_other_setting
 import logging
 import httpx
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -185,17 +186,44 @@ def register_gemini_routes(app, login_required):
                 
                 new_key = data.get('key')
                 new_prompt = data.get('prompt')
+                support_enabled = data.get('support_enabled')
+                schedule_enabled = data.get('schedule_enabled')
+                schedule_start = data.get('schedule_start')
+                schedule_end = data.get('schedule_end')
+
+                if schedule_start is not None or schedule_end is not None:
+                    try:
+                        datetime.strptime(schedule_start or '', '%H:%M')
+                        datetime.strptime(schedule_end or '', '%H:%M')
+                    except ValueError:
+                        return jsonify({'ok': False, 'error': 'Invalid support schedule'}), 400
 
                 if new_key is not None:
                     update_setting('key_gemini', new_key)
                 if new_prompt is not None:
                     update_other_setting('sg_promt', new_prompt)
+                if support_enabled is not None:
+                    update_setting('support_enabled', 'true' if support_enabled else 'false')
+                if schedule_enabled is not None:
+                    update_setting('support_schedule_enabled', 'true' if schedule_enabled else 'false')
+                if schedule_start is not None:
+                    update_setting('support_schedule_start', schedule_start)
+                if schedule_end is not None:
+                    update_setting('support_schedule_end', schedule_end)
                     
                 return jsonify({'ok': True})
             else:
                 key = get_setting('key_gemini')
                 prompt = get_other_setting('sg_promt', "")
-                return jsonify({'ok': True, 'key': key, 'prompt': prompt})
+                return jsonify({
+                    'ok': True,
+                    'key': key,
+                    'prompt': prompt,
+                    'support_enabled': get_setting('support_enabled') != 'false',
+                    'schedule_enabled': get_setting('support_schedule_enabled') == 'true',
+                    'schedule_start': get_setting('support_schedule_start') or '10:00',
+                    'schedule_end': get_setting('support_schedule_end') or '23:00',
+                })
         except Exception as e:
             logger.error(f"Error in Gemini settings: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
