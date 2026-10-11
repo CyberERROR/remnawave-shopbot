@@ -196,12 +196,18 @@ async def _request(
                 if attempt < max_retries - 1:
                     await asyncio.sleep(2)
                 continue
+            except httpx.RemoteProtocolError as e:
+                last_exception = e
+                logger.warning("Remnawave: разрыв соединения %s. Попытка %d из %d...", e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
 
         if last_exception and 'response' not in locals():
             logger.error("Remnawave API: исчерпаны попытки подключения: %s", last_exception)
             raise RemnawaveAPIError(f"Connection failed after {max_retries} attempts: {last_exception}")
 
-    if response.status_code not in expected_status:
+    if 'response' not in locals():
         try:
             detail = response.json()
         except json.JSONDecodeError:
@@ -269,12 +275,18 @@ async def _request_for_host(
                 if attempt < max_retries - 1:
                     await asyncio.sleep(2)
                 continue
+            except httpx.RemoteProtocolError as e:
+                last_exception = e
+                logger.warning("Remnawave[%s]: разрыв соединения %s. Попытка %d из %d...", host_name, e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
 
         if last_exception and 'response' not in locals():
             logger.error("Remnawave[%s] API: исчерпаны попытки подключения: %s", host_name, last_exception)
             raise RemnawaveAPIError(f"Connection failed after {max_retries} attempts: {last_exception}")
 
-    if response.status_code not in expected_status:
+    if 'response' not in locals():
         try:
             detail = response.json()
         except json.JSONDecodeError:
