@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загрузка</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981",
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="flex flex-col items-center justify-center gap-6 relative z-10">
+        <div class="absolute -top-10 -left-10 w-40 h-40 bg-primary/20 rounded-full blur-[60px] animate-pulse-fast">
+        </div>
+        <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-600/10 rounded-full blur-[60px] animate-pulse-fast"
+            style="animation-delay: 0.5s;"></div>
+
+        <div class="relative flex justify-center items-center">
+            <div class="absolute inset-0 rounded-full border-2 border-primary/20"></div>
+            <div
+                class="w-16 h-16 rounded-full border-2 border-primary border-t-transparent animate-spin shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-6 h-6 text-primary fill-current animate-pulse" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-1">
+            <h2 class="text-sm font-bold text-white tracking-widest uppercase">Загрузка</h2>
+            <p class="text-[10px] text-gray-500 font-medium animate-pulse">Пожалуйста, подождите...</p>
+        </div>
+    </div>
+</body>
+
+</html>
