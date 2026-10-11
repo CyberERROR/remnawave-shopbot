@@ -318,7 +318,17 @@ async def create_yookassa_payment_async(payload: dict, idempotence_key: str, sho
     auth = aiohttp.BasicAuth(str(shop_id), str(secret_key))
     api_payload = dict(payload)
     if isinstance(api_payload.get("metadata"), dict):
-        api_payload["metadata"] = {str(k): "" if v is None else str(v) for k, v in api_payload["metadata"].items()}
+        meta = api_payload["metadata"]
+        meta_keys = (
+            "user_id", "months", "price", "action", "key_id", "host_name",
+            "plan_id", "customer_email", "payment_method", "payment_id",
+            "promo_code", "promo_discount", "tier_device_count", "traffic_tier_id",
+        )
+        api_payload["metadata"] = {
+            str(key): ("" if meta.get(key) is None else str(meta.get(key)))
+            for key in meta_keys
+            if key in meta
+        }
     async with aiohttp.ClientSession(timeout=timeout, auth=auth) as session:
         last_error = None
         max_attempts = 4
@@ -3036,8 +3046,8 @@ def get_user_router() -> Router:
         months = int(plan.get('months') or 1)
         duration_days = int(plan.get('duration_days') or 0) or (months * 30)
         month_factor = Decimal(str(duration_days)) / Decimal('30')
-        price += Decimal(str(data.get('tier_price', 0))) * month_factor
-        price += Decimal(str(data.get('traffic_price', 0))) * month_factor
+        price += Decimal(str(data.get('tier_price') or 0)) * month_factor
+        price += Decimal(str(data.get('traffic_price') or 0)) * month_factor
         if data.get('action') == 'extend' and data.get('key_id') and not data.get('traffic_price'):
             active_tp = rw_repo.get_active_key_traffic_purchases(int(data['key_id']))
             if active_tp:
@@ -3064,7 +3074,7 @@ def get_user_router() -> Router:
         if host_data.get('device_mode') == 'tiers':
             included_devices = int(plan.get('hwid_limit') or 0)
             selected_devices = data.get('tier_device_count')
-            device_price = Decimal(str(data.get('tier_price', 0))) * month_factor
+            device_price = Decimal(str(data.get('tier_price') or 0)) * month_factor
             included_label = "∞" if included_devices == 0 else f"{included_devices} устр."
             if selected_devices and int(selected_devices) > included_devices and included_devices > 0:
                 extra_devices = int(selected_devices) - included_devices
@@ -3075,7 +3085,7 @@ def get_user_router() -> Router:
         if host_data.get('traffic_mode') == 'tiers':
             included_traffic = int(plan.get('traffic_limit_gb') or 0)
             traffic_tier_id = data.get('traffic_tier_id')
-            traffic_price = Decimal(str(data.get('traffic_price', 0))) * month_factor
+            traffic_price = Decimal(str(data.get('traffic_price') or 0)) * month_factor
             included_label = "∞" if included_traffic == 0 else f"{included_traffic} ГБ"
             if traffic_tier_id:
                 from shop_bot.data_manager.database import get_traffic_tier_by_id

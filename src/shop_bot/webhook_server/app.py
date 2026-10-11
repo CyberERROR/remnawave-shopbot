@@ -3660,9 +3660,8 @@ def create_webhook_app(bot_controller_instance):
             hwid_limit = int(request.form.get('hwid_limit') or 0)
             traffic_limit_gb = int(request.form.get('traffic_limit_gb') or 0)
             
-            current_plan = get_plan_by_id(plan_id)
-            button_style = (request.form.get('button_style') or '').strip() if 'button_style' in request.form else (current_plan or {}).get('button_style')
-            icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip() if 'icon_emoji_id' in request.form else (current_plan or {}).get('icon_emoji_id')
+            button_style = (request.form.get('button_style') or '').strip()
+            icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip()
             new_plan_id = create_plan(host_name=host_name, plan_name=plan_name, months=months, price=price, hwid_limit=hwid_limit, traffic_limit_gb=traffic_limit_gb, button_style=button_style, icon_emoji_id=icon_emoji_id)
             
             wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
