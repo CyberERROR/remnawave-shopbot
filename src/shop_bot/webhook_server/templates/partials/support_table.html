@@ -1,97 +1,34 @@
 {% for ticket in tickets %}
-<tr
-    class="group border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors {% if ticket.status == 'open' and ticket.last_sender == 'user' %}bg-yellow-500/[0.03]{% endif %}">
-    <td class="px-6 py-4">
-        <span class="text-xs font-black text-white/30 uppercase tracking-tighter">#{{ ticket.ticket_id }}</span>
-    </td>
-    <td class="px-6 py-4">
-        <div class="flex items-center gap-3">
-            <div
-                class="w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary text-sm font-black border border-primary/20 shadow-lg shadow-primary/5">
-                {{ ticket.username[0]|upper if ticket.username else 'U' }}
-            </div>
-            <div class="flex flex-col min-w-0">
-                <span class="text-sm font-bold text-white truncate group-hover:text-primary transition-colors demo-blur-username">
-                    {% if ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}
-                </span>
-                <span class="text-[9px] text-white/20 font-black uppercase tracking-widest">ID: {{ ticket.user_id
-                    }}</span>
-            </div>
+<a href="javascript:void(0)" onclick="openTicketChat('{{ ticket.ticket_id }}')" class="group block rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition-all hover:border-white/20 hover:bg-white/[0.06] {% if ticket.status == 'open' and ticket.last_sender == 'user' %}border-amber-400/20 bg-amber-400/[0.04]{% endif %}">
+    <div class="flex items-start gap-3">
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full {% if ticket.status == 'open' %}bg-gradient-to-br from-sky-400 to-sky-600{% else %}bg-gradient-to-br from-slate-400 to-slate-600 opacity-60{% endif %} text-xs font-bold text-white">
+            {{ ticket.username[0]|upper if ticket.username else 'U' }}
         </div>
-    </td>
-    <td class="px-6 py-4">
-        <span class="text-sm text-white/70 line-clamp-1 max-w-[200px] hover:text-white transition-colors">{{
-            ticket.subject or 'Без темы' }}</span>
-    </td>
-    <td class="px-6 py-4">
-        {% if ticket.status == 'open' %}
-        {% set is_waiting = ticket.last_sender == 'user' %}
-        <div
-            class="flex items-center gap-2 px-3 py-1 rounded-full {% if is_waiting %}bg-yellow-500/10 border border-yellow-500/20{% else %}bg-primary/10 border border-primary/20{% endif %} w-fit">
-            <span
-                class="w-1.5 h-1.5 rounded-full {% if ticket.last_sender == 'admin' %}bg-primary animate-pulse{% else %}bg-yellow-500 animate-bounce{% endif %}"></span>
-            <span
-                class="text-[9px] font-black {% if is_waiting %}text-yellow-500{% else %}text-primary{% endif %} uppercase tracking-[0.15em]">Открыт</span>
-        </div>
-        {% else %}
-        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit opacity-40">
-            <span class="w-1.5 h-1.5 rounded-full bg-white/30"></span>
-            <span class="text-[9px] font-black text-white/40 uppercase tracking-[0.15em]">Закрыт</span>
-        </div>
-        {% endif %}
-    </td>
-    <td class="px-6 py-4">
-        <span class="text-xs font-bold text-white/40 desktop-rel-time"
-            data-timestamp="{{ ticket.updated_at or ticket.created_at }}">
-            {{ (ticket.updated_at or ticket.created_at or "").split(' ')[1][:5] }}
-        </span>
-    </td>
-    <td class="px-6 py-4 text-right">
-        <div class="flex items-center justify-end gap-2">
-            <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}"
-                class="px-4 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary hover:text-background-dark transition-all">
-                Открыть
-            </a>
-            <a href="{{ url_for('users_page', q=ticket.user_id) }}"
-                class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
-                <span class="material-symbols-outlined text-[18px]">person</span>
-            </a>
-            <div class="relative">
-                <button type="button" onclick="toggleSupportMenu(event,'{{ ticket.ticket_id }}')"
-                    class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
-                    <span class="material-symbols-outlined text-[18px]">more_vert</span>
-                </button>
-                <div id="support-menu-{{ ticket.ticket_id }}"
-                    class="hidden absolute top-0 right-full mr-2 w-48 border border-white/10 rounded-xl shadow-2xl z-[9999] overflow-hidden"
-                    style="background-color: #1a1a1a !important;">
-                    <form method="post" action="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}"
-                        class="m-0" data-ajax="true" data-refresh="support-tbody">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        {% if ticket.status == 'open' %}
-                        <button type="submit" name="t_action" value="close"
-                            class="w-full p-4 text-left text-xs font-bold text-white hover:bg-white/5 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-sm text-primary">check_circle</span> ЗАКРЫТЬ
-                        </button>
-                        {% else %}
-                        <button type="submit" name="t_action" value="open"
-                            class="w-full p-4 text-left text-xs font-bold text-white hover:bg-white/5 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-sm text-primary">refresh</span> ОТКРЫТЬ
-                        </button>
-                        {% endif %}
-                    </form>
-                    <form method="post"
-                        action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}"
-                        class="m-0 border-t border-white/5" data-ajax="true" data-refresh="support-tbody">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                        <button type="submit"
-                            class="w-full p-4 text-left text-xs font-bold text-red-500 hover:bg-white/5 flex items-center gap-2"
-                            onclick="return confirm('Удалить?')">
-                            <span class="material-symbols-outlined text-sm text-red-500">delete_forever</span> УДАЛИТЬ
-                        </button>
-                    </form>
+        <div class="min-w-0 flex-1 space-y-1">
+            <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-white">{% if ticket.username %}{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}</p>
+                    <p class="font-mono text-[10px] font-medium text-white/50">ID: {{ ticket.user_id }}</p>
                 </div>
+                <span class="shrink-0 font-mono text-[10px] font-medium tabular-nums text-white/40 desktop-rel-time" data-timestamp="{{ ticket.updated_at or ticket.created_at }}">{{ (ticket.updated_at or ticket.created_at or "").split(' ')[1][:5] }}</span>
+            </div>
+            <p class="truncate text-xs font-medium text-white/60">{{ ticket.subject or 'Без темы' }}</p>
+            <div class="flex items-center gap-2">
+                {% if ticket.status == 'open' %}
+                {% set is_waiting = ticket.last_sender == 'user' %}
+                <span class="inline-flex items-center gap-1 rounded-full border {% if is_waiting %}border-amber-400/20 bg-amber-400/10{% else %}border-sky-400/20 bg-sky-400/10{% endif %} px-2 py-0.5 text-[10px] font-semibold {% if is_waiting %}text-amber-300{% else %}text-sky-300{% endif %}">
+                    <i data-lucide="{% if is_waiting %}clock-3{% else %}circle-dot{% endif %}" class="h-3 w-3"></i>
+                    {% if is_waiting %}Ожидает{% else %}Открыт{% endif %}
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                    <i data-lucide="check-circle-2" class="h-3 w-3"></i>
+                    Закрыт
+                </span>
+                {% endif %}
+                <span class="font-mono text-[10px] font-medium text-white/30">#{{ ticket.ticket_id }}</span>
             </div>
         </div>
-    </td>
-</tr>
+    </div>
+</a>
 {% endfor %}

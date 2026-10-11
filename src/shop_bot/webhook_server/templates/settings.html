@@ -3,10 +3,295 @@
 
 {% block head %}
 <style>
-    .swatch-default { background: #55555520; color: #555; }
-    .swatch-danger  { background: #ef535020; color: #ef5350; }
-    .swatch-success { background: #66bb6a20; color: #66bb6a; }
-    .swatch-primary { background: #42a5f520; color: #42a5f5; }
+    .swatch-default { background: rgba(255,255,255,.03); color: rgba(255,255,255,.6); }
+    .swatch-danger { background: rgba(248,113,113,.08); color: #fca5a5; }
+    .swatch-success { background: rgba(52,211,153,.08); color: #6ee7b7; }
+    .swatch-primary { background: rgba(125,211,252,.08); color: #7dd3fc; }
+    #settings-form .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+    #settings-form .tab-content textarea,
+    #settings-form .tab-content select,
+    #settings-form-part2 .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+    #settings-form-part2 .tab-content textarea,
+    #settings-form-part2 .tab-content select {
+        max-width: 100%;
+        min-width: 0;
+        border-color: rgba(255,255,255,.08) !important;
+        background-color: rgba(255,255,255,.03) !important;
+        border-radius: .75rem !important;
+        transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+    }
+    #settings-form .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):focus-visible,
+    #settings-form .tab-content textarea:focus-visible,
+    #settings-form .tab-content select:focus-visible,
+    #settings-form-part2 .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):focus-visible,
+    #settings-form-part2 .tab-content textarea:focus-visible,
+    #settings-form-part2 .tab-content select:focus-visible {
+        outline: none;
+        border-color: rgba(255,255,255,.2);
+        box-shadow: 0 0 0 2px rgba(255,255,255,.12);
+    }
+    #settings-form .tab-content [class*="backdrop-blur"],
+    #settings-form-part2 .tab-content [class*="backdrop-blur"],
+    #tab-hosts [class*="backdrop-blur"] { backdrop-filter: none; }
+    #settings-form .tab-content [class*="shadow-xl"],
+    #settings-form .tab-content [class*="shadow-2xl"],
+    #settings-form-part2 .tab-content [class*="shadow-xl"],
+    #settings-form-part2 .tab-content [class*="shadow-2xl"],
+    #tab-hosts [class*="shadow-xl"],
+    #tab-hosts [class*="shadow-2xl"] { box-shadow: none; }
+    #settings-form .tab-content [class*="bg-white/5"],
+    #settings-form-part2 .tab-content [class*="bg-white/5"],
+    #tab-hosts [class*="bg-white/5"] { background-color: rgba(255,255,255,.03); }
+    #settings-form .tab-content [class*="bg-black/"],
+    #settings-form-part2 .tab-content [class*="bg-black/"],
+    #tab-hosts [class*="bg-black/"] { background-color: rgba(255,255,255,.03); }
+    #settings-form .tab-content [class*="border-white/10"],
+    #settings-form-part2 .tab-content [class*="border-white/10"],
+    #tab-hosts [class*="border-white/10"] { border-color: rgba(255,255,255,.08); }
+    #settings-form .tab-content [class*="text-white/30"],
+    #settings-form-part2 .tab-content [class*="text-white/30"],
+    #tab-hosts [class*="text-white/30"] { color: rgba(255,255,255,.45); }
+    #tab-hosts [class*="border-cyan-"],
+    #tab-hosts [class*="text-cyan-"] { border-color: rgba(255,255,255,.08); color: rgba(255,255,255,.65); }
+    #tab-hosts [class*="bg-cyan-"] { background-color: rgba(255,255,255,.03); }
+    #tab-hosts [class*="text-green-"] { color: #6ee7b7; }
+    #settings-form .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):hover,
+    #settings-form .tab-content textarea:hover,
+    #settings-form .tab-content select:hover,
+    #settings-form-part2 .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):hover,
+    #settings-form-part2 .tab-content textarea:hover,
+    #settings-form-part2 .tab-content select:hover,
+    #tab-hosts input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):hover,
+    #tab-hosts textarea:hover,
+    #tab-hosts select:hover { border-color: rgba(255,255,255,.2) !important; }
+    #settings-form .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):focus-visible,
+    #settings-form .tab-content textarea:focus-visible,
+    #settings-form .tab-content select:focus-visible,
+    #settings-form-part2 .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):focus-visible,
+    #settings-form-part2 .tab-content textarea:focus-visible,
+    #settings-form-part2 .tab-content select:focus-visible,
+    #tab-hosts input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):focus-visible,
+    #tab-hosts textarea:focus-visible,
+    #tab-hosts select:focus-visible { outline: none; border-color: rgba(255,255,255,.2) !important; box-shadow: 0 0 0 2px rgba(255,255,255,.12) !important; }
+    #tab-hosts input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+    #tab-hosts textarea,
+    #tab-hosts select { max-width: 100%; min-width: 0; }
+    #tab-hosts input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):focus-visible,
+    #tab-hosts textarea:focus-visible,
+    #tab-hosts select:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,.12); }
+    #tab-panel,
+    #tab-bot { min-width: 0; }
+    #tab-panel .space-y-6,
+    #tab-bot .space-y-6 { gap: 1rem; }
+    #tab-panel [class*="bg-white/5"],
+    #tab-panel [class*="bg-white/10"],
+    #tab-panel [class*="bg-black/"],
+    #tab-bot [class*="bg-white/5"],
+    #tab-bot [class*="bg-white/10"],
+    #tab-bot [class*="bg-black/"] { background-color: rgba(255,255,255,.03) !important; }
+    #tab-panel [class*="border-white/5"],
+    #tab-panel [class*="border-white/10"],
+    #tab-bot [class*="border-white/5"],
+    #tab-bot [class*="border-white/10"] { border-color: rgba(255,255,255,.08) !important; }
+    #tab-panel [class*="backdrop-blur"],
+    #tab-bot [class*="backdrop-blur"] { backdrop-filter: none !important; }
+    #tab-panel [class*="shadow-xl"],
+    #tab-panel [class*="shadow-2xl"],
+    #tab-bot [class*="shadow-xl"],
+    #tab-bot [class*="shadow-2xl"] { box-shadow: none !important; }
+    #tab-panel [class*="rounded-3xl"],
+    #tab-bot [class*="rounded-3xl"] { border-radius: 1rem !important; }
+    #tab-panel [class*="text-white/30"],
+    #tab-panel [class*="text-white/35"],
+    #tab-bot [class*="text-white/30"],
+    #tab-bot [class*="text-white/35"] { color: rgba(255,255,255,.45) !important; }
+    #tab-panel input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    #tab-panel select,
+    #tab-bot input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    #tab-bot select { max-width: 100%; min-width: 0; }
+    #tab-panel label,
+    #tab-bot label { color: rgba(255,255,255,.6); }
+    #tab-panel button:focus-visible,
+    #tab-panel a:focus-visible,
+    #tab-bot button:focus-visible,
+    #tab-bot a:focus-visible,
+    #tab-panel input:focus-visible,
+    #tab-panel select:focus-visible,
+    #tab-bot input:focus-visible,
+    #tab-bot select:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,.16); }
+    @media (max-width: 640px) {
+        #tab-panel .grid,
+        #tab-bot .grid { min-width: 0; }
+        #tab-panel [class*="p-5"],
+        #tab-panel [class*="p-6"],
+        #tab-bot [class*="p-5"],
+        #tab-bot [class*="p-6"] { padding: .75rem; }
+        #tab-panel h3,
+        #tab-bot h3 { font-size: .875rem; line-height: 1.25rem; }
+    }
+    #tab-payments,
+    #tab-hosts,
+    #tab-referrals,
+    #tab-content { min-width: 0; }
+    #tab-payments .space-y-6,
+    #tab-hosts .space-y-6,
+    #tab-referrals .space-y-6,
+    #tab-content .space-y-6,
+    #tab-payments .space-y-5,
+    #tab-hosts .space-y-5,
+    #tab-referrals .space-y-5,
+    #tab-content .space-y-5 { gap: 1rem; }
+    #tab-payments [class*="bg-white/5"],
+    #tab-payments [class*="bg-white/10"],
+    #tab-payments [class*="bg-black/"],
+    #tab-hosts [class*="bg-white/5"],
+    #tab-hosts [class*="bg-white/10"],
+    #tab-hosts [class*="bg-black/"],
+    #tab-referrals [class*="bg-white/5"],
+    #tab-referrals [class*="bg-white/10"],
+    #tab-referrals [class*="bg-black/"],
+    #tab-content [class*="bg-white/5"],
+    #tab-content [class*="bg-white/10"],
+    #tab-content [class*="bg-black/"] { background-color: rgba(255,255,255,.03) !important; }
+    #tab-payments [class*="border-white/5"],
+    #tab-payments [class*="border-white/10"],
+    #tab-hosts [class*="border-white/5"],
+    #tab-hosts [class*="border-white/10"],
+    #tab-referrals [class*="border-white/5"],
+    #tab-referrals [class*="border-white/10"],
+    #tab-content [class*="border-white/5"],
+    #tab-content [class*="border-white/10"] { border-color: rgba(255,255,255,.08) !important; }
+    #tab-payments [class*="divide-white/5"] > :not([hidden]) ~ :not([hidden]),
+    #tab-hosts [class*="divide-white/5"] > :not([hidden]) ~ :not([hidden]),
+    #tab-referrals [class*="divide-white/5"] > :not([hidden]) ~ :not([hidden]),
+    #tab-content [class*="divide-white/5"] > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255,255,255,.04) !important; }
+    #tab-payments [class*="backdrop-blur"],
+    #tab-hosts [class*="backdrop-blur"],
+    #tab-referrals [class*="backdrop-blur"],
+    #tab-content [class*="backdrop-blur"] { backdrop-filter: none !important; }
+    #tab-payments [class*="shadow-xl"],
+    #tab-payments [class*="shadow-2xl"],
+    #tab-hosts [class*="shadow-xl"],
+    #tab-hosts [class*="shadow-2xl"],
+    #tab-referrals [class*="shadow-xl"],
+    #tab-referrals [class*="shadow-2xl"],
+    #tab-content [class*="shadow-xl"],
+    #tab-content [class*="shadow-2xl"] { box-shadow: none !important; }
+    #tab-payments [class*="rounded-3xl"],
+    #tab-hosts [class*="rounded-3xl"],
+    #tab-referrals [class*="rounded-3xl"],
+    #tab-content [class*="rounded-3xl"] { border-radius: 1rem !important; }
+    #tab-payments [class*="text-white/30"],
+    #tab-payments [class*="text-white/35"],
+    #tab-payments [class*="text-white/40"],
+    #tab-hosts [class*="text-white/30"],
+    #tab-hosts [class*="text-white/35"],
+    #tab-hosts [class*="text-white/40"],
+    #tab-referrals [class*="text-white/30"],
+    #tab-referrals [class*="text-white/35"],
+    #tab-referrals [class*="text-white/40"],
+    #tab-content [class*="text-white/30"],
+    #tab-content [class*="text-white/35"],
+    #tab-content [class*="text-white/40"] { color: rgba(255,255,255,.45) !important; }
+    #tab-payments [class*="text-white/50"],
+    #tab-hosts [class*="text-white/50"],
+    #tab-referrals [class*="text-white/50"],
+    #tab-content [class*="text-white/50"] { color: rgba(255,255,255,.6) !important; }
+    #tab-hosts [class*="border-cyan-"],
+    #tab-hosts [class*="text-cyan-"] { border-color: rgba(255,255,255,.08) !important; color: rgba(255,255,255,.65) !important; }
+    #tab-hosts [class*="bg-cyan-"] { background-color: rgba(255,255,255,.03) !important; }
+    #tab-hosts [class*="bg-blue-"],
+    #tab-hosts [class*="text-blue-"],
+    #tab-hosts [class*="bg-purple-"],
+    #tab-hosts [class*="text-purple-"] { color: rgba(255,255,255,.65) !important; background-color: rgba(255,255,255,.03) !important; }
+    #tab-hosts [class*="peer-checked:bg-cyan-"] { background-color: #34d399 !important; }
+    #tab-payments [class*="rounded-3xl"],
+    #tab-hosts [class*="rounded-3xl"],
+    #tab-referrals [class*="rounded-3xl"],
+    #tab-content [class*="rounded-3xl"] { border-radius: 1rem !important; }
+    #tab-payments .grid > *,
+    #tab-hosts .grid > *,
+    #tab-referrals .grid > *,
+    #tab-content .grid > * { min-width: 0; }
+    #tab-payments [class*="group/media"],
+    #tab-content [class*="group/media"] { transition: transform .15s ease, border-color .15s ease; }
+    #tab-payments [class*="group/media"]:hover,
+    #tab-content [class*="group/media"]:hover { transform: translateY(-.125rem); border-color: rgba(255,255,255,.2) !important; }
+    #tab-payments input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+    #tab-payments textarea,
+    #tab-payments select,
+    #tab-hosts input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+    #tab-hosts textarea,
+    #tab-hosts select,
+    #tab-referrals input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+    #tab-referrals textarea,
+    #tab-referrals select,
+    #tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+    #tab-content textarea,
+    #tab-content select { max-width: 100%; min-width: 0; }
+    #tab-payments label,
+    #tab-hosts label,
+    #tab-referrals label,
+    #tab-content label { color: rgba(255,255,255,.6); }
+    #tab-payments button:focus-visible,
+    #tab-payments a:focus-visible,
+    #tab-payments label:has(input[type="checkbox"]:focus-visible),
+    #tab-payments label:has(input[type="radio"]:focus-visible),
+    #tab-payments input:focus-visible,
+    #tab-payments textarea:focus-visible,
+    #tab-payments select:focus-visible,
+    #tab-hosts button:focus-visible,
+    #tab-hosts a:focus-visible,
+    #tab-hosts label:has(input[type="checkbox"]:focus-visible),
+    #tab-hosts label:has(input[type="radio"]:focus-visible),
+    #tab-hosts input:focus-visible,
+    #tab-hosts textarea:focus-visible,
+    #tab-hosts select:focus-visible,
+    #tab-referrals button:focus-visible,
+    #tab-referrals a:focus-visible,
+    #tab-referrals label:has(input[type="checkbox"]:focus-visible),
+    #tab-referrals label:has(input[type="radio"]:focus-visible),
+    #tab-referrals input:focus-visible,
+    #tab-referrals textarea:focus-visible,
+    #tab-referrals select:focus-visible,
+    #tab-content button:focus-visible,
+    #tab-content a:focus-visible,
+    #tab-content label:has(input[type="checkbox"]:focus-visible),
+    #tab-content label:has(input[type="radio"]:focus-visible),
+    #tab-content input:focus-visible,
+    #tab-content textarea:focus-visible,
+    #tab-content select:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,.16); }
+    @media (max-width: 640px) {
+        #tab-payments .grid,
+        #tab-hosts .grid,
+        #tab-referrals .grid,
+        #tab-content .grid { min-width: 0; }
+        #tab-payments [class*="p-5"],
+        #tab-payments [class*="p-6"],
+        #tab-hosts [class*="p-5"],
+        #tab-hosts [class*="p-6"],
+        #tab-referrals [class*="p-5"],
+        #tab-referrals [class*="p-6"],
+        #tab-content [class*="p-5"],
+        #tab-content [class*="p-6"] { padding: .75rem; }
+        #tab-payments h3,
+        #tab-hosts h3,
+        #tab-referrals h3,
+        #tab-content h3 { font-size: .875rem; line-height: 1.25rem; }
+        #tab-hosts .host-card > .flex.items-center.justify-between { flex-wrap: wrap; gap: .75rem; padding: .75rem; }
+        #tab-hosts .host-card > .flex.items-center.justify-between > div:last-child { width: 100%; flex-wrap: wrap; }
+        #tab-hosts .host-card > .flex.items-center.justify-between > div:last-child form { flex: 1 1 auto; }
+        #tab-hosts .host-card > .flex.items-center.justify-between > div:last-child button { justify-content: center; width: 100%; }
+        #tab-hosts .host-card > div[id^="host-content-"] { padding: .75rem; }
+        #tab-hosts [id^="device-tiers-list-"],
+        #tab-hosts [id^="traffic-tiers-list-"] { min-width: 0; }
+        #tab-hosts [id^="device-tiers-list-"] > *,
+        #tab-hosts [id^="traffic-tiers-list-"] > * { max-width: 100%; overflow-wrap: anywhere; }
+        #tab-hosts .flex.items-end { flex-wrap: wrap; }
+        #tab-hosts .flex.items-end > .flex-1 { min-width: 7rem; }
+        #tab-payments .flex.items-center.justify-between:has(input[type="checkbox"]),
+        #tab-content .flex.items-center.justify-between:has(input[type="checkbox"]) { flex-wrap: wrap; }
+    }
 </style>
 {% endblock %}
 
@@ -14,20 +299,20 @@
 
 <!-- ===== ЗАГОЛОВОК СТРАНИЦЫ ===== -->
 <!-- Название раздела и краткое подзаголовок -->
-<div class="mb-8 flex items-center justify-between">
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
     <div class="space-y-1">
-        <h2 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+        <h2 class="flex items-center gap-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Настройки
             <span
-                class="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-widest border border-primary/20">Система</span>
+                class="rounded-full border border-primary/15 bg-primary/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-primary">Система</span>
         </h2>
-        <p class="text-white/40 text-xs font-medium uppercase tracking-[0.2em] ml-1">Центр управления ботами и контентом
+        <p class="ml-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/50">Центр управления ботами и контентом
         </p>
     </div>
 
     <button type="button" id="save-all-settings-btn"
-        class="group relative px-6 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-white font-bold text-xs uppercase tracking-widest hover:bg-primary/20 active:scale-95 transition-all duration-300 shadow-lg shadow-black/20 flex items-center gap-2 overflow-hidden">
-        <span class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">save</span>
+        class="group relative flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/[0.08] px-3 py-2 text-xs font-medium text-primary transition duration-150 hover:border-primary/30 hover:bg-primary/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-4">
+        <span class="material-symbols-outlined text-base transition-transform">save</span>
         <span>Сохранить изменения</span>
     </button>
 </div>
@@ -36,8 +321,8 @@
 
 <!-- ===== СТАТУС НАСТРОЕК ===== -->
 {% if not (all_settings_ok and support_settings_ok) %}
-<div class="mb-8 p-1.5 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl">
-    <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4 p-4 pr-6">
+<div class="mb-6 rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+    <div class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
         <div
             class="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 relative">
             <span class="material-symbols-outlined text-3xl">warning</span>
@@ -69,8 +354,8 @@
 
 <!-- ===== НАВИГАЦИЯ ПО ВКЛАДКАМ ===== -->
 <!-- Верхнее меню управления разделами настроек -->
-<div class="relative mb-10">
-    <div class="bg-white/5 rounded-2xl p-1.5 shadow-2xl backdrop-blur-xl overflow-x-auto no-scrollbar">
+<div class="relative mb-5">
+    <div class="overflow-x-auto rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 no-scrollbar">
         <nav class="flex items-center gap-1 min-w-max" id="settings-nav">
             {% for item in [
             {'id': 'panel', 'label': 'Панель', 'icon': 'dashboard'},
@@ -82,8 +367,8 @@
             {'id': 'content', 'label': 'Контент', 'icon': 'article'}
             ] %}
             <button type="button" data-tab="{{ item.id }}"
-                class="tab-btn px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5">
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                class="tab-btn flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-[11px] font-medium transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 sm:px-4">
+                <span class="material-symbols-outlined text-base">{{ item.icon }}</span>
                 {{ item.label }}
             </button>
             {% endfor %}
@@ -99,28 +384,23 @@
 
     <section id="tab-panel" class="tab-content">
         <div class="space-y-6">
-            <div
-                class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-                <div
-                    class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
-                </div>
-                <div class="relative flex items-center gap-4">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
-                        <span class="material-symbols-outlined text-3xl">admin_panel_settings</span>
+            <div class="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
+                <div class="flex items-center gap-2">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/[0.08] text-primary">
+                        <span class="material-symbols-outlined text-base">admin_panel_settings</span>
                     </div>
                     <div>
-                        <h3 class="text-xl font-bold text-white tracking-tight">Настройки Панели</h3>
-                        <p class="text-white/40 text-[11px] font-medium uppercase tracking-wider">Управление доступом,
+                        <h3 class="text-sm font-semibold tracking-tight text-white">Настройки Панели</h3>
+                        <p class="text-xs font-medium uppercase tracking-wider text-white/60">Управление доступом,
                             базой данных и системными функциями</p>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
                 <!-- Access & Global Settings -->
                 <div
-                    class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col xl:col-span-2">
+                    class="flex min-w-0 flex-col rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4 xl:col-span-2">
                     <div class="flex items-center gap-2 mb-4">
                         <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <span class="material-symbols-outlined text-lg">security</span>
@@ -362,7 +642,7 @@
 
 
                 <!-- Trial Period Card -->
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col">
+                <div class="flex min-w-0 flex-col rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
                     <div class="flex items-center justify-between gap-2 mb-4">
                         <div class="flex items-center gap-2">
                             <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -464,7 +744,7 @@
                 </div>
 
                 <!-- Resource Monitoring Card -->
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col">
+                <div class="flex min-w-0 flex-col rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
                     <div class="flex items-center justify-between gap-2 mb-4">
                         <div class="flex items-center gap-2">
                             <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -543,7 +823,7 @@
 
                 <!-- Backup Management Card -->
                 <div
-                    class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col xl:col-span-2">
+                    class="flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 xl:col-span-2">
                     <div class="flex items-center gap-2 mb-4">
                         <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <span class="material-symbols-outlined text-lg">database</span>
@@ -671,7 +951,7 @@
             </div>
             {% endif %}
 
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
                 <!-- Main Bot Card -->
                 <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col">
                     <div class="flex items-center gap-2 mb-4">
@@ -2001,7 +2281,89 @@
                         </div>
                     </div>
 
-                    <!-- Plans -->
+                                        <!-- Traffic Tiers -->
+                    <div class="bg-white/5 border border-white/10 rounded-2xl p-5 mb-5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                                    <span class="material-symbols-outlined text-lg">data_usage</span>
+                                </div>
+                                <div>
+                                    <h5 class="text-white font-bold text-sm tracking-tight">Режим докупки трафика</h5>
+                                    <p class="text-white/40 text-[9px]">Дополнительные пакеты гигабайтов</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-white/40 text-[10px] font-bold uppercase tracking-wider" id="traffic-mode-label-{{ host.host_name }}">
+                                    {{ 'Выбор' if host.traffic_mode == 'tiers' else 'По тарифу' }}
+                                </span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" {% if host.traffic_mode == 'tiers' %}checked{% endif %} onchange="toggleTrafficMode('{{ host.host_name }}', this.checked)" />
+                                    <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-cyan-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="traffic-tiers-block-{{ host.host_name }}" class="{% if host.traffic_mode != 'tiers' %}hidden{% endif %} mt-3 pt-3 border-t border-white/5">
+                            <div id="traffic-tiers-list-{{ host.host_name }}" class="flex flex-wrap gap-2 mb-3">
+                                {% for ttier in host.traffic_tiers %}
+                                <div class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-2 cursor-pointer group hover:bg-black/30 transition-colors" id="traffic-tier-display-{{ ttier.tier_id }}" onclick="editTrafficTier('{{ ttier.tier_id }}')">
+                                    <span class="text-cyan-400 text-xs font-bold" id="traffic-tier-display-gb-{{ ttier.tier_id }}">+{{ ttier.traffic_gb }} ГБ</span>
+                                    <span class="text-white/30 text-[10px]">—</span>
+                                    <span class="text-white text-xs font-bold" id="traffic-tier-display-price-{{ ttier.tier_id }}">{{ '%.0f'|format(ttier.price) }}₽/мес</span>
+                                    <span class="material-symbols-outlined text-xs text-white/30 opacity-0 group-hover:opacity-100 transition-opacity ml-1">edit</span>
+                                    <button type="button" onclick="event.stopPropagation(); deleteTrafficTier('{{ ttier.tier_id }}', '{{ host.host_name }}')" class="w-5 h-5 rounded-md bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500/30 transition-all ml-1">
+                                        <span class="material-symbols-outlined text-sm">close</span>
+                                    </button>
+                                </div>
+                                <div id="traffic-tier-edit-{{ ttier.tier_id }}" class="hidden items-center gap-2 bg-black/40 border border-cyan-500/50 rounded-lg px-3 py-1.5 transition-colors">
+                                    <span class="text-white/40 text-[10px]">+</span>
+                                    <input type="number" id="traffic-tier-input-gb-{{ ttier.tier_id }}" value="{{ ttier.traffic_gb }}" min="1" class="w-12 bg-transparent border-b border-cyan-500/50 text-cyan-400 text-xs font-bold focus:outline-none focus:border-cyan-400 text-center px-1" />
+                                    <span class="text-white/30 text-[10px]">ГБ —</span>
+                                    <input type="number" id="traffic-tier-input-price-{{ ttier.tier_id }}" value="{{ '%.0f'|format(ttier.price) }}" min="0" class="w-12 bg-transparent border-b border-cyan-500/50 text-white text-xs font-bold focus:outline-none focus:border-cyan-400 text-center px-1" />
+                                    <span class="text-white/40 text-[10px] whitespace-nowrap">₽/мес</span>
+                                    <button type="button" onclick="saveTrafficTier('{{ ttier.tier_id }}')" class="material-symbols-outlined text-sm text-green-400 hover:text-green-300 transition-colors ml-1 w-5 h-5 flex items-center justify-center rounded-md hover:bg-green-400/10">check</button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="flex gap-2 items-end">
+                                <div class="flex-1 space-y-0.5">
+                                    <label class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">Пакет ГБ</label>
+                                    <input type="number" min="1" id="traffic-tier-gb-{{ host.host_name }}" placeholder="50" class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-cyan-500/40 focus:outline-none" />
+                                </div>
+                                <div class="flex-1 space-y-0.5">
+                                    <label class="block text-white/40 text-[9px] uppercase font-bold tracking-wider ml-1">Цена (₽/мес)</label>
+                                    <input type="number" min="0" step="1" id="traffic-tier-price-{{ host.host_name }}" placeholder="50" class="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-[11px] focus:ring-1 focus:ring-cyan-500/40 focus:outline-none" />
+                                </div>
+                                <button type="button" onclick="addTrafficTier('{{ host.host_name }}')" class="px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:bg-cyan-500/30 transition-all border border-cyan-500/20">
+                                    <span class="material-symbols-outlined text-sm">add</span>
+                                </button>
+                            </div>
+                            <div class="flex flex-col gap-2 mt-3 pt-3 border-t border-white/5">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span class="text-white/60 text-[10px] font-bold">Без выбора при покупке</span>
+                                        <p class="text-white/30 text-[8px]">Скрывает выбор дополнительных ГБ при первичной покупке</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="traffic-no-choice-buy-{{ host.host_name }}" class="sr-only peer" {% if host.traffic_no_choice_buy %}checked{% endif %} onchange="toggleTrafficNoChoice('{{ host.host_name }}')" />
+                                        <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-cyan-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between pt-2 border-t border-white/5">
+                                    <div>
+                                        <span class="text-white/60 text-[10px] font-bold">Без выбора при продлении</span>
+                                        <p class="text-white/30 text-[8px]">Продление авто-включает текущие оплаченные докупки ГБ</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type=checkbox id="traffic-no-choice-renew-{{ host.host_name }}" class="sr-only peer" {% if host.traffic_no_choice_renew %}checked{% endif %} onchange="toggleTrafficNoChoice('{{ host.host_name }}')" />
+                                        <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-cyan-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+<!-- Plans -->
                     <div class="bg-white/5 border border-white/10 rounded-2xl p-5">
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-2">
@@ -2215,16 +2577,11 @@
 
     <section id="tab-referrals" class="tab-content hidden">
         <div class="space-y-6">
-            <div
-                class="relative overflow-hidden bg-white/5 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md group">
-                <div
-                    class="absolute -right-16 -top-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700">
-                </div>
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative">
-                    <div class="flex items-center gap-4">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10 border border-primary/20">
-                            <span class="material-symbols-outlined text-3xl">group_add</span>
+            <div class="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/[0.08] text-primary">
+                            <span class="material-symbols-outlined text-base">group_add</span>
                         </div>
                         <div>
                             <h3 class="text-xl font-bold text-white tracking-tight">Реферальная система</h3>
@@ -2250,9 +2607,9 @@
             </div>
 
             <!-- Main Settings Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <!-- Reward Logic Card -->
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+                <div class="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
                     <div class="flex items-center gap-2 mb-4">
                         <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <span class="material-symbols-outlined text-lg">payments</span>
@@ -2305,7 +2662,7 @@
                 </div>
 
                 <!-- Values Card -->
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+                <div class="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
                     <div class="flex items-center gap-2 mb-4">
                         <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <span class="material-symbols-outlined text-lg">trending_up</span>
@@ -2800,12 +3157,12 @@
         function switchTab(tabId) {
             tabs.forEach(btn => {
                 const isActive = btn.getAttribute('data-tab') === tabId;
-                btn.classList.toggle('bg-primary/20', isActive);
-                btn.classList.toggle('border-primary/30', isActive);
+                btn.classList.toggle('bg-white/[0.06]', isActive);
+                btn.classList.toggle('border-white/[0.08]', isActive);
                 btn.classList.toggle('text-white', isActive);
 
-                btn.classList.toggle('text-white/70', !isActive);
-                btn.classList.toggle('hover:bg-white/5', !isActive);
+                btn.classList.toggle('text-white/60', !isActive);
+                btn.classList.toggle('hover:bg-white/[0.06]', !isActive);
                 btn.classList.toggle('border-transparent', !isActive);
             });
             contents.forEach(content => content.classList.toggle('hidden', content.id !== 'tab-' + tabId));
@@ -3467,6 +3824,81 @@
         async function saveOrder() { const order = [...container.querySelectorAll('.' + itemClass)].map(el => el.getAttribute(dataAttr)); await sendRequest(url, 'POST', { order }, true); }
     }
     // ===== Конец перемещения элементов =====
+    async function toggleTrafficMode(hostName, checked) {
+        const mode = checked ? 'tiers' : 'plan';
+        const label = document.getElementById('traffic-mode-label-' + hostName);
+        if (label) label.textContent = checked ? 'Выбор' : 'По тарифу';
+        const block = document.getElementById('traffic-tiers-block-' + hostName);
+        if (block) { if (checked) block.classList.remove('hidden'); else block.classList.add('hidden'); }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('mode', mode);
+        const r = await sendRequest('/update-host-traffic-mode', 'POST', fd);
+        if (r.ok) showToast('success', 'Режим трафика сохранён');
+        else showToast('danger', r.error || 'Ошибка сохранения');
+    }
+
+    async function toggleTrafficNoChoice(hostName) {
+        const buyCb = document.getElementById('traffic-no-choice-buy-' + hostName);
+        const renewCb = document.getElementById('traffic-no-choice-renew-' + hostName);
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('no_choice_buy', buyCb && buyCb.checked ? 1 : 0);
+        fd.append('no_choice_renew', renewCb && renewCb.checked ? 1 : 0);
+        const r = await sendRequest('/update-host-traffic-no-choice', 'POST', fd);
+        if (r.ok) showToast('success', 'Настройки трафика сохранены');
+        else showToast('danger', r.error || 'Ошибка сохранения');
+    }
+
+    async function addTrafficTier(hostName) {
+        const gbInput = document.getElementById('traffic-tier-gb-' + hostName);
+        const priceInput = document.getElementById('traffic-tier-price-' + hostName);
+        if (!gbInput || !priceInput) return;
+        const gb = parseInt(gbInput.value);
+        const price = parseFloat(priceInput.value);
+        if (isNaN(gb) || gb < 1) { showToast('danger', 'Укажите пакет трафика в ГБ'); return; }
+        if (isNaN(price) || price < 0) { showToast('danger', 'Укажите корректную цену'); return; }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('traffic_gb', gb);
+        fd.append('price', price);
+        const r = await sendRequest('/add-traffic-tier', 'POST', fd);
+        if (r.ok) { showToast('success', 'Пакет трафика добавлен'); location.reload(); }
+        else { showToast('danger', r.error || 'Ошибка добавления'); }
+    }
+
+    function editTrafficTier(tierId) {
+        document.getElementById('traffic-tier-display-' + tierId).classList.add('hidden');
+        document.getElementById('traffic-tier-display-' + tierId).classList.remove('flex');
+        const editDiv = document.getElementById('traffic-tier-edit-' + tierId);
+        editDiv.classList.remove('hidden');
+        editDiv.classList.add('flex');
+        document.getElementById('traffic-tier-input-gb-' + tierId).focus();
+    }
+
+    async function saveTrafficTier(tierId) {
+        const gbInput = document.getElementById('traffic-tier-input-gb-' + tierId);
+        const priceInput = document.getElementById('traffic-tier-input-price-' + tierId);
+        if (!gbInput || !priceInput) return;
+        const gb = parseInt(gbInput.value);
+        const price = parseFloat(priceInput.value);
+        if (isNaN(gb) || gb < 1) { showToast('danger', 'Укажите пакет ГБ от 1'); return; }
+        if (isNaN(price) || price < 0) { showToast('danger', 'Укажите цену 0 или выше'); return; }
+        const fd = new FormData();
+        fd.append('traffic_gb', gb);
+        fd.append('price', price);
+        const r = await sendRequest('/edit-traffic-tier/' + tierId, 'POST', fd);
+        if (r.ok) { showToast('success', 'Пакет трафика обновлён'); location.reload(); }
+        else { showToast('danger', r.error || 'Ошибка сохранения'); }
+    }
+
+    async function deleteTrafficTier(tierId, hostName) {
+        if (!confirm('Удалить данный пакет трафика?')) return;
+        const r = await sendRequest('/delete-traffic-tier/' + tierId, 'POST');
+        if (r.ok) { showToast('success', 'Пакет трафика удалён'); location.reload(); }
+        else { showToast('danger', r.error || 'Ошибка удаления'); }
+    }
+
     async function toggleDeviceMode(hostName, checked) {
         const mode = checked ? 'tiers' : 'plan';
         const label = document.getElementById('device-mode-label-' + hostName);
@@ -3615,6 +4047,60 @@
     .tab-content .grid>div {
         position: relative;
         z-index: 1;
+    }
+
+    .settings-control {
+        border-color: rgba(255,255,255,.08) !important;
+        background: rgba(255,255,255,.03) !important;
+        border-radius: .75rem !important;
+        transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .settings-control:hover {
+        border-color: rgba(255,255,255,.2) !important;
+    }
+
+    .settings-control:focus,
+    .settings-control:focus-visible {
+        border-color: rgba(255,255,255,.2) !important;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(255,255,255,.12);
+    }
+
+    .settings-section-card {
+        border-color: rgba(255,255,255,.08) !important;
+        background: rgba(255,255,255,.03) !important;
+        box-shadow: none !important;
+    }
+
+    #settings-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+    #settings-form textarea,
+    #settings-form select {
+        border-color: rgba(255,255,255,.08) !important;
+        background: rgba(255,255,255,.03) !important;
+        border-radius: .75rem !important;
+        transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    #settings-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):hover,
+    #settings-form textarea:hover,
+    #settings-form select:hover {
+        border-color: rgba(255,255,255,.2) !important;
+    }
+
+    #settings-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus,
+    #settings-form textarea:focus,
+    #settings-form select:focus {
+        border-color: rgba(255,255,255,.2) !important;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(255,255,255,.12);
+    }
+
+    #settings-form .bg-black\/20,
+    #settings-form .bg-black\/30,
+    #settings-form .bg-black\/40,
+    #settings-form .bg-white\/5 {
+        background: rgba(255,255,255,.03) !important;
     }
 
     .tab-content .grid>div:has(.soft-select.open) {

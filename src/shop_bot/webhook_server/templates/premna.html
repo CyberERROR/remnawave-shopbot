@@ -20,52 +20,19 @@
 <div id="premna-error" class="{% if not statistics_error %}hidden {% endif %}mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-200">{{ statistics_error or '' }}</div>
 
 <div id="premna-content" class="{% if not statistics %}hidden {% endif %}">
-    <div class="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        {% set cards = [
-            ('online', 'Онлайн', 'wifi', 'text-primary'),
-            ('active', 'Активных', 'person_check', 'text-emerald-400'),
-            ('total', 'Всего в панели', 'group', 'text-sky-400'),
-            ('expired', 'Истекла', 'event_busy', 'text-orange-400'),
-            ('disabled', 'Отключено', 'person_off', 'text-red-400'),
-            ('limited', 'Лимит', 'speed', 'text-yellow-300'),
-            ('nodes', 'Нод в списке', 'dns', 'text-violet-400'),
-            ('never_online', 'Никогда', 'history_toggle_off', 'text-white/50'),
-            ('today', 'Сегодня', 'today', 'text-cyan-300')
+    <div class="space-y-5">
+    <section class="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur-sm">
+        <h3 class="mb-3 text-sm font-bold text-white">Трафик</h3>
+        <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        {% set traffic_cards = [
+            ('today', 'Сегодня', 'со вчерашнего дня'),
+            ('week', 'Последние 7 дней', 'с прошлой недели'),
+            ('month', 'Последние 30 дней', 'с прошлого месяца'),
+            ('calendar_month', 'Календарный месяц', 'предыдущий месяц'),
+            ('year', 'Текущий год', 'с прошлого года')
         ] %}
-        {% for key, label, icon, color in cards %}
-        <div class="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur-sm">
-            <span class="material-symbols-outlined absolute -right-2 -top-2 text-6xl opacity-[0.04]">{{ icon }}</span>
-            <div class="mb-5 flex items-center justify-between">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">{{ label }}</span>
-                <span class="material-symbols-outlined text-lg {{ color }}">{{ icon }}</span>
-            </div>
-            <strong class="text-3xl font-bold tracking-tight text-white" data-stat="{{ key }}">{% if key == 'nodes' %}{{ statistics.nodes }}{% else %}{{ statistics.users[key] }}{% endif %}</strong>
-        </div>
-        {% endfor %}
-        <div class="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur-sm">
-            <span class="material-symbols-outlined absolute -right-2 -top-2 text-6xl opacity-[0.04]">memory</span>
-            <div class="mb-5 flex items-center justify-between">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">Память</span>
-                <span class="material-symbols-outlined text-lg text-pink-400">memory</span>
-            </div>
-            <strong class="text-xl font-bold tracking-tight text-white"><span data-stat="memory-used">{{ statistics.memory.used }}</span><span class="text-white/35"> / </span><span data-stat="memory-total">{{ statistics.memory.total }}</span></strong>
-        </div>
-    </div>
-
-    <div class="rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-xl backdrop-blur-sm sm:p-7">
-        <div class="mb-6 flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><span class="material-symbols-outlined">swap_vert</span></div>
-            <div><h3 class="font-bold text-white">Трафик</h3><p class="text-xs text-white/40">Текущий период и значение предыдущего периода</p></div>
-        </div>
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {% set traffic_cards = [
-                ('today', 'Сегодня', 'со вчерашнего дня'),
-                ('week', 'Последние 7 дней', 'с прошлой недели'),
-                ('month', 'Последние 30 дней', 'с прошлого месяца'),
-                ('year', 'Текущий год', 'с прошлого года')
-            ] %}
-            {% for key, label, previous_label in traffic_cards %}
-            <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+        {% for key, label, previous_label in traffic_cards %}
+            <div class="rounded-xl border border-white/10 bg-black/10 p-3">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-white/40">{{ label }}</p>
                 <p class="mt-3 text-2xl font-bold text-white" data-traffic-current="{{ key }}">{{ statistics.traffic[key].current }}</p>
                 <p class="mt-2 flex items-center gap-1.5 text-xs text-white/40">
@@ -76,7 +43,76 @@
             </div>
             {% endfor %}
         </div>
+    </section>
+
+    <section class="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur-sm">
+        <h3 class="mb-3 text-sm font-bold text-white">Статистика сети</h3>
+        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {% for key, label, icon, color in [('online', 'Онлайн сейчас', 'wifi', 'text-primary'), ('today', 'Онлайн сегодня', 'today', 'text-cyan-300'), ('week', 'Онлайн на этой неделе', 'date_range', 'text-sky-300'), ('never_online', 'Ни разу не были онлайн', 'history_toggle_off', 'text-white/50')] %}
+            <div class="rounded-xl border border-white/10 bg-black/10 p-3"><div class="mb-2 flex items-center justify-between"><span class="text-[10px] font-bold uppercase tracking-wider text-white/40">{{ label }}</span><span class="material-symbols-outlined text-base {{ color }}">{{ icon }}</span></div><strong class="text-2xl font-bold text-white" data-stat="{{ key }}">{{ statistics.users[key] }}</strong></div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur-sm">
+        <h3 class="mb-3 text-sm font-bold text-white">Система</h3>
+        <div class="grid gap-2 sm:grid-cols-3">
+            <div class="rounded-xl border border-white/10 bg-black/10 p-3"><span class="text-[10px] font-bold uppercase tracking-wider text-white/40">Всего онлайн на нодах</span><strong class="mt-2 block text-2xl font-bold text-white" data-system="online-nodes">{{ statistics.system.online_nodes }}</strong></div>
+            <div class="rounded-xl border border-white/10 bg-black/10 p-3"><span class="text-[10px] font-bold uppercase tracking-wider text-white/40">Всего трафика</span><strong class="mt-2 block text-xl font-bold text-white" data-system="total-traffic">{{ statistics.system.total_traffic }}</strong></div>
+            <div class="rounded-xl border border-white/10 bg-black/10 p-3"><span class="text-[10px] font-bold uppercase tracking-wider text-white/40">Использование RAM / Total RAM</span><strong class="mt-2 block text-xl font-bold text-white"><span data-stat="memory-used">{{ statistics.memory.used }}</span><span class="text-white/35"> / </span><span data-stat="memory-total">{{ statistics.memory.total }}</span></strong></div>
+        </div>
+    </section>
+
+    <section class="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-xl backdrop-blur-sm">
+        <h3 class="mb-3 text-sm font-bold text-white">Пользователи</h3>
+        <div class="grid grid-cols-2 gap-2 md:grid-cols-5">
+            {% for key, label, color in [('total', 'Всего', 'text-sky-300'), ('active', 'Active', 'text-emerald-400'), ('expired', 'Expired', 'text-orange-400'), ('limited', 'Limited', 'text-yellow-300'), ('disabled', 'Disabled', 'text-red-400')] %}
+            <div class="rounded-xl border border-white/10 bg-black/10 p-3"><span class="text-[10px] font-bold uppercase tracking-wider text-white/40">{{ label }}</span><strong class="mt-2 block text-2xl font-bold {{ color }}" data-stat="{{ key }}">{{ statistics.users[key] }}</strong></div>
+            {% endfor %}
+        </div>
+    </section>
     </div>
+
+    <section class="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-xl backdrop-blur-sm">
+        <div class="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-400">
+                    <span class="material-symbols-outlined text-lg">group</span>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-white">Активные пользователи</h3>
+                    <p class="text-[11px] text-white/40">Пользователи с действующей подпиской Remnawave</p>
+                </div>
+            </div>
+            <span class="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-emerald-300">Active</span>
+        </div>
+        <div id="premna-active-users" class="grid gap-2.5 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+            {% if statistics and statistics.active_users %}
+            {% for user in statistics.active_users %}
+            <article class="group rounded-xl border border-white/10 bg-black/20 p-3 transition hover:border-primary/30 hover:bg-white/[0.06]">
+                <div class="flex items-center gap-2.5">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/30 to-sky-400/20 text-xs font-black text-primary">{{ user.name[:1]|upper }}</div>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-xs font-bold text-white">{{ user.name }}</p>
+                        <p class="truncate text-[10px] text-white/40">{{ user.email or ('Telegram ID: ' ~ user.telegram_id if user.telegram_id else 'Профиль Remnawave') }}</p>
+                    </div>
+                    <span class="material-symbols-outlined text-sm text-emerald-400">verified</span>
+                </div>
+                <div class="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2 text-[9px] uppercase tracking-wider">
+                    <span class="text-white/35">Действует до</span>
+                    <span class="font-bold text-emerald-300">{{ user.expire_at }}</span>
+                </div>
+            </article>
+            {% endfor %}
+            {% else %}
+            <div class="col-span-full flex min-h-24 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10 p-4 text-center">
+                <span class="material-symbols-outlined mb-1 text-2xl text-white/20">group_off</span>
+                <p class="text-xs font-semibold text-white/60">Активные пользователи не найдены</p>
+                <p class="mt-1 text-[10px] text-white/30">Данные появятся после синхронизации с Remnawave</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
 </div>
 
 <script>
@@ -89,9 +125,20 @@
             const element = document.querySelector(`[data-stat="${key}"]`);
             if (element) element.textContent = value;
         });
-        document.querySelector('[data-stat="nodes"]').textContent = statistics.nodes;
         document.querySelector('[data-stat="memory-used"]').textContent = statistics.memory.used;
         document.querySelector('[data-stat="memory-total"]').textContent = statistics.memory.total;
+        document.querySelector('[data-system="online-nodes"]').textContent = statistics.system.online_nodes;
+        document.querySelector('[data-system="total-traffic"]').textContent = statistics.system.total_traffic;
+        const activeUsers = document.getElementById('premna-active-users');
+        activeUsers.innerHTML = statistics.active_users.length ? statistics.active_users.map(user => `
+            <article class="group rounded-xl border border-white/10 bg-black/20 p-3 transition hover:border-primary/30 hover:bg-white/[0.06]">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/30 to-sky-400/20 text-xs font-black text-primary">${escapeHtml(user.name.slice(0, 1).toUpperCase())}</div>
+                    <div class="min-w-0 flex-1"><p class="truncate text-xs font-bold text-white">${escapeHtml(user.name)}</p><p class="truncate text-[10px] text-white/40">${escapeHtml(user.email || (user.telegram_id ? `Telegram ID: ${user.telegram_id}` : 'Профиль Remnawave'))}</p></div>
+                    <span class="material-symbols-outlined text-sm text-emerald-400">verified</span>
+                </div>
+                <div class="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2 text-[9px] uppercase tracking-wider"><span class="text-white/35">Действует до</span><span class="font-bold text-emerald-300">${escapeHtml(user.expire_at)}</span></div>
+            </article>`).join('') : '<div class="col-span-full flex min-h-24 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10 p-4 text-center"><span class="material-symbols-outlined mb-1 text-2xl text-white/20">group_off</span><p class="text-xs font-semibold text-white/60">Активные пользователи не найдены</p></div>';
         Object.entries(statistics.traffic).forEach(([key, value]) => {
             document.querySelector(`[data-traffic-current="${key}"]`).textContent = value.current;
             const previous = document.querySelector(`[data-traffic-previous="${key}"]`);
@@ -101,6 +148,10 @@
             trend.textContent = value.trend === 'down' ? 'trending_down' : value.trend === 'up' ? 'trending_up' : 'trending_flat';
             trend.className = `material-symbols-outlined text-base ${value.trend === 'down' ? 'text-emerald-400' : value.trend === 'up' ? 'text-red-400' : 'text-white/50'}`;
         });
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
     }
 
     async function refreshStatistics() {

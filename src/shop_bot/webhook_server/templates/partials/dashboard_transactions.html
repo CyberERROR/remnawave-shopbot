@@ -1,67 +1,39 @@
+{% macro user_cell(username, user_id, color='emerald') %}
+    {% if color == 'sky' %}{% set avatar = 'bg-sky-400/[0.08] text-sky-300' %}{% elif color == 'amber' %}{% set avatar = 'bg-amber-400/[0.08] text-amber-300' %}{% elif color == 'indigo' %}{% set avatar = 'bg-indigo-400/[0.08] text-indigo-300' %}{% else %}{% set avatar = 'bg-emerald-400/[0.08] text-emerald-300' %}{% endif %}
+    <div class="flex min-w-0 items-center gap-2">
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full {{ avatar }} text-xs font-medium uppercase">{{ (username or 'U')[0]|upper }}</span>
+        <span class="min-w-0"><span class="block truncate text-sm text-white/80 demo-blur-username">{% if username %}@{{ username }}{% else %}User {{ user_id }}{% endif %}</span>{% if username %}<span class="block truncate font-mono text-xs text-white/60">{{ user_id }}</span>{% endif %}</span>
+    </div>
+{% endmacro %}
+
+{% macro source_badge(source) %}
+    {% set method = (source or '')|lower %}
+    {% if method in ['yookassa', 'yoo kassa'] %}{% set badge = 'bg-indigo-400/10 text-indigo-300' %}
+    {% elif method == 'platega' %}{% set badge = 'bg-slate-400/10 text-slate-300' %}
+    {% elif method in ['stars', 'telegram stars', 'telegramstars'] %}{% set badge = 'bg-amber-400/10 text-amber-300' %}
+    {% elif method == 'cryptobot' %}{% set badge = 'bg-violet-400/10 text-violet-300' %}
+    {% elif method == 'heleket' %}{% set badge = 'bg-emerald-400/10 text-emerald-300' %}
+    {% elif method in ['balance', 'баланс'] %}{% set badge = 'bg-emerald-400/10 text-emerald-300' %}
+    {% elif method in ['referral', 'реферал'] %}{% set badge = 'bg-white/[0.06] text-white/60' %}
+    {% elif method in ['ton', 'ton connect', 'tonconnect'] %}{% set badge = 'bg-white/[0.06] text-white/60' %}
+    {% else %}{% set badge = 'bg-white/[0.06] text-white/60' %}{% endif %}
+    <span class="inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-medium {{ badge }}">{{ source or 'Не указан' }}</span>
+{% endmacro %}
+
+{% macro data_table(columns, rows) %}{{ caller() }}{% endmacro %}
+{% macro pagination(page, pages) %}<span class="text-xs tabular-nums text-white/60">‹ {{ page }} / {{ pages }} ›</span>{% endmacro %}
+
 {% for tx in transactions %}
-<tr class="transition-all duration-200 hover:bg-white/[0.03] group">
-    <td class="px-4 py-3 whitespace-nowrap">
-        <div class="flex items-center gap-2.5">
-            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-green-500/20 to-white/5 border border-green-500/15 flex items-center justify-center text-green-400 text-[10px] font-black uppercase shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                {{ (tx.username or 'N')[0] | upper }}
-            </div>
-            <div class="min-w-0">
-                <div class="text-xs font-bold text-white truncate max-w-[120px] demo-blur-username">{% if tx.username %}@{{ tx.username }}{% else %}User {{ tx.user_id }}{% endif %}</div>
-                <button type="button" class="text-[9px] text-white/25 hover:text-green-400 transition-colors font-mono tracking-wider" onclick="copySingleId(event, '{{ tx.user_id }}')" title="Скопировать ID">{{ tx.user_id }}</button>
-            </div>
-        </div>
-    </td>
-    <td class="px-4 py-3 whitespace-nowrap">
-        {% if tx.action == 'top_up' or tx.action == 'topup' %}
-        <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 shrink-0"></span>
-            <span class="text-xs font-bold text-white">Пополнение</span>
-        </div>
-        <div class="text-[10px] text-white/30 font-medium mt-0.5 ml-3">Кошелек</div>
-        {% else %}
-        <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-green-400 shadow-sm shadow-green-400/50 shrink-0"></span>
-            <span class="text-xs font-bold text-white truncate max-w-[130px] demo-blur-sensitive">{{ tx.plan_name }}</span>
-        </div>
-        <div class="text-[10px] text-white/30 font-medium mt-0.5 ml-3 flex items-center gap-1">
-            <span class="material-symbols-outlined text-[10px]">dns</span><span class="demo-blur-sensitive">{{ tx.host_name }}</span>
-        </div>
-        {% endif %}
-    </td>
-    <td class="px-4 py-3 whitespace-nowrap">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 border border-white/[0.08] text-xs font-black text-white tabular-nums demo-blur-amount">{{ tx.amount_rub | round(2) }} ₽</span>
-        <div class="mt-1">
-            {% set method = tx.payment_method|lower if tx.payment_method else '' %}
-            {% set badge_style %}
-            {% if method == 'yookassa' %}bg-blue-500/10 text-blue-400 border-blue-500/15
-            {% elif method == 'cryptobot' %}bg-yellow-500/10 text-yellow-400 border-yellow-500/15
-            {% elif method == 'ton' %}bg-cyan-500/10 text-cyan-400 border-cyan-500/15
-            {% elif method == 'stars' %}bg-purple-500/10 text-purple-400 border-purple-500/15
-            {% elif method == 'balance' %}bg-green-500/10 text-green-400 border-green-500/15
-            {% elif method == 'yoomoney' %}bg-orange-500/10 text-orange-400 border-orange-500/15
-            {% elif method == 'heleket' %}bg-pink-500/10 text-pink-400 border-pink-500/15
-            {% elif method == 'platega' %}bg-indigo-500/10 text-indigo-400 border-indigo-500/15
-            {% else %}bg-white/5 text-white/35 border-white/10
-            {% endif %}
-            {% endset %}
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded border text-[8px] uppercase font-black tracking-widest {{ badge_style }}">{{ tx.payment_method or 'N/A' }}</span>
-        </div>
-    </td>
-    <td class="px-4 py-3 whitespace-nowrap">
-        {% if tx.created_date %}
-        {% set d_parts = tx.created_date.split(' ')[0].split('-') %}
-        <div class="text-[11px] font-bold text-white/60 tabular-nums">{{ d_parts[2] }}.{{ d_parts[1] }}</div>
-        <div class="text-[9px] text-white/25 font-bold mt-0.5">{{ tx.created_date | relative_time }}</div>
-        {% else %}
-        <div class="text-[11px] text-white/30">—</div>
-        {% endif %}
-    </td>
-    <td class="px-4 py-3 whitespace-nowrap text-right">
-        <a href="{{ url_for('users_page', q=tx.user_id) }}"
-            class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/20 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-400 transition-all duration-200"
-            title="Профиль">
-            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
-        </a>
-    </td>
-</tr>
+    {% set method = (tx.payment_method or '')|lower %}
+    {% set status = (tx.status or '')|lower %}
+    {% set source = 'Balance' if method in ['balance', 'баланс'] else 'Referral' if method in ['referral', 'реферал'] else 'Telegram Stars' if method in ['stars', 'telegram stars', 'telegramstars'] else 'CryptoBot' if method == 'cryptobot' else 'Heleket' if method == 'heleket' else 'TON' if method in ['ton', 'ton connect', 'tonconnect'] else tx.payment_method or 'Не указан' %}
+    {% set tx_date = tx.created_date.split(' ')[0] if tx.created_date else '' %}
+    {% set date_parts = tx_date.split('-') if tx_date else [] %}
+    <tr class="group grid grid-cols-[minmax(130px,1.4fr)_minmax(140px,1.6fr)_minmax(100px,1.2fr)_minmax(90px,1fr)_40px] items-center border-b border-white/[0.05] text-left transition duration-150 hover:bg-white/[0.03] max-md:grid-cols-2 max-md:gap-x-2 max-md:py-1" onclick="window.location.href='{{ url_for('users_page', q=tx.user_id) }}'" tabindex="0" onkeydown="if(event.key==='Enter')window.location.href='{{ url_for('users_page', q=tx.user_id) }}'">
+        <td class="min-w-0 px-3 py-2 max-md:col-start-1 max-md:row-start-1">{{ user_cell(tx.username, tx.user_id, 'emerald') }}</td>
+        <td class="min-w-0 px-3 py-2 max-md:col-start-1 max-md:row-start-2">{% if tx.action in ['top_up', 'topup'] %}<span class="block truncate text-sm text-white/80">Пополнение баланса</span><span class="block truncate text-xs text-white/60">Кошелёк</span>{% else %}<span class="block truncate text-sm text-white/80">{{ tx.plan_name or 'Покупка ключа' }}</span><span class="block truncate text-xs text-white/60">{{ tx.host_name or 'Подписка' }}</span>{% endif %}{% if status not in ['paid', 'completed', 'success', 'successful'] and status %}<span class="mt-1 inline-flex rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] text-white/60">{{ tx.status }}</span>{% endif %}</td>
+        <td class="min-w-0 px-3 py-2 max-md:col-start-2 max-md:row-start-1"><span class="block truncate text-sm font-medium text-white/80 tabular-nums">{{ '%.2f'|format(tx.amount_rub or 0) }} ₽</span>{{ source_badge(source|trim) }}</td>
+        <td class="min-w-0 px-3 py-2 max-md:col-start-2 max-md:row-start-2">{% if date_parts|length == 3 %}<span class="block truncate text-sm text-white/80 tabular-nums">{{ date_parts[2] }} {{ {'01':'янв','02':'фев','03':'мар','04':'апр','05':'май','06':'июн','07':'июл','08':'авг','09':'сен','10':'окт','11':'ноя','12':'дек'}[date_parts[1]] }}, {{ tx.created_date.split(' ')[1][:5] if ' ' in tx.created_date else '' }}</span><span class="block truncate text-xs text-white/60">{{ tx.created_date|relative_time }}</span>{% else %}<span class="text-xs text-white/40">—</span>{% endif %}</td>
+        <td class="px-2 py-2 text-right max-md:hidden"><a href="{{ url_for('users_page', q=tx.user_id) }}" onclick="event.stopPropagation()" aria-label="Открыть профиль пользователя" class="inline-flex rounded-full p-1 text-white/60 transition duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"><i data-lucide="external-link" class="h-4 w-4" aria-hidden="true"></i></a></td>
+    </tr>
 {% endfor %}

@@ -147,7 +147,7 @@
         <div id="ssh-targets-grid-container" class="grid grid-cols-1 md:grid-cols-2 gap-3">
             {% for t in ssh_targets %}
             <div class="group/card ssh-target-card relative bg-gradient-to-r from-white/[0.04] to-white/[0.01] border border-white/[0.08] hover:border-primary/20 rounded-2xl overflow-visible shadow-xl backdrop-blur-md transition-all duration-300 hover:shadow-lg hover:shadow-primary/[0.04] p-4 flex flex-col w-full cursor-pointer"
-                draggable="true" data-target-name="{{ t.target_name }}" onclick="openHostDetailsModal('{{ t.target_name }}', 'ssh')">
+                draggable="true" data-target-name="{{ t.target_name }}" data-target-host="{{ t.ssh_host or '' }}" data-target-description="{{ t.description or '' }}" data-password-missing="{{ 'true' if not t.ssh_password else 'false' }}" onclick="openHostDetailsModal('{{ t.target_name }}', 'ssh')">
                 <div class="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/[0.01] to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
@@ -226,7 +226,7 @@
                         </form>
 
                         <form action="{{ url_for('node_delete_ssh_target_route', target_name=t.target_name) }}"
-                            method="post" data-confirm="Удалить SSH-цель '{{ t.target_name }}'?" class="w-full">
+                            method="post" class="w-full">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                             <button type="submit"
                                 class="w-full py-1.5 rounded-lg bg-white/[0.03] hover:bg-red-500/10 border border-transparent hover:border-red-500/20 text-white/20 hover:text-red-400 transition-all duration-200 text-[9px] font-bold uppercase tracking-wider flex items-center justify-center">
@@ -238,7 +238,7 @@
 
                 <div id="edit-ssh-{{ t.target_name }}" class="hidden w-full bg-black/40 border border-white/[0.08] rounded-xl p-4 mt-3" onclick="event.stopPropagation()">
                     <form action="{{ url_for('node_update_ssh_target_route', target_name=t.target_name) }}"
-                        method="post" class="space-y-2">
+                        method="post" class="ssh-update-form space-y-2">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                             <div>
@@ -301,6 +301,37 @@
     </div>
 </div>
 
+{% set passwordless_ssh_targets = namespace(count=0) %}
+{% for t in ssh_targets %}
+{% if not t.ssh_password %}
+{% set passwordless_ssh_targets.count = passwordless_ssh_targets.count + 1 %}
+{% endif %}
+{% endfor %}
+{% if passwordless_ssh_targets.count > 1 %}
+<button type="button" id="btn-open-ssh-passwords-modal" class="fixed right-5 bottom-5 z-40 w-12 h-12 rounded-2xl bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary shadow-xl shadow-primary/15 flex items-center justify-center transition-all duration-300" title="Ввести пароли для нод">
+    <span class="material-symbols-outlined text-xl">key</span>
+</button>
+{% endif %}
+
+<div id="sshPasswordsModal" class="modal-overlay">
+    <div class="modal-content max-w-lg rounded-3xl bg-[radial-gradient(circle_at_top_left,_rgba(19,236,128,0.08),_transparent_35%),linear-gradient(135deg,_#0c2218,_#091a12_55%,_#06110c)] border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden backdrop-blur-xl">
+        <div class="relative px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center border border-primary/15 shadow-lg shadow-primary/10"><span class="material-symbols-outlined text-primary text-xl">key</span></div>
+                <div><h5 class="text-[13px] font-bold text-white tracking-tight">Данные для нод</h5><p class="text-[9px] text-white/25 uppercase tracking-[0.15em] font-semibold mt-0.5">Введите пароли SSH</p></div>
+            </div>
+            <button type="button" onclick="closeModal('sshPasswordsModal')" class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center text-white/30 hover:text-white/70 transition-all duration-200"><span class="material-symbols-outlined text-lg">close</span></button>
+        </div>
+        <form id="ssh-passwords-form" class="p-5">
+            <div id="ssh-passwords-list" class="space-y-3 max-h-[55vh] overflow-y-auto pr-1"></div>
+            <div class="flex justify-end gap-2 pt-5">
+                <button type="button" onclick="closeModal('sshPasswordsModal')" class="px-4 py-2 rounded-xl bg-white/[0.06] border border-white/[0.06] text-white/50 text-[10px] font-bold uppercase tracking-wider hover:bg-white/[0.1] transition-all duration-200">Отмена</button>
+                <button type="submit" id="btn-save-ssh-passwords" class="px-4 py-2 rounded-xl bg-primary/20 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/30 transition-all duration-200">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="tab-server" class="tab-content">
     <div class="space-y-5">
 
@@ -327,6 +358,10 @@
                             class="px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/15 hover:border-blue-500/25 text-blue-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 transition-all duration-300" title="Добавить ноды Remnawave в SSH-цели">
                             <span class="material-symbols-outlined text-sm">sync</span>
                             <span class="hidden sm:inline">Синхронизировать ноды</span>
+                        </button>
+                        <button type="button" id="btn-update-all-ssh-nodes"
+                            class="w-8 h-8 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/15 hover:border-primary/25 text-primary flex items-center justify-center transition-all duration-300" title="Обновить все SSH-ноды">
+                            <span class="material-symbols-outlined text-base">system_update</span>
                         </button>
                         <span class="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/15 tabular-nums"
                             id="remna-hosts-count">0</span>
@@ -1553,6 +1588,29 @@
     </div>
 </div>
 
+<div id="updateAllSshNodesModal" class="modal-overlay" style="z-index: 55;">
+    <div class="modal-content max-w-2xl rounded-3xl bg-[radial-gradient(circle_at_top_left,_rgba(19,236,128,0.08),_transparent_35%),linear-gradient(135deg,_#0c2218,_#091a12_55%,_#06110c)] border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden backdrop-blur-xl">
+        <div class="relative px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center border border-primary/15 shadow-lg shadow-primary/10"><span class="material-symbols-outlined text-primary text-xl">system_update</span></div>
+                <div><h5 class="text-[13px] font-bold text-white tracking-tight">Обновление всех нод</h5><p class="text-[9px] text-white/25 uppercase tracking-[0.15em] font-semibold mt-0.5">Выполняется по очереди</p></div>
+            </div>
+            <button type="button" id="btn-close-update-all-ssh-nodes" class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center text-white/30 hover:text-white/70 transition-all duration-200"><span class="material-symbols-outlined text-lg">close</span></button>
+        </div>
+        <div class="p-5">
+            <div id="update-all-ssh-nodes-confirmation" class="space-y-4">
+                <div class="bg-amber-500/[0.06] border border-amber-500/15 rounded-2xl p-4 text-[11px] text-amber-200/75 leading-relaxed">Для каждой SSH-ноды будут последовательно загружены новые образы, перезапущены контейнеры и удалены неиспользуемые образы.</div>
+                <p id="update-all-ssh-nodes-count" class="text-[11px] text-white/50"></p>
+                <div class="flex justify-end gap-2"><button type="button" id="btn-cancel-update-all-ssh-nodes" class="px-4 py-2 rounded-xl bg-white/[0.06] border border-white/[0.06] text-white/50 text-[10px] font-bold uppercase tracking-wider hover:bg-white/[0.1] transition-all">Отмена</button><button type="button" id="btn-confirm-update-all-ssh-nodes" class="px-4 py-2 rounded-xl bg-primary/20 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/30 transition-all">Обновить</button></div>
+            </div>
+            <div id="update-all-ssh-nodes-progress" class="hidden">
+                <div class="flex items-center justify-between mb-3 text-[10px] font-bold uppercase tracking-wider"><span class="text-white/35">Прогресс</span><span id="update-all-ssh-nodes-progress-text" class="text-primary">0 / 0</span></div>
+                <div id="update-all-ssh-nodes-list" class="space-y-2 max-h-[55vh] overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="rebootServersModal" class="modal-overlay" style="z-index: 55;">
     <div class="modal-content max-w-3xl max-h-[85vh] rounded-2xl bg-gradient-to-br from-[#0c2218] to-[#091a12] border border-white/[0.08] shadow-2xl shadow-black/50 overflow-hidden backdrop-blur-xl">
         <div class="relative px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
@@ -1759,6 +1817,15 @@
         delete target.uptime_cached_at;
         delete target.country;
         delete target.country_code;
+        saveServersCache(cachedObj);
+    }
+
+    function removeCachedServer(type, name) {
+        const cachedObj = getServersCache();
+        if (!cachedObj) return;
+        const key = type === 'host' ? 'hosts' : 'ssh_targets';
+        const nameKey = type === 'host' ? 'host_name' : 'target_name';
+        cachedObj[key] = (cachedObj[key] || []).filter(item => item[nameKey] !== name);
         saveServersCache(cachedObj);
     }
 
@@ -2230,7 +2297,7 @@
                                         SWAP
                                     </button>
                                     <div class="my-1 border-t border-white/[0.04]"></div>
-                                    <form action="/node/ssh-targets/${encodeURIComponent(target.target_name)}/delete" method="post" data-confirm="Удалить SSH-цель '${target.target_name}'?" class="w-full">
+                                    <form action="/node/ssh-targets/${encodeURIComponent(target.target_name)}/delete" method="post" class="w-full">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                         <button type="submit" onclick="localStorage.removeItem(SERVERS_CACHE_KEY)"
                                             class="w-full px-3 py-2 text-left text-[11px] text-rose-500/90 hover:text-rose-400 hover:bg-rose-500/10 flex items-center gap-2.5 transition-all duration-200 rounded-xl font-semibold">
@@ -4374,26 +4441,236 @@
         });
         renderNodeFlagEmoji();
 
-        document.querySelectorAll('form[action*="/ssh-targets/"][action$="/update"]').forEach(form => {
-            form.addEventListener('submit', () => {
+        document.querySelectorAll('.ssh-update-form').forEach(form => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
                 const actionParts = form.action.split('/');
                 const currentName = decodeURIComponent(actionParts[actionParts.length - 2]);
                 const formData = new FormData(form);
-                updateCachedSshTarget(currentName, {
-                    ssh_host: formData.get('ssh_host') || '',
-                    ssh_port: formData.get('ssh_port') || '',
-                    ssh_user: formData.get('ssh_user') || '',
-                    ssh_password: formData.get('ssh_password') || '',
-                    ssh_key_path: formData.get('ssh_key_path') || '',
-                    description: formData.get('description') || ''
-                }, formData.get('new_target_name') || currentName);
+                const submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) submitButton.disabled = true;
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.ok) throw new Error(result.error || 'Не удалось сохранить SSH-цель');
+                    updateCachedSshTarget(currentName, {
+                        ssh_host: formData.get('ssh_host') || '',
+                        ssh_port: formData.get('ssh_port') || '',
+                        ssh_user: formData.get('ssh_user') || '',
+                        ssh_password: formData.get('ssh_password') || '',
+                        ssh_key_path: formData.get('ssh_key_path') || '',
+                        description: formData.get('description') || ''
+                    }, formData.get('new_target_name') || currentName);
+                    document.getElementById('edit-ssh-' + currentName)?.classList.add('hidden');
+                    window.showToast('success', result.message || 'SSH-цель обновлена');
+                } catch (error) {
+                    window.showToast('danger', error.message || 'Ошибка сохранения SSH-цели');
+                } finally {
+                    if (submitButton) submitButton.disabled = false;
+                }
             });
         });
 
-        document.querySelectorAll('form[action*="/ssh-targets/"][action$="/delete"]').forEach(form => {
-            form.addEventListener('submit', () => {
-                localStorage.removeItem(SERVERS_CACHE_KEY);
+        const sshPasswordsModalButton = document.getElementById('btn-open-ssh-passwords-modal');
+        const sshPasswordsForm = document.getElementById('ssh-passwords-form');
+        const sshPasswordsList = document.getElementById('ssh-passwords-list');
+
+        sshPasswordsModalButton?.addEventListener('click', () => {
+            const targets = Array.from(document.querySelectorAll('.ssh-target-card[data-password-missing="true"]'));
+            sshPasswordsList.replaceChildren();
+            targets.forEach(card => {
+                const row = document.createElement('div');
+                const name = document.createElement('p');
+                const host = document.createElement('button');
+                const password = document.createElement('input');
+                row.className = 'bg-black/25 border border-white/[0.06] rounded-2xl p-3';
+                name.className = 'text-[11px] font-bold text-white truncate';
+                name.textContent = `${getFlagEmoji(card.dataset.targetName, card.dataset.targetDescription)} ${card.dataset.targetName}`;
+                host.type = 'button';
+                host.className = 'mt-1 text-[10px] font-mono text-white/35 hover:text-primary transition-colors cursor-copy';
+                host.textContent = card.dataset.targetHost;
+                host.title = 'Скопировать IP сервера';
+                host.addEventListener('click', () => navigator.clipboard.writeText(card.dataset.targetHost).then(() => window.showToast('success', 'IP скопирован')));
+                password.type = 'password';
+                password.name = 'ssh_password';
+                password.autocomplete = 'new-password';
+                password.placeholder = 'Пароль SSH';
+                password.dataset.targetName = card.dataset.targetName;
+                password.className = 'mt-3 w-full bg-black/30 border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-[11px] placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/20 transition-all';
+                row.append(name, host, password);
+                sshPasswordsList.append(row);
             });
+            if (!targets.length) return window.showToast('info', 'Все ноды уже имеют пароль');
+            openModal('sshPasswordsModal');
+        });
+
+        sshPasswordsForm?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const fields = Array.from(sshPasswordsList.querySelectorAll('input[name="ssh_password"]')).filter(field => field.value);
+            if (!fields.length) return window.showToast('danger', 'Введите хотя бы один пароль');
+            const button = document.getElementById('btn-save-ssh-passwords');
+            button.disabled = true;
+            try {
+                await Promise.all(fields.map(async field => {
+                    const card = document.querySelector(`.ssh-target-card[data-target-name="${CSS.escape(field.dataset.targetName)}"]`);
+                    const formData = new FormData();
+                    formData.append('csrf_token', window.getCsrfToken());
+                    formData.append('ssh_password', field.value);
+                    const response = await fetch(`/node/ssh-targets/${encodeURIComponent(field.dataset.targetName)}/update`, {
+                        method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.ok) throw new Error(field.dataset.targetName);
+                    card.dataset.passwordMissing = 'false';
+                    const editPassword = document.getElementById('pass-' + field.dataset.targetName);
+                    if (editPassword) editPassword.value = field.value;
+                }));
+                closeModal('sshPasswordsModal');
+                window.showToast('success', 'Пароли SSH сохранены');
+            } catch (error) {
+                window.showToast('danger', `Не удалось сохранить пароль для ноды ${error.message || ''}`);
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        const updateAllSshNodesButton = document.getElementById('btn-update-all-ssh-nodes');
+        const updateAllSshNodesConfirmation = document.getElementById('update-all-ssh-nodes-confirmation');
+        const updateAllSshNodesProgress = document.getElementById('update-all-ssh-nodes-progress');
+        const updateAllSshNodesList = document.getElementById('update-all-ssh-nodes-list');
+        let isUpdatingAllSshNodes = false;
+
+        const closeUpdateAllSshNodesModal = () => {
+            if (!isUpdatingAllSshNodes) closeModal('updateAllSshNodesModal');
+        };
+
+        updateAllSshNodesButton?.addEventListener('click', () => {
+            const targets = Array.from(document.querySelectorAll('.ssh-target-card')).filter(card => card.dataset.passwordMissing === 'false' && !card.dataset.targetName.includes('🛠'));
+            document.getElementById('update-all-ssh-nodes-count').textContent = `Будет обновлено нод: ${targets.length}`;
+            document.getElementById('btn-confirm-update-all-ssh-nodes').disabled = !targets.length;
+            updateAllSshNodesConfirmation.classList.remove('hidden');
+            updateAllSshNodesProgress.classList.add('hidden');
+            openModal('updateAllSshNodesModal');
+        });
+
+        document.getElementById('btn-close-update-all-ssh-nodes')?.addEventListener('click', closeUpdateAllSshNodesModal);
+        document.getElementById('btn-cancel-update-all-ssh-nodes')?.addEventListener('click', closeUpdateAllSshNodesModal);
+        document.getElementById('btn-confirm-update-all-ssh-nodes')?.addEventListener('click', async () => {
+            const targets = Array.from(document.querySelectorAll('.ssh-target-card')).filter(card => card.dataset.passwordMissing === 'false' && !card.dataset.targetName.includes('🛠'));
+            if (!targets.length) return window.showToast('danger', 'Нет нод с настроенным SSH-доступом');
+            isUpdatingAllSshNodes = true;
+            updateAllSshNodesConfirmation.classList.add('hidden');
+            updateAllSshNodesProgress.classList.remove('hidden');
+            updateAllSshNodesList.replaceChildren();
+            targets.forEach(card => {
+                const row = document.createElement('div');
+                const icon = document.createElement('span');
+                const content = document.createElement('div');
+                const name = document.createElement('p');
+                const host = document.createElement('p');
+                const status = document.createElement('p');
+                row.className = 'flex items-center gap-3 rounded-xl bg-black/25 border border-white/[0.06] px-3 py-2.5';
+                row.dataset.targetName = card.dataset.targetName;
+                icon.className = 'material-symbols-outlined text-white/25';
+                icon.textContent = 'schedule';
+                content.className = 'min-w-0 flex-1';
+                name.className = 'text-[11px] font-bold text-white truncate';
+                name.textContent = card.dataset.targetName;
+                host.className = 'text-[9px] font-mono text-white/35 mt-0.5';
+                host.textContent = card.dataset.targetHost;
+                status.className = 'text-[9px] text-white/30 mt-0.5';
+                status.textContent = 'Ожидание';
+                content.append(name, host, status);
+                row.append(icon, content);
+                updateAllSshNodesList.append(row);
+            });
+            let completed = 0;
+            const updateNode = async (card) => {
+                const row = updateAllSshNodesList.querySelector(`[data-target-name="${CSS.escape(card.dataset.targetName)}"]`);
+                const status = row.querySelector('p:last-child');
+                const icon = row.querySelector('.material-symbols-outlined');
+                icon.className = 'material-symbols-outlined text-primary animate-spin';
+                icon.textContent = 'progress_activity';
+                status.textContent = 'Обновление и очистка образов...';
+                try {
+                    const formData = new FormData();
+                    formData.append('csrf_token', window.getCsrfToken());
+                    const response = await fetch(`/node/servers/update/ssh/${encodeURIComponent(card.dataset.targetName)}/start`, { method: 'POST', body: formData });
+                    const contentType = response.headers.get('content-type') || '';
+                    const started = contentType.includes('application/json') ? await response.json() : null;
+                    if (!response.ok || !started?.ok) throw new Error(started?.error || 'Не удалось запустить обновление ноды');
+                    let result = null;
+                    while (!result?.done) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        const statusResponse = await fetch(`/node/servers/update/status/${encodeURIComponent(started.task_id)}`);
+                        const statusContentType = statusResponse.headers.get('content-type') || '';
+                        result = statusContentType.includes('application/json') ? await statusResponse.json() : null;
+                        if (!statusResponse.ok || !result?.ok) throw new Error(result?.error || 'Не удалось получить статус обновления');
+                    }
+                    result = result.result;
+                    if (!result?.ok) throw new Error(result?.error || 'Не удалось обновить ноду');
+                    icon.className = `material-symbols-outlined ${result.updated ? 'text-primary' : 'text-amber-400'}`;
+                    icon.textContent = result.updated ? 'check_circle' : 'info';
+                    const versions = result.version_before || result.version_after ? `: ${result.version_before || 'неизвестно'} -> ${result.version_after || 'неизвестно'}` : '';
+                    status.textContent = `${result.updated ? 'Обновлено' : 'Уже последняя версия'}${versions}`;
+                    window.showToast(result.updated ? 'success' : 'info', `${card.dataset.targetName} (${card.dataset.targetHost}): ${status.textContent}`);
+                } catch (error) {
+                    icon.className = 'material-symbols-outlined text-red-400';
+                    icon.textContent = 'error';
+                    status.textContent = error.message || 'Не удается войти на сервер';
+                    window.showToast('danger', `${card.dataset.targetName} (${card.dataset.targetHost}): ${status.textContent}`);
+                }
+                completed += 1;
+                document.getElementById('update-all-ssh-nodes-progress-text').textContent = `${completed} / ${targets.length}`;
+            };
+            let nextTargetIndex = 0;
+            await Promise.all(Array.from({ length: Math.min(3, targets.length) }, async () => {
+                while (nextTargetIndex < targets.length) {
+                    const card = targets[nextTargetIndex];
+                    nextTargetIndex += 1;
+                    await updateNode(card);
+                }
+            }));
+            isUpdatingAllSshNodes = false;
+            window.showToast('success', 'Обновление всех нод завершено');
+        });
+
+        document.addEventListener('submit', async (event) => {
+            const form = event.target.closest('form[action*="/ssh-targets/"][action$="/delete"]');
+            if (!form) return;
+            event.preventDefault();
+            const actionParts = form.action.split('/');
+            const targetName = decodeURIComponent(actionParts[actionParts.length - 2]);
+            const confirmed = await window.showConfirm({
+                title: 'Удалить SSH-цель',
+                message: `Вы уверены, что хотите удалить SSH-цель '${targetName}'?`,
+                type: 'danger',
+                confirmText: 'Удалить',
+                cancelText: 'Отмена'
+            });
+            if (!confirmed) return;
+            const button = form.querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                });
+                const contentType = response.headers.get('content-type') || '';
+                const result = contentType.includes('application/json') ? await response.json() : null;
+                if (!response.ok || !result?.ok) throw new Error(result?.error || 'Не удалось удалить SSH-цель');
+                removeCachedServer('ssh', targetName);
+                form.closest('.ssh-target-card')?.remove();
+                window.showToast('success', result.message || 'SSH-цель удалена');
+            } catch (error) {
+                window.showToast('danger', error.message || 'Ошибка сети при удалении SSH-цели');
+                if (button) button.disabled = false;
+            }
         });
 
         document.querySelectorAll('.ssh-edit-btn').forEach(btn => {
@@ -4788,10 +5065,11 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.ok) {
-                    localStorage.removeItem(SERVERS_CACHE_KEY);
+                    removeCachedServer(currentDetailsServerType, currentDetailsNodeName);
+                    document.querySelectorAll(`.ssh-target-card[data-target-name="${CSS.escape(currentDetailsNodeName)}"]`).forEach(card => card.remove());
+                    document.querySelectorAll(`.host-card[data-host-name="${CSS.escape(currentDetailsNodeName)}"]`).forEach(card => card.remove());
                     window.showToast('success', data.message || `${label} удален`);
                     closeModal('nodeDetailsModal');
-                    loadServers();
                 } else {
                     window.showToast('danger', data.error || `Не удалось удалить ${label}`);
                 }

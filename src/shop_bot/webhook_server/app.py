@@ -67,11 +67,14 @@ from shop_bot.data_manager.remnawave_repository import (
     get_all_ssh_targets, get_ssh_target, create_ssh_target, update_ssh_target_fields, delete_ssh_target, rename_ssh_target,
     get_user, toggle_host_visibility, get_total_spent_by_method, get_all_other_settings, update_other_setting,
     get_device_tiers, add_device_tier, delete_device_tier, update_host_device_mode,
+    get_traffic_tiers, add_traffic_tier, delete_traffic_tier, update_traffic_tier,
+    update_host_traffic_mode, update_host_traffic_no_choice,
 )
 from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
     delete_button_config, reorder_button_configs, DB_FILE,
-    add_seller_user, get_seller_user, delete_seller_user, update_user_username
+    add_seller_user, get_seller_user, delete_seller_user, update_user_username,
+    get_admin_stats
 )
 from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id, update_host_button_style
 import sqlite3
@@ -85,6 +88,7 @@ from .modules import security
 
 _bot_controller = None
 _support_bot_controller = SupportBotController()
+_telegram_avatar_cache = {}
 
 ALL_SETTINGS_KEYS = [
     "panel_login", "panel_password", "about_text", "terms_url", "privacy_url",
@@ -314,7 +318,8 @@ def create_webhook_app(bot_controller_instance):
         return {
             'current_year': get_msk_time().year,
             'csrf_token': generate_csrf,
-            'webapp_exists': webapp_exists
+            'webapp_exists': webapp_exists,
+            'sidebar_today_stats': get_admin_stats()
         }
 
     @flask_app.template_filter('strip_bom')
@@ -612,12 +617,22 @@ def create_webhook_app(bot_controller_instance):
     @login_required
     def dashboard_stats_partial():
         hide_payments = request.args.get('hide_payments') == 'true'
-        
+        comparison = get_daily_stats_for_charts(days=2)
+        recent = get_daily_stats_for_charts(days=1)
+        today = get_msk_time().strftime('%Y-%m-%d')
+        yesterday = (get_msk_time() - timedelta(days=1)).strftime('%Y-%m-%d')
+        today_users = sum(value for key, value in recent.get('users', {}).items() if key.startswith(today))
+        yesterday_users = sum(value for key, value in comparison.get('users', {}).items() if key.startswith(yesterday))
+        today_income = sum(sum(methods.values()) for key, methods in recent.get('income', {}).items() if key.startswith(today))
+        yesterday_income = sum(sum(methods.values()) for key, methods in comparison.get('income', {}).items() if key.startswith(yesterday))
+        percentage_change = lambda current, previous: ((current - previous) * 100 / previous) if previous else (100 if current else 0)
         stats = {
             "user_count": get_user_count(),
             "total_keys": get_total_keys_count(),
             "total_spent": get_total_spent_sum(),
-            "host_count": len(get_all_hosts())
+            "host_count": len(get_all_hosts()),
+            "users_delta": percentage_change(today_users, yesterday_users),
+            "income_delta": percentage_change(today_income, yesterday_income)
         }
 
         if not hide_payments:
@@ -675,7 +690,7 @@ def create_webhook_app(bot_controller_instance):
     @login_required
     def dashboard_transactions_partial():
         page = request.args.get('page', 1, type=int)
-        per_page = 8
+        per_page = 9
         transactions, total_transactions = get_paginated_transactions(page=page, per_page=per_page)
         total_pages = ceil(total_transactions / per_page)
         
@@ -722,6 +737,21 @@ def create_webhook_app(bot_controller_instance):
         }
         days = mapping.get(period, 30)
         data = get_daily_stats_for_charts(days=days)
+        comparison = get_daily_stats_for_charts(days=2)
+        today = get_msk_time().strftime('%Y-%m-%d')
+        yesterday = (get_msk_time() - timedelta(days=1)).strftime('%Y-%m-%d')
+        recent = get_daily_stats_for_charts(days=1)
+        today_users = sum(value for key, value in recent.get('users', {}).items() if key.startswith(today))
+        yesterday_users = sum(value for key, value in comparison.get('users', {}).items() if key.startswith(yesterday))
+        today_income = sum(sum(methods.values()) for key, methods in recent.get('income', {}).items() if key.startswith(today))
+        yesterday_income = sum(sum(methods.values()) for key, methods in comparison.get('income', {}).items() if key.startswith(yesterday))
+        today_keys = sum(value for key, value in recent.get('keys', {}).items() if key.startswith(today))
+        yesterday_keys = sum(value for key, value in comparison.get('keys', {}).items() if key.startswith(yesterday))
+        data['comparison'] = {
+            'users': ((today_users - yesterday_users) * 100 / yesterday_users) if yesterday_users else (100 if today_users else 0),
+            'income': ((today_income - yesterday_income) * 100 / yesterday_income) if yesterday_income else (100 if today_income else 0),
+            'keys': ((today_keys - yesterday_keys) * 100 / yesterday_keys) if yesterday_keys else (100 if today_keys else 0)
+        }
         return jsonify(data)
 
     @flask_app.route('/dashboard/user_groups.json')
@@ -970,6 +1000,60 @@ def create_webhook_app(bot_controller_instance):
         return render_template('partials/users_table.html', users=users)
 
 
+    @flask_app.route('/users/<int:user_id>/avatar')
+    @login_required
+    def user_avatar(user_id: int):
+        now = time.time()
+        cached = _telegram_avatar_cache.get(user_id)
+        if cached and cached[0] > now:
+            if cached[1] is None:
+                return '', 204
+            response = make_response(cached[1])
+            response.headers['Content-Type'] = cached[2]
+            response.headers['Cache-Control'] = 'private, max-age=3600'
+            return response
+
+        token = (get_setting('telegram_bot_token') or '').strip()
+        if not token:
+            _telegram_avatar_cache[user_id] = (now + 300, None, None)
+            return '', 204
+
+        try:
+            api_url = f'https://api.telegram.org/bot{token}/getUserProfilePhotos?user_id={user_id}&limit=1'
+            api_request = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(api_request, timeout=5) as api_response:
+                photos_result = json.loads(api_response.read().decode('utf-8'))
+            photos = photos_result.get('result', {}).get('photos', []) if photos_result.get('ok') else []
+            if not photos or not photos[0]:
+                _telegram_avatar_cache[user_id] = (now + 3600, None, None)
+                return '', 204
+
+            file_id = photos[0][-1].get('file_id')
+            file_url = f'https://api.telegram.org/bot{token}/getFile?file_id={urllib.parse.quote(file_id)}'
+            file_request = urllib.request.Request(file_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(file_request, timeout=5) as api_response:
+                file_result = json.loads(api_response.read().decode('utf-8'))
+            file_path = file_result.get('result', {}).get('file_path') if file_result.get('ok') else None
+            if not file_path:
+                _telegram_avatar_cache[user_id] = (now + 300, None, None)
+                return '', 204
+
+            image_url = f'https://api.telegram.org/file/bot{token}/{file_path}'
+            image_request = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(image_request, timeout=8) as image_response:
+                image_data = image_response.read(2_000_000)
+                content_type = image_response.headers.get_content_type() or 'image/jpeg'
+            _telegram_avatar_cache[user_id] = (now + 3600, image_data, content_type)
+            response = make_response(image_data)
+            response.headers['Content-Type'] = content_type
+            response.headers['Cache-Control'] = 'private, max-age=3600'
+            return response
+        except Exception as error:
+            logger.warning('Не удалось получить аватар Telegram для пользователя %s: %s', user_id, error)
+            _telegram_avatar_cache[user_id] = (now + 300, None, None)
+            return '', 204
+
+
     @flask_app.route('/users/<int:user_id>/keys.partial')
     @login_required
     def user_keys_partial(user_id: int):
@@ -1137,11 +1221,11 @@ def create_webhook_app(bot_controller_instance):
         """Fetch detailed user information for the details modal"""
         try:
             
+            remnawave_only = request.args.get('remnawave_only') == '1'
             user = get_user(user_id)
             if not user:
                 return jsonify({"ok": False, "error": "user_not_found"}), 404
-            
-            
+            user_username = user.get('username')
             referrals = get_referrals_for_user(user_id) or []
             
             
@@ -1224,6 +1308,15 @@ def create_webhook_app(bot_controller_instance):
                                 return f"Тариф #{plan_id}"
                         return '—'
 
+                    def _first_present(source, *keys):
+                        if not isinstance(source, dict):
+                            return None
+                        for key in keys:
+                            value = source.get(key)
+                            if value not in (None, ''):
+                                return value
+                        return None
+
                     for row in rows:
                         pm_raw = row['payment_method'] or 'N/A'
                         pm = str(pm_raw).strip().lower()
@@ -1247,6 +1340,16 @@ def create_webhook_app(bot_controller_instance):
                         is_admin_balance = action_norm == 'admin_balance_adjust' or pm == 'admin'
                         is_referral_bonus = action_norm in ('referral_bonus', 'referral_start_bonus')
                         is_balance_payment = pm == 'balance'
+                        transaction_type = None
+                        customer_name = _first_present(meta, 'username', 'customer_username', 'customer_name', 'user_name') or user_username or row['username']
+                        customer_id = user_id
+                        purchase_type = _first_present(meta, 'sale_type', 'saleType', 'action_label', 'action') or transaction_type or action
+                        provider_payment_id = _first_present(meta, 'provider_payment_id', 'providerPaymentId', 'invoice_id', 'invoiceId', 'cryptobot_invoice_id', 'crypto_invoice_id', 'charge_id', 'chargeId')
+                        if not provider_payment_id and str(pm_raw).strip().lower() in ('cryptobot', 'crypto bot'):
+                            provider_payment_id = meta.get('transaction_id')
+                        provider_url = _first_present(meta, 'payment_url', 'paymentUrl', 'confirmation_url', 'confirmationUrl', 'pay_url', 'payUrl')
+                        yookassa_id = _first_present(meta, 'yookassa_id', 'yooKassaId', 'yookassa_payment_id', 'yooKassaPaymentId')
+                        idempotency_key = _first_present(meta, 'idempotency_key', 'idempotence_key', 'idempotenceKey', 'Idempotence-Key')
 
                         details = []
                         if plan_name and plan_name != '—':
@@ -1280,9 +1383,14 @@ def create_webhook_app(bot_controller_instance):
 
                         base_item = {
                             'transaction_id': row['transaction_id'],
+                            'transaction_code': row['transaction_id'],
                             'payment_id': row['payment_id'],
                             'username': row['username'],
+                            'customer_name': customer_name,
+                            'customer_id': customer_id,
+                            'telegram_id': user_id,
                             'date': row['created_date'],
+                            'updated_at': _first_present(meta, 'updated_at', 'updatedAt', 'updated_date'),
                             'status': row['status'],
                             'payment_method': pm_raw,
                             'method_label': _method_label(pm_raw),
@@ -1310,8 +1418,29 @@ def create_webhook_app(bot_controller_instance):
                             'source_payment_id': meta.get('source_payment_id'),
                             'source_amount': meta.get('source_amount'),
                             'reason': meta.get('reason'),
-                            'details': details,
+                            'provider_payment_id': provider_payment_id,
+                            'provider_url': provider_url,
+                            'yookassa_id': yookassa_id,
+                            'idempotency_key': idempotency_key,
+                            'purchase_type': purchase_type,
+                            'processed_by': _first_present(meta, 'processed_by', 'processedBy', 'admin_login', 'admin_username'),
+                            'processed_at': _first_present(meta, 'processed_at', 'processedAt'),
+                            'canceled_by': _first_present(meta, 'canceled_by', 'cancelled_by', 'canceledBy', 'cancelledBy'),
+                            'canceled_at': _first_present(meta, 'canceled_at', 'cancelled_at', 'canceledAt', 'cancelledAt'),
+                            'cancel_reason': _first_present(meta, 'cancel_reason', 'cancelReason', 'cancellation_reason'),
+                            'admin_id': _first_present(meta, 'admin_id', 'adminId', 'processed_by_id', 'processedById'),
+                            'admin_cancel_id': _first_present(meta, 'cancelled_by_id', 'canceled_by_id', 'cancelledById', 'canceledById'),
+                            'description': _first_present(meta, 'description', 'payment_description', 'paymentDescription'),
+                             'discount': _first_present(meta, 'discount', 'discount_amount', 'discountAmount', 'promo_applied_amount', 'promo_discount'),
+                             'original_price': meta.get('original_price'),
+                             'seller_discount': meta.get('seller_discount'),
+                             'seller_discount_percent': meta.get('seller_discount_percent'),
+                             'referral_discount': meta.get('referral_discount'),
+                             'referral_discount_percent': meta.get('referral_discount_percent'),
+                             'total_discount': meta.get('total_discount'),
+                             'details': details,
                             'metadata': meta,
+                            'raw_metadata': row['metadata'],
                         }
                         
                         if is_success and (is_topup or is_admin_balance or is_referral_bonus or is_balance_payment):
@@ -1343,6 +1472,25 @@ def create_webhook_app(bot_controller_instance):
                 keys = get_keys_for_user(user_id) or []
                 subs_stats["total"] = len(keys)
                 now = get_msk_time().replace(tzinfo=None)
+                payment_by_key = {}
+                try:
+                    with sqlite3.connect(DB_FILE) as conn:
+                        conn.row_factory = sqlite3.Row
+                        payment_rows = conn.execute(
+                            "SELECT metadata, payment_method FROM transactions WHERE user_id = ? AND LOWER(status) IN ('paid', 'completed', 'success') ORDER BY created_date DESC",
+                            (user_id,),
+                        ).fetchall()
+                    for payment_row in payment_rows:
+                        payment_meta = json.loads(payment_row['metadata'] or '{}')
+                        payment_key_id = str(payment_meta.get('key_id') or '')
+                        if payment_key_id and payment_key_id not in payment_by_key:
+                            payment_by_key[payment_key_id] = {
+                                'plan': payment_meta.get('plan_name'),
+                                'plan_id': payment_meta.get('plan_id'),
+                                'provider': _method_label(payment_row['payment_method']),
+                            }
+                except Exception as payment_error:
+                    logger.warning(f"Failed to load subscription payment metadata for user {user_id}: {payment_error}")
                 
                 for key in keys:
                     expire_at_str = key.get('expire_at')
@@ -1369,7 +1517,63 @@ def create_webhook_app(bot_controller_instance):
                         days_left = 9999 
                     
                     status_text = f"Осталось дней: {days_left}" if not is_expired else "ИСТЕК"
-                    
+                    payment_info = payment_by_key.get(str(key.get('key_id')), {})
+                    plan_name = payment_info.get('plan')
+                    plan_id = payment_info.get('plan_id')
+                    if not plan_name and plan_id:
+                        try:
+                            plan = get_plan_by_id(int(plan_id))
+                            plan_name = plan.get('plan_name') if plan else None
+                        except Exception:
+                            plan_name = None
+
+                    remote_user = None
+                    remote_traffic = None
+                    remote_hwid_limit = None
+                    remote_hwid_used = None
+                    try:
+                        if remnawave_only:
+                            remote_user = asyncio.run(remnawave_api.get_user_by_id(
+                                key.get('remnawave_user_uuid'),
+                                host_name=key.get('host_name'),
+                            ))
+                        if remnawave_only and remote_user:
+                            limit_bytes = int(remote_user.get('trafficLimitBytes') or remote_user.get('trafficLimit') or 0)
+                            user_traffic = remote_user.get('userTraffic') or {}
+                            used_value = user_traffic.get('usedTrafficBytes')
+                            if used_value is None:
+                                used_value = remote_user.get('usedTrafficBytes')
+                            if used_value is None:
+                                used_value = remote_user.get('trafficUsed')
+                            used_bytes = int(used_value or 0)
+                            remote_traffic = {
+                                'limit_bytes': limit_bytes,
+                                'used_bytes': used_bytes,
+                                'limit_gb': limit_bytes / (1024 ** 3),
+                                'used_gb': used_bytes / (1024 ** 3),
+                            }
+                            remote_hwid_limit = remote_user.get('hwidDeviceLimit')
+                            if remnawave_only:
+                                hwid_data = asyncio.run(remnawave_api.get_connected_devices_count(
+                                    key.get('remnawave_user_uuid'),
+                                    host_name=key.get('host_name'),
+                                ))
+                                remote_hwid_used = (hwid_data or {}).get('total')
+                    except Exception as remote_error:
+                        logger.warning(f"Failed to load Remnawave details for key {key.get('key_id')}: {remote_error}")
+                        remote_user = None
+                        remote_traffic = None
+                        remote_hwid_limit = None
+                        remote_hwid_used = None
+
+                    traffic_limit = (remote_traffic or {}).get('limit_bytes') if remote_traffic is not None else (key.get('traffic_limit_bytes') or 0)
+                    traffic_used = (remote_traffic or {}).get('used_bytes') if remote_traffic is not None else None
+                    traffic_limit_gb = traffic_limit / (1024 ** 3) if traffic_limit else 0
+                    traffic_used_gb = traffic_used / (1024 ** 3) if traffic_used else 0
+                    traffic_remaining_gb = max(traffic_limit_gb - traffic_used_gb, 0)
+                    traffic_percent = min(100, (traffic_used_gb / traffic_limit_gb * 100)) if traffic_limit_gb else 0
+                    hwid_limit = remote_hwid_limit
+
                     subscriptions.append({
                         "key_id": key.get('key_id'),
                         "key": key.get('subscription_url') or key.get('access_url') or 'N/A',
@@ -1380,7 +1584,20 @@ def create_webhook_app(bot_controller_instance):
                         "email": key.get('email') or key.get('key_email') or 'N/A',
                         "remnawave_user_uuid": key.get('remnawave_user_uuid') or 'N/A',
                         "user_comment": key.get('comment_key') or '',
-                        "admin_comment": key.get('description') or key.get('comment') or ''
+                        "admin_comment": key.get('description') or key.get('comment') or '',
+                        "plan": plan_name or (f"Тариф #{plan_id}" if plan_id else '—'),
+                        "provider": payment_info.get('provider') or '—',
+                        "hwid_used": remote_hwid_used,
+                        "hwid_limit": int(hwid_limit) if hwid_limit not in (None, 0, '0') else None,
+                        "hwid_unlimited": remote_user is not None and hwid_limit in (None, 0, '0'),
+                        "hwid_available": remote_user is not None,
+                        "remote_loading": not remnawave_only,
+                        "traffic_limit_gb": traffic_limit_gb,
+                        "traffic_used_gb": traffic_used_gb if traffic_used is not None else None,
+                        "traffic_remaining_gb": traffic_remaining_gb,
+                        "traffic_percent": round(traffic_percent, 1),
+                        "traffic_unlimited": not traffic_limit,
+                        "traffic_available": remote_traffic is not None
                     })
                     
             except Exception as e:
@@ -1422,6 +1639,71 @@ def create_webhook_app(bot_controller_instance):
             return jsonify(result)
         except Exception as e:
             logger.error(f"Failed to get user details for {user_id}: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @flask_app.route('/users/subscriptions/<int:key_id>/reset-link', methods=['POST'])
+    @login_required
+    def reset_user_subscription_link(key_id: int):
+        try:
+            key = rw_repo.get_key_by_id(key_id)
+            if not key:
+                return jsonify({"ok": False, "error": "Подписка не найдена"}), 404
+
+            revoked = asyncio.run(remnawave_api.revoke_user_subscription(
+                key.get('remnawave_user_uuid'),
+                host_name=key.get('host_name'),
+                short_uuid=secrets.token_urlsafe(24),
+            ))
+            if revoked is None:
+                return jsonify({"ok": False, "error": "Не удалось обновить подписку в Remnawave"}), 502
+
+            revoked_user = revoked.get('user') if isinstance(revoked.get('user'), dict) else revoked
+            subscription_url = remnawave_api.extract_subscription_url(revoked_user)
+            remnawave_user_uuid = str(revoked_user.get('id') or key.get('remnawave_user_uuid') or '')
+            short_uuid = revoked_user.get('shortUuid') or key.get('short_uuid')
+            if not subscription_url:
+                refreshed_user = asyncio.run(remnawave_api.get_user_by_id(
+                    remnawave_user_uuid,
+                    host_name=key.get('host_name'),
+                ))
+                if refreshed_user:
+                    subscription_url = remnawave_api.extract_subscription_url(refreshed_user)
+                    remnawave_user_uuid = str(refreshed_user.get('id') or remnawave_user_uuid)
+                    short_uuid = refreshed_user.get('shortUuid') or short_uuid
+
+            if not subscription_url:
+                return jsonify({"ok": False, "error": "Remnawave не вернул новую ссылку подписки"}), 502
+
+            rw_repo.update_key(
+                key_id,
+                remnawave_user_uuid=remnawave_user_uuid,
+                short_uuid=short_uuid,
+                subscription_url=subscription_url,
+            )
+            return jsonify({"ok": True, "subscription_url": subscription_url})
+        except Exception as e:
+            logger.error(f"Failed to reset subscription link for key {key_id}: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @flask_app.route('/users/subscriptions/<int:key_id>/reset-hwid', methods=['POST'])
+    @login_required
+    def reset_user_subscription_hwid(key_id: int):
+        try:
+            key = rw_repo.get_key_by_id(key_id)
+            if not key:
+                return jsonify({"ok": False, "error": "Подписка не найдена"}), 404
+            user_uuid = key.get('remnawave_user_uuid')
+            if not user_uuid:
+                return jsonify({"ok": False, "error": "Для подписки не найден пользователь Remnawave"}), 400
+            result = asyncio.run(remnawave_api.delete_all_user_devices(
+                user_uuid,
+                host_name=key.get('host_name'),
+            ))
+            if result['failed']:
+                return jsonify({"ok": False, "error": f"Удалено устройств: {result['deleted']}, не удалось удалить: {result['failed']}"}), 502
+            return jsonify({"ok": True, "deleted": result['deleted']})
+        except Exception as e:
+            logger.error(f"Failed to reset HWID devices for key {key_id}: {e}")
             return jsonify({"ok": False, "error": str(e)}), 500
 
     @flask_app.route('/users/<int:user_id>/username', methods=['POST'])
@@ -1492,6 +1774,8 @@ def create_webhook_app(bot_controller_instance):
         
         if filter_mode == 'gift':
             keys = [k for k in all_keys if (k.get('user_id') or 0) == 0 or str(k.get('key_email') or '').lower().startswith('gift')]
+        elif filter_mode == 'trial':
+            keys = [k for k in all_keys if str(k.get('key_email') or '').lower().startswith('trial_')]
         else:
             keys = [k for k in all_keys if (k.get('user_id') or 0) != 0 and not str(k.get('key_email') or '').lower().startswith('gift')]
 
@@ -2653,6 +2937,7 @@ def create_webhook_app(bot_controller_instance):
         for host in hosts:
             host['plans'] = get_plans_for_host(host['host_name'])
             host['device_tiers'] = get_device_tiers(host['host_name'])
+            host['traffic_tiers'] = get_traffic_tiers(host['host_name'])
 
             try:
                 host['latest_speedtest'] = get_latest_speedtest(host['host_name'])
@@ -3492,6 +3777,56 @@ def create_webhook_app(bot_controller_instance):
             price = float(request.form.get('price', 0))
             from shop_bot.data_manager.database import update_device_tier
             ok = update_device_tier(tier_id, device_count, price)
+            return jsonify({'ok': ok})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
+
+    @flask_app.route('/update-host-traffic-mode', methods=['POST'])
+    @login_required
+    def update_host_traffic_mode_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        mode = (request.form.get('mode') or 'plan').strip()
+        ok = update_host_traffic_mode(host_name, mode)
+        return jsonify({'ok': ok})
+
+    @flask_app.route('/update-host-traffic-no-choice', methods=['POST'])
+    @login_required
+    def update_host_traffic_no_choice_route():
+        host_name = (request.form.get('host_name') or '').strip()
+        no_choice_buy = int(request.form.get('no_choice_buy', 0))
+        no_choice_renew = int(request.form.get('no_choice_renew', 0))
+        ok = update_host_traffic_no_choice(host_name, no_choice_buy, no_choice_renew)
+        return jsonify({'ok': ok})
+
+    @flask_app.route('/add-traffic-tier', methods=['POST'])
+    @login_required
+    def add_traffic_tier_route():
+        try:
+            host_name = (request.form.get('host_name') or '').strip()
+            traffic_gb = int(request.form.get('traffic_gb', 0))
+            price = float(request.form.get('price', 0))
+            if traffic_gb <= 0 or price < 0:
+                return jsonify({'ok': False, 'error': 'Invalid values'}), 400
+            tier_id = add_traffic_tier(host_name, traffic_gb, price)
+            return jsonify({'ok': bool(tier_id), 'tier_id': tier_id})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
+
+    @flask_app.route('/delete-traffic-tier/<int:tier_id>', methods=['POST'])
+    @login_required
+    def delete_traffic_tier_route(tier_id):
+        ok = delete_traffic_tier(tier_id)
+        return jsonify({'ok': ok})
+
+    @flask_app.route('/edit-traffic-tier/<int:tier_id>', methods=['POST'])
+    @login_required
+    def edit_traffic_tier_route(tier_id):
+        try:
+            traffic_gb = int(request.form.get('traffic_gb', 0))
+            price = float(request.form.get('price', 0))
+            if traffic_gb <= 0 or price < 0:
+                return jsonify({'ok': False, 'error': 'Invalid values'}), 400
+            ok = update_traffic_tier(tier_id, traffic_gb, price)
             return jsonify({'ok': ok})
         except Exception as e:
             return jsonify({'ok': False, 'error': str(e)}), 400

@@ -2,226 +2,312 @@
 {% block title %}Конструктор кнопок{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="mb-6">
-    <h2 class="text-2xl font-bold text-white">Конструктор кнопок</h2>
-    <p class="text-white/50 text-sm">Интерактивное создание и настройка кнопок для бота</p>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="space-y-1">
+        <h2 class="flex items-center gap-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Конструктор кнопок
+            <span class="rounded-full border border-violet-400/15 bg-violet-400/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-violet-300">Editor</span>
+        </h2>
+        <p class="ml-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/50">
+            Управление меню и клавиатурами бота
+        </p>
+    </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Main Grid -->
-    <div class="lg:col-span-2 space-y-6">
-        <!-- Button Grid -->
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-white font-bold">Кнопки</h3>
-                <div class="flex gap-2">
-                    <button type="button" id="add-button-btn"
-                        class="px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 flex items-center gap-1">
-                        <span class="material-symbols-outlined text-base">add</span> Добавить
-                    </button>
-
-                    <button type="button" id="preview-btn"
-                        class="px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 text-sm font-medium hover:bg-blue-500/30 flex items-center gap-1">
-                        <span class="material-symbols-outlined text-base">visibility</span> Предпросмотр
-                    </button>
+<section class="mb-6">
+    <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+        <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-violet-400/[0.08] blur-3xl"></div>
+        <div class="relative flex min-h-[52px] items-center gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+            <div class="flex min-w-0 items-center gap-2">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300"><i data-lucide="pie-chart" class="h-4 w-4" aria-hidden="true"></i></span>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold tracking-tight text-white">Статистика</h3>
+                    <p class="text-xs text-white/60">Обзор текущего меню</p>
                 </div>
-            </div>
-            <div class="mb-4">
-                <label class="block text-white/70 text-sm mb-2">Тип меню:</label>
-                <div class="soft-select" data-target="menu-type-select">
-                    <button type="button" class="soft-select-toggle">Главное меню</button>
-                    <div class="soft-select-menu"></div>
-                    <select id="menu-type-select" class="hidden">
-                        <option value="main_menu">Главное меню</option>
-                        <option value="admin_menu">Админ меню</option>
-                        <option value="profile_menu">Меню профиля</option>
-                        <option value="support_menu">Меню поддержки</option>
-                        <option value="key_info_menu">Информация о ключе</option>
-                    </select>
-                </div>
-            </div>
-            <div id="button-grid"
-                class="grid grid-cols-2 gap-3 min-h-[300px] p-4 border-2 border-dashed border-white/20 rounded-lg bg-white/[0.02]">
             </div>
         </div>
-
-        <!-- Hidden Buttons -->
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-white font-bold">Скрытые кнопки</h3>
-                <span class="text-white/50 text-sm">Перетащите сюда кнопки, чтобы скрыть их</span>
-            </div>
-            <div id="hidden-button-grid"
-                class="grid grid-cols-2 gap-3 min-h-[100px] p-4 border-2 border-dashed border-white/10 rounded-lg bg-white/[0.01]">
+        <div class="p-3 sm:p-4">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <article class="relative flex min-h-[84px] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                    <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-violet-400/[0.08] blur-2xl"></div>
+                    <div class="relative flex items-start justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300"><i data-lucide="grid-3x3" class="h-4 w-4" aria-hidden="true"></i></span>
+                            <p class="text-xs font-medium text-white/60">Всего кнопок</p>
+                        </div>
+                    </div>
+                    <div class="relative mt-auto">
+                        <p id="kpi-total-buttons" class="text-2xl font-semibold leading-none tracking-tight text-white/40 tabular-nums">0</p>
+                    </div>
+                </article>
+                <article class="relative flex min-h-[84px] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                    <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-sky-400/[0.08] blur-2xl"></div>
+                    <div class="relative flex items-start justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="link" class="h-4 w-4" aria-hidden="true"></i></span>
+                            <p class="text-xs font-medium text-white/60">URL-кнопок</p>
+                        </div>
+                    </div>
+                    <div class="relative mt-auto">
+                        <p id="kpi-url-buttons" class="text-2xl font-semibold leading-none tracking-tight text-white/40 tabular-nums">0</p>
+                    </div>
+                </article>
+                <article class="relative flex min-h-[84px] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                    <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-400/[0.08] blur-2xl"></div>
+                    <div class="relative flex items-start justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300"><i data-lucide="zap" class="h-4 w-4" aria-hidden="true"></i></span>
+                            <p class="text-xs font-medium text-white/60">Callback</p>
+                        </div>
+                    </div>
+                    <div class="relative mt-auto">
+                        <p id="kpi-callback-buttons" class="text-2xl font-semibold leading-none tracking-tight text-white/40 tabular-nums">0</p>
+                    </div>
+                </article>
             </div>
         </div>
     </div>
+</section>
 
-    <!-- Properties Panel -->
-    <div class="space-y-6">
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-white font-bold">Свойства кнопки</h3>
-                <button type="button" onclick="openModal('buttonHelpModal')"
-                    class="text-white/30 hover:text-primary transition-colors" title="Доступные кнопки">
-                    <span class="material-symbols-outlined text-base">info</span>
-                </button>
-            </div>
-            <form id="button-properties-form" class="space-y-4">
-                <div>
-                    <label class="block text-white/70 text-sm mb-2">ID кнопки:</label>
-                    <input type="text" id="button-id" placeholder="Уникальный ID"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm mb-2">Текст кнопки:</label>
-                    <input type="text" id="button-text" placeholder="Текст кнопки"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm mb-2">Тип действия:</label>
-                    <div class="soft-select" data-target="action-type">
-                        <button type="button" class="soft-select-toggle">Callback (внутреннее действие)</button>
-                        <div class="soft-select-menu"></div>
-                        <select id="action-type" class="hidden">
-                            <option value="callback">Callback (внутреннее действие)</option>
-                            <option value="url">URL (внешняя ссылка)</option>
-                        </select>
+<section class="mb-8">
+    <div class="grid grid-cols-1 items-start gap-3 xl:grid-cols-12">
+        <div class="space-y-3 xl:col-span-7">
+            <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-violet-400/[0.08] blur-3xl"></div>
+                <div class="relative flex flex-col gap-3 border-b border-white/[0.08] p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300"><i data-lucide="layers" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Активные кнопки</h3>
+                            <p class="text-xs text-white/60">Перетащите для изменения порядка</p>
+                        </div>
                     </div>
-                </div>
-                <div id="callback-data-group">
-                    <label class="block text-white/70 text-sm mb-2">Callback Data:</label>
-                    <input type="text" id="callback-data" placeholder="callback_data"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div id="url-group" class="hidden">
-                    <label class="block text-white/70 text-sm mb-2">URL:</label>
-                    <input type="text" id="button-url" placeholder="https://example.com или {connection_string}"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-white/70 text-sm mb-2">Строка:</label>
-                        <input type="number" id="row-position" min="0" value="0"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-white/70 text-sm mb-2">Колонка:</label>
-                        <input type="number" id="column-position" min="0" value="0"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white" />
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm mb-2">Ширина:</label>
-                    <div class="soft-select" data-target="button-width">
-                        <button type="button" class="soft-select-toggle">1 колонка (обычная)</button>
-                        <div class="soft-select-menu"></div>
-                        <select id="button-width" class="hidden">
-                            <option value="1">1 колонка (обычная)</option>
-                            <option value="2">2 колонки (широкая)</option>
-                            <option value="3">3 колонки (очень широкая)</option>
-                        </select>
-                    </div>
-                    <p class="text-white/40 text-xs mt-1">Ширина кнопки относительно других</p>
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm mb-2">Порядок сортировки:</label>
-                    <input type="number" id="sort-order" min="0" value="0"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white" />
-                </div>
-                <div>
-                    <label class="block text-white/70 text-sm mb-2">Цвет кнопки:</label>
-                    <div class="flex flex-wrap gap-2" id="color-picker">
-                        <button type="button" data-color="" class="color-swatch active" title="По умолчанию">
-                            <span class="material-symbols-outlined text-xs">block</span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="add-button-btn" class="flex items-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-xs font-medium text-emerald-300 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 whitespace-nowrap">
+                            <i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i>
+                            Добавить
                         </button>
-                        <button type="button" data-color="red" class="color-swatch" title="Красный (danger)"
-                            style="background:#ef5350"></button>
-                        <button type="button" data-color="green" class="color-swatch" title="Зелёный (success)"
-                            style="background:#66bb6a"></button>
-                        <button type="button" data-color="blue" class="color-swatch" title="Синий (primary)"
-                            style="background:#42a5f5"></button>
+                        <button type="button" onclick="openModal('buttonHelpModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60" title="Справка по кнопкам">
+                            <i data-lucide="info" class="h-4 w-4" aria-hidden="true"></i>
+                        </button>
                     </div>
-                    <input type="hidden" id="button-color" value="" />
-                    <p class="text-white/40 text-xs mt-1">danger / success / primary</p>
                 </div>
-                <div>
-                    <label class="block text-white/70 text-sm mb-2">Premium Emoji ID:</label>
-                    <input type="text" id="emoji-id" placeholder="Например: 5368324170671202286"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                    <p class="text-white/40 text-xs mt-1">icon_custom_emoji_id — иконка в кнопке</p>
-                </div>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="is-active" checked
-                        class="w-4 h-4 bg-white/10 border-white/20 rounded text-primary focus:ring-primary/50" />
-                    <span class="text-white/70 text-sm">Активна</span>
-                </label>
-                <div class="pt-2 space-y-2">
-                    <button type="submit"
-                        class="w-full px-4 py-2.5 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90 transition-colors">
-                        Сохранить изменения
-                    </button>
-                    <button type="button" id="delete-button-btn"
-                        class="hidden w-full px-4 py-2.5 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 transition-colors">
-                        <span class="material-symbols-outlined text-base align-middle">delete</span> Удалить кнопку
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Preview -->
-        <div class="bg-white/5 border border-white/10 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-white font-bold">Предпросмотр</h3>
-                <div class="flex gap-1">
-                    <button type="button" id="refresh-preview-btn"
-                        class="px-2 py-1 rounded bg-white/10 text-white/70 hover:bg-white/20" title="Обновить">
-                        <span class="material-symbols-outlined text-base">refresh</span>
-                    </button>
-                    <button type="button" id="clear-preview-btn"
-                        class="px-2 py-1 rounded bg-white/10 text-white/70 hover:bg-white/20" title="Очистить">
-                        <span class="material-symbols-outlined text-base">close</span>
-                    </button>
+                <div class="p-3 sm:p-4">
+                    <div class="mb-3">
+                        <label class="mb-2 block text-xs font-medium text-white/70">Тип меню:</label>
+                        <div class="soft-select w-full" data-target="menu-type-select">
+                            <button type="button" class="soft-select-toggle flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-left text-xs font-medium text-white/60 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60">
+                                <span>Главное меню</span>
+                                <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+                            </button>
+                            <div class="soft-select-menu"></div>
+                            <select id="menu-type-select" class="hidden">
+                                <option value="main_menu">Главное меню</option>
+                                <option value="admin_menu">Админ меню</option>
+                                <option value="profile_menu">Меню профиля</option>
+                                <option value="support_menu">Меню поддержки</option>
+                                <option value="key_info_menu">Информация о ключе</option>
+                                <option value="subscription_addons_menu">Допы подписки</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="button-grid" class="grid min-h-[300px] grid-cols-2 gap-3 rounded-xl border-2 border-dashed border-white/[0.08] bg-white/[0.02] p-4">
+                    </div>
                 </div>
             </div>
-            <div id="preview-area" class="telegram-preview">
-                <p class="text-white/50 text-center text-sm">Нажмите "Предпросмотр" для просмотра кнопок</p>
+
+            <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-neutral-400/[0.08] blur-3xl"></div>
+                <div class="relative flex flex-col gap-3 border-b border-white/[0.08] p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-400/[0.08] text-neutral-300"><i data-lucide="eye-off" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Скрытые кнопки</h3>
+                            <p class="text-xs text-white/60">Перетащите сюда для скрытия</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 sm:p-4">
+                    <div id="hidden-button-grid" class="grid min-h-[100px] grid-cols-2 gap-3 rounded-xl border-2 border-dashed border-white/[0.06] bg-white/[0.01] p-4">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-3 xl:col-span-5">
+            <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-amber-400/[0.08] blur-3xl"></div>
+                <div class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300"><i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Свойства кнопки</h3>
+                            <p class="text-xs text-white/60">Настройка выбранного элемента</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="button-properties-form" class="space-y-3 p-3 sm:p-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">ID кнопки</label>
+                            <input type="text" id="button-id" placeholder="Уникальный ID" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Текст кнопки</label>
+                            <input type="text" id="button-text" placeholder="Текст кнопки" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Тип действия</label>
+                            <div class="soft-select" data-target="action-type">
+                                <button type="button" class="soft-select-toggle flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white/60 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60">
+                                    <span>Callback</span>
+                                    <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+                                </button>
+                                <div class="soft-select-menu"></div>
+                                <select id="action-type" class="hidden">
+                                    <option value="callback">Callback</option>
+                                    <option value="url">URL</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="callback-data-group">
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Callback Data</label>
+                            <input type="text" id="callback-data" placeholder="callback_data" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                        </div>
+                        <div id="url-group" class="hidden">
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">URL</label>
+                            <input type="text" id="button-url" placeholder="https://example.com или {connection_string}" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Строка</label>
+                            <input type="number" id="row-position" min="0" value="0" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Колонка</label>
+                            <input type="number" id="column-position" min="0" value="0" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Ширина</label>
+                            <div class="soft-select" data-target="button-width">
+                                <button type="button" class="soft-select-toggle flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white/60 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60">
+                                    <span>1 колонка</span>
+                                    <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+                                </button>
+                                <div class="soft-select-menu"></div>
+                                <select id="button-width" class="hidden">
+                                    <option value="1">1 колонка</option>
+                                    <option value="2">2 колонки</option>
+                                    <option value="3">3 колонки</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Порядок сортировки</label>
+                            <input type="number" id="sort-order" min="0" value="0" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Цвет кнопки</label>
+                            <div class="flex flex-wrap gap-2" id="color-picker">
+                                <button type="button" data-color="" class="color-swatch active" title="По умолчанию">
+                                    <span class="material-symbols-outlined text-xs">block</span>
+                                </button>
+                                <button type="button" data-color="red" class="color-swatch" title="Красный (danger)" style="background:#ef5350"></button>
+                                <button type="button" data-color="green" class="color-swatch" title="Зелёный (success)" style="background:#66bb6a"></button>
+                                <button type="button" data-color="blue" class="color-swatch" title="Синий (primary)" style="background:#42a5f5"></button>
+                            </div>
+                            <input type="hidden" id="button-color" value="" />
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Premium Emoji ID</label>
+                            <input type="text" id="emoji-id" placeholder="5368324170671202286" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                        </div>
+                    </div>
+                    <label class="flex cursor-pointer items-center gap-2">
+                        <input type="checkbox" id="is-active" checked class="h-4 w-4 rounded border-white/20 bg-white/10 text-primary focus:ring-primary/50" />
+                        <span class="text-xs font-medium text-white/70">Активна</span>
+                    </label>
+                    <div class="space-y-2 pt-2">
+                        <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-2.5 text-xs font-semibold text-emerald-300 transition-all hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                            <i data-lucide="save" class="h-4 w-4" aria-hidden="true"></i>
+                            Сохранить изменения
+                        </button>
+                        <button type="button" id="delete-button-btn" class="hidden flex w-full items-center justify-center gap-1.5 rounded-xl border border-red-400/20 bg-red-400/[0.08] px-4 py-2.5 text-xs font-medium text-red-300 transition-all hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60">
+                            <i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i>
+                            Удалить кнопку
+                        </button>
+                    </div>
+            </form>
+                </form>
+            </div>
+
+            <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-sky-400/[0.08] blur-3xl"></div>
+                <div class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Telegram Preview</h3>
+                            <p class="text-xs text-white/60">Интерактивное отображение</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" id="preview-btn" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60" title="Обновить предпросмотр">
+                            <i data-lucide="refresh-cw" class="h-4 w-4" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" id="clear-preview-btn" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60" title="Очистить">
+                            <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-3 sm:p-4">
+                    <div id="preview-area" class="telegram-preview">
+                        <p class="text-center text-sm text-white/50">Нажмите кнопку обновления для предпросмотра</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
-<!-- Add Button Modal -->
 <div id="addButtonModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <h5 class="text-white font-bold">Добавить новую кнопку</h5>
-                <button type="button" onclick="openModal('buttonHelpModal')"
-                    class="text-white/30 hover:text-primary transition-colors" title="Доступные кнопки">
-                    <span class="material-symbols-outlined text-base">info</span>
+    <div class="modal-content overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
+        <div class="border-b border-white/[0.08] bg-white/[0.03]">
+            <div class="flex items-center justify-between p-3 sm:p-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                        <i data-lucide="plus-circle" class="h-4 w-4" aria-hidden="true"></i>
+                    </div>
+                    <h5 class="text-sm font-semibold tracking-tight text-white">Добавить новую кнопку</h5>
+                </div>
+                <button onclick="closeModal('addButtonModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
                 </button>
             </div>
-            <button onclick="closeModal('addButtonModal')" class="text-white/50 hover:text-white">
-                <span class="material-symbols-outlined">close</span>
-            </button>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="space-y-3 p-3 sm:p-4">
             <div>
-                <label class="block text-white/70 text-sm mb-2">ID кнопки:</label>
-                <input type="text" id="new-button-id" placeholder="Уникальный ID" required
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">ID кнопки</label>
+                <input type="text" id="new-button-id" placeholder="Уникальный ID" required class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
             <div>
-                <label class="block text-white/70 text-sm mb-2">Текст кнопки:</label>
-                <input type="text" id="new-button-text" placeholder="Текст кнопки" required
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Текст кнопки</label>
+                <input type="text" id="new-button-text" placeholder="Текст кнопки" required class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
             <div>
-                <label class="block text-white/70 text-sm mb-2">Тип действия:</label>
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Тип действия</label>
                 <div class="soft-select" data-target="new-action-type">
-                    <button type="button" class="soft-select-toggle">Callback</button>
+                    <button type="button" class="soft-select-toggle flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white/60 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60">
+                        <span>Callback</span>
+                        <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+                    </button>
                     <div class="soft-select-menu"></div>
                     <select id="new-action-type" class="hidden">
                         <option value="callback">Callback</option>
@@ -230,19 +316,20 @@
                 </div>
             </div>
             <div id="new-callback-data-group">
-                <label class="block text-white/70 text-sm mb-2">Callback Data:</label>
-                <input type="text" id="new-callback-data" placeholder="callback_data"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Callback Data</label>
+                <input type="text" id="new-callback-data" placeholder="callback_data" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
             <div id="new-url-group" class="hidden">
-                <label class="block text-white/70 text-sm mb-2">URL:</label>
-                <input type="text" id="new-button-url" placeholder="https://example.com или {connection_string}"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">URL</label>
+                <input type="text" id="new-button-url" placeholder="https://example.com или {connection_string}" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
             <div>
-                <label class="block text-white/70 text-sm mb-2">Ширина кнопки:</label>
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Ширина кнопки</label>
                 <div class="soft-select" data-target="new-button-width">
-                    <button type="button" class="soft-select-toggle">1 колонка (обычная)</button>
+                    <button type="button" class="soft-select-toggle flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white/60 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60">
+                        <span>1 колонка (обычная)</span>
+                        <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+                    </button>
                     <div class="soft-select-menu"></div>
                     <select id="new-button-width" class="hidden">
                         <option value="1">1 колонка (обычная)</option>
@@ -252,139 +339,134 @@
                 </div>
             </div>
             <div>
-                <label class="block text-white/70 text-sm mb-2">Цвет кнопки:</label>
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Цвет кнопки</label>
                 <div class="flex flex-wrap gap-2" id="new-color-picker">
                     <button type="button" data-color="" class="color-swatch active" title="По умолчанию">
                         <span class="material-symbols-outlined text-xs">block</span>
                     </button>
-                    <button type="button" data-color="red" class="color-swatch" title="Красный (danger)"
-                        style="background:#ef5350"></button>
-                    <button type="button" data-color="green" class="color-swatch" title="Зелёный (success)"
-                        style="background:#66bb6a"></button>
-                    <button type="button" data-color="blue" class="color-swatch" title="Синий (primary)"
-                        style="background:#42a5f5"></button>
+                    <button type="button" data-color="red" class="color-swatch" title="Красный (danger)" style="background:#ef5350"></button>
+                    <button type="button" data-color="green" class="color-swatch" title="Зелёный (success)" style="background:#66bb6a"></button>
+                    <button type="button" data-color="blue" class="color-swatch" title="Синий (primary)" style="background:#42a5f5"></button>
                 </div>
                 <input type="hidden" id="new-button-color" value="" />
             </div>
             <div>
-                <label class="block text-white/70 text-sm mb-2">Premium Emoji ID:</label>
-                <input type="text" id="new-emoji-id" placeholder="Например: 5368324170671202286"
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Premium Emoji ID</label>
+                <input type="text" id="new-emoji-id" placeholder="Например: 5368324170671202286" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
         </div>
-        <div class="p-4 border-t border-white/10 flex justify-end gap-2">
-            <button onclick="closeModal('addButtonModal')"
-                class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
-            <button id="confirm-add-button"
-                class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Добавить</button>
+        <div class="flex justify-end gap-2 border-t border-white/[0.08] p-3 sm:p-4">
+            <button onclick="closeModal('addButtonModal')" class="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-medium text-white transition duration-150 hover:border-white/20 hover:bg-white/[0.06]">Отмена</button>
+            <button id="confirm-add-button" class="flex items-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-2 text-xs font-semibold text-emerald-300 transition-all hover:border-white/20">
+                <i data-lucide="check" class="h-4 w-4" aria-hidden="true"></i>
+                Добавить
+            </button>
         </div>
     </div>
 </div>
 
-<!-- Available Buttons Help Modal -->
 <div id="buttonHelpModal" class="modal-overlay modal-xl">
-    <div class="modal-content">
-        <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <h5 class="text-white font-bold">Доступные кнопки и callback_data</h5>
-            <button onclick="closeModal('buttonHelpModal')" class="text-white/50 hover:text-white">
-                <span class="material-symbols-outlined">close</span>
-            </button>
+    <div class="modal-content overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
+        <div class="border-b border-white/[0.08] bg-white/[0.03]">
+            <div class="flex items-center justify-between p-3 sm:p-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                        <i data-lucide="book-open" class="h-4 w-4" aria-hidden="true"></i>
+                    </div>
+                    <h5 class="text-sm font-semibold tracking-tight text-white">Доступные кнопки и callback_data</h5>
+                </div>
+                <button onclick="closeModal('buttonHelpModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
-        <div class="p-6">
-            <div class="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                <p class="text-[11px] text-white/70 leading-relaxed">
-                    <span class="text-primary font-bold">💡 Подсказка:</span> ID кнопки можно указывать по вашему
-                    желанию. Кнопки <span class="text-white px-1">не привязаны</span> жестко к определенным меню - вы
-                    можете свободно переносить их (например, из Главного меню в Профиль и наоборот).
+        <div class="p-3 sm:p-4">
+            <div class="mb-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p class="text-xs leading-relaxed text-white/70">
+                    <span class="font-semibold text-primary">Подсказка:</span> ID кнопки можно указывать по вашему желанию. Кнопки не привязаны жестко к определенным меню — вы можете свободно переносить их.
                     <br><br>
-                    Поле <span class="text-yellow-400 font-bold">Callback / URL</span> является обязательным - именно по
-                    нему бот определяет, какое действие совершить или какое меню вызвать при нажатии.
+                    Поле <span class="font-semibold text-amber-300">Callback / URL</span> является обязательным — именно по нему бот определяет действие при нажатии.
                     <br><br>
-                    Примеры кнопок: <br>
-                    <span class="text-white px-1">⬅️ К списку ключей</span> - callback_data = <span
-                        class="text-yellow-400 font-bold">"manage_keys"</span>;
-                    <br> и так же можно указать: <br>
-                    <span class="text-white px-1">🔑 Мои ключи</span> - callback_data = <span
-                        class="text-yellow-400 font-bold">"manage_keys"</span>;
+                    Примеры: <span class="text-white">⬅️ К списку ключей</span> → <span class="font-mono text-amber-300">manage_keys</span>; <span class="text-white">🔑 Мои ключи</span> → <span class="font-mono text-amber-300">manage_keys</span>
                 </p>
             </div>
-            <div class="mb-4">
-                <input type="text" id="help-search" placeholder="Поиск по названию или ID..."
-                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-primary/50" />
+            <div class="mb-3">
+                <input type="text" id="help-search" placeholder="Поиск по названию или ID..." class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
-            <div class="overflow-x-auto max-h-[250vh] custom-scroll">
-                <table class="w-full text-xs">
-                    <thead class="bg-primary/10 sticky top-0 backdrop-blur-md">
+            <div class="max-h-[250vh] overflow-x-auto rounded-xl border border-white/[0.08] bg-white/[0.03]">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="sticky top-0 border-b border-primary/20 bg-primary/10 backdrop-blur-md">
                         <tr>
-                            <th
-                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
-                                Меню</th>
-                            <th
-                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
-                                ID</th>
-                            <th
-                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
-                                Текст</th>
-                            <th
-                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
-                                Callback</th>
-                            <th
-                                class="px-2 py-1.5 text-left text-primary/70 font-bold uppercase tracking-wider border-b border-primary/20">
-                                URL</th>
+                            <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70">Меню</th>
+                            <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70">ID</th>
+                            <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70">Текст</th>
+                            <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70">Callback</th>
+                            <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70">URL</th>
                         </tr>
                     </thead>
                     <tbody id="help-table-body" class="divide-y divide-white/5">
-                        <!-- Rows will be added via JS -->
                     </tbody>
                 </table>
             </div>
         </div>
-        <div class="p-4 border-t border-white/10 flex justify-end">
-            <button onclick="closeModal('buttonHelpModal')"
-                class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Понятно</button>
+        <div class="flex justify-end border-t border-white/[0.08] p-3 sm:p-4">
+            <button onclick="closeModal('buttonHelpModal')" class="flex items-center gap-1.5 rounded-xl border border-primary/20 bg-primary/[0.08] px-4 py-2 text-xs font-semibold text-primary transition-all hover:border-white/20">
+                <i data-lucide="check" class="h-4 w-4" aria-hidden="true"></i>
+                Понятно
+            </button>
         </div>
     </div>
 </div>
 
 <style>
     .button-item {
-        padding: 0.5rem 0.75rem;
-        border-radius: 0.5rem;
+        padding: 0.625rem 0.75rem;
+        border-radius: 0.75rem;
         cursor: move;
-        transition: all 0.2s;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         text-align: center;
-        min-height: 44px;
+        min-height: 52px;
     }
 
     .button-item .button-text {
-        font-size: 0.875rem;
-        line-height: 1.2;
+        font-size: 0.75rem;
+        line-height: 1.3;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
     }
 
     .button-item .button-id {
-        font-size: 0.65rem;
+        font-size: 0.625rem;
         opacity: 0.5;
+        margin-top: 0.25rem;
+        font-family: 'Courier New', monospace;
     }
 
     .button-item .button-width-indicator {
-        font-size: 0.6rem;
-        margin-top: 2px;
+        font-size: 0.625rem;
+        margin-top: 0.25rem;
+        color: rgb(167, 139, 250);
+        font-weight: 600;
+        font-feature-settings: 'tnum';
     }
 
     .button-item:hover {
-        border-color: rgba(var(--primary-rgb), 0.5);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.06);
     }
 
     .button-item.selected {
-        background: rgba(var(--primary-rgb), 0.2);
-        border-color: var(--primary);
+        background: rgba(139, 92, 246, 0.15);
+        border-color: rgb(167, 139, 250);
+        box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
     }
 
     .button-item.width-1 {
@@ -401,16 +483,26 @@
 
     .button-item .button-actions {
         position: absolute;
-        top: 0.25rem;
-        right: 0.25rem;
+        top: 0.375rem;
+        right: 0.375rem;
         opacity: 0;
-        transition: opacity 0.2s;
+        transition: opacity 150ms;
         display: flex;
-        gap: 0.125rem;
+        gap: 0.25rem;
     }
 
     .button-item .button-actions button {
-        padding: 0.125rem;
+        padding: 0.25rem;
+        border-radius: 0.375rem;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: all 150ms;
+    }
+
+    .button-item .button-actions button:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.8);
     }
 
     .button-item:hover .button-actions {
@@ -418,19 +510,19 @@
     }
 
     .sortable-ghost {
-        opacity: 0.4;
+        opacity: 0.3;
+        background: rgba(167, 139, 250, 0.1);
     }
 
     .sortable-chosen {
-        transform: rotate(3deg);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        transform: rotate(2deg) scale(1.02);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
     }
 
-    /* Telegram-style preview - расширенные стили */
     .telegram-preview {
         background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-        border-radius: 12px;
-        padding: 16px;
+        border-radius: 0.75rem;
+        padding: 1rem;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         max-width: 400px;
         margin: 0 auto;
@@ -451,40 +543,40 @@
     }
 
     .telegram-header {
-        margin-bottom: 16px;
+        margin-bottom: 1rem;
     }
 
     .telegram-title {
-        font-size: 18px;
+        font-size: 1.125rem;
         font-weight: 600;
         color: #ffffff;
-        margin-bottom: 4px;
+        margin-bottom: 0.25rem;
     }
 
     .telegram-subtitle {
-        font-size: 14px;
+        font-size: 0.875rem;
         color: #8e8e93;
     }
 
     .telegram-button-grid {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 0.5rem;
     }
 
     .telegram-button-row {
         display: flex;
-        gap: 8px;
+        gap: 0.5rem;
         width: 100%;
     }
 
     .telegram-button {
         background: linear-gradient(135deg, #3a3a3c 0%, #2c2c2e 100%);
         border: 1px solid #4a4a4c;
-        border-radius: 8px;
-        padding: 12px 16px;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 150ms ease;
         min-height: 44px;
         display: flex;
         align-items: center;
@@ -505,7 +597,7 @@
         width: 100%;
         height: 100%;
         background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-        transition: left 0.3s ease;
+        transition: left 300ms ease;
     }
 
     .telegram-button:hover::before {
@@ -530,12 +622,12 @@
         align-items: center;
         justify-content: center;
         width: 100%;
-        gap: 8px;
+        gap: 0.5rem;
     }
 
     .telegram-button-text {
         color: #ffffff;
-        font-size: 14px;
+        font-size: 0.875rem;
         font-weight: 600;
         text-align: center;
         line-height: 1.2;
@@ -543,14 +635,14 @@
     }
 
     .telegram-button-url {
-        font-size: 12px;
+        font-size: 0.75rem;
         opacity: 0.8;
         color: #4fc3f7;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
 
     .telegram-button-width {
-        font-size: 10px;
+        font-size: 0.625rem;
         opacity: 0.8;
         background: rgba(79, 195, 247, 0.2);
         color: #4fc3f7;
@@ -561,43 +653,41 @@
         font-weight: 600;
     }
 
-    /* Responsive для preview */
     @media (max-width: 480px) {
         .telegram-preview {
             max-width: 100%;
             margin: 0;
-            padding: 12px;
+            padding: 0.75rem;
         }
 
         .telegram-button {
-            padding: 10px 12px;
+            padding: 0.625rem 0.75rem;
             min-height: 40px;
         }
 
         .telegram-button-text {
-            font-size: 13px;
+            font-size: 0.8125rem;
         }
 
         .telegram-button-width {
-            font-size: 9px;
+            font-size: 0.5625rem;
             padding: 1px 4px;
         }
     }
 
-    /* Loading indicator */
     .preview-loading {
         text-align: center;
-        padding: 20px;
+        padding: 1.25rem;
     }
 
     .preview-loading .spinner {
         width: 24px;
         height: 24px;
         border: 2px solid rgba(255, 255, 255, 0.1);
-        border-top-color: var(--primary);
+        border-top-color: rgb(19, 236, 128);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
-        margin: 0 auto 10px;
+        margin: 0 auto 0.625rem;
     }
 
     @keyframes spin {
@@ -609,10 +699,10 @@
     .color-swatch {
         width: 28px;
         height: 28px;
-        border-radius: 6px;
+        border-radius: 0.375rem;
         border: 2px solid rgba(255, 255, 255, 0.15);
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 150ms;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -622,34 +712,19 @@
 
     .color-swatch:hover {
         border-color: rgba(255, 255, 255, 0.4);
-        transform: scale(1.15);
+        transform: scale(1.1);
     }
 
     .color-swatch.active {
-        border-color: var(--primary);
+        border-color: rgb(19, 236, 128);
         box-shadow: 0 0 8px rgba(19, 236, 128, 0.4);
-        transform: scale(1.15);
-    }
-
-    .soft-select-item {
-        padding: 0.625rem 1rem;
-        color: white;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-    .soft-select-item:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-
-    .soft-select-item.is-active {
-        background: rgba(var(--primary-rgb), 0.2);
-        color: var(--primary);
+        transform: scale(1.1);
     }
 </style>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
     const AVAILABLE_BUTTONS_HELP = [
@@ -665,6 +740,7 @@
         { m: 'admin_menu', id: 'users', t: '👥 Пользователи', c: 'admin_users', u: '' },
         { m: 'admin_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' },
         { m: 'key_info_menu', id: 'connect', t: '📲 Подключиться', c: '', u: '{connection_string}' },
+        { m: 'key_info_menu', id: 'subscription_addons', t: '➕ Допы подписки', c: 'subscription_addons_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'extend', t: '➕ Продлить ключ', c: 'extend_key_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'key_devices', t: '📱 Устройства', c: 'key_devices_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'qr', t: '📱 QR-код', c: 'show_qr_{key_id}', u: '' },
@@ -696,10 +772,15 @@
     const MENU_NAME_MAP = {
         'main_menu': 'Главное меню',
         'key_info_menu': 'Информация о ключе',
+        'subscription_addons_menu': 'Допы подписки',
         'admin_menu': 'Админ меню',
         'profile_menu': 'Меню профиля',
         'support_menu': 'Меню поддержки'
     };
+
+    function refreshLucideIcons() {
+        if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+    }
 
     function initHelpModal() {
         const tbody = document.getElementById('help-table-body');
@@ -718,12 +799,12 @@
                         menuName.toLowerCase().includes(q);
                 })
                 .map(b => `
-                    <tr class="hover:bg-white/[0.03] transition-colors leading-tight">
-                        <td class="px-2 py-1 text-white/40 text-[10px] font-medium whitespace-nowrap">${MENU_NAME_MAP[b.m] || b.m}</td>
-                        <td class="px-2 py-1 font-mono text-primary/80 text-[10px] font-bold">${b.id}</td>
-                        <td class="px-2 py-1 text-white text-[11px] font-medium">${b.t}</td>
-                        <td class="px-2 py-1 font-mono text-yellow-400/70 text-[10px] break-all max-w-[120px]">${b.c || '-'}</td>
-                        <td class="px-2 py-1 font-mono text-blue-400/70 text-[10px] break-all max-w-[120px]">${b.u || '-'}</td>
+                    <tr class="transition-colors leading-tight hover:bg-white/[0.03]">
+                        <td class="px-2 py-1 text-[10px] font-medium text-white/40 whitespace-nowrap">${MENU_NAME_MAP[b.m] || b.m}</td>
+                        <td class="px-2 py-1 text-[10px] font-bold font-mono text-primary/80">${b.id}</td>
+                        <td class="px-2 py-1 text-[11px] font-medium text-white">${b.t}</td>
+                        <td class="px-2 py-1 text-[10px] font-mono text-amber-300/70 break-all max-w-[120px]">${b.c || '-'}</td>
+                        <td class="px-2 py-1 text-[10px] font-mono text-sky-300/70 break-all max-w-[120px]">${b.u || '-'}</td>
                     </tr>
                 `).join('');
         }
@@ -732,7 +813,10 @@
         render();
     }
 
-    document.addEventListener('DOMContentLoaded', initHelpModal);
+    document.addEventListener('DOMContentLoaded', () => {
+        refreshLucideIcons();
+        initHelpModal();
+    });
 
     class ButtonConstructor {
         constructor() {
@@ -782,35 +866,52 @@
         }
 
         bindEvents() {
-            document.getElementById('menu-type-select').addEventListener('change', (e) => {
-                this.currentMenuType = e.target.value;
-                this.selectedButton = null;
-                this.loadButtons();
-            });
+            const menuTypeSelect = document.getElementById('menu-type-select');
+            if (menuTypeSelect) {
+                menuTypeSelect.addEventListener('change', (e) => {
+                    this.currentMenuType = e.target.value;
+                    this.selectedButton = null;
+                    this.loadButtons();
+                });
+            }
 
-            document.getElementById('add-button-btn').addEventListener('click', () => this.showAddModal());
+            const addBtn = document.getElementById('add-button-btn');
+            if (addBtn) addBtn.addEventListener('click', () => this.showAddModal());
 
-            document.getElementById('preview-btn').addEventListener('click', () => this.showPreview());
-            document.getElementById('refresh-preview-btn').addEventListener('click', () => this.showPreview());
-            document.getElementById('clear-preview-btn').addEventListener('click', () => this.clearPreview());
+            const previewBtn = document.getElementById('preview-btn');
+            if (previewBtn) previewBtn.addEventListener('click', () => this.showPreview());
 
-            document.getElementById('button-properties-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.saveButtonProperties();
-            });
+            const clearPreviewBtn = document.getElementById('clear-preview-btn');
+            if (clearPreviewBtn) clearPreviewBtn.addEventListener('click', () => this.clearPreview());
 
-            document.getElementById('action-type').addEventListener('change', (e) => this.toggleActionFields(e.target.value));
-            document.getElementById('new-action-type').addEventListener('change', (e) => this.toggleNewActionFields(e.target.value));
-            document.getElementById('delete-button-btn').addEventListener('click', () => this.deleteButton());
-            document.getElementById('confirm-add-button').addEventListener('click', () => this.addNewButton());
+            const propertiesForm = document.getElementById('button-properties-form');
+            if (propertiesForm) {
+                propertiesForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveButtonProperties();
+                });
+            }
 
-            // Обработчик изменения ширины в реальном времени + автосохранение
-            document.getElementById('button-width').addEventListener('change', (e) => {
-                this.updateButtonWidthPreview(parseInt(e.target.value));
-                this.saveButtonProperties(true);
-            });
+            const actionType = document.getElementById('action-type');
+            if (actionType) actionType.addEventListener('change', (e) => this.toggleActionFields(e.target.value));
 
-            // Автосохранение для остальных полей (текст, позиция, сортировка, emoji)
+            const newActionType = document.getElementById('new-action-type');
+            if (newActionType) newActionType.addEventListener('change', (e) => this.toggleNewActionFields(e.target.value));
+
+            const deleteBtn = document.getElementById('delete-button-btn');
+            if (deleteBtn) deleteBtn.addEventListener('click', () => this.deleteButton());
+
+            const confirmAddBtn = document.getElementById('confirm-add-button');
+            if (confirmAddBtn) confirmAddBtn.addEventListener('click', () => this.addNewButton());
+
+            const buttonWidth = document.getElementById('button-width');
+            if (buttonWidth) {
+                buttonWidth.addEventListener('change', (e) => {
+                    this.updateButtonWidthPreview(parseInt(e.target.value));
+                    this.saveButtonProperties(true);
+                });
+            }
+
             const autoSaveIds = ['button-text', 'row-position', 'column-position', 'sort-order', 'emoji-id'];
             autoSaveIds.forEach(id => {
                 const el = document.getElementById(id);
@@ -819,9 +920,7 @@
                 }
             });
 
-            // Color picker for properties panel
             this.initColorPicker('color-picker', 'button-color', true);
-            // Color picker for add modal
             this.initColorPicker('new-color-picker', 'new-button-color', false);
         }
 
@@ -844,10 +943,38 @@
                 const result = await resp.json();
                 this.buttons = result.success ? (result.data || []) : [];
                 this.renderButtons();
+                this.updateKPIStats();
             } catch (e) {
                 console.error('Error loading buttons:', e);
                 this.buttons = [];
                 this.renderButtons();
+                this.updateKPIStats();
+            }
+        }
+
+        updateKPIStats() {
+            const totalButtons = this.buttons.length;
+            const urlButtons = this.buttons.filter(b => b.url).length;
+            const callbackButtons = this.buttons.filter(b => b.callback_data && !b.url).length;
+
+            const totalEl = document.getElementById('kpi-total-buttons');
+            const urlEl = document.getElementById('kpi-url-buttons');
+            const callbackEl = document.getElementById('kpi-callback-buttons');
+
+            if (totalEl) {
+                totalEl.textContent = totalButtons;
+                totalEl.classList.toggle('text-white/40', totalButtons === 0);
+                totalEl.classList.toggle('text-white', totalButtons > 0);
+            }
+            if (urlEl) {
+                urlEl.textContent = urlButtons;
+                urlEl.classList.toggle('text-white/40', urlButtons === 0);
+                urlEl.classList.toggle('text-white', urlButtons > 0);
+            }
+            if (callbackEl) {
+                callbackEl.textContent = callbackButtons;
+                callbackEl.classList.toggle('text-white/40', callbackButtons === 0);
+                callbackEl.classList.toggle('text-white', callbackButtons > 0);
             }
         }
 
@@ -885,6 +1012,7 @@
             }
 
             this.initSortable();
+            refreshLucideIcons();
         }
 
         createButtonElement(btn) {
@@ -897,21 +1025,21 @@
             if (this.selectedButton && this.selectedButton.id === btn.id) div.classList.add('selected');
 
             const colorBadge = btn.button_color ? `<span class="inline-block w-3 h-3 rounded-full mr-1 pointer-events-none" style="background:${this.getColorHex(btn.button_color)}"></span>` : '';
-            const emojiTag = btn.emoji_id ? `<span class="text-[9px] text-yellow-400/70 pointer-events-none">✨ emoji</span>` : '';
+            const emojiTag = btn.emoji_id ? `<span class="text-[9px] text-amber-300/70 pointer-events-none">✨ emoji</span>` : '';
 
             div.innerHTML = `
-            <div class="button-text text-white font-medium mb-1 pointer-events-none">${colorBadge}${btn.text || btn.button_id}</div>
-            <div class="button-id text-white/50 text-xs pointer-events-none">${btn.button_id}</div>
+            <div class="button-text pointer-events-none mb-1">${colorBadge}${btn.text || btn.button_id}</div>
+            <div class="button-id pointer-events-none">${btn.button_id}</div>
             <div class="flex items-center gap-1 mt-1 pointer-events-none">
-                <span class="button-width-indicator text-primary text-xs">${width}×</span>
+                <span class="button-width-indicator">${width}×</span>
                 ${emojiTag}
             </div>
             <div class="button-actions">
-                <button type="button" class="p-1 rounded bg-white/10 hover:bg-white/20 text-white/70" onclick="buttonConstructor.editButton(${btn.id})">
-                    <span class="material-symbols-outlined text-sm">edit</span>
+                <button type="button" class="text-white/70 hover:text-white hover:bg-white/[0.08]" onclick="buttonConstructor.editButton(${btn.id})" title="Редактировать">
+                    <i data-lucide="edit-3" class="h-3.5 w-3.5"></i>
                 </button>
-                <button type="button" class="p-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400" onclick="buttonConstructor.deleteButton(${btn.id})">
-                    <span class="material-symbols-outlined text-sm">delete</span>
+                <button type="button" class="text-red-300/70 hover:text-red-300 hover:bg-red-400/[0.08]" onclick="buttonConstructor.deleteButton(${btn.id})" title="Удалить">
+                    <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
                 </button>
             </div>
         `;
@@ -1255,7 +1383,8 @@
                     'admin_menu': { title: '⚙️ Админ панель', subtitle: 'Административные функции:' },
                     'profile_menu': { title: '👤 Мой профиль', subtitle: 'Управление профилем:' },
                     'support_menu': { title: '🆘 Поддержка', subtitle: 'Система поддержки:' },
-                    'key_info_menu': { title: '🔑 Информация о ключе', subtitle: 'Управление ключом:' }
+                    'key_info_menu': { title: '🔑 Информация о ключе', subtitle: 'Управление ключом:' },
+                    'subscription_addons_menu': { title: '➕ Допы подписки', subtitle: 'Дополнительные возможности подписки:' }
                 };
                 const menuInfo = menuTitles[this.currentMenuType] || {
                     title: MENU_NAME_MAP[this.currentMenuType] || 'Меню',

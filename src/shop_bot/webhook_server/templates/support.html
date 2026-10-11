@@ -2,394 +2,262 @@
 {% block title %}Поддержка{% endblock %}
 
 {% block content %}
-<style>
-    /* ========== ОБЩИЕ СТИЛИ (Премиум дизайн) ========== */
-    .support-container {
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-
-    /* Стеклянные карточки */
-    .premium-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 1.25rem;
-        backdrop-filter: blur(12px);
-        transition: all 0.3s ease;
-    }
-
-    .dark .premium-card {
-        background: rgba(255, 255, 255, 0.05);
-        /* Чуть светлее в темной теме */
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    /* ========== DESKTOP СТИЛИ ========== */
-    @media (min-width: 769px) {
-        .desktop-view {
-            display: block;
-        }
-
-        .mobile-view {
-            display: none;
-        }
-
-        .mobile-app-header {
-            display: none;
-        }
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1.25rem;
-        margin-bottom: 2rem;
-    }
-
-    .stat-card {
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1.25rem;
-        text-decoration: none;
-        cursor: pointer;
-    }
-
-    .stat-card:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(19, 236, 128, 0.2);
-        transform: translateY(-4px);
-    }
-
-    .stat-card.active {
-        background: rgba(19, 236, 128, 0.08);
-        border-color: rgba(19, 236, 128, 0.4);
-        box-shadow: 0 10px 30px -10px rgba(19, 236, 128, 0.2);
-    }
-
-    .stat-icon {
-        width: 3rem;
-        height: 3rem;
-        border-radius: 0.75rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.05);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        flex-shrink: 0;
-    }
-
-    /* Цвета для подложек иконок */
-    .icon-box-primary {
-        background: rgba(19, 236, 128, 0.1);
-        color: #13ec80;
-        box-shadow: 0 4px 15px -5px rgba(19, 236, 128, 0.4);
-    }
-
-    .icon-box-orange {
-        background: rgba(251, 146, 60, 0.1);
-        color: #fb923c;
-        box-shadow: 0 4px 15px -5px rgba(251, 146, 60, 0.4);
-    }
-
-    .icon-box-blue {
-        background: rgba(96, 165, 250, 0.1);
-        color: #60a5fa;
-        box-shadow: 0 4px 15px -5px rgba(96, 165, 250, 0.4);
-    }
-
-    .stat-card:hover .stat-icon,
-    .stat-card.active .stat-icon {
-        transform: scale(1.05) rotate(5deg);
-        box-shadow: 0 8px 20px -5px currentColor;
-    }
-
-    .stat-value {
-        font-size: 1.75rem;
-        font-weight: 900;
-        color: #fff;
-        line-height: 1;
-        margin-bottom: 0.25rem;
-    }
-
-    .stat-label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        color: rgba(255, 255, 255, 0.3);
-    }
-
-    /* Таблица */
-    .tickets-table-wrapper {
-        margin-bottom: 2rem;
-    }
-
-    .tickets-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .tickets-table thead {
-        background: rgba(255, 255, 255, 0.03);
-    }
-
-    .tickets-table th {
-        padding: 1rem 1.5rem;
-        text-align: left;
-        font-size: 0.7rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.15em;
-        color: rgba(255, 255, 255, 0.3);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    /* ========== MOBILE СТИЛИ ========== */
-    @media (max-width: 768px) {
-        .desktop-view {
-            display: none;
-        }
-
-        .mobile-view {
-            display: block;
-        }
-
-        .mobile-app-header {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            background: rgba(16, 34, 25, 0.8);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 1rem;
-            margin: -1.5rem -1.5rem 1rem -1.5rem;
-        }
-
-        .dark .mobile-app-header {
-            background: rgba(0, 0, 0, 0.82);
-        }
-
-        .chat-item {
-            display: flex;
-            align-items: center;
-            padding: 1rem;
-            border-radius: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            margin-bottom: 0.75rem;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .chat-item:active {
-            transform: scale(0.98);
-            background: rgba(19, 236, 128, 0.05);
-        }
-
-        .chat-avatar {
-            width: 3.25rem;
-            height: 3.25rem;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #13ec80 0%, #0b9e56 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            font-weight: 900;
-            color: #fff;
-            margin-right: 1rem;
-            box-shadow: 0 4px 12px rgba(19, 236, 128, 0.2);
-        }
-
-        .chat-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .chat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 0.125rem;
-        }
-
-        .chat-name {
-            font-size: 1rem;
-            font-weight: 800;
-            color: #fff;
-        }
-
-        .chat-time {
-            font-size: 0.65rem;
-            color: rgba(255, 255, 255, 0.3);
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .chat-preview {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.4);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .chat-preview.highlight {
-            color: #13ec80;
-            font-weight: 700;
-        }
-    }
-</style>
-
-<!-- ========== MOBILE HEADER ========== -->
-<div class="mobile-app-header">
-    <div class="flex items-center justify-between mb-4">
-        <h2 class="text-2xl font-black text-white tracking-tighter">Поддержка</h2>
-        <div class="flex items-center gap-2">
-            <div
-                class="px-3 py-1 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
-                {{ open_count }} открыто
-            </div>
-        </div>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="space-y-1">
+        <h2 class="flex items-center gap-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Поддержка
+            <span class="rounded-full border border-sky-400/15 bg-sky-400/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-sky-300">Support</span>
+        </h2>
+        <p class="ml-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/50">
+            Центр управления обращениями
+        </p>
     </div>
-    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        {% for s, l, c in [('', 'Все', all_count), ('open', 'Открытые', open_count), ('closed', 'Закрытые',
-        closed_count)] %}
-        <a href="{{ url_for('support_list_page', status=s) }}"
-            class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border {% if filter_status == s %}bg-primary text-background-dark border-primary{% else %}bg-white/5 text-white/40 border-white/5{% endif %}">
-            {{ l }} ({{ c }})
-        </a>
-        {% endfor %}
+    <div class="flex items-center gap-2">
+        <button onclick="confirmDeleteAllTickets()" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-red-400/20 hover:bg-red-400/[0.08] hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60" title="Удалить все обращения">
+            <i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i>
+        </button>
+        <button onclick="openGeminiModal()" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60" title="Настройки поддержки">
+            <i data-lucide="settings" class="h-4 w-4" aria-hidden="true"></i>
+        </button>
     </div>
 </div>
 
-<!-- ========== DESKTOP VIEW ========== -->
-<div class="desktop-view support-container">
-    <div class="flex items-center justify-between mb-8">
-        <div class="space-y-1">
-            <h2 class="text-3xl font-black text-white tracking-tight flex items-center gap-3 uppercase">Поддержка</h2>
-            <p class="text-white/30 text-[10px] font-bold uppercase tracking-[0.3em] ml-1">Центр управления обращениями
-            </p>
-        </div>
-        <div class="flex items-center gap-2">
-            <button onclick="confirmDeleteAllTickets()"
-                class="h-12 px-4 rounded-2xl premium-card flex items-center justify-center gap-2 text-red-400/60 hover:text-red-400 hover:border-red-500/30 transition-all group">
-                <span class="material-symbols-outlined text-lg">delete_sweep</span>
-                <span class="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Удалить все</span>
-            </button>
-            <button onclick="openGeminiModal()"
-                class="w-12 h-12 rounded-2xl premium-card flex items-center justify-center text-white/40 hover:text-primary transition-all group">
-                <span
-                    class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-500">settings</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Статистика -->
-    <div class="stats-grid" data-refresh-part="support-stats">
-        {% for s, l, icon, count, box_class in [
-        ('', 'Все обращения', 'forum', all_count, 'icon-box-primary'),
-        ('open', 'В ожидании', 'pending', open_count, 'icon-box-orange'),
-        ('closed', 'Завершенные', 'task_alt', closed_count, 'icon-box-blue')
+<section class="mb-6 space-y-2">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Обзор</p>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {% for s, l, icon, count, color in [
+            ('', 'Все обращения', 'messages-square', all_count, 'violet'),
+            ('open', 'Открытые', 'circle-dot', open_count, 'sky'),
+            ('', 'Ожидают ответа', 'clock-3', open_count, 'amber'),
+            ('closed', 'Завершенные', 'check-circle-2', closed_count, 'emerald')
         ] %}
-        <a href="{{ url_for('support_list_page', status=s) }}"
-            class="premium-card stat-card ajax-nav {% if filter_status == s %}active{% endif %}" data-target="{{ s }}">
-            <div class="stat-icon {{ box_class }}">
-                <span class="material-symbols-outlined text-2xl">{{ icon }}</span>
-            </div>
-            <div class="stat-info">
-                <div class="stat-value">{{ count }}</div>
-                <div class="stat-label">{{ l }}</div>
+        {% set accent_text = 'text-' + color + '-300' %}
+        {% set accent_wash = 'bg-' + color + '-400/[0.08]' %}
+        {% set accent_fill = 'bg-' + color + '-400' %}
+        <a href="{{ url_for('support_list_page', status=s) }}" class="relative min-w-0 h-[84px] overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150 hover:border-white/20 hover:-translate-y-0.5 {% if filter_status == s %}border-{{ color }}-400/30 bg-{{ color }}-400/[0.06]{% endif %}">
+            <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full {{ accent_wash }} blur-2xl"></div>
+            <div class="relative flex h-full min-w-0 flex-col">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full {{ accent_wash }} {{ accent_text }}"><i data-lucide="{{ icon }}" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <p class="truncate text-xs font-medium text-white/60">{{ l }}</p>
+                    </div>
+                </div>
+                <div class="mt-auto">
+                    <p class="text-2xl font-semibold leading-none tracking-tight tabular-nums {% if count == 0 %}text-white/40{% else %}text-white{% endif %}">{{ count }}</p>
+                </div>
             </div>
         </a>
         {% endfor %}
     </div>
+</section>
 
-    <div class="premium-card tickets-table-wrapper bg-black/20" data-refresh-part="support-table">
-        <table class="tickets-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Пользователь</th>
-                    <th>Тема</th>
-                    <th>Статус</th>
-                    <th>Обновлен</th>
-                    <th class="text-right">Действия</th>
-                </tr>
-            </thead>
-            <tbody id="support-tbody"
-                data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
-                data-fetch-interval="20000">
-                <tr>
-                    <td colspan="6" class="p-8 text-center text-white/30">
-                        <div class="flex flex-col items-center justify-center">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-                            <span class="text-[10px] font-bold uppercase tracking-widest">Загрузка обращений...</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <!-- Пагинация Desktop -->
-        <div id="support-pagination"
-            class="p-5 border-t border-white/5 flex items-center justify-between bg-white/[0.01]"
-            data-src="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}">
-            <!-- Will be populated by JS -->
+<section class="mb-6">
+    <div class="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12 lg:min-h-[680px]">
+        <div class="lg:col-span-4">
+            <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="shrink-0 space-y-3 border-b border-white/[0.08] p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <h3 class="text-sm font-bold tracking-tight text-white">Список обращений</h3>
+                        <span class="rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-sky-300">{{ open_count }}</span>
+                    </div>
+                    <div class="relative">
+                        <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" aria-hidden="true"></i>
+                        <input type="text" id="tickets-search-input" placeholder="Поиск по @username, имени или ID" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                    </div>
+                    <div class="flex gap-1.5 rounded-xl border border-white/[0.06] bg-black/30 p-1">
+                        {% for s, l in [('', 'Все'), ('open', 'Открытые'), ('closed', 'Закрытые')] %}
+                        <a href="{{ url_for('support_list_page', status=s) }}" class="ajax-filter flex-1 rounded-lg px-3 py-1.5 text-center text-[11px] font-semibold transition-all {% if filter_status == s %}bg-white/10 text-white{% else %}text-white/50 hover:text-white/70{% endif %}">{{ l }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="flex-1 space-y-1 overflow-y-auto p-2" id="tickets-list" data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}">
+                    <div class="flex flex-col items-center justify-center py-20 opacity-20">
+                        <div class="mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">Загрузка обращений...</span>
+                    </div>
+                </div>
+            </div>
         </div>
+        <div class="lg:col-span-8">
+            <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]" id="chat-panel">
+                <div class="flex h-full flex-col items-center justify-center p-8 text-center">
+                    <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                        <i data-lucide="message-square-text" class="h-8 w-8 text-white/40" aria-hidden="true"></i>
+                    </div>
+                    <h3 class="mb-2 text-base font-bold tracking-tight text-white">Выберите обращение</h3>
+                    <p class="max-w-sm text-xs font-medium leading-relaxed text-white/50">Нажмите на карточку тикета в списке слева, чтобы открыть чат и начать общение с пользователем</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="closeTicketModal" class="modal-overlay" onclick="if(event.target===this)closeCloseTicketModal()">
+    <div class="w-full max-w-md transform overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0f0d] p-0 opacity-0 scale-95 transition-all duration-300" id="closeTicketModalContent">
+        <div class="flex items-center justify-between border-b border-white/[0.08] p-5">
+            <div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10 text-emerald-300"><i data-lucide="circle-check" class="h-4 w-4" aria-hidden="true"></i></span><div><h3 class="text-sm font-semibold text-white">Закрыть обращение</h3><p class="mt-0.5 text-[11px] text-white/50">Завершение тикета <span id="close-ticket-number">#—</span></p></div></div>
+            <button onclick="closeCloseTicketModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-white/45 transition hover:bg-white/[0.06] hover:text-white" aria-label="Закрыть окно"><i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i></button>
+        </div>
+        <div class="space-y-5 p-5"><p class="text-sm leading-relaxed text-white/70">Вы уверены, что хотите завершить диалог с пользователем?</p><div class="flex gap-2"><button onclick="closeCloseTicketModal()" type="button" class="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-white/70 transition duration-150 hover:bg-white/[0.07] hover:text-white">Отмена</button><button onclick="confirmCloseTicket()" type="button" class="flex-1 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-xs font-semibold text-emerald-300 transition duration-150 hover:bg-emerald-400/20">Закрыть обращение</button></div></div>
     </div>
 </div>
 
-<!-- ========== MOBILE VIEW ========== -->
-<div class="mobile-view">
-    <div id="support-mobile-list" class="space-y-3 pt-4"
-        data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page, mobile=1) }}">
-        <div class="flex flex-col items-center justify-center p-20 opacity-20">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+<div id="templatesModal" class="modal-overlay" onclick="if(event.target===this)closeTemplatesModal()">
+    <div class="w-full max-w-2xl transform overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f0d] p-0 opacity-0 scale-95 transition-all duration-300" id="templatesModalContent">
+        <div class="relative overflow-hidden border-b border-white/[0.08] bg-amber-400/[0.04] p-6">
+            <div class="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-amber-400/10 blur-3xl"></div>
+            <div class="relative flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
+                        <i data-lucide="zap" class="h-5 w-5" aria-hidden="true"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold tracking-tight text-white">Быстрые шаблоны</h3>
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Готовые ответы</p>
+                    </div>
+                </div>
+                <button onclick="closeTemplatesModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition-all hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
-    </div>
-</div>
-
-<div id="geminiModal" class="modal-overlay" onclick="if(event.target===this)event.stopPropagation()">
-    <div class="modal-content premium-card !bg-[#0a0f0d] !border-primary/20 w-full max-w-3xl p-0 overflow-hidden transform transition-all duration-300 scale-95 opacity-0"
-        id="geminiModalContent">
-        <div class="p-6 border-b border-white/5 bg-primary/5 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <div
-                    class="w-10 h-10 rounded-xl bg-primary/20 border border-primary/20 flex items-center justify-center text-primary shadow-[0_0_15px_rgba(19,236,128,0.3)]">
-                    <span class="material-symbols-outlined text-xl">auto_awesome</span>
+        <div class="p-6 space-y-4">
+            <div class="relative">
+                <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" aria-hidden="true"></i>
+                <input type="text" placeholder="Поиск по шаблонам..." class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Оплата</p>
+                    <div class="space-y-2">
+                        <button class="group w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-all hover:border-white/20 hover:bg-white/[0.06]">
+                            <p class="text-xs font-semibold text-white">Оплата успешно зачислена</p>
+                            <p class="mt-1 text-xs text-white/60">Ваша оплата успешно зачислена на счёт. Подписка активирована</p>
+                        </button>
+                        <button class="group w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-all hover:border-white/20 hover:bg-white/[0.06]">
+                            <p class="text-xs font-semibold text-white">Проблема с оплатой</p>
+                            <p class="mt-1 text-xs text-white/60">Проверьте правильность платёжных данных и повторите попытку</p>
+                        </button>
+                    </div>
                 </div>
                 <div>
-                    <h3 class="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
-                        Настройки поддержки
-                    </h3>
-                    <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Доступность и автоматизация</p>
+                    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Настройка VPN</p>
+                    <div class="space-y-2">
+                        <button class="group w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-all hover:border-white/20 hover:bg-white/[0.06]">
+                            <p class="text-xs font-semibold text-white">Инструкция по подключению</p>
+                            <p class="mt-1 text-xs text-white/60">Скачайте приложение, добавьте ключ и включите подключение</p>
+                        </button>
+                        <button class="group w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-all hover:border-white/20 hover:bg-white/[0.06]">
+                            <p class="text-xs font-semibold text-white">Смена сервера</p>
+                            <p class="mt-1 text-xs text-white/60">Для смены сервера обратитесь в личном кабинете в раздел настроек</p>
+                        </button>
+                    </div>
                 </div>
             </div>
-            <button onclick="closeGeminiModal()"
-                class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
-                <span class="material-symbols-outlined">close</span>
-            </button>
         </div>
+    </div>
+</div>
 
-        <div class="p-6 space-y-6">
-            <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-5">
+<div id="userInfoModal" class="modal-overlay" onclick="if(event.target===this)closeUserInfoModal()">
+    <div class="w-full max-w-lg transform overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f0d] p-0 opacity-0 scale-95 transition-all duration-300" id="userInfoModalContent">
+        <div class="relative overflow-hidden border-b border-white/[0.08] bg-violet-400/[0.04] p-6">
+            <div class="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-violet-400/10 blur-3xl"></div>
+            <div class="relative flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-400/10 text-violet-300">
+                        <i data-lucide="user" class="h-5 w-5" aria-hidden="true"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold tracking-tight text-white">Карточка клиента</h3>
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Полная информация</p>
+                    </div>
+                </div>
+                <button onclick="closeUserInfoModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition-all hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+        <div class="space-y-5 p-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Баланс</p>
+                    <p class="text-xl font-semibold tabular-nums text-white">450 ₽</p>
+                </div>
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Активных ключей</p>
+                    <p class="text-xl font-semibold tabular-nums text-white">2</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Сервер</p>
+                <div class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                    <p class="text-sm font-medium text-white">DE-Frankfurt-01</p>
+                    <p class="mt-0.5 font-mono text-[10px] text-white/50">Германия</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Подписка до</p>
+                <p class="text-sm font-medium text-white">15 марта 2026</p>
+            </div>
+            <div class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Последние платежи</p>
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
+                        <span class="text-xs font-medium text-white/70">10 янв 2026</span>
+                        <span class="font-mono text-xs font-semibold text-emerald-300">+300 ₽</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
+                        <span class="text-xs font-medium text-white/70">25 дек 2025</span>
+                        <span class="font-mono text-xs font-semibold text-emerald-300">+500 ₽</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
+                        <span class="text-xs font-medium text-white/70">10 дек 2025</span>
+                        <span class="font-mono text-xs font-semibold text-emerald-300">+300 ₽</span>
+                    </div>
+                </div>
+            </div>
+            <a id="user-profile-link" href="/users?q=" class="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 py-2.5 text-xs font-semibold text-emerald-300 transition duration-150 hover:bg-emerald-400/20"><i data-lucide="external-link" class="h-4 w-4" aria-hidden="true"></i>Перейти в профиль</a>
+        </div>
+    </div>
+</div>
+
+<div id="geminiModal" class="modal-overlay" onclick="if(event.target===this)closeGeminiModal()">
+    <div class="w-full max-w-2xl transform overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f0d] p-0 opacity-0 scale-95 transition-all duration-300" id="geminiModalContent">
+        <div class="relative overflow-hidden border-b border-white/[0.08] bg-primary/[0.04] p-6">
+            <div class="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/10 blur-3xl"></div>
+            <div class="relative flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                        <i data-lucide="sparkles" class="h-5 w-5" aria-hidden="true"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold tracking-tight text-white">Настройки поддержки</h3>
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Доступность и автоматизация</p>
+                    </div>
+                </div>
+                <button onclick="closeGeminiModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition-all hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+        <div class="space-y-6 p-6">
+            <div class="space-y-5 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                 <div class="flex items-center justify-between gap-4">
                     <div>
-                        <h4 class="text-sm font-black text-white">Техническая поддержка</h4>
-                        <p class="mt-1 text-xs text-white/40">При включении бот принимает новые обращения, при выключении временно сообщает о недоступности поддержки.</p>
+                        <h4 class="text-sm font-bold text-white">Техническая поддержка</h4>
+                        <p class="mt-1 text-xs font-medium text-white/50">При включении бот принимает новые обращения, при выключении временно сообщает о недоступности поддержки</p>
                     </div>
                     <label class="relative inline-flex cursor-pointer items-center">
                         <input type="checkbox" id="supportEnabledInput" class="peer sr-only">
                         <span class="h-7 w-12 rounded-full bg-white/10 transition-colors peer-checked:bg-primary after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5"></span>
                     </label>
                 </div>
-                <div class="border-t border-white/5 pt-5">
+                <div class="border-t border-white/[0.08] pt-5">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <h4 class="text-sm font-black text-white">Часы работы</h4>
-                            <p class="mt-1 text-xs text-white/40">Вне указанного времени бот сообщит клиенту, когда поддержка доступна.</p>
+                            <h4 class="text-sm font-bold text-white">Часы работы</h4>
+                            <p class="mt-1 text-xs font-medium text-white/50">Вне указанного времени бот сообщит клиенту, когда поддержка доступна</p>
                         </div>
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" id="supportScheduleEnabledInput" class="peer sr-only" onchange="toggleSupportScheduleFields()">
@@ -398,49 +266,37 @@
                     </div>
                     <div id="supportScheduleFields" class="mt-4 grid grid-cols-2 gap-3">
                         <label class="space-y-2">
-                            <span class="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Начало работы</span>
-                            <input type="time" id="supportScheduleStartInput" value="10:00" class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-primary/50">
+                            <span class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Начало работы</span>
+                            <input type="time" id="supportScheduleStartInput" value="10:00" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white outline-none transition-all focus:ring-1 focus:ring-primary/30">
                         </label>
                         <label class="space-y-2">
-                            <span class="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Конец работы</span>
-                            <input type="time" id="supportScheduleEndInput" value="23:00" class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-primary/50">
+                            <span class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Конец работы</span>
+                            <input type="time" id="supportScheduleEndInput" value="23:00" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white outline-none transition-all focus:ring-1 focus:ring-primary/30">
                         </label>
                     </div>
                 </div>
             </div>
-
-            <div class="flex items-center gap-3 pt-1">
+            <div class="flex items-center gap-3">
                 <span class="h-px flex-1 bg-white/10"></span>
-                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">AI Assistant</span>
+                <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">AI Assistant</span>
                 <span class="h-px flex-1 bg-white/10"></span>
             </div>
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] ml-1">API Key</label>
-                <div class="relative group">
-                    <input type="password" id="geminiKeyInput" name="gemini_secret_key" autocomplete="new-password"
-                        data-lpignore="true"
-                        class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white text-sm focus:ring-1 focus:ring-primary/50 outline-none transition-all"
-                        placeholder="••••••••••••••••••••••••">
-                    <button onclick="toggleKeyVisibility()"
-                        class="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
-                        <span class="material-symbols-outlined text-xl" id="keyVisibilityIcon">visibility</span>
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">API Key</label>
+                <div class="relative">
+                    <input type="password" id="geminiKeyInput" name="gemini_secret_key" autocomplete="new-password" data-lpignore="true" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 pr-10 font-mono text-xs font-medium text-white placeholder:text-white/50 outline-none transition-all focus:ring-1 focus:ring-primary/30" placeholder="••••••••••••••••••••••••">
+                    <button onclick="toggleKeyVisibility()" type="button" class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-white/30 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                        <i data-lucide="eye" id="keyVisibilityIcon" class="h-4 w-4" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
-
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] ml-1">System Prompt
-                    (sg_promt)</label>
-                <textarea id="geminiPromptInput" name="gemini_system_prompt" autocomplete="off"
-                    class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white text-xs focus:ring-1 focus:ring-primary/50 outline-none transition-all min-h-[150px] resize-y"
-                    placeholder="Введите системные инструкции для ИИ..."></textarea>
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">System Prompt</label>
+                <textarea id="geminiPromptInput" name="gemini_system_prompt" autocomplete="off" class="min-h-[140px] w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium leading-relaxed text-white placeholder:text-white/50 outline-none transition-all focus:ring-1 focus:ring-primary/30" placeholder="Введите системные инструкции для ИИ"></textarea>
             </div>
-
-            <div class="flex gap-3">
-                <button onclick="closeGeminiModal()"
-                    class="flex-1 px-5 py-4 rounded-xl bg-white/5 text-white/60 font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all">Отмена</button>
-                <button onclick="saveGeminiKey()"
-                    class="flex-[1.5] px-5 py-4 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-widest hover:scale-[1.02] shadow-xl shadow-primary/20 transition-all">Сохранить</button>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeGeminiModal()" type="button" class="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-white/70 transition-all hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">Отмена</button>
+                <button onclick="saveGeminiKey()" type="button" class="flex-1 rounded-xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-xs font-semibold text-primary transition-all hover:bg-primary hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">Сохранить</button>
             </div>
         </div>
     </div>
@@ -454,53 +310,73 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://unpkg.com/lucide@latest"></script>
 <script>
+    const refreshSupportIcons = (root = document) => window.lucide?.createIcons({ root, attrs: { 'stroke-width': 1.75 } });
+
+    let activeTicketId = null;
+    let ticketSearchTimer = null;
+
     document.addEventListener('DOMContentLoaded', () => {
-        // ===== AJAX НАВИГАЦИЯ И LAZY LOAD =====
+        refreshSupportIcons();
 
-        const loadSupportTable = async () => {
-            const tbody = document.getElementById('support-tbody');
-            const mobileList = document.getElementById('support-mobile-list');
-            if (!tbody && !mobileList) return;
+        window.loadTicketsList = async () => {
+            const ticketsList = document.getElementById('tickets-list');
+            if (!ticketsList) return;
 
-            const fetchUrlTbody = tbody ? new URL(tbody.dataset.fetchUrl, location.origin) : null;
-            const fetchUrlMobile = mobileList ? new URL(mobileList.dataset.fetchUrl, location.origin) : null;
-
+            const fetchUrl = new URL(ticketsList.dataset.fetchUrl, location.origin);
+            
             try {
-                if (tbody) {
-                    const res = await fetch(fetchUrlTbody, { headers: { 'Accept': 'application/json' } });
-                    if (res.ok) {
-                        const data = await res.json();
-                        tbody.innerHTML = data.table_html || '<tr><td colspan="6" class="p-20 text-center opacity-20"><span class="material-symbols-outlined text-5xl mb-4">forum</span><p class="text-[10px] font-black uppercase tracking-widest">Обращений пока нет</p></td></tr>';
-                        tbody.style.opacity = '1';
-                        const pagEl = document.getElementById('support-pagination');
-                        if (pagEl) pagEl.innerHTML = data.pagination_html;
-                    }
+                const res = await fetch(fetchUrl, { headers: { 'Accept': 'application/json' } });
+                if (res.ok) {
+                    const data = await res.json();
+                    ticketsList.innerHTML = data.table_html || '<div class="flex flex-col items-center justify-center py-20 text-white/40"><i data-lucide="inbox" class="mb-2 h-8 w-8 text-white/25"></i><span class="text-xs">Обращений пока нет</span></div>';
+                    refreshSupportIcons(ticketsList);
+                    filterTicketCards();
                 }
-
-                if (mobileList) {
-                    const resM = await fetch(fetchUrlMobile, { headers: { 'Accept': 'application/json' } });
-                    if (resM.ok) {
-                        const dataM = await resM.json();
-                        mobileList.innerHTML = dataM.table_html || '<div class="flex flex-col items-center justify-center py-20 opacity-20"><span class="material-symbols-outlined text-6xl mb-4">forum</span><p class="text-[10px] font-black uppercase tracking-widest">Обращений пока нет</p></div>';
-                        mobileList.style.opacity = '1';
-                    }
-                }
-
-                if (window.updateRelativeTimes) window.updateRelativeTimes();
             } catch (err) {
-                console.error('Fetch error:', err);
+                console.error('Ошибка загрузки тикетов:', err);
+            } finally {
+                ticketsList.style.opacity = '1';
             }
         };
 
-        const updatePagination = async (currentUrl) => {
-            const pagEl = document.getElementById('support-pagination');
-            if (!pagEl) return;
+        const filterTicketCards = () => {
+            const ticketsList = document.getElementById('tickets-list');
+            const searchInput = document.getElementById('tickets-search-input');
+            if (!ticketsList || !searchInput) return;
+            const query = searchInput.value.trim().toLocaleLowerCase();
+            const cards = Array.from(ticketsList.querySelectorAll('a[onclick*="openTicketChat"]'));
+            let visibleCount = 0;
+            cards.forEach(card => {
+                const matches = !query || card.textContent.toLocaleLowerCase().includes(query);
+                card.classList.toggle('hidden', !matches);
+                if (matches) visibleCount += 1;
+            });
+            let emptyState = ticketsList.querySelector('[data-ticket-search-empty]');
+            if (query && visibleCount === 0) {
+                if (!emptyState) {
+                    emptyState = document.createElement('div');
+                    emptyState.dataset.ticketSearchEmpty = 'true';
+                    emptyState.className = 'flex flex-col items-center justify-center gap-2 py-12 text-center text-white/45';
+                    emptyState.innerHTML = '<i data-lucide="search-x" class="h-6 w-6" aria-hidden="true"></i><span class="text-xs">Обращений не найдено</span>';
+                    ticketsList.appendChild(emptyState);
+                    refreshSupportIcons(emptyState);
+                }
+                emptyState.classList.remove('hidden');
+            } else if (emptyState) {
+                emptyState.classList.add('hidden');
+            }
         };
 
-        // AJAX Навигация по фильтрам и пагинации
+        const searchInput = document.getElementById('tickets-search-input');
+        if (searchInput) searchInput.addEventListener('input', () => {
+            clearTimeout(ticketSearchTimer);
+            ticketSearchTimer = setTimeout(filterTicketCards, 250);
+        });
+
         document.addEventListener('click', async (e) => {
-            const link = e.target.closest('.ajax-nav, .ajax-pagination');
+            const link = e.target.closest('.ajax-filter');
             if (!link) return;
 
             e.preventDefault();
@@ -509,64 +385,171 @@
 
             history.pushState(null, '', href);
 
-            // Обновление активного класса на карточках (фильтрах)
-            const currentStatus = new URL(href, location.origin).searchParams.get('status') || '';
-            document.querySelectorAll('.stat-card').forEach(card => {
-                card.classList.toggle('active', card.getAttribute('data-target') === currentStatus);
+            document.querySelectorAll('.ajax-filter').forEach(f => {
+                f.classList.remove('bg-white/10', 'text-white');
+                f.classList.add('text-white/50');
             });
+            link.classList.add('bg-white/10', 'text-white');
+            link.classList.remove('text-white/50');
 
-            const tbody = document.getElementById('support-tbody');
-            const mobileList = document.getElementById('support-mobile-list');
-
-            if (tbody) {
+            const ticketsList = document.getElementById('tickets-list');
+            if (ticketsList) {
                 const newUrl = new URL(href, location.origin);
-                const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+                const fetchUrl = new URL(ticketsList.dataset.fetchUrl, location.origin);
                 newUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
-                tbody.dataset.fetchUrl = fetchUrl.toString();
-                tbody.style.opacity = '0.5';
+                ticketsList.dataset.fetchUrl = fetchUrl.toString();
+                ticketsList.style.opacity = '0.5';
             }
 
-            if (mobileList) {
-                const newUrl = new URL(href, location.origin);
-                const fetchUrl = new URL(mobileList.dataset.fetchUrl, location.origin);
-                newUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
-                mobileList.dataset.fetchUrl = fetchUrl.toString();
-                mobileList.style.opacity = '0.5';
-            }
-
-            await loadSupportTable();
+            await window.loadTicketsList();
         });
 
-        loadSupportTable();
-
+        window.loadTicketsList();
         window.addEventListener('popstate', () => location.reload());
-
-        window.updateRelativeTimes = function () {
-            const fmt = (s) => {
-                if (!s) return '';
-                const p = s.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
-                if (!p) return s;
-                const d = new Date(Date.UTC(p[1], p[2] - 1, p[3], p[4], p[5]));
-                const now = new Date();
-                const diffMin = Math.floor((now - d) / 60000);
-                if (diffMin < 1) return 'сейчас';
-                if (diffMin < 60) return diffMin + ' мин. назад';
-                if (diffMin < 1440) return Math.floor(diffMin / 60) + ' ч. назад';
-                if (diffMin < 10080) return Math.floor(diffMin / 1440) + ' д. назад';
-                return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-            };
-            document.querySelectorAll('.desktop-rel-time, .mobile-relative-time').forEach(el => {
-                el.textContent = fmt(el.dataset.timestamp);
-            });
-        };
-
-        const tbody = document.getElementById('support-tbody');
-        if (tbody && tbody.dataset.fetchInterval) {
-            setInterval(loadSupportTable, parseInt(tbody.dataset.fetchInterval));
-        }
-
-        window.updateRelativeTimes();
     });
+
+    window.openTicketChat = function(ticketId) {
+        activeTicketId = ticketId;
+        const isMobile = window.innerWidth < 1024;
+        if (isMobile) {
+            window.location.href = '/support/' + ticketId;
+        } else {
+            loadTicketInPanel(ticketId);
+        }
+    };
+
+    async function loadTicketInPanel(ticketId) {
+        const chatPanel = document.getElementById('chat-panel');
+        if (!chatPanel) return;
+
+        chatPanel.innerHTML = '<div class="flex h-full items-center justify-center"><div class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div></div>';
+
+        try {
+            const res = await fetch('/support/' + ticketId + '?partial=1');
+            if (res.ok) {
+                const html = await res.text();
+                chatPanel.innerHTML = html;
+                refreshSupportIcons(chatPanel);
+                
+                const form = chatPanel.querySelector('#replyForm');
+                if (form) {
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        await handleTicketReply(ticketId, form);
+                    });
+                }
+
+                const aiBtn = chatPanel.querySelector('button[onclick*="generateGeminiResponse"]');
+                if (aiBtn) {
+                    aiBtn.setAttribute('onclick', '');
+                    aiBtn.addEventListener('click', (e) => generateGeminiResponseInPanel(ticketId, e));
+                }
+
+                startTicketPolling(ticketId);
+                
+                setTimeout(() => {
+                    loadTicketMessagesPartial(ticketId);
+                }, 500);
+            }
+        } catch (err) {
+            console.error('Ошибка загрузки чата:', err);
+            chatPanel.innerHTML = '<div class="flex h-full items-center justify-center text-red-300"><p class="text-sm">Ошибка загрузки чата</p></div>';
+        }
+    }
+
+    let ticketPollingInterval = null;
+
+    function startTicketPolling(ticketId) {
+        if (ticketPollingInterval) {
+            clearInterval(ticketPollingInterval);
+        }
+        ticketPollingInterval = setInterval(() => loadTicketMessagesPartial(ticketId), 10000);
+    }
+
+    async function loadTicketMessagesPartial(ticketId) {
+        try {
+            const res = await fetch('/support/' + ticketId + '?partial=true');
+            if (res.ok) {
+                const html = await res.text();
+                const messagesBox = document.getElementById('messages-feed');
+                if (messagesBox) {
+                    const wasAtBottom = (messagesBox.scrollHeight - messagesBox.scrollTop <= messagesBox.clientHeight + 100);
+                    messagesBox.innerHTML = html;
+                    refreshSupportIcons(messagesBox);
+                    if (wasAtBottom) {
+                        messagesBox.scrollTop = messagesBox.scrollHeight;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Ошибка обновления сообщений:', err);
+        }
+    }
+
+    async function handleTicketReply(ticketId, form) {
+        const formData = new FormData(form);
+        formData.append('t_action', 'reply');
+        const textarea = form.querySelector('textarea');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        if (!textarea.value.trim()) return;
+
+        submitBtn.disabled = true;
+        try {
+            const res = await fetch('/support/' + ticketId, {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                textarea.value = '';
+                await loadTicketMessagesPartial(ticketId);
+                const messagesBox = document.getElementById('messages-feed');
+                if (messagesBox) messagesBox.scrollTop = messagesBox.scrollHeight;
+                if (window.showToast) showToast('success', 'Сообщение отправлено');
+            }
+        } catch (e) {
+            console.error(e);
+            if (window.showToast) showToast('danger', 'Ошибка отправки');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    }
+
+    async function generateGeminiResponseInPanel(ticketId, event) {
+        const tx = document.getElementById('chat-message-input');
+        const btn = event.currentTarget;
+        const icon = btn.querySelector('[data-lucide]');
+
+        if (btn.disabled) return;
+        btn.disabled = true;
+        icon.setAttribute('data-lucide', 'loader-2');
+        icon.classList.add('animate-spin');
+        refreshSupportIcons(btn);
+
+        try {
+            const r = await fetch('/admin/gemini/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name="csrf_token"]').value },
+                body: JSON.stringify({ ticket_id: ticketId, current_text: tx.value })
+            });
+            const d = await r.json();
+            if (d.ok) {
+                tx.value = d.response;
+                tx.focus();
+                if (window.showToast) showToast('success', 'Ответ сгенерирован');
+            } else {
+                if (window.showToast) showToast('danger', d.error || 'Ошибка генерации');
+            }
+        } catch (e) {
+            if (window.showToast) showToast('danger', 'Ошибка сети');
+        } finally {
+            btn.disabled = false;
+            icon.setAttribute('data-lucide', 'sparkles');
+            icon.classList.remove('animate-spin');
+            refreshSupportIcons(btn);
+        }
+    }
+
 
     async function openGeminiModal() {
         const keyInp = document.getElementById('geminiKeyInput');
@@ -593,7 +576,7 @@
                 toggleSupportScheduleFields();
             }
         } catch (e) {
-            console.error("Failed to fetch gemini settings:", e);
+            console.error("Ошибка загрузки настроек:", e);
         }
 
         openModal('geminiModal');
@@ -601,27 +584,27 @@
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         });
+            refreshSupportIcons();
     }
 
     function closeGeminiModal() {
         const content = document.getElementById('geminiModalContent');
         content.classList.remove('scale-100', 'opacity-100');
         content.classList.add('scale-95', 'opacity-0');
-
-        setTimeout(() => {
-            closeModal('geminiModal');
-        }, 300);
+        setTimeout(() => closeModal('geminiModal'), 300);
     }
+
     function toggleKeyVisibility() {
         const inp = document.getElementById('geminiKeyInput');
         const icon = document.getElementById('keyVisibilityIcon');
         if (inp.type === 'password') {
             inp.type = 'text';
-            icon.textContent = 'visibility_off';
+            icon.setAttribute('data-lucide', 'eye-off');
         } else {
             inp.type = 'password';
-            icon.textContent = 'visibility';
+            icon.setAttribute('data-lucide', 'eye');
         }
+        refreshSupportIcons();
     }
 
     function toggleSupportScheduleFields() {
@@ -660,33 +643,88 @@
         }
     }
 
-    // Функция переключения меню (универсальная)
-    window.toggleSupportMenu = function (e, id) {
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        const menu = document.getElementById(id) || document.getElementById('support-menu-' + id) || document.getElementById('m-support-menu-' + id);
-
-        // Закрываем все остальные открытые меню
-        document.querySelectorAll('[id*="dropdown"], [id*="menu-"]').forEach(m => {
-            if (m !== menu) m.classList.add('hidden');
+    function openCloseTicketModal() {
+        const ticketNumber = document.getElementById('close-ticket-number');
+        if (ticketNumber) ticketNumber.textContent = '#' + (activeTicketId || '—');
+        openModal('closeTicketModal');
+        const content = document.getElementById('closeTicketModalContent');
+        requestAnimationFrame(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
         });
+        refreshSupportIcons();
+    }
 
-        if (menu) {
-            menu.classList.toggle('hidden');
+    function closeCloseTicketModal() {
+        const content = document.getElementById('closeTicketModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => closeModal('closeTicketModal'), 300);
+    }
+
+    async function confirmCloseTicket() {
+        if (!activeTicketId) {
+            showToast('danger', 'Не выбрано обращение');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('t_action', 'close');
+        const csrfToken = document.querySelector('[name="csrf_token"]');
+        if (csrfToken) formData.append('csrf_token', csrfToken.value);
+        try {
+            const res = await fetch('/support/' + activeTicketId, { method: 'POST', body: formData });
+            if (!res.ok) throw new Error('Ошибка закрытия обращения');
+            const closedTicketId = activeTicketId;
+            closeCloseTicketModal();
+            await window.loadTicketsList?.();
+            await loadTicketInPanel(closedTicketId);
+            if (window.showToast) showToast('success', 'Обращение закрыто');
+        } catch (error) {
+            if (window.showToast) showToast('danger', 'Не удалось закрыть обращение');
         }
     }
 
-    // Закрытие меню при клике вне его области
-    document.addEventListener('click', function (e) {
-        if (!e.target.closest('button')) {
-            document.querySelectorAll('[id*="dropdown"], [id*="menu-"]').forEach(m => {
-                m.classList.add('hidden');
-            });
-        }
-    });
+    function openTemplatesModal() {
+        openModal('templatesModal');
+        const content = document.getElementById('templatesModalContent');
+        requestAnimationFrame(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        });
+        refreshSupportIcons();
+    }
 
+    function closeTemplatesModal() {
+        const content = document.getElementById('templatesModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => closeModal('templatesModal'), 300);
+    }
+
+    function openUserInfoModal(userId) {
+        const profileLink = document.getElementById('user-profile-link');
+        const chatUserId = userId || document.querySelector('#chat-panel [data-user-id]')?.dataset.userId || document.querySelector('#chat-panel .font-mono')?.textContent.match(/\d+/)?.[0];
+        if (profileLink && chatUserId) profileLink.href = '/users?q=' + encodeURIComponent(chatUserId);
+        openModal('userInfoModal');
+        const content = document.getElementById('userInfoModalContent');
+        requestAnimationFrame(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        });
+        refreshSupportIcons();
+    }
+
+    function closeUserInfoModal() {
+        const content = document.getElementById('userInfoModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => closeModal('userInfoModal'), 300);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        refreshSupportIcons();
+        
+    });
 </script>
 {% endblock %}
 ```

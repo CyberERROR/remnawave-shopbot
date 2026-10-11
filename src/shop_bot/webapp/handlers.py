@@ -1372,6 +1372,8 @@ class SyncTgRequest(BaseModel):
 
 class DeviceTiersRequest(BaseModel):
     host_name: str
+    key_id: int | None = None
+    plan_id: int | None = None
 
 class CreatePaymentRequest(BaseModel):
     user_id: int
@@ -1383,6 +1385,8 @@ class CreatePaymentRequest(BaseModel):
     promo_code: str | None = None
     tier_device_count: int | None = None
     tier_price: float = 0
+    traffic_tier_id: int | None = None
+    traffic_price: float = 0
 
 class ApplyPromoRequest(BaseModel):
     user_id: int
@@ -1699,7 +1703,45 @@ async def api_device_tiers(req: DeviceTiersRequest):
         if mode == 'tiers':
             raw = get_device_tiers(req.host_name)
             tiers = [{"tier_id": t["tier_id"], "device_count": t["device_count"], "price": float(t["price"])} for t in raw]
-        return {"ok": True, "device_mode": mode, "tiers": tiers, "tier_lock_extend": lock, "base_device_count": base_devices}
+        selected_device_count = None
+        if req.key_id and mode == 'tiers':
+            key = get_key_by_id(req.key_id)
+            if key and key.get('host_name') == req.host_name and key.get('remnawave_user_uuid'):
+                user_info = await remnawave_api.get_user_by_uuid(
+                    key['remnawave_user_uuid'], host_name=req.host_name
+                )
+                if user_info and user_info.get('hwidDeviceLimit') is not None:
+                    selected_device_count = int(user_info['hwidDeviceLimit'])
+        traffic_mode = host_data.get('traffic_mode', 'plan')
+        traffic_no_choice_buy = int(host_data.get('traffic_no_choice_buy', 0) or 0)
+        traffic_no_choice_renew = int(host_data.get('traffic_no_choice_renew', 0) or 0)
+        traffic_tiers = []
+        base_traffic_gb = 0
+        selected_traffic_gb = 0
+        if traffic_mode == 'tiers':
+            from shop_bot.data_manager.database import get_traffic_tiers
+            raw_tt = get_traffic_tiers(req.host_name)
+            traffic_tiers = [{"tier_id": t["tier_id"], "traffic_gb": t["traffic_gb"], "price": float(t["price"])} for t in raw_tt]
+            plan = get_plan_by_id(req.plan_id) if req.plan_id else None
+            if plan and plan.get('host_name') == req.host_name:
+                base_traffic_gb = int(plan.get('traffic_limit_gb') or 0)
+            if req.key_id:
+                selected_traffic_gb = rw_repo.get_key_active_traffic_gb(req.key_id)
+
+        return {
+            "ok": True,
+            "device_mode": mode,
+            "tiers": tiers,
+            "tier_lock_extend": lock,
+            "base_device_count": base_devices,
+            "selected_device_count": selected_device_count,
+            "traffic_mode": traffic_mode,
+            "traffic_tiers": traffic_tiers,
+            "base_traffic_gb": base_traffic_gb,
+            "selected_traffic_gb": selected_traffic_gb,
+            "traffic_no_choice_buy": traffic_no_choice_buy,
+            "traffic_no_choice_renew": traffic_no_choice_renew,
+        }
     except Exception as e:
         logger.error(f"[WEBAPP] - Ошибка API device-tiers для {req.host_name}: {e}")
         return {"ok": False, "error": str(e)}
@@ -1803,8 +1845,23 @@ async def api_create_payment(req: CreatePaymentRequest):
                     except Exception as e:
                         logger.error(f"[WEBAPP] - Ошибка HWID: {e}")
         
+        if req.action == 'extend' and req.key_id and traffic_price_per_month == 0:
+            active_tp = rw_repo.get_active_key_traffic_purchases(req.key_id)
+            if active_tp:
+                traffic_price_per_month = sum(float(p.get('price', 0)) for p in active_tp)
+
         if tier_price_per_month > 0:
             final_price += tier_price_per_month * month_factor
+
+        traffic_price_per_month = 0.0
+        if req.traffic_tier_id:
+            from shop_bot.data_manager.database import get_traffic_tier_by_id
+            ttier = get_traffic_tier_by_id(req.traffic_tier_id)
+            if ttier:
+                traffic_price_per_month = float(ttier.get('price') or 0.0)
+
+        if traffic_price_per_month > 0:
+            final_price += traffic_price_per_month * month_factor
             
         # --- APPLY PROMO DISCOUNT ---
         if req.promo_code:
@@ -1827,7 +1884,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "YooKassa", "payment_id": pid,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
             comment = get_transaction_comment({"id": user_id, "username": user.get("username")}, action_name, months, req.host_name)
@@ -1860,7 +1917,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "Platega Payform", "payment_id": pid,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
             desc = f"Order {pid}"
@@ -1884,7 +1941,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "Platega", "payment_id": pid,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
             desc = f"Order {pid}"
@@ -1908,7 +1965,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "Platega Crypto", "payment_id": pid,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
             desc = f"Order {pid}"
@@ -1930,7 +1987,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "CryptoBot", "payment_id": pid,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id
             }
              create_payload_pending(pid, user_id, float(final_price), meta)
              # payload_str format MUST match what bot expects. Using a generic format for now or just ID
@@ -1958,7 +2015,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "Heleket", "payment_id": pid,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id
             }
             create_payload_pending(pid, user_id, float(final_price), meta)
             
@@ -1993,7 +2050,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "YooMoney", "payment_id": pid,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id
             }
              create_payload_pending(pid, user_id, float(final_price), meta)
              label = pid
@@ -2021,7 +2078,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "Telegram Stars", "payment_id": pid,
-                "tier_device_count": tier_device_count
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id
             }
              create_payload_pending(pid, user_id, float(final_price), meta)
              title = f"{'Подписка' if action_name == 'new' else 'Продление'} на {months} мес."
@@ -2041,7 +2098,7 @@ async def api_create_payment(req: CreatePaymentRequest):
                 "user_id": user_id, "months": months, "price": float(final_price),
                 "action": action_name, "key_id": req.key_id, "host_name": req.host_name,
                 "plan_id": plan_id, "payment_method": "Balance", "promo_code": "", "promo_discount": 0,
-                "tier_device_count": tier_device_count,
+                "tier_device_count": tier_device_count, "traffic_tier_id": req.traffic_tier_id,
                 "payment_id": p_log_id
             }
             token = get_setting("telegram_bot_token")

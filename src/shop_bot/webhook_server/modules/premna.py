@@ -75,6 +75,23 @@ def _bytes_from_formatted_value(value: str) -> float:
     return amount * (1024 ** powers.get(unit, 0))
 
 
+def _active_user_preview(user: dict[str, Any]) -> dict[str, str]:
+    username = user.get('username') or user.get('email') or user.get('telegramId') or user.get('uuid') or 'Без имени'
+    expire_at = user.get('expireAt') or user.get('expire_at') or ''
+    if expire_at:
+        try:
+            from datetime import datetime
+            expire_at = datetime.fromisoformat(str(expire_at).replace('Z', '+00:00')).strftime('%d.%m.%Y')
+        except ValueError:
+            expire_at = str(expire_at)[:10]
+    return {
+        'name': str(username),
+        'email': str(user.get('email') or ''),
+        'telegram_id': str(user.get('telegramId') or user.get('telegram_id') or ''),
+        'expire_at': str(expire_at or 'Без срока'),
+    }
+
+
 async def load_remnawave_nodes() -> list[dict[str, Any]]:
     try:
         remnawave_api._load_config()
@@ -121,10 +138,11 @@ async def _load_statistics() -> dict[str, Any]:
             path,
             **kwargs,
         )
-    stats_response, bandwidth_response, nodes_response = await asyncio.gather(
+    stats_response, bandwidth_response, nodes_response, users_response = await asyncio.gather(
         request_api('GET', '/api/system/stats', params=params),
         request_api('GET', '/api/system/stats/bandwidth', params=params),
         request_api('GET', '/api/nodes'),
+        request_api('GET', '/api/users', params={'page': 0, 'size': 50}),
     )
     stats = _response_data(stats_response)
     bandwidth = _response_data(bandwidth_response)
@@ -134,6 +152,20 @@ async def _load_statistics() -> dict[str, Any]:
     status_counts = users.get('statusCounts') or {}
     memory = stats.get('memory') or {}
     online = stats.get('onlineStats') or {}
+    online_nodes = sum(
+        1 for node in nodes
+        if isinstance(node, dict) and str(node.get('status') or node.get('connectionStatus') or '').upper() in {'ONLINE', 'CONNECTED', 'ACTIVE'}
+    )
+    total_traffic = users.get('totalTrafficBytes') or users.get('totalTraffic') or stats.get('totalTrafficBytes') or stats.get('totalTraffic') or bandwidth.get('totalTraffic') or bandwidth.get('total')
+    calendar_month = bandwidth.get('bandwidthCurrentMonth') or bandwidth.get('bandwidthThisMonth') or bandwidth.get('bandwidthLast30Days') or {}
+    users_payload = users_response.json()
+    users_body = users_payload.get('response', users_payload) if isinstance(users_payload, dict) else {}
+    raw_users = users_body.get('users') or users_body.get('data') or [] if isinstance(users_body, dict) else []
+    active_users = [
+        _active_user_preview(user)
+        for user in raw_users
+        if isinstance(user, dict) and str(user.get('status', '')).upper() == 'ACTIVE'
+    ][:12]
 
     return {
         'users': {
@@ -145,8 +177,14 @@ async def _load_statistics() -> dict[str, Any]:
             'limited': _as_int(status_counts.get('LIMITED')),
             'never_online': _as_int(online.get('neverOnline')),
             'today': _as_int(online.get('lastDay')),
+            'week': _as_int(online.get('lastWeek') or online.get('last7Days') or online.get('thisWeek') or online.get('week')),
         },
         'nodes': len(nodes) if isinstance(nodes, list) else 0,
+        'system': {
+            'online_nodes': online_nodes,
+            'total_traffic': _format_bytes(total_traffic),
+        },
+        'active_users': active_users,
         'memory': {
             'used': _format_bytes(memory.get('used')),
             'total': _format_bytes(memory.get('total')),
@@ -155,6 +193,7 @@ async def _load_statistics() -> dict[str, Any]:
             'today': _traffic_value(bandwidth, 'bandwidthLastTwoDays'),
             'week': _traffic_value(bandwidth, 'bandwidthLastSevenDays'),
             'month': _traffic_value(bandwidth, 'bandwidthLast30Days'),
+            'calendar_month': _traffic_value({'calendar_month': calendar_month}, 'calendar_month'),
             'year': _traffic_value(bandwidth, 'bandwidthCurrentYear'),
         },
     }

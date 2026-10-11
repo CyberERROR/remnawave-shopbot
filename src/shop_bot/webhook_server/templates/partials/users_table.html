@@ -1,101 +1,99 @@
 {% for user in users %}
-<tr class="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0 group">
-    <td class="px-6 py-4 whitespace-nowrap user-id">
-        <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-white">{{ user.telegram_id }}</span>
-            {% if user.is_pinned %}
-            <span class="material-symbols-outlined text-[16px] text-primary"
-                title="Закрепленный пользователь">push_pin</span>
-            {% endif %}
+<tr class="group user-list-row transition-colors hover:bg-white/[0.015]" data-user-details-row data-uid="{{ user.telegram_id }}">
+    <td class="user-id user-name px-3 py-3">
+        <div class="flex min-w-0 items-center gap-3">
+            <div class="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
+                <img class="user-avatar absolute inset-0 h-full w-full object-cover" src="{{ url_for('user_avatar', user_id=user.telegram_id) }}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">
+                <div class="flex h-full w-full items-center justify-center text-xs font-bold text-white/40">{{ (user.first_name or user.username or 'U')[0]|upper }}</div>
+            </div>
+            <div class="min-w-0 flex-1">
+                {% if user.first_name %}<div class="truncate text-sm font-semibold text-white">{{ user.first_name }}</div>{% endif %}
+                <div class="flex items-center gap-2">
+                    {% if user.username %}<span class="truncate text-xs text-sky-300/80 demo-blur-username">@{{ user.username }}</span>{% endif %}
+                    {% if user.is_pinned %}<i data-lucide="pin" class="h-3 w-3 shrink-0 text-primary" title="Закреплён"></i>{% endif %}
+                </div>
+                <button type="button" onclick="copyToClipboard('{{ user.telegram_id }}', this)" class="mt-1 flex items-center gap-1.5 rounded-md px-1.5 py-0.5 font-mono text-[10px] text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/60" title="Скопировать Telegram ID">
+                    <i data-lucide="hash" class="h-3 w-3"></i>
+                    <span>{{ user.telegram_id }}</span>
+                </button>
+            </div>
         </div>
     </td>
-    <td class="px-6 py-4 whitespace-nowrap user-name">
-        <span class="text-sm text-white demo-blur-username">@{{ user.username or 'N/A' }}</span>
+    <td class="px-3 py-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-0.5">
+                <i data-lucide="wallet" class="h-3 w-3 text-emerald-300"></i>
+                <span class="text-xs font-semibold tabular-nums text-emerald-300">{{ '%.2f'|format(user.balance or 0) }} ₽</span>
+            </div>
+            <div class="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5">
+                <i data-lucide="trending-up" class="h-3 w-3 text-white/40"></i>
+                <span class="text-xs font-medium tabular-nums text-white/60">{{ '%.2f'|format(user.total_spent or 0) }} ₽</span>
+            </div>
+        </div>
     </td>
-    <td class="px-6 py-4 whitespace-nowrap">
-        {% if user.is_banned %}
-        <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400">
-            Забанен
-        </span>
-        {% else %}
-        <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
-            Активен
-        </span>
-        {% endif %}
-    </td>
-    <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-        <div class="flex items-center justify-center gap-1.5 flex-wrap">
+<td class="px-3 py-3">
+        {% set has_months = (user.total_months or 0) > 0 %}
+        {% set has_refs = (user.referral_count or 0) > 0 %}
+        {% set item_count = 1 + (1 if has_months else 0) + (1 if has_refs else 0) %}
+        <div class="grid grid-cols-2 items-center gap-1.5">
             {% if (user.keys_count or 0) > 0 %}
-            <span
-                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
-                {{ user.keys_count }} шт.
+            <span class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-1 text-[10px] font-semibold text-emerald-300 {{ 'col-span-2' if item_count == 1 else '' }}">
+                <i data-lucide="key-round" class="h-3 w-3"></i>
+                {{ user.keys_count }} ключ{{ 'ей' if user.keys_count > 4 or user.keys_count == 0 else ('а' if user.keys_count > 1 else '') }}
             </span>
             {% else %}
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-white/10 text-white/50">
-                —
-            </span>
+            <span class="inline-flex items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] font-medium text-white/35 {{ 'col-span-2' if item_count == 1 else '' }}">Нет ключей</span>
             {% endif %}
-            {% if (user.total_months or 0) > 0 %}
-            <span
-                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
+            {% if has_months %}
+            <span class="inline-flex items-center justify-center gap-1 rounded-lg border border-sky-400/15 bg-sky-400/[0.06] px-2 py-0.5 text-[10px] font-medium text-sky-300">
+                <i data-lucide="calendar" class="h-3 w-3"></i>
                 {{ user.total_months }} мес.
             </span>
             {% endif %}
-            {% if (user.referral_count or 0) > 0 %}
-            <span
-                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-400">
+            {% if has_refs %}
+            <span class="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-400/15 bg-amber-400/[0.06] px-2 py-0.5 text-[10px] font-medium text-amber-300 {{ 'col-span-2' if item_count == 3 else '' }}">
+                <i data-lucide="users-round" class="h-3 w-3"></i>
                 {{ user.referral_count }} реф.
             </span>
             {% endif %}
         </div>
     </td>
-    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">{{ '%.2f'|format(user.balance or 0) }} ₽</td>
-    <td class="px-6 py-4 whitespace-nowrap text-right">
-        <div class="flex items-center justify-end gap-1.5 flex-wrap">
-            <!-- Give Key -->
-            <a href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}"
-                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-                title="Выдать ключ">
-                <span class="material-symbols-outlined text-base">key</span>
-            </a>
-            <!-- Add Balance -->
+    <td class="px-3 py-3">
+        <time class="text-xs text-white/60" data-registration-date="{{ user.registration_date or '' }}">{{ user.registration_date or 'N/A' }}</time>
+    </td>
+    <td class="px-3 py-3">
+        <div class="flex items-center justify-end gap-1.5 flex-nowrap">
             <button type="button"
-                class="btn-user-balance-sign inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                class="btn-user-balance-sign inline-flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300 transition-all hover:bg-emerald-400/15"
                 data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
                 data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="+" title="Начислить баланс">
-                <span class="material-symbols-outlined text-base">add</span>
+                <i data-lucide="plus" class="h-4 w-4"></i>
             </button>
-            <!-- Subtract Balance -->
             <button type="button"
-                class="btn-user-balance-sign inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                class="btn-user-balance-sign inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-400/15 bg-rose-400/[0.06] text-rose-300 transition-all hover:bg-rose-400/15"
                 data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
                 data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="-" title="Списать баланс">
-                <span class="material-symbols-outlined text-base">remove</span>
+                <i data-lucide="minus" class="h-4 w-4"></i>
             </button>
-            <!-- Send Message -->
             <button type="button"
-                class="btn-user-message inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                class="btn-user-message inline-flex h-8 w-8 items-center justify-center rounded-xl border border-sky-400/15 bg-sky-400/[0.06] text-sky-300 transition-all hover:bg-sky-400/15"
                 data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
                 title="Отправить сообщение">
-                <span class="material-symbols-outlined text-base">mail</span>
+                <i data-lucide="mail" class="h-4 w-4"></i>
             </button>
-            <!-- Toggle Keys -->
             <button type="button" data-toggle="keys" data-user="{{ user.telegram_id }}"
-                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
-                title="Ключи">
-                <span class="material-symbols-outlined text-base">vpn_key</span>
+                class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-white/60 transition-all hover:bg-white/10 hover:text-white"
+                title="Показать ключи пользователя">
+                <i data-lucide="key-round" class="h-4 w-4"></i>
             </button>
-            <!-- Ban/Unban -->
             {% if user.is_banned %}
             <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post"
                 class="inline ajax-form" data-refresh="users-tbody" data-success-msg="Пользователь разбанен">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit"
-                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300 hover:bg-emerald-400/15 transition-all"
                     title="Разбанить">
-                    <span class="material-symbols-outlined text-base">check_circle</span>
+                    <i data-lucide="user-check" class="h-4 w-4"></i>
                 </button>
             </form>
             {% else %}
@@ -104,13 +102,12 @@
                 data-refresh="users-tbody" data-success-msg="Пользователь забанен">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit"
-                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
-                    title="Бан">
-                    <span class="material-symbols-outlined text-base">block</span>
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-amber-400/15 bg-amber-400/[0.06] text-amber-300 hover:bg-amber-400/15 transition-all"
+                    title="Забанить">
+                    <i data-lucide="ban" class="h-4 w-4"></i>
                 </button>
             </form>
             {% endif %}
-            <!-- Revoke Keys -->
             {% if (user.keys_count or 0) > 0 %}
             <form action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post"
                 class="inline ajax-form"
@@ -118,39 +115,32 @@
                 data-refresh="users-tbody" data-success-msg="Ключи отозваны">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit"
-                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                    title="Отозвать ключи">
-                    <span class="material-symbols-outlined text-base">delete</span>
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-rose-400/15 bg-rose-400/[0.06] text-rose-300 hover:bg-rose-400/15 transition-all"
+                    title="Отозвать все ключи">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
                 </button>
             </form>
             {% endif %}
-            <!-- Pin/Unpin -->
             <form action="{{ url_for('toggle_pin_user_route', user_id=user.telegram_id) }}" method="post"
                 class="inline ajax-form" data-refresh="users-tbody">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit"
-                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg {{ 'bg-primary/20 text-primary border border-primary/20 shadow-lg shadow-primary/10' if user.is_pinned else 'bg-white/5 text-white/30 border border-white/5' }} hover:bg-primary/30 transition-all group"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-xl {{ 'border border-primary/20 bg-primary/10 text-primary shadow-lg shadow-primary/5' if user.is_pinned else 'border border-white/[0.08] bg-white/[0.03] text-white/40' }} hover:bg-primary/20 transition-all"
                     title="{{ 'Открепить' if user.is_pinned else 'Закрепить' }}">
-                    <span
-                        class="material-symbols-outlined text-base {{ 'rotate-45' if user.is_pinned else 'group-hover:rotate-45' }} transition-transform">push_pin</span>
+                    <i data-lucide="pin" class="h-4 w-4 {{ 'rotate-45' if user.is_pinned else '' }} transition-transform"></i>
                 </button>
             </form>
-            <!-- Details -->
-            <button type="button"
-                class="btn-user-details inline-flex items-center gap-1 px-3 h-8 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors text-sm"
-                data-uid="{{ user.telegram_id }}" title="Подробнее">
-                <span class="material-symbols-outlined text-base">info</span>
-                <span class="hidden sm:inline">Подробнее</span>
-            </button>
         </div>
     </td>
 </tr>
-<!-- Keys row -->
 <tr class="keys-row hidden" id="keys-{{ user.telegram_id }}"
     data-src="{{ url_for('user_keys_partial', user_id=user.telegram_id) }}">
-    <td colspan="6" class="p-0">
-        <div class="m-4 bg-white/5 border border-white/10 rounded-lg">
-            <div class="p-3 border-b border-white/10 text-white font-bold text-sm">Ключи пользователя</div>
+    <td colspan="5" class="p-0">
+        <div class="m-4 rounded-xl border border-white/[0.08] bg-white/[0.03]">
+            <div class="flex items-center gap-2 border-b border-white/[0.08] p-3">
+                <i data-lucide="key-round" class="h-4 w-4 text-sky-300"></i>
+                <span class="text-sm font-semibold text-white">Ключи пользователя</span>
+            </div>
             <div class="p-3" data-lazy="keys"></div>
         </div>
     </td>

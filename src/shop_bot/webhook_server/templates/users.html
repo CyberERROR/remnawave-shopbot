@@ -2,121 +2,132 @@
 {% block title %}Управление Пользователями{% endblock %}
 
 {% block content %}
-<!-- ===== ЗАГОЛОВОК СТРАНИЦЫ ===== -->
-<div class="mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
     <div class="space-y-1">
-        <h2 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+        <h2 class="flex items-center gap-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Пользователи
-            <span
-                class="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-widest border border-primary/20">Клиенты</span>
+            <span class="rounded-full border border-sky-400/15 bg-sky-400/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-sky-300">System</span>
         </h2>
-        <p class="text-white/40 text-xs font-medium uppercase tracking-[0.2em] ml-1">Управление базой пользователей</p>
-    </div>
-
-    <div class="relative w-full md:w-96 group">
-        <span
-            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg group-focus-within:text-primary transition-colors">person_search</span>
-        <input id="users-search" type="text" value="{{ q or '' }}"
-            class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all shadow-lg backdrop-blur-sm"
-            placeholder="Поиск по ID или Username..." />
-        <button id="search-clear"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors hidden">
-            <span class="material-symbols-outlined text-lg">close</span>
-        </button>
+        <p class="ml-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/50">Управление базой пользователей</p>
     </div>
 </div>
 
-</style>
-
-<div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md">
-    <div class="overflow-x-auto">
-        <table id="users-table" class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b border-white/5 bg-white/[0.02]">
-                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Telegram ID</th>
-                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Username</th>
-                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Статус</th>
-                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40 text-center">
-                        Активные ключи</th>
-                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40">Баланс</th>
-                    <th class="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40 text-right">
-                        Действия
-                    </th>
-                </tr>
-            </thead>
-            <tbody id="users-tbody" class="divide-y divide-white/5"
-                data-fetch-url="{{ url_for('users_table_partial', page=current_page, per_page=per_page, q=q) }}"
-                data-fetch-interval="120000">
-                <tr>
-                    <td colspan="6" class="p-8 text-center">
-                        <div class="flex flex-col items-center justify-center text-white/30">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-                            <span class="text-xs">Загрузка пользователей...</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+<section class="mb-8">
+    <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+        <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-sky-400/[0.08] blur-3xl"></div>
+        <div class="relative flex flex-col gap-3 border-b border-white/[0.08] p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+            <div class="flex min-w-0 items-center gap-2">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="search" class="h-4 w-4" aria-hidden="true"></i></span>
+                <h3 class="text-sm font-semibold tracking-tight text-white">Поиск пользователя</h3>
+            </div>
+        </div>
+        <div class="relative p-3 sm:p-4">
+            <div class="min-w-0">
+                <label for="users-search" class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">Поиск по @username, ID или имени</label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"><i data-lucide="search" class="h-4 w-4 text-white/40" aria-hidden="true"></i></span>
+                    <input id="users-search" type="text" value="{{ q or '' }}" class="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-white/30 transition duration-150 hover:border-white/20 focus:border-sky-300/30 focus:outline-none focus:ring-2 focus:ring-sky-300/20" placeholder="Введите имя, @username или Telegram ID..." />
+                    <button id="search-clear" class="absolute right-3 top-1/2 hidden -translate-y-1/2 text-white/40 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                        <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+</section>
 
-<div class="flex justify-center mt-6 gap-2" id="users-pagination"
-    data-src="{{ url_for('users_pagination_partial', page=current_page, q=q, per_page=per_page) }}">
-    {% include 'partials/users_pagination.html' %}
-</div>
+<section class="mb-8">
+    <div class="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+        <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-sky-400/[0.08] blur-3xl"></div>
+        <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+            <div class="flex min-w-0 items-center gap-2">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="users-round" class="h-4 w-4" aria-hidden="true"></i></span>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold tracking-tight text-white">База пользователей</h3>
+                    <p class="text-xs text-white/60">Управление и мониторинг</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="relative flex-1 overflow-x-auto">
+            <table id="users-table" class="w-full min-w-[980px] text-left border-collapse">
+                <thead class="bg-white/[0.03] backdrop-blur-sm border-b border-white/[0.06] sticky top-0 z-10">
+                    <tr>
+                        <th class="px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60">Пользователь</th>
+                        <th class="px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60">Финансы</th>
+                        <th class="px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60">Ключ / срок / реф</th>
+                        <th class="px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60">Регистрация</th>
+                        <th class="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-white/60">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody" class="divide-y divide-white/[0.04]"
+                    data-fetch-url="{{ url_for('users_table_partial', page=current_page, per_page=per_page, q=q) }}"
+                    data-fetch-interval="120000">
+                    <tr>
+                        <td colspan="5" class="p-8 text-center">
+                            <div class="flex flex-col items-center justify-center gap-2">
+                                <span class="h-3 w-full animate-pulse rounded bg-white/[0.08]"></span>
+                                <span class="h-3 w-2/3 animate-pulse rounded bg-white/[0.08]"></span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="users-pagination" class="mt-auto flex min-h-11 items-center justify-center border-t border-white/[0.05] empty:hidden"
+            data-src="{{ url_for('users_pagination_partial', page=current_page, q=q, per_page=per_page) }}">
+            {% include 'partials/users_pagination.html' %}
+        </div>
+    </div>
+</section>
 
 <div id="balanceModal" class="modal-overlay" style="z-index: 1100;">
-    <div class="modal-content bg-[#101815] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
-        <div class="p-6 border-b border-white/5 flex items-center justify-between">
-            <h5 class="text-white font-bold text-lg">Баланс пользователя</h5>
-            <button onclick="closeModal('balanceModal')" class="text-white/50 hover:text-white transition-colors">
-                <span class="material-symbols-outlined">close</span>
-            </button>
+    <div class="modal-content overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
+        <div class="border-b border-white/[0.08] bg-white/[0.03]">
+            <div class="flex items-start justify-between gap-3 p-3 sm:p-4">
+                <div class="flex items-start gap-3 min-w-0">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                        <i data-lucide="wallet" class="h-4 w-4" aria-hidden="true"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="mb-1.5 flex flex-wrap items-center gap-2">
+                            <span class="text-[11px] font-medium uppercase tracking-wider text-white/60">Управление балансом</span>
+                        </div>
+                        <h5 class="text-sm font-semibold tracking-tight text-white" id="bm-user">Пользователь</h5>
+                    </div>
+                </div>
+                <button onclick="closeModal('balanceModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
-        <div class="p-6">
-            <div class="mb-4 flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-                    <span class="material-symbols-outlined">person</span>
+        <div class="p-3 sm:p-4">
+            <div class="mb-4 grid grid-cols-2 gap-3">
+                <div class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                    <div class="mb-1 text-[11px] font-medium uppercase tracking-wider text-white/60">Текущий баланс</div>
+                    <div class="text-2xl font-semibold tabular-nums tracking-tight text-white"><span id="bm-balance">0.00</span> ₽</div>
                 </div>
-                <div>
-                    <div class="text-white/50 text-xs uppercase font-bold tracking-wider">Пользователь</div>
-                    <div class="text-white font-bold text-sm" id="bm-user"></div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="bg-white/5 p-3 rounded-xl border border-white/5">
-                    <div class="text-white/50 text-[10px] uppercase font-bold tracking-wider mb-1">Текущий баланс</div>
-                    <div class="text-2xl font-bold text-white"><span id="bm-balance">0.00</span> <span
-                            class="text-white/50 text-lg font-normal">₽</span></div>
-                </div>
-                <div class="bg-white/5 p-3 rounded-xl border border-white/5">
-                    <div class="text-white/50 text-[10px] uppercase font-bold tracking-wider mb-1">Рефералы</div>
-                    <div class="text-2xl font-bold text-white"><span id="bm-refcount">0</span></div>
+                <div class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                    <div class="mb-1 text-[11px] font-medium uppercase tracking-wider text-white/60">Рефералы</div>
+                    <div class="text-2xl font-semibold tabular-nums tracking-tight text-white" id="bm-refcount">0</div>
                 </div>
             </div>
 
-            <form id="bm-form" class="flex gap-3 ajax-form" method="post" data-success-msg="Баланс успешно изменён"
-                data-refresh="users-tbody">
+            <form id="bm-form" class="mb-4 flex gap-2 ajax-form" method="post" data-success-msg="Баланс успешно изменён" data-refresh="users-tbody">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <div class="relative flex-1">
-                    <span
-                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-lg">payments</span>
-                    <input
-                        class="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/40 font-mono"
-                        type="text" inputmode="decimal" name="delta" placeholder="± Сумма" required />
+                    <input class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-sm font-medium text-white placeholder:text-white/30 transition-all focus:outline-none focus:ring-1 focus:ring-emerald-300/30" type="text" inputmode="decimal" name="delta" placeholder="± Сумма (₽)" required />
                 </div>
-                <button
-                    class="px-6 py-2 rounded-xl bg-primary text-background-dark font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
-                    type="submit">
-                    <span class="material-symbols-outlined text-lg">save</span>
-                    <span>Изменить</span>
+                <button class="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300 transition-all hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60" type="submit">
+                    <i data-lucide="save" class="h-4 w-4" aria-hidden="true"></i>
+                    Применить
                 </button>
             </form>
 
-            <div class="mt-6">
-                <div class="text-white/50 text-[10px] uppercase font-bold tracking-wider mb-2">Список рефералов</div>
-                <div class="bg-black/30 rounded-xl border border-white/5 p-2 max-h-36 overflow-y-auto custom-scroll">
+            <div>
+                <div class="mb-2 text-[11px] font-medium uppercase tracking-wider text-white/60">Список рефералов</div>
+                <div class="max-h-36 overflow-y-auto rounded-xl border border-white/[0.08] bg-black/20 p-2">
                     <ul id="bm-reflist" class="space-y-1 text-xs text-white/70"></ul>
                 </div>
             </div>
@@ -125,32 +136,36 @@
 </div>
 
 <div id="messageModal" class="modal-overlay" style="z-index: 1100;">
-    <div class="modal-content bg-[#101815] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
-        <div class="p-6 border-b border-white/5 flex items-center justify-between">
-            <h5 class="text-white font-bold text-lg">Отправить сообщение</h5>
-            <button onclick="closeModal('messageModal')" class="text-white/50 hover:text-white transition-colors">
-                <span class="material-symbols-outlined">close</span>
-            </button>
+    <div class="modal-content overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
+        <div class="border-b border-white/[0.08] bg-white/[0.03]">
+            <div class="flex items-start justify-between gap-3 p-3 sm:p-4">
+                <div class="flex items-start gap-3 min-w-0">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                        <i data-lucide="mail" class="h-4 w-4" aria-hidden="true"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="mb-1.5 flex flex-wrap items-center gap-2">
+                            <span class="text-[11px] font-medium uppercase tracking-wider text-white/60">Отправить сообщение</span>
+                        </div>
+                        <h5 class="text-sm font-semibold tracking-tight text-white" id="mm-user">Пользователь</h5>
+                    </div>
+                </div>
+                <button onclick="closeModal('messageModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
-        <div class="p-6">
-            <div class="mb-4 text-white/70 text-sm" id="mm-user"></div>
+        <div class="p-3 sm:p-4">
             <form id="mm-form" method="post" class="ajax-form" data-success-msg="Сообщение отправлено">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <div class="mb-4">
-                    <label class="block text-white/60 text-[10px] uppercase font-bold tracking-wider mb-2">📩 Сообщение
-                        от администратора:</label>
+                    <label class="mb-2 block text-[11px] font-medium uppercase tracking-wider text-white/60">Текст сообщения</label>
                     <div class="relative">
-                        <textarea
-                            class="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all min-h-[120px] resize-y text-sm"
-                            name="message" placeholder="Введите сообщение для пользователя..." required></textarea>
-                        <div class="absolute bottom-3 right-3 text-white/20 text-xs pointer-events-none">От лица бота
-                        </div>
+                        <textarea class="min-h-[120px] w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 p-3 text-sm text-white placeholder:text-white/30 transition-all focus:outline-none focus:ring-1 focus:ring-sky-300/30" name="message" placeholder="Введите сообщение для пользователя..." required></textarea>
                     </div>
                 </div>
-                <button
-                    class="w-full py-3 rounded-xl bg-primary text-background-dark font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
-                    type="submit">
-                    <span class="material-symbols-outlined text-lg">send</span>
+                <button class="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-sky-300 transition-all hover:bg-sky-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60" type="submit">
+                    <i data-lucide="send" class="h-4 w-4" aria-hidden="true"></i>
                     Отправить
                 </button>
             </form>
@@ -321,59 +336,137 @@
     </div>
 </div>
 
-<div id="userDetailsModal" class="modal-overlay modal-xl" style="z-index: 1050;">
-    <div class="modal-content bg-[#101815] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl">
-        <div class="p-4 border-b border-white/10 flex items-center justify-between">
-            <h5 class="text-white font-bold">Информация о пользователе</h5>
-            <button onclick="closeModal('userDetailsModal')" class="text-white/50 hover:text-white">
+<div id="resetSubscriptionLinkModal" class="modal-overlay" style="z-index: 1250;">
+    <div class="modal-content reset-subscription-confirm overflow-hidden border border-amber-400/20 rounded-2xl">
+        <div class="flex items-start gap-3 border-b border-white/10 bg-amber-400/[0.06] px-5 py-4">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
+                <span class="material-symbols-outlined">link_off</span>
+            </div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-sm font-bold text-white">Обновить ссылку подписки?</h3>
+                <p class="mt-1 text-[11px] leading-relaxed text-white/45">Будет создан новый адрес подписки. Старая ссылка перестанет работать.</p>
+            </div>
+            <button type="button" onclick="closeModal('resetSubscriptionLinkModal')" aria-label="Закрыть" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/40 hover:bg-white/5 hover:text-white">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+        <div class="space-y-2 p-5">
+            <div class="flex items-start gap-2.5 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.045] p-3">
+                <span class="material-symbols-outlined mt-0.5 text-base text-emerald-300">check_circle</span>
+                <div>
+                    <p class="text-[11px] font-semibold text-emerald-100/90">Останется без изменений</p>
+                    <p class="mt-1 text-[10px] leading-relaxed text-white/45">Срок действия, тариф, провайдер оплаты и лимиты трафика/HWID.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-2.5 rounded-xl border border-amber-400/10 bg-amber-400/[0.045] p-3">
+                <span class="material-symbols-outlined mt-0.5 text-base text-amber-300">sync_problem</span>
+                <div>
+                    <p class="text-[11px] font-semibold text-amber-100/90">Потребуется обновить подключение</p>
+                    <p class="mt-1 text-[10px] leading-relaxed text-white/45">Старая ссылка станет недействительной. Клиенту нужно импортировать новый адрес подписки.</p>
+                </div>
+            </div>
+            <p class="px-1 pt-1 text-[10px] text-white/35">Действие изменяет ссылку только для выбранного ключа.</p>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-white/10 bg-black/20 px-5 py-3">
+            <button type="button" id="cancel-reset-subscription-link" class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-bold text-white/65 hover:bg-white/[0.08] hover:text-white">Отмена</button>
+            <button type="button" id="confirm-reset-subscription-link" class="flex items-center gap-1.5 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-[10px] font-bold text-amber-100 hover:bg-amber-300/20">
+                <span class="material-symbols-outlined text-sm">autorenew</span>Создать новую ссылку
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="transactionDetailsModal" class="modal-overlay" style="z-index: 1300;">
+    <div class="modal-content transaction-details-modal overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e] p-0 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-white/[0.08] bg-white/[0.03] px-4 py-3 sm:px-5">
+            <div class="flex min-w-0 items-center gap-3">
+                <div id="txd-icon-wrap" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-400/15 bg-emerald-400/[0.08] text-emerald-300">
+                    <span id="txd-icon" class="material-symbols-outlined">receipt_long</span>
+                </div>
+                <div class="min-w-0">
+                    <h3 id="txd-title" class="truncate text-sm font-semibold tracking-tight text-white">Детали операции</h3>
+                    <p id="txd-subtitle" class="mt-0.5 truncate text-xs text-white/60"></p>
+                </div>
+            </div>
+            <button type="button" onclick="closeModal('transactionDetailsModal')" aria-label="Закрыть окно с деталями" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <div class="p-6">
-            <div id="udm-loading" class="text-center py-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <div class="max-h-[min(76vh,760px)] space-y-3 overflow-y-auto p-3 sm:p-4">
+            <div class="udm-tx-layout">
+                <aside class="space-y-2">
+                    <div id="txd-context" class="udm-tx-context"></div>
+                    <div id="txd-summary" class="space-y-2"></div>
+                </aside>
+                <div class="min-w-0 space-y-3">
+                    <div id="txd-groups" class="space-y-3"></div>
+                    <details id="txd-raw-wrap" class="hidden rounded-xl border border-white/[0.07] bg-black/20">
+                        <summary class="cursor-pointer px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white/45 hover:text-white/70">Исходные данные записи</summary>
+                        <pre id="txd-raw" class="max-h-64 overflow-auto border-t border-white/[0.06] p-3 text-[10px] leading-relaxed text-white/45"></pre>
+                    </details>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="userDetailsModal" class="modal-overlay modal-xl" style="z-index: 1050;">
+    <div class="modal-content user-details-modal overflow-hidden rounded-2xl border border-white/10 bg-[#0b0f0e]/95 shadow-2xl shadow-black/50 backdrop-blur-2xl">
+        <div class="user-details-header sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-[#0b0f0e]/95 px-4 py-3 backdrop-blur-2xl sm:px-5">
+            <div class="flex items-center gap-3">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sky-400/20 bg-sky-400/[0.08] text-sky-300">
+                    <i data-lucide="user-round" class="h-4 w-4" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <h5 class="text-sm font-semibold tracking-tight text-white">Информация о пользователе</h5>
+                    <p class="mt-0.5 text-[11px] uppercase tracking-wider text-white/50">Профиль · подписки · финансы</p>
+                </div>
+            </div>
+            <button type="button" aria-label="Закрыть окно" onclick="closeModal('userDetailsModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="user-details-body p-3 sm:p-4 lg:p-5">
+            <div id="udm-loading" class="text-center py-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-300 mx-auto"></div>
                 <p class="text-white/50 mt-2">Загрузка...</p>
             </div>
             <div id="udm-content" class="hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="udm-workspace mb-5">
                     <!-- LEFT COLUMN: User Profile & Finance -->
                     <div class="flex flex-col gap-4 h-full">
                         <!-- Profile Block -->
                         <div
-                            class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-inner relative overflow-hidden group">
-                            <div
-                                class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <span class="material-symbols-outlined text-6xl text-white">person</span>
-                            </div>
-                            <div class="relative z-10 flex items-start gap-4">
-                                <div
-                                    class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary border border-primary/20 shadow-lg shadow-primary/5">
-                                    <span class="material-symbols-outlined text-3xl">badge</span>
+                            class="border border-white/[0.08] rounded-xl bg-white/[0.03] p-4 sm:p-5 relative overflow-hidden">
+                            <div class="relative z-10 flex items-start gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-400/20 bg-sky-400/[0.08] text-sky-300">
+                                    <i data-lucide="user-round" class="h-4 w-4" aria-hidden="true"></i>
                                 </div>
                                 <div class="flex-1 min-w-0 pt-1">
                                     <div class="flex items-center gap-2 min-w-0">
-                                        <h4 class="text-white font-bold text-xl leading-tight truncate select-all"
+                                        <h4 class="truncate text-base font-bold leading-tight tracking-tight text-white select-all"
                                             id="udm-username"></h4>
                                         <input id="udm-username-input"
-                                            class="hidden min-w-0 w-full bg-black/30 border border-primary/30 rounded-lg px-2 py-1 text-lg font-bold text-white focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                            class="hidden min-w-0 w-full bg-black/30 border border-sky-300/30 rounded-lg px-2 py-1 text-lg font-bold text-white focus:outline-none focus:ring-1 focus:ring-sky-300/40"
                                             type="text" maxlength="64" autocomplete="off" />
                                         <button id="udm-username-edit" type="button"
-                                            class="w-8 h-8 shrink-0 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 hover:text-primary transition-all flex items-center justify-center"
+                                            class="w-8 h-8 shrink-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white/50 hover:text-sky-300 transition-all flex items-center justify-center"
                                             title="Изменить имя пользователя">
-                                            <span id="udm-username-edit-icon" class="material-symbols-outlined text-base">edit</span>
+                                            <i id="udm-username-edit-icon" data-lucide="edit" class="h-4 w-4" aria-hidden="true"></i>
                                         </button>
                                         <span id="udm-pinned-badge"
-                                            class="hidden material-symbols-outlined text-primary text-lg">push_pin</span>
+                                            class="hidden flex h-8 w-8 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                                            <i data-lucide="pin" class="h-4 w-4" aria-hidden="true"></i>
+                                        </span>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-x-2.5 gap-y-2 mt-2.5">
                                         <span
-                                            class="text-white/40 text-sm font-mono bg-black/30 px-2 py-0.5 rounded select-all"
+                                            class="rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-2 py-0.5 font-mono text-xs text-sky-300 select-all"
                                             id="udm-telegram-id"></span>
                                         <div class="flex items-center gap-2">
-                                            <div class="px-1.5 py-0.5 rounded bg-white/5 text-white/40 text-[10px] uppercase font-bold tracking-wider"
+                                            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.03] text-white/40 text-[10px] uppercase font-bold tracking-wider"
                                                 title="Дата регистрации">
-                                                <span
-                                                    class="material-symbols-outlined text-[13px] opacity-30">calendar_today</span>
+                                                <i data-lucide="calendar" class="h-3 w-3 text-white/30" aria-hidden="true"></i>
                                                 <span id="udm-registration" class="font-mono pt-px"></span>
                                             </div>
                                         </div>
@@ -382,105 +475,102 @@
                             </div>
                         </div>
 
-                        <!-- Finance Grid -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <!-- Balance -->
-                            <div
-                                class="bg-white/5 border border-white/10 rounded-2xl p-4 shadow-inner flex flex-col justify-between h-full relative overflow-hidden group">
+                            <div class="udm-overview-grid grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <!-- Balance -->
                                 <div
-                                    class="absolute -bottom-4 -right-4 w-20 h-20 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition-colors">
-                                </div>
-                                <div class="flex items-center justify-between gap-2 text-primary/80">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <span class="material-symbols-outlined text-lg">account_balance_wallet</span>
-                                        <span class="text-[10px] font-bold uppercase tracking-wider">Баланс</span>
-                                    </div>
-                                    <button id="udm-balance-edit"
-                                        class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-primary transition-all flex items-center justify-center"
-                                        type="button" title="Изменить баланс вручную">
-                                        <span id="udm-balance-edit-icon" class="material-symbols-outlined text-sm">edit</span>
-                                    </button>
-                                </div>
-                                <div>
-                                    <div class="text-2xl font-bold text-white tracking-tight" id="udm-balance"></div>
-                                    <input id="udm-balance-input"
-                                        class="hidden w-full bg-black/30 border border-primary/30 rounded-xl px-3 py-2 text-2xl font-bold text-white tracking-tight focus:outline-none focus:ring-1 focus:ring-primary/40"
-                                        type="text" inputmode="decimal" />
-                                    <div class="flex items-center gap-2 mt-1">
-                                        <div class="text-[10px] text-white/40">Текущий счет</div>
-                                        <button id="udm-balance-reset"
-                                            class="w-6 h-6 rounded-md bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 transition-all flex items-center justify-center"
-                                            type="button" title="Обнулить баланс до 0.00 ₽">
-                                            <span class="material-symbols-outlined text-sm">delete</span>
+                                    class="udm-balance-card relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 flex flex-col justify-between h-full min-h-[120px] hover:border-white/20 transition duration-150">
+                                    <div class="relative z-10 flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/[0.08] text-emerald-300">
+                                                <i data-lucide="wallet" class="h-5 w-5" aria-hidden="true"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">Баланс</div>
+                                                <div class="text-[10px] text-white/40 mt-0.5">Текущий счет</div>
+                                            </div>
+                                        </div>
+                                        <button id="udm-balance-edit"
+                                            class="w-8 h-8 shrink-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white/60 hover:text-emerald-300 transition-all flex items-center justify-center"
+                                            type="button" title="Изменить баланс вручную">
+                                            <i id="udm-balance-edit-icon" data-lucide="edit" class="h-4 w-4" aria-hidden="true"></i>
                                         </button>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- Spent & Months -->
-                            <div class="flex flex-col gap-4">
-                                <div
-                                    class="bg-white/5 border border-white/10 rounded-2xl p-3 flex-1 flex items-center gap-3">
-                                    <div
-                                        class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/50">
-                                        <span class="material-symbols-outlined text-xl">payments</span>
-                                    </div>
-                                    <div>
-                                        <div class="text-sm font-bold text-white" id="udm-total-spent"></div>
-                                        <div class="text-[9px] text-white/30 uppercase font-bold tracking-wider">
-                                            Потрачено</div>
-                                    </div>
-                                </div>
-                                <div
-                                    class="bg-white/5 border border-white/10 rounded-2xl p-3 flex-1 flex items-center gap-3">
-                                    <div
-                                        class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/50">
-                                        <span class="material-symbols-outlined text-xl">calendar_month</span>
-                                    </div>
-                                    <div>
-                                        <div class="text-sm font-bold text-white" id="udm-total-months"></div>
-                                        <div class="text-[9px] text-white/30 uppercase font-bold tracking-wider">Месяцев
+                                    <div class="relative z-10 mt-3">
+                                        <div class="text-2xl font-semibold text-white tracking-tight tabular-nums" id="udm-balance">0.00 ₽</div>
+                                        <input id="udm-balance-input"
+                                            class="hidden w-full bg-black/30 border border-emerald-300/30 rounded-xl px-3 py-2 text-2xl font-semibold text-white tracking-tight focus:outline-none focus:ring-1 focus:ring-emerald-300/40"
+                                            type="text" inputmode="decimal" />
+                                        <div class="flex items-center gap-2 mt-2">
+                                            <button id="udm-balance-reset"
+                                                class="w-6 h-6 rounded-md bg-rose-400/[0.08] hover:bg-rose-400/20 border border-rose-400/20 text-rose-400 transition-all flex items-center justify-center"
+                                                type="button" title="Обнулить баланс до 0.00 ₽">
+                                                <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+
+                                <!-- Spent & Months -->
+                                    <div class="udm-mini-stats flex gap-3">
+                                        <div
+                                            class="udm-mini-stat border border-white/[0.08] rounded-xl p-3 flex-1 flex items-center gap-3 bg-white/[0.03] transition duration-150 hover:border-white/20">
+                                            <div
+                                                class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                                <i data-lucide="credit-card" class="h-4 w-4" aria-hidden="true"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-semibold text-white tabular-nums" id="udm-total-spent">0 ₽</div>
+                                                <div class="text-[9px] text-white/40 uppercase font-medium tracking-wider">Потрачено</div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="udm-mini-stat border border-white/[0.08] rounded-xl p-3 flex-1 flex items-center gap-3 bg-white/[0.03] transition duration-150 hover:border-white/20">
+                                            <div
+                                                class="flex h-7 w-7 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                                                <i data-lucide="calendar" class="h-5 w-5" aria-hidden="true"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-semibold text-white tabular-nums" id="udm-total-months">0</div>
+                                                <div class="text-[9px] text-white/40 uppercase font-medium tracking-wider">Месяцев</div>
+                                            </div>
+                                        </div>
+                                    </div>
                         </div>
 
-                        <!-- Details Block (Reg & Trial) -->
+                            <!-- Details Block (Reg & Trial) -->
                         <div
-                            class="bg-white/5 border border-white/10 rounded-2xl p-6 shadow-inner space-y-5 flex-1 flex flex-col justify-center">
-                            <div class="flex items-center justify-between group">
+                            class="border border-white/[0.08] rounded-xl bg-white/[0.03] p-4 sm:p-5 space-y-4 flex-1 flex flex-col justify-center relative overflow-hidden">
+                            <div class="relative z-10 flex items-center justify-between group">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
-                                        <span class="material-symbols-outlined text-lg">history_toggle_off</span>
+                                        class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300">
+                                        <i data-lucide="history" class="h-5 w-5" aria-hidden="true"></i>
                                     </div>
                                     <div>
-                                        <div class="text-sm font-bold text-white uppercase tracking-wide">Пробный период
-                                        </div>
-                                        <div class="text-[10px] text-white/40" id="udm-trial-label"></div>
+                                        <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">Пробный период</div>
+                                        <div class="text-[10px] text-white/40 mt-0.5" id="udm-trial-label"></div>
                                     </div>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="udm-trial-toggle" class="sr-only peer">
                                     <div
-                                        class="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500">
+                                        class="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-400">
                                     </div>
                                 </label>
                             </div>
 
 
 
-                            <!-- INDIVIDUAL SETTINGS BLOCK -->
-                            <div class="border-t border-white/5 pt-3 mt-1">
+                                <!-- INDIVIDUAL SETTINGS BLOCK -->
+                            <div class="border-t border-white/[0.06] pt-3 mt-1">
                                 <div class="flex items-center justify-between">
                                     <span
-                                        class="text-[10px] uppercase font-bold text-white/30 tracking-wider">Индивидуальные
+                                        class="text-[10px] uppercase font-semibold text-white/40 tracking-wider">Индивидуальные
                                         настройки</span>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="udm-seller-active" class="sr-only peer">
                                         <div
-                                            class="w-9 h-5 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
+                                            class="w-9 h-5 bg-white/[0.08] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-400">
                                         </div>
                                     </label>
                                 </div>
@@ -550,19 +640,15 @@
                     </div>
 
                     <!-- RIGHT COLUMN: Referral System -->
-                    <div
-                        class="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-inner flex flex-col h-full min-h-[300px] relative overflow-hidden">
-                        <div class="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
-                            <span class="material-symbols-outlined text-9xl text-white">group_add</span>
-                        </div>
-
-                        <div class="flex items-center gap-4 mb-6 relative z-10">
+<div
+                        class="udm-referrals-card border border-white/[0.08] bg-white/[0.03] rounded-xl p-4 sm:p-5 flex flex-col h-full min-h-[260px] relative overflow-hidden">
+                        <div class="flex items-center gap-3 mb-4 relative z-10">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center text-purple-400 border border-purple-500/20 shadow-lg shadow-purple-500/5">
-                                <span class="material-symbols-outlined text-2xl">diversity_3</span>
+                                class="flex h-7 w-7 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300">
+                                <i data-lucide="users-round" class="h-4 w-4" aria-hidden="true"></i>
                             </div>
                             <div>
-                                <h4 class="text-white font-bold text-lg leading-tight">Рефералы</h4>
+                                <h4 class="text-sm font-bold tracking-tight text-white">Рефералы</h4>
                                 <p class="text-white/40 text-xs mt-0.5">Статистика приглашений</p>
                             </div>
                         </div>
@@ -593,7 +679,7 @@
 
                             <!-- Ref List Section -->
                             <div
-                                class="flex-1 bg-black/20 border border-white/5 rounded-2xl p-4 flex flex-col relative overflow-hidden">
+                                class="flex-1 bg-black/20 border border-white/5 rounded-2xl p-3 flex flex-col relative overflow-hidden">
                                 <div class="flex items-center justify-between mb-3 flex-shrink-0">
                                     <div class="flex items-center gap-3">
                                         <span
@@ -623,7 +709,7 @@
                                     Отвязать рефералов
                                 </button>
 
-                                <div class="custom-scroll pr-1 -mr-1 overflow-y-auto h-[222px]">
+                                <div class="custom-scroll pr-1 -mr-1 overflow-y-auto h-[200px]">
                                     <ul id="udm-referrals-list" class="space-y-2 pb-2"></ul>
                                 </div>
 
@@ -640,57 +726,57 @@
                 </div>
 
                 <!-- Quick Actions Toolbar -->
-                <div class="mb-6 grid grid-cols-4 md:grid-cols-7 gap-3">
+                <div class="udm-action-toolbar mb-5 grid grid-cols-4 sm:grid-cols-7 gap-2">
                     <button id="udm-action-pin"
-                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all group min-h-[68px] justify-center">
                         <span id="udm-action-pin-icon"
                             class="material-symbols-outlined text-white/50 group-hover:text-primary transition-colors">push_pin</span>
                         <span id="udm-action-pin-text"
                             class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Закреп</span>
                     </button>
                     <button id="udm-action-issue"
-                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all group min-h-[68px] justify-center">
                         <span
                             class="material-symbols-outlined text-white/50 group-hover:text-primary transition-colors">vpn_key</span>
                         <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Выдать</span>
                     </button>
                     <button id="udm-action-add-bal"
-                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all group min-h-[68px] justify-center">
                         <span
                             class="material-symbols-outlined text-white/50 group-hover:text-green-400 transition-colors">add_card</span>
                         <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Пополнить</span>
                     </button>
                     <button id="udm-action-sub-bal"
-                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all group min-h-[68px] justify-center">
                         <span
                             class="material-symbols-outlined text-white/50 group-hover:text-red-400 transition-colors">credit_card_off</span>
                         <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Списать</span>
                     </button>
                     <button id="udm-action-msg"
-                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all group min-h-[68px] justify-center">
                         <span
                             class="material-symbols-outlined text-white/50 group-hover:text-blue-400 transition-colors">mail</span>
                         <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Написать</span>
                     </button>
                     <button id="udm-action-ban"
-                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all group min-h-[68px] justify-center">
                         <span id="udm-action-ban-icon"
                             class="material-symbols-outlined text-white/50 group-hover:text-red-500 transition-colors">block</span>
                         <span id="udm-action-ban-text"
                             class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Бан</span>
                     </button>
                     <button id="udm-action-revoke-all"
-                        class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all group">
+                        class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all group min-h-[68px] justify-center">
                         <span
                             class="material-symbols-outlined text-white/50 group-hover:text-red-500 transition-colors">delete_forever</span>
                         <span class="text-[10px] font-bold text-white/60 uppercase tracking-wide">Отозвать</span>
                     </button>
                 </div>
 
-                <div class="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] p-2 backdrop-blur-sm">
+                <div class="mb-4 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 backdrop-blur-sm">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <button type="button" data-udm-tab="subscriptions"
-                            class="udm-tab-btn group rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition-all hover:bg-white/10 hover:border-white/20"
+                            class="udm-tab-btn group rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left transition-all hover:bg-white/10 hover:border-white/20"
                             aria-selected="true">
                             <div class="flex items-center justify-between gap-3">
                                 <div class="flex items-center gap-3 min-w-0">
@@ -706,7 +792,7 @@
                             </div>
                         </button>
                         <button type="button" data-udm-tab="payments"
-                            class="udm-tab-btn group rounded-xl border border-white/10 bg-transparent px-4 py-3 text-left transition-all hover:bg-white/10 hover:border-white/20"
+                            class="udm-tab-btn group rounded-xl border border-white/10 bg-transparent px-3 py-2.5 text-left transition-all hover:bg-white/10 hover:border-white/20"
                             aria-selected="false">
                             <div class="flex items-center justify-between gap-3">
                                 <div class="flex items-center gap-3 min-w-0">
@@ -722,7 +808,7 @@
                             </div>
                         </button>
                         <button type="button" data-udm-tab="balance"
-                            class="udm-tab-btn group rounded-xl border border-white/10 bg-transparent px-4 py-3 text-left transition-all hover:bg-white/10 hover:border-white/20"
+                            class="udm-tab-btn group rounded-xl border border-white/10 bg-transparent px-3 py-2.5 text-left transition-all hover:bg-white/10 hover:border-white/20"
                             aria-selected="false">
                             <div class="flex items-center justify-between gap-3">
                                 <div class="flex items-center gap-3 min-w-0">
@@ -740,7 +826,7 @@
                     </div>
                 </div>
 
-                <div class="space-y-6">
+                <div class="space-y-4">
                     <div id="udm-panel-subscriptions" class="udm-tab-panel">
                         <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-inner group">
                             <div class="p-5 border-b border-white/10 flex items-center justify-between gap-4 flex-wrap">
@@ -778,20 +864,8 @@
                                     Очистить всё
                                 </button>
                             </div>
-                            <div class="overflow-x-auto max-h-[560px] overflow-y-auto">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
-                                        <tr>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Дата / ID</th>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Событие</th>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Детали</th>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Метод / статус</th>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Сумма</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="udm-payment-history" class="divide-y divide-white/5"></tbody>
-                                </table>
-                            </div>
+                            <div class="udm-history-head"><span>Дата / ID</span><span>Событие</span><span>Детали</span><span>Метод / статус</span><span>Сумма</span></div>
+                            <div id="udm-payment-history" class="udm-history-list max-h-[560px] space-y-2 overflow-y-auto p-3"></div>
                         </div>
                     </div>
 
@@ -814,20 +888,8 @@
                                     Очистить всё
                                 </button>
                             </div>
-                            <div class="overflow-x-auto max-h-[560px] overflow-y-auto">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-black/20 border-b border-white/5 sticky top-0 backdrop-blur-md">
-                                        <tr>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Дата / ID</th>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Событие</th>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Детали</th>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Метод / статус</th>
-                                            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 text-left">Сумма</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="udm-balance-history" class="divide-y divide-white/5"></tbody>
-                                </table>
-                            </div>
+                            <div class="udm-history-head"><span>Дата / ID</span><span>Событие</span><span>Детали</span><span>Метод / статус</span><span>Сумма</span></div>
+                            <div id="udm-balance-history" class="udm-history-list max-h-[560px] space-y-2 overflow-y-auto p-3"></div>
                         </div>
                     </div>
                 </div>
@@ -838,8 +900,1043 @@
 {% endblock %}
 
 {% block scripts %}
+<div id="userAvatarModal" class="modal-overlay" style="z-index: 1400;" onclick="if(event.target === this) closeModal('userAvatarModal')">
+    <div class="relative flex max-h-[90vh] max-w-[90vw] items-center justify-center">
+        <button type="button" onclick="closeModal('userAvatarModal')" aria-label="Закрыть фото" class="absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-[#101815] text-white/70 shadow-xl hover:text-white">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+        <img id="userAvatarLarge" class="max-h-[85vh] max-w-[90vw] rounded-2xl border border-white/10 object-contain shadow-2xl" alt="Увеличенное фото пользователя" />
+    </div>
+</div>
+<style>
+    .users-table-shell #users-tbody > tr:not(.keys-row) {
+        background: transparent;
+        transition: background-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .users-table-shell #users-tbody > tr.user-list-row:nth-of-type(4n + 3) {
+        background: rgba(255, 255, 255, 0.012);
+    }
+
+    .users-table-shell #users-tbody > tr.user-list-row:nth-of-type(4n + 3) > td {
+        border-bottom-color: rgba(255, 255, 255, 0.04);
+    }
+
+    .users-table-shell #users-tbody > tr.user-list-row:nth-of-type(4n + 1) {
+        background: transparent;
+    }
+
+    .users-table-shell #users-tbody > tr.user-list-row:nth-of-type(4n + 1) > td {
+        border-bottom-color: rgba(255, 255, 255, 0.04);
+    }
+
+    .users-table-shell #users-tbody > tr:not(.keys-row):hover {
+        background: rgba(255, 255, 255, 0.045);
+        box-shadow: inset 2px 0 rgba(19, 236, 128, 0.72);
+    }
+
+    .users-table-shell #users-tbody > tr.user-list-row:nth-of-type(4n + 1):hover {
+        background: rgba(255, 255, 255, 0.035);
+    }
+
+    .users-table-shell #users-tbody > tr.user-list-row:nth-of-type(4n + 3):hover {
+        background: rgba(255, 255, 255, 0.035);
+    }
+
+    .users-table-shell #users-tbody > tr:not(.keys-row) > td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+            padding-top: 8px;
+            padding-bottom: 8px;
+    }
+
+    .users-table-shell #users-tbody > tr.user-list-row {
+        cursor: pointer;
+    }
+
+    .users-table-shell #users-tbody > tr.keys-row > td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .users-table-shell .user-id > div {
+        position: relative;
+        padding-left: 42px;
+        min-height: 38px;
+        justify-content: center;
+    }
+
+    .users-table-shell .user-id > div > span:empty {
+        display: none;
+    }
+
+    .users-table-shell .user-id > div::before {
+        content: "person";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        transform: translateY(-50%);
+        border: 1px solid rgba(19, 236, 128, 0.15);
+        border-radius: 11px;
+        background: rgba(19, 236, 128, 0.08);
+        color: rgba(19, 236, 128, 0.8);
+        font-family: "Material Symbols Outlined";
+        font-size: 19px;
+    }
+
+    .users-table-shell .user-avatar {
+        position: absolute;
+        z-index: 1;
+        left: 0;
+        top: 50%;
+        width: 32px;
+        height: 32px;
+        transform: translateY(-50%);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 11px;
+        object-fit: cover;
+        background: #111917;
+    }
+
+    .users-table-shell .user-id > div > span:first-child {
+        line-height: 1.25;
+    }
+
+    .users-table-shell #users-tbody > tr:not(.keys-row) > td:nth-child(4),
+    .users-table-shell #users-tbody > tr:not(.keys-row) > td:nth-child(5) {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.84);
+    }
+
+    .users-table-shell #users-tbody > tr:not(.keys-row) > td:nth-child(5) {
+        color: #80d9ad;
+    }
+
+    @media (max-width: 640px) {
+        .users-table-shell #users-tbody > tr:not(.keys-row) > td {
+            padding-top: 7px;
+            padding-bottom: 7px;
+        }
+    }
+
+    #transactionDetailsModal .transaction-details-modal {
+        width: min(980px, calc(100vw - 32px));
+        max-width: 980px;
+        background: #0b0f0e !important;
+    }
+
+    #transactionDetailsModal .udm-tx-layout {
+        display: grid;
+        grid-template-columns: minmax(190px, 0.72fr) minmax(0, 1.9fr);
+        gap: 14px;
+        align-items: start;
+    }
+
+    #transactionDetailsModal .udm-tx-context {
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.075);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    #transactionDetailsModal .udm-tx-context-top,
+    #transactionDetailsModal .udm-tx-context-user {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        padding: 12px;
+    }
+
+    #transactionDetailsModal .udm-tx-context-top > .material-symbols-outlined,
+    #transactionDetailsModal .udm-tx-context-user > .material-symbols-outlined {
+        color: #84d8ab;
+        font-size: 18px;
+    }
+
+    #transactionDetailsModal .udm-tx-context-top > div,
+    #transactionDetailsModal .udm-tx-context-user > div {
+        display: grid;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    #transactionDetailsModal .udm-tx-context-top span:not(.material-symbols-outlined),
+    #transactionDetailsModal .udm-tx-context-user span:not(.material-symbols-outlined) {
+        color: rgba(255, 255, 255, 0.42);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    #transactionDetailsModal .udm-tx-context-top strong,
+    #transactionDetailsModal .udm-tx-context-user strong {
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 12px;
+        overflow-wrap: anywhere;
+    }
+
+    #transactionDetailsModal .udm-tx-context-provider {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.055);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 8px 12px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 10px;
+    }
+
+    #transactionDetailsModal .udm-tx-context-provider span {
+        color: rgba(255, 255, 255, 0.22);
+    }
+
+    #transactionDetailsModal .udm-tx-context-user small {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 10px;
+    }
+
+    #transactionDetailsModal .udm-tx-summary-card {
+        min-width: 0;
+        border: 1px solid rgba(255, 255, 255, 0.075);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.035);
+        padding: 11px 13px;
+    }
+
+    #transactionDetailsModal .udm-tx-summary-card + .udm-tx-summary-card {
+        margin-top: 8px;
+    }
+
+    #transactionDetailsModal .udm-tx-summary-card > span {
+        display: block;
+        color: rgba(255, 255, 255, 0.42);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    #transactionDetailsModal .udm-tx-summary-card > strong {
+        display: block;
+        overflow-wrap: anywhere;
+        margin-top: 5px;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 13px;
+    }
+
+    #transactionDetailsModal .udm-tx-summary-card .inline-flex {
+        display: inline-flex;
+        margin-top: 4px;
+    }
+
+    #transactionDetailsModal .udm-tx-group {
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.075);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    #transactionDetailsModal .udm-tx-group > header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 10px 13px;
+        color: #9be9bc;
+    }
+
+    #transactionDetailsModal .udm-tx-group > header .material-symbols-outlined {
+        font-size: 17px;
+    }
+
+    #transactionDetailsModal .udm-tx-group > header h4 {
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    #transactionDetailsModal .udm-tx-group > dl {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 4px 13px;
+    }
+
+    #transactionDetailsModal .udm-tx-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-start;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+        padding: 10px 8px 10px 0;
+    }
+
+    #transactionDetailsModal .udm-tx-field:last-child {
+        border-bottom: 0;
+    }
+
+    #transactionDetailsModal .udm-tx-field dt {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 10px;
+    }
+
+    #transactionDetailsModal .udm-tx-field dd {
+        min-width: 0;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 11px;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+    }
+
+    #transactionDetailsModal .udm-tx-field dd a {
+        color: #6ec8a0;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .udm-history-head,
+    .udm-history-row {
+        display: grid;
+        grid-template-columns: minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(200px, 1.7fr) minmax(140px, 1fr) minmax(105px, 0.7fr);
+        align-items: center;
+        gap: 14px;
+        text-align: left;
+    }
+
+    .udm-history-head {
+        padding: 10px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        background: rgba(255, 255, 255, 0.025);
+        color: rgba(255, 255, 255, 0.42);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .udm-history-row {
+        min-width: 0;
+        padding: 13px 16px;
+        background: rgba(255, 255, 255, 0.018);
+    }
+
+    .udm-history-cell {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 11px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    .udm-history-cell-label {
+        display: none;
+        color: rgba(255, 255, 255, 0.38);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .udm-history-event {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+
+    .udm-history-method {
+        color: rgba(255, 255, 255, 0.62);
+    }
+
+    .udm-history-amount {
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .udm-history-row:hover {
+        border-color: rgba(255, 255, 255, 0.13);
+        background: rgba(255, 255, 255, 0.045);
+    }
+
+    @media (max-width: 640px) {
+        #transactionDetailsModal {
+            padding: 8px;
+        }
+
+        #transactionDetailsModal .transaction-details-modal {
+            width: 100%;
+            max-width: none;
+            max-height: calc(100dvh - 16px);
+        }
+
+        #transactionDetailsModal .udm-tx-summary-card {
+            padding: 9px;
+        }
+
+        #transactionDetailsModal .udm-tx-layout {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        #transactionDetailsModal .udm-tx-layout > aside {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        #transactionDetailsModal .udm-tx-summary-card + .udm-tx-summary-card {
+            margin-top: 0;
+        }
+
+        #transactionDetailsModal .udm-tx-summary-card > strong {
+            font-size: 11px;
+        }
+
+        .udm-history-row {
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px 12px;
+            padding: 12px;
+        }
+
+        .udm-history-head {
+            display: none;
+        }
+
+        .udm-history-cell-label {
+            display: block;
+        }
+
+        .udm-history-event-cell,
+        .udm-history-details-cell {
+            grid-column: 1 / -1;
+        }
+
+        .udm-history-event-cell {
+            grid-row: 1;
+        }
+
+        .udm-history-date-cell {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .udm-history-status-cell {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .udm-history-details-cell {
+            grid-row: 3;
+        }
+
+        .udm-history-amount-cell {
+            grid-column: 2;
+            grid-row: 1;
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        .udm-history-status-cell {
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        .udm-history-cell-label {
+            display: block;
+        }
+    }
+
+    #userDetailsModal {
+        --udm-line: rgba(255, 255, 255, 0.085);
+        --udm-surface: rgba(255, 255, 255, 0.03);
+        --udm-surface-raised: rgba(255, 255, 255, 0.05);
+        --udm-muted: #91a09a;
+        background: rgba(1, 6, 4, 0.78);
+        backdrop-filter: blur(8px);
+    }
+
+    #userDetailsModal {
+        padding: 20px;
+    }
+
+    #userDetailsModal .user-details-modal {
+        width: min(1440px, calc(100vw - 40px));
+        max-height: calc(100dvh - 40px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: rgba(11, 15, 14, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 32px 100px rgba(0, 0, 0, 0.5);
+    }
+
+    #userDetailsModal .user-details-header {
+        flex: 0 0 auto;
+    }
+
+    #userDetailsModal .user-details-body {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: transparent;
+    }
+
+    #userDetailsModal .udm-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1.12fr) minmax(340px, 0.88fr);
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    #userDetailsModal .udm-workspace > div:first-child {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    #userDetailsModal .udm-profile-card {
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: none;
+    }
+
+    #userDetailsModal .udm-profile-topline {
+        position: absolute;
+        inset: 0 0 auto;
+        height: 2px;
+        background: rgba(19, 236, 128, 0.65);
+    }
+
+    #userDetailsModal .udm-profile-avatar {
+        background: rgba(19, 236, 128, 0.08);
+        box-shadow: none;
+    }
+
+    #userDetailsModal .udm-profile-card #udm-telegram-id {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        color: #b8c9c0;
+    }
+
+    #userDetailsModal .udm-overview-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+        gap: 10px;
+    }
+
+    #userDetailsModal .udm-balance-card {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    #userDetailsModal .udm-mini-stats {
+        display: grid;
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    #userDetailsModal .udm-action-toolbar button,
+    #userDetailsModal [data-udm-tab],
+    #userDetailsModal .udm-subscription-card,
+    #userDetailsModal .udm-history-row {
+        transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+    }
+
+
+    #userDetailsModal .udm-mini-stat,
+    #userDetailsModal .udm-settings-card,
+    #userDetailsModal .udm-referrals-card {
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: none;
+    }
+
+    #userDetailsModal .udm-referrals-card {
+        min-height: 0;
+    }
+
+    #userDetailsModal .udm-subscription-card {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.08);
+        box-shadow: none;
+        padding: 9px 11px;
+        margin-bottom: 5px;
+    }
+
+    #userDetailsModal .udm-subscription-card:hover {
+        border-color: rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    #userDetailsModal .udm-subscription-card.udm-subscription-card-alt {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    #userDetailsModal .udm-subscription-card.udm-subscription-card-alt:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    #userDetailsModal .udm-sub-status-dot {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: #13ec80;
+        box-shadow: 0 0 12px rgba(19, 236, 128, 0.45);
+    }
+
+    #userDetailsModal .udm-sub-status-dot.is-expired {
+        background: #f87171;
+        box-shadow: 0 0 12px rgba(248, 113, 113, 0.35);
+    }
+
+    #userDetailsModal .udm-sub-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+        margin-bottom: 6px;
+    }
+
+    #userDetailsModal .udm-sub-meta {
+        min-width: 0;
+        border: 0;
+        border-left: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0;
+        background: transparent;
+        padding: 2px 6px;
+    }
+
+    #userDetailsModal .udm-sub-meta span {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        margin-bottom: 1px;
+        color: rgba(255, 255, 255, 0.38);
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+    }
+
+    #userDetailsModal .udm-sub-meta span .material-symbols-outlined {
+        color: rgba(174, 196, 183, 0.55);
+        font-size: 12px;
+        line-height: 1;
+    }
+
+    #userDetailsModal .udm-sub-meta strong {
+        display: block;
+        overflow: hidden;
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 10px;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #userDetailsModal .udm-sub-meta-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    #userDetailsModal .udm-traffic-panel {
+        background: rgba(0, 0, 0, 0.16);
+        border-color: rgba(255, 255, 255, 0.055);
+        margin-bottom: 6px;
+        padding: 7px 9px;
+    }
+
+    #userDetailsModal .udm-sub-link-row {
+        background: rgba(0, 0, 0, 0.2);
+        margin-bottom: 5px;
+        min-height: 32px;
+        padding: 2px 6px;
+    }
+
+    #userDetailsModal .udm-subscription-card > div:first-child {
+        margin-bottom: 6px;
+    }
+
+    #userDetailsModal .udm-subscription-heading {
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.075);
+    }
+
+    #userDetailsModal .udm-subscription-card-alt .udm-subscription-heading {
+        border-bottom-color: rgba(190, 210, 230, 0.1);
+    }
+
+    #userDetailsModal .udm-subscription-card-alt .udm-sub-status-dot:not(.is-expired) {
+        box-shadow: 0 0 8px rgba(19, 236, 128, 0.32);
+    }
+
+    #userDetailsModal .udm-subscription-card .udm-traffic-panel > div:first-child {
+        margin-bottom: 3px;
+    }
+
+    #userDetailsModal .udm-subscription-card .udm-traffic-panel .mt-2\.5 {
+        margin-top: 5px;
+    }
+
+    #userDetailsModal .udm-subscription-card .udm-sub-link-row button {
+        width: 26px;
+        height: 26px;
+    }
+
+    #userDetailsModal .udm-subscription-card .udm-sub-link-row .btn-user-reset-subscription-link {
+        width: auto;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    #resetSubscriptionLinkModal .reset-subscription-confirm {
+        max-width: 460px;
+        width: calc(100% - 32px);
+        background: #0d1411 !important;
+    }
+
+    #resetSubscriptionLinkModal .modal-content {
+        max-height: calc(100dvh - 32px);
+    }
+
+    @media (max-width: 640px) {
+        #resetSubscriptionLinkModal {
+            padding: 12px;
+        }
+
+        #resetSubscriptionLinkModal .reset-subscription-confirm {
+            width: 100%;
+        }
+
+        #resetSubscriptionLinkModal .reset-subscription-confirm > div:nth-child(2) {
+            padding: 14px;
+        }
+    }
+
+    #userDetailsModal .udm-action-toolbar {
+        padding: 8px;
+        border: 1px solid var(--udm-line);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    #userDetailsModal .udm-action-toolbar button {
+        min-height: 58px;
+        border-color: transparent;
+        background: transparent;
+        border-radius: 10px;
+    }
+
+    #userDetailsModal .udm-action-toolbar button:hover,
+    #userDetailsModal .udm-action-toolbar button:focus-visible {
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.04);
+        outline: none;
+    }
+
+    #userDetailsModal [data-udm-tab] {
+        border-radius: 11px;
+        border-color: transparent;
+    }
+
+    #userDetailsModal [data-udm-tab][aria-selected="true"] {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 -2px #13ec80;
+    }
+
+    #userDetailsModal [data-udm-tab][aria-selected="false"] {
+        opacity: 0.72;
+    }
+
+    #userDetailsModal [data-udm-tab][aria-selected="false"]:hover {
+        opacity: 1;
+    }
+
+    #userDetailsModal .udm-tab-panel > div {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: var(--udm-line);
+        box-shadow: none;
+    }
+
+    #userDetailsModal .udm-tab-panel > div > div:first-child {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: var(--udm-line);
+    }
+
+    #userDetailsModal .udm-tab-panel th {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    #userDetailsModal button,
+    #userDetailsModal input,
+    #userDetailsModal textarea {
+        transition-duration: 160ms;
+    }
+
+    #userDetailsModal :focus-visible {
+        outline: 2px solid rgba(19, 236, 128, 0.55);
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 640px) {
+        #userDetailsModal {
+            padding: 8px;
+            align-items: flex-end;
+        }
+
+        #userDetailsModal .user-details-modal {
+            width: 100%;
+            max-width: none;
+            max-height: calc(100dvh - 16px);
+            border-radius: 22px 22px 12px 12px;
+        }
+
+        #userDetailsModal .user-details-body {
+            padding: 14px;
+        }
+
+        #userDetailsModal .udm-workspace {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 12px;
+        }
+
+        #userDetailsModal .udm-action-toolbar {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+
+        #userDetailsModal .udm-action-toolbar button {
+            min-height: 58px;
+            padding: 7px 4px;
+        }
+
+        #userDetailsModal .udm-action-toolbar button span:last-child {
+            font-size: 8px;
+        }
+
+        #userDetailsModal .udm-profile-card {
+            padding: 14px;
+        }
+
+        #userDetailsModal .udm-profile-card h4 {
+            font-size: 16px;
+        }
+
+        #userDetailsModal .udm-overview-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+        }
+
+        #userDetailsModal .udm-sub-meta-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        #userDetailsModal .udm-sub-link-row {
+            flex-wrap: wrap;
+        }
+
+        #userDetailsModal .udm-sub-link-row > span:nth-child(2) {
+            flex-basis: calc(100% - 36px);
+            order: 1;
+        }
+
+        #userDetailsModal .udm-sub-link-row > span:first-child {
+            order: 0;
+        }
+
+        #userDetailsModal .udm-sub-link-row > button {
+            order: 2;
+        }
+
+        #userDetailsModal .udm-sub-link-row > button:last-child {
+            flex: 1;
+            justify-content: center;
+        }
+
+        #userDetailsModal .udm-subscription-card {
+            padding: 8px;
+            border-radius: 12px;
+        }
+
+        #userDetailsModal .udm-subscription-heading {
+            align-items: flex-start;
+        }
+
+        #userDetailsModal .udm-sub-badges {
+            width: 100%;
+            padding-left: 17px;
+        }
+
+        #userDetailsModal .udm-sub-meta {
+            padding: 2px 6px;
+        }
+
+        #userDetailsModal .udm-sub-footer {
+            align-items: flex-start;
+        }
+
+        #userDetailsModal .udm-sub-identifiers {
+            width: 100%;
+        }
+
+        #userDetailsModal .udm-subscription-card > div:first-child {
+            margin-bottom: 6px;
+        }
+
+        #userDetailsModal .udm-sub-meta-grid {
+            gap: 5px;
+            margin-bottom: 6px;
+        }
+
+        #userDetailsModal .udm-sub-meta {
+            padding: 5px 7px;
+        }
+
+        #userDetailsModal .udm-sub-meta span {
+            font-size: 8px;
+        }
+
+        #userDetailsModal .udm-sub-meta strong {
+            font-size: 10px;
+        }
+
+        #userDetailsModal .udm-traffic-panel {
+            margin-bottom: 6px;
+            padding: 7px 8px;
+        }
+
+        #userDetailsModal .udm-sub-link-row {
+            margin-bottom: 5px;
+        }
+
+        #userDetailsModal .udm-tab-btn {
+            min-height: 48px;
+            padding: 8px;
+        }
+
+        #userDetailsModal .udm-tab-btn > div > div:first-child {
+            width: 32px;
+            height: 32px;
+        }
+
+        #userDetailsModal .udm-tab-btn > div > div:first-child .material-symbols-outlined {
+            font-size: 17px;
+        }
+
+        #userDetailsModal .udm-tab-btn > div > div:nth-child(2) > div:nth-child(2) {
+            display: none;
+        }
+    }
+</style>
 <script>
     (function () {
+
+        const transactionDetailsByButton = new WeakMap();
+
+        let pendingSubscriptionLinkReset = null;
+
+        function closeSubscriptionLinkResetConfirm() {
+            closeModal('resetSubscriptionLinkModal');
+            pendingSubscriptionLinkReset = null;
+            const confirmButton = document.getElementById('confirm-reset-subscription-link');
+            if (confirmButton) {
+                confirmButton.disabled = false;
+                confirmButton.innerHTML = '<span class="material-symbols-outlined text-sm">autorenew</span>Создать новую ссылку';
+            }
+        }
+
+        function openSubscriptionLinkResetConfirm(button, userId) {
+            pendingSubscriptionLinkReset = { button, userId };
+            openModal('resetSubscriptionLinkModal');
+            document.getElementById('confirm-reset-subscription-link')?.focus();
+        }
+
+        document.getElementById('cancel-reset-subscription-link')?.addEventListener('click', closeSubscriptionLinkResetConfirm);
+        document.querySelector('#resetSubscriptionLinkModal [aria-label="Закрыть"]')?.addEventListener('click', closeSubscriptionLinkResetConfirm);
+        document.getElementById('resetSubscriptionLinkModal')?.addEventListener('click', event => {
+            if (event.target.id === 'resetSubscriptionLinkModal') closeSubscriptionLinkResetConfirm();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && document.getElementById('resetSubscriptionLinkModal')?.classList.contains('open')) {
+                closeSubscriptionLinkResetConfirm();
+            }
+        });
+
+        document.getElementById('confirm-reset-subscription-link')?.addEventListener('click', async function () {
+            if (!pendingSubscriptionLinkReset) return;
+            const { button, userId } = pendingSubscriptionLinkReset;
+            const keyId = button.dataset.keyId;
+            const originalMarkup = button.innerHTML;
+            this.disabled = true;
+            button.disabled = true;
+            this.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>Создание ссылки…';
+            try {
+                const response = await fetch(`/users/subscriptions/${encodeURIComponent(keyId)}/reset-link`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrfToken(), 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                });
+                const result = await response.json();
+                if (!response.ok || !result.ok) throw new Error(result.error || 'Не удалось обновить ссылку');
+                closeSubscriptionLinkResetConfirm();
+                showToast('success', 'Ссылка подписки обновлена');
+                await fetchUserDetails(userId);
+            } catch (error) {
+                showToast('danger', error.message || 'Ошибка обновления ссылки');
+                button.disabled = false;
+                button.innerHTML = originalMarkup;
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<span class="material-symbols-outlined text-sm">autorenew</span>Создать новую ссылку';
+            }
+        });
+
+        function formatRegistrationDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const raw = String(dateStr).trim();
+            const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+            if (!match) return raw;
+            const date = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}`);
+            if (Number.isNaN(date.getTime())) return raw;
+
+            let seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+            const years = Math.floor(seconds / 31536000);
+            seconds %= 31536000;
+            const months = Math.floor(seconds / 2592000);
+            seconds %= 2592000;
+            const days = Math.floor(seconds / 86400);
+            seconds %= 86400;
+            const hours = Math.floor(seconds / 3600);
+            seconds %= 3600;
+            const minutes = Math.floor(seconds / 60);
+            const relative = [
+                years ? `${years}г.` : '',
+                months ? `${months}м.` : '',
+                days ? `${days}д.` : '',
+                hours ? `${hours}ч.` : '',
+                minutes || (!years && !months && !days && !hours) ? `${minutes}мин` : ''
+            ].filter(Boolean).slice(0, 2).join(' ');
+            return `${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}:${match[6]} (${relative} назад)`;
+        }
+
+        function applyRegistrationDates(root = document) {
+            root.querySelectorAll('[data-registration-date]').forEach(element => {
+                const formatted = formatRegistrationDate(element.dataset.registrationDate);
+                element.textContent = formatted.includes(' (') ? formatted.slice(formatted.indexOf(' (') + 2, -1) : formatted;
+                element.title = element.textContent;
+            });
+        }
 
         async function clearBalanceHistory(uid) {
             showConfirmModal(
@@ -856,7 +1953,8 @@
                         const data = await resp.json();
                         if (data && data.ok) {
                             showToast('success', data.message || 'История очищена');
-                            document.getElementById('udm-balance-history').innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-white/50">История очищена</td></tr>';
+                            document.getElementById('udm-balance-history').innerHTML = '<div class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История очищена</div>';
+                            document.getElementById('udm-tab-count-balance').textContent = '0';
                         } else {
                             showToast('danger', (data && data.error) || 'Ошибка при очистке');
                         }
@@ -882,7 +1980,8 @@
                         const data = await resp.json();
                         if (data && data.ok) {
                             showToast('success', data.message || 'История очищена');
-                            document.getElementById('udm-payment-history').innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
+                            document.getElementById('udm-payment-history').innerHTML = '<div class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</div>';
+                            document.getElementById('udm-tab-count-payments').textContent = '0';
                         } else {
                             showToast('danger', (data && data.error) || 'Ошибка при очистке');
                         }
@@ -954,11 +2053,15 @@
                 const resp = await fetch(url, { headers: { 'Accept': 'text/html' } });
                 if (resp.ok) {
                     tbody.innerHTML = await resp.text();
+                    applyRegistrationDates(tbody);
                     updatePagination(url);
+                    if (typeof window.refreshLucideIcons === 'function') {
+                        window.refreshLucideIcons();
+                    }
                 }
             } catch (e) {
                 console.error("Failed to load users:", e);
-                tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-red-500">Ошибка загрузки</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-red-500">Ошибка загрузки</td></tr>';
             }
         };
 
@@ -969,7 +2072,12 @@
                 currentUrl.searchParams.forEach((v, k) => pagUrl.searchParams.set(k, v));
                 try {
                     const resp = await fetch(pagUrl, { headers: { 'Accept': 'text/html' } });
-                    if (resp.ok) pagEl.innerHTML = await resp.text();
+                    if (resp.ok) {
+                        pagEl.innerHTML = await resp.text();
+                        if (typeof window.refreshLucideIcons === 'function') {
+                            window.refreshLucideIcons();
+                        }
+                    }
                 } catch (_) { }
             }
         };
@@ -1061,6 +2169,7 @@
                     const resp = await fetch(url, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
                     if (resp.ok) {
                         tbody.innerHTML = await resp.text();
+                        applyRegistrationDates(tbody);
                         tbody.setAttribute('data-fetch-url', url.toString());
 
                         const pagEl = document.getElementById('users-pagination');
@@ -1076,6 +2185,9 @@
 
                         restoreOpenedKeys();
                         applyFilter();
+                        if (typeof window.refreshLucideIcons === 'function') {
+                            window.refreshLucideIcons();
+                        }
                     }
                 } catch (_) { }
             }, 400);
@@ -1115,6 +2227,9 @@
                 setTimeout(() => { deltaInput.focus(); deltaInput.setSelectionRange(1, 1); }, 100);
             }
             openModal('balanceModal');
+            if (typeof window.refreshLucideIcons === 'function') {
+                window.refreshLucideIcons();
+            }
         }
 
         function parseBalanceValue(balanceText) {
@@ -1166,7 +2281,7 @@
             const editButton = document.getElementById('udm-username-edit');
             const editIcon = document.getElementById('udm-username-edit-icon');
 
-            if (!usernameDisplay || !usernameInput || !editButton || !editIcon) return;
+            if (!usernameDisplay || !usernameInput || !editButton) return;
 
             usernameDisplay.classList.toggle('hidden', isEditing);
             usernameInput.classList.toggle('hidden', !isEditing);
@@ -1177,7 +2292,10 @@
             editButton.classList.toggle('text-white/50', !isEditing);
             editButton.classList.toggle('border-white/10', !isEditing);
             editButton.classList.toggle('bg-white/5', !isEditing);
-            editIcon.textContent = isEditing ? 'check' : 'edit';
+            if (editIcon) {
+                editIcon.setAttribute('data-lucide', isEditing ? 'check' : 'edit');
+                window.lucide?.createIcons({ root: editButton, attrs: { 'stroke-width': 1.75 } });
+            }
             editButton.dataset.editing = isEditing ? 'true' : 'false';
 
             if (isEditing) {
@@ -1187,6 +2305,13 @@
                 }, 0);
             }
         }
+
+        document.getElementById('udm-avatar-button')?.addEventListener('click', function () {
+            const avatar = document.getElementById('udm-avatar');
+            if (avatar?.classList.contains('hidden') || !avatar?.src) return;
+            document.getElementById('userAvatarLarge').src = avatar.src;
+            openModal('userAvatarModal');
+        });
 
         async function saveUsername() {
             const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
@@ -1290,6 +2415,9 @@
             document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0', `/${uid}`);
             document.querySelector('#mm-form textarea[name="message"]').value = '';
             openModal('messageModal');
+            if (typeof window.refreshLucideIcons === 'function') {
+                window.refreshLucideIcons();
+            }
         }
 
         async function revokeAllKeys(uid, uname) {
@@ -1395,6 +2523,7 @@
                     const html = await tableResp.text();
                     if (isLoginPage(html)) { window.location.reload(); return; }
                     tbody.innerHTML = html;
+                    applyRegistrationDates(tbody);
                     tbody.setAttribute('data-fetch-url', tableUrl);
                     restoreOpenedKeys();
                 }
@@ -1421,16 +2550,64 @@
             openMessageModalForUser(uid, uname);
         });
 
+        async function loadRemnawaveDetails(uid) {
+            try {
+                const baseUrl = `{{ url_for('user_details_json', user_id=0) }}`.replace('/0', `/${encodeURIComponent(uid)}`);
+                const resp = await fetch(`${baseUrl}?remnawave_only=1`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                });
+                if (!resp.ok) {
+                    document.querySelectorAll('#udm-subs-list [data-remote-key-id]').forEach(panel => panel.classList.remove('animate-pulse'));
+                    return;
+                }
+                const data = await resp.json();
+                if (!data?.ok || document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id') !== String(uid)) return;
+                data.subscriptions?.forEach(sub => {
+                    const panel = Array.from(document.querySelectorAll('#udm-subs-list [data-remote-key-id]')).find(element => element.dataset.remoteKeyId === String(sub.key_id));
+                    if (!panel) return;
+                    panel.classList.remove('animate-pulse');
+                    const percent = panel.querySelector('[data-remote-traffic-percent]');
+                    const value = panel.querySelector('[data-remote-traffic-value]');
+                    if (percent) percent.textContent = !sub.traffic_available ? 'Нет данных' : (sub.traffic_unlimited ? 'Без ограничений' : `${Number(sub.traffic_percent || 0)}% использовано`);
+                    if (value) value.textContent = !sub.traffic_available ? '—' : (sub.traffic_unlimited ? `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ∞` : `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ${Number(sub.traffic_limit_gb || 0).toFixed(2)} GB`);
+                    const remaining = panel.querySelector('[data-remote-traffic-remaining]');
+                    if (remaining) remaining.textContent = !sub.traffic_available ? 'Проверьте соединение с Remnawave' : (sub.traffic_unlimited ? 'Осталось: ∞' : `Осталось: ${Number(sub.traffic_remaining_gb || 0).toFixed(2)} GB`);
+                    const progress = panel.querySelector('.udm-traffic-panel .h-full.rounded-full');
+                    if (progress) {
+                        progress.style.width = `${Math.min(100, Math.max(0, Number(sub.traffic_percent || 0)))}%`;
+                        progress.classList.toggle('bg-red-400', Number(sub.traffic_percent || 0) >= 90);
+                        progress.classList.toggle('bg-cyan-400', Number(sub.traffic_percent || 0) < 90);
+                    }
+                    const hwid = (panel.closest('.udm-subscription-card') || panel).querySelector('[data-remote-hwid]');
+                    if (hwid) hwid.textContent = !sub.hwid_available ? '—' : (sub.hwid_unlimited ? 'Безлимит' : `${Number(sub.hwid_used || 0)} / ${Number(sub.hwid_limit)}`);
+                });
+            } catch (error) {
+                document.querySelectorAll('#udm-subs-list [data-remote-key-id]').forEach(panel => panel.classList.remove('animate-pulse'));
+            }
+        }
+
         async function fetchUserDetails(uid) {
             document.getElementById('udm-loading').classList.remove('hidden');
             document.getElementById('udm-content').classList.add('hidden');
 
             try {
-                const resp = await fetch(`{{ url_for('user_details_json', user_id=0) }}`.replace('/0', `/${uid}`), {
+                const resp = await fetch(`{{ url_for('user_details_json', user_id=0) }}`.replace('/0', `/${encodeURIComponent(uid)}`), {
                     headers: { 'Accept': 'application/json' },
                     credentials: 'same-origin'
                 });
+                if (resp.redirected && isLoginPage(await resp.clone().text())) {
+                    window.location.reload();
+                    return;
+                }
+                const contentType = resp.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error(`Ответ сервера не является JSON (HTTP ${resp.status})`);
+                }
                 const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data?.error || `Ошибка загрузки данных (HTTP ${resp.status})`);
+                }
                 if (typeof data === 'string' && isLoginPage(data)) { window.location.reload(); return; }
 
                 if (data && data.ok) {
@@ -1507,15 +2684,33 @@
                     }
 
                     document.getElementById('udm-telegram-id').textContent = data.user.telegram_id || 'N/A';
+                    const avatar = document.getElementById('udm-avatar');
+                    const avatarButton = document.getElementById('udm-avatar-button');
+                    const avatarIcon = avatarButton?.querySelector('.material-symbols-outlined');
+                    if (avatar && avatarButton && avatarIcon) {
+                        avatar.onload = () => {
+                            avatar.classList.remove('hidden');
+                            avatarIcon.classList.add('hidden');
+                        };
+                        avatar.onerror = () => {
+                            avatar.removeAttribute('src');
+                            avatar.classList.add('hidden');
+                            avatarIcon.classList.remove('hidden');
+                        };
+                        avatar.classList.add('hidden');
+                        avatarIcon.classList.remove('hidden');
+                        avatar.src = `{{ url_for('user_avatar', user_id=0) }}`.replace('/0/avatar', `/${uid}/avatar`);
+                    }
                     const username = data.user.username || 'N/A';
                     document.getElementById('udm-username').textContent = '@' + username;
                     document.getElementById('udm-username-input').value = username;
                     setUsernameEditMode(false);
-                    document.getElementById('udm-registration').textContent = data.user.registration_date || 'N/A';
+                    document.getElementById('udm-registration').textContent = formatRegistrationDate(data.user.registration_date);
                     document.getElementById('udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' ₽';
                     document.getElementById('udm-total-months').textContent = (data.user.total_months || 0) + ' мес.';
 
                     const trialToggle = document.getElementById('udm-trial-toggle');
+                    trialToggle?.setAttribute('data-user-id', String(uid));
                     const trialLabel = document.getElementById('udm-trial-label');
                     trialToggle.checked = data.user.trial_used || false;
                     trialToggle.setAttribute('data-user-id', uid);
@@ -1531,7 +2726,7 @@
                     const pinBadge = document.getElementById('udm-pinned-badge');
                     if (pinBadge) {
                         pinBadge.classList.toggle('hidden', !data.user.is_pinned);
-                        pinBadge.style.color = '#22c55e';
+                        pinBadge.style.color = '';
                     }
 
                     const pinText = document.getElementById('udm-action-pin-text');
@@ -1569,7 +2764,7 @@
                     subsStats.textContent = data.subs_stats ?
                         `(Всего: ${data.subs_stats.total}, Активно: ${data.subs_stats.active}, Истекло: ${data.subs_stats.expired})` : '';
                     document.getElementById('udm-tab-count-subs').textContent = String(data.subscriptions?.length || 0);
-                    subsList.innerHTML = data.subscriptions?.length ? data.subscriptions.map(sub => {
+                    subsList.innerHTML = data.subscriptions?.length ? data.subscriptions.map((sub, index) => {
                         function formatDuration(dateStr) {
                             if (!dateStr || sub.is_expired) return '';
                             const d = new Date(dateStr);
@@ -1582,61 +2777,89 @@
                             }
                             return '';
                         }
+                        const daysRemaining = sub.is_expired ? 0 : (sub.expire_date && sub.expire_date !== 'N/A'
+                            ? Math.max(0, Math.ceil((new Date(sub.expire_date) - new Date()) / (1000 * 60 * 60 * 24)))
+                            : null);
                         const durationText = formatDuration(sub.expire_date);
                         const emailDisp = sub.email ? sub.email.split('@')[0] : 'N/A';
 
                         return `
-                    <div class="p-4 relative bg-black/20 mb-4 border border-white/5 rounded-2xl last:mb-0 shadow-lg hover:bg-black/30 transition-colors">
-                        <div class="flex items-center gap-2 mb-3 flex-wrap justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-base ${sub.is_expired ? 'text-red-400' : 'text-primary'}">${sub.is_expired ? 'close' : 'check_circle'}</span>
-                                <span class="${sub.is_expired ? 'text-red-400' : 'text-primary'} font-bold text-sm">${sub.status_text}</span>
-                                ${durationText ? `<span class="text-white/50 text-sm font-medium bg-white/5 px-2 py-0.5 rounded-lg">${durationText}</span>` : ''}
-                                <span class="text-white/30 text-[10px] uppercase font-bold tracking-wider ml-1">Истекает: ${sub.expire_date}</span>
+                    <div class="udm-subscription-card ${index % 2 ? 'udm-subscription-card-alt' : ''} p-3 sm:p-3.5 relative mb-2 border border-white/10 rounded-xl last:mb-0 transition-colors" data-subscription-index="${index}">
+                        <div class="udm-subscription-heading flex items-center justify-between gap-2 flex-wrap mb-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="udm-sub-status-dot ${sub.is_expired ? 'is-expired' : ''}"></span>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap leading-tight">
+                                        <span class="${sub.is_expired ? 'text-red-300' : 'text-emerald-300'} font-bold text-sm">${sub.is_expired ? 'Подписка истекла' : 'Подписка активна'}</span>
+                                        <span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-semibold text-white/55">${durationText || `ID ${sub.key_id}`}</span>
+                                    </div>
+                                    <p class="mt-0.5 text-[10px] text-white/45">${sub.expire_date && sub.expire_date !== 'N/A' ? `Активна до ${escapeHtml(sub.expire_date)}` : 'Без срока окончания'}</p>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-2 text-xs text-white/50 font-medium">
-                                ${sub.admin_comment ? `<span class="px-2 py-0.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20" title="Комментарий админа: ${escapeHtml(sub.admin_comment)}">${escapeHtml(sub.admin_comment)}</span>` : ''}
-                                ${sub.user_comment ? `<span class="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 italic max-w-[150px] truncate" title="Комментарий пользователя: ${escapeHtml(sub.user_comment)}">${escapeHtml(sub.user_comment)}</span>` : ''}
-                                <div class="bg-white/5 px-2 py-0.5 rounded-lg border border-white/10">${sub.host_name}</div>
+                            <div class="udm-sub-badges flex items-center gap-1 flex-wrap">
+                                <span class="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-semibold text-white/55">${escapeHtml(sub.host_name)}</span>
+                                ${sub.admin_comment ? `<span class="max-w-[160px] truncate rounded-md border border-emerald-400/15 bg-emerald-400/[0.07] px-2 py-1 text-[9px] text-emerald-200/80" title="Комментарий администратора">${escapeHtml(sub.admin_comment)}</span>` : ''}
+                                ${sub.user_comment ? `<span class="max-w-[130px] truncate rounded-md border border-sky-400/15 bg-sky-400/[0.07] px-2 py-1 text-[9px] text-sky-200/80" title="Комментарий пользователя">${escapeHtml(sub.user_comment)}</span>` : ''}
                             </div>
                         </div>
-                        <div class="bg-white/5 rounded-xl p-3 font-mono text-sm text-primary break-all mb-3 pr-2 relative flex items-center gap-3 border border-white/5 group-hover:border-white/10 transition-colors">
-                            <span class="flex-1 select-all">${sub.key}</span>
-                            <button onclick="copyToClipboard('${sub.key}', this)" 
-                                    class="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 hover:bg-primary/20 hover:text-primary text-white/50 flex items-center justify-center transition-all shadow-lg shadow-black/20"
-                                    title="Скопировать ссылку">
+
+                        <div class="udm-sub-meta-grid mb-2.5">
+                            <div class="udm-sub-meta"><span><i class="material-symbols-outlined">sell</i>Тариф</span><strong>${escapeHtml(sub.plan || '—')}</strong></div>
+                            <div class="udm-sub-meta"><span><i class="material-symbols-outlined">payments</i>Провайдер</span><strong>${escapeHtml(sub.provider || '—')}</strong></div>
+                            <div class="udm-sub-meta"><span><i class="material-symbols-outlined">devices</i>HWID-устройства</span><strong data-remote-hwid>${sub.hwid_available ? (sub.hwid_unlimited ? 'Безлимит' : `${Number(sub.hwid_used || 0)} / ${Number(sub.hwid_limit)}`) : '—'}</strong><button type="button" class="btn-reset-subscription-hwid ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md border border-rose-400/20 bg-rose-400/[0.07] text-rose-300/80 transition-colors hover:bg-rose-400/20 hover:text-rose-200" data-key-id="${sub.key_id}" title="Сбросить все устройства ключа" aria-label="Сбросить все HWID-устройства"><span class="material-symbols-outlined text-sm">delete</span></button></div>
+                            <div class="udm-sub-meta"><span><i class="material-symbols-outlined">event</i>Осталось дней</span><strong class="${daysRemaining !== null && daysRemaining <= 3 ? 'text-amber-300' : ''}">${daysRemaining === null ? 'Без срока' : daysRemaining}</strong></div>
+                        </div>
+
+                        <div class="udm-traffic-panel mb-2 rounded-lg border border-white/[0.07] px-2.5 py-2 ${sub.remote_loading ? 'animate-pulse' : ''}" data-remote-key-id="${sub.key_id}">
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-base text-cyan-300">data_usage</span>
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-white/60">Основной трафик</span>
+                                </div>
+                                    <span class="text-[10px] font-semibold text-white/45" data-remote-traffic-percent>${!sub.traffic_available ? 'Нет данных' : (sub.traffic_unlimited ? 'Без ограничений' : `${Number(sub.traffic_percent || 0)}% использовано`)}</span>
+                            </div>
+                            <div class="flex items-baseline justify-between gap-2 flex-wrap">
+                                <strong class="text-sm font-bold text-white" data-remote-traffic-value>${!sub.traffic_available ? '—' : (sub.traffic_unlimited ? `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ∞` : `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ${Number(sub.traffic_limit_gb || 0).toFixed(2)} GB`)}</strong>
+                                <span class="text-[10px] text-white/45" data-remote-traffic-remaining>${!sub.traffic_available ? 'Проверьте соединение с Remnawave' : (sub.traffic_unlimited ? 'Осталось: ∞' : `Осталось: ${Number(sub.traffic_remaining_gb || 0).toFixed(2)} GB`)}</span>
+                            </div>
+                            ${!sub.traffic_available || sub.traffic_unlimited ? '' : `<div class="mt-1.5 h-1 overflow-hidden rounded-full bg-black/40"><div class="h-full rounded-full ${Number(sub.traffic_percent || 0) >= 90 ? 'bg-red-400' : 'bg-cyan-400'}" style="width:${Math.min(100, Math.max(0, Number(sub.traffic_percent || 0)))}%"></div></div>`}
+                        </div>
+
+                        <div class="udm-sub-link-row mb-2 flex items-center gap-1.5 rounded-lg border border-white/[0.07] px-2 py-1.5">
+                            <span class="material-symbols-outlined shrink-0 text-base text-primary/70">link</span>
+                            <span class="flex-1 min-w-0 select-all truncate font-mono text-[11px] text-primary/90" title="${escapeHtml(sub.key)}">${escapeHtml(sub.key)}</span>
+                            <button type="button" data-sub-action="copy" data-sub-url="${escapeHtml(sub.key)}" class="flex-shrink-0 w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-primary/15 hover:text-primary text-white/55 flex items-center justify-center transition-all" title="Скопировать ссылку">
                                 <span class="material-symbols-outlined text-sm">content_copy</span>
                             </button>
-                            <button onclick="window.open('${sub.key}', '_blank')" 
-                                    class="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 hover:bg-primary/20 hover:text-primary text-white/50 flex items-center justify-center transition-all shadow-lg shadow-black/20"
-                                    title="Открыть ссылку">
+                            <button type="button" data-sub-action="open" data-sub-url="${escapeHtml(sub.key)}" class="flex-shrink-0 w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-primary/15 hover:text-primary text-white/55 flex items-center justify-center transition-all" title="Открыть ссылку">
                                 <span class="material-symbols-outlined text-sm">open_in_new</span>
+                            </button>
+                            <button type="button" class="btn-user-reset-subscription-link flex-shrink-0 h-8 rounded-lg border border-amber-400/20 bg-amber-400/[0.07] px-2.5 text-[9px] font-bold text-amber-200/80 hover:bg-amber-400/15 transition-all flex items-center gap-1.5" data-key-id="${sub.key_id}" title="Сгенерировать новую ссылку подписки">
+                                <span class="material-symbols-outlined text-sm">autorenew</span><span class="hidden sm:inline">Обновить ссылку</span>
                             </button>
                         </div>
 
-                        <!-- Actions Row -->
-                        <div class="flex items-center gap-2 justify-between flex-wrap mt-2">
-                             <!-- Left: Email & UUID -->
-                             <div class="flex items-center gap-2 flex-wrap">
-                                <div class="bg-white/5 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1.5 uppercase tracking-wide group" 
-                                     onclick="copyToClipboard('${sub.email}', this)" title="Скопировать полный email">
+                        <div class="udm-sub-footer flex items-center justify-between gap-2 flex-wrap">
+                             <div class="udm-sub-identifiers flex items-center gap-1 flex-wrap">
+                                <div class="bg-white/5 border border-white/5 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1 uppercase tracking-wide group" 
+                                     data-sub-email="${escapeHtml(sub.email)}" title="Скопировать полный email">
                                     <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">mail</span>
-                                    <span class="text-white/40">Email:</span> <span class="text-white group-hover:text-primary transition-colors">${sub.email}</span>
+                                    <span class="text-white/40">Email:</span> <span class="text-white group-hover:text-primary transition-colors">${escapeHtml(sub.email)}</span>
                                 </div>
-                                <div class="bg-white/5 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1.5 uppercase tracking-wide group" 
-                                     onclick="copyToClipboard('${emailDisp}', this)" title="Скопировать имя пользователя">
+                                <div class="bg-white/5 border border-white/5 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1 uppercase tracking-wide group" 
+                                     data-sub-username="${escapeHtml(emailDisp)}" title="Скопировать имя пользователя">
                                     <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">person</span>
-                                    <span class="text-white/40">User:</span> <span class="text-white group-hover:text-primary transition-colors">${emailDisp}</span>
+                                    <span class="text-white/40">User:</span> <span class="text-white group-hover:text-primary transition-colors">${escapeHtml(emailDisp)}</span>
                                 </div>
-                                <div class="bg-white/5 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1.5 uppercase tracking-wide group" 
-                                     onclick="copyToClipboard('${sub.remnawave_user_uuid}', this)" title="Скопировать UUID">
+                                <div class="bg-white/5 border border-white/5 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1 uppercase tracking-wide group" 
+                                     data-sub-uuid="${escapeHtml(sub.remnawave_user_uuid)}" title="Скопировать UUID">
                                     <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">fingerprint</span>
-                                    <span class="text-white/40">UUID:</span> <span class="font-mono text-white group-hover:text-primary transition-colors">${sub.remnawave_user_uuid.substring(0, 8)}...</span>
+                                    <span class="text-white/40">UUID:</span> <span class="font-mono text-white group-hover:text-primary transition-colors">${escapeHtml(String(sub.remnawave_user_uuid || '').substring(0, 8))}...</span>
                                 </div>
                              </div>
 
                              <!-- Right: Buttons -->
-                             <div class="flex items-center gap-2 flex-shrink-0">
+                              <div class="flex items-center gap-1 flex-shrink-0">
                                   <button class="btn-user-edit-expiry w-8 h-8 flex items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-all"
                                           data-key-id="${sub.key_id}" title="Изменить срок">
                                       <span class="material-symbols-outlined text-sm">schedule</span>
@@ -1655,6 +2878,60 @@
                         </div>
                     </div>
                 `}).join('') : '<div class="p-8 text-center text-white/30 text-sm font-medium border-2 border-dashed border-white/5 rounded-2xl">Нет активных подписок</div>';
+
+                    loadRemnawaveDetails(uid);
+                    document.getElementById('udm-subs-list').querySelectorAll('.btn-user-reset-subscription-link').forEach(button => {
+                        button.addEventListener('click', () => openSubscriptionLinkResetConfirm(button, uid));
+                    });
+                    document.getElementById('udm-subs-list').querySelectorAll('.btn-reset-subscription-hwid').forEach(button => {
+                        button.addEventListener('click', async () => {
+                            const keyId = button.dataset.keyId;
+                            showConfirmModal(
+                                'Сброс HWID-устройств',
+                                'Удалить все зарегистрированные устройства этого ключа в Remnawave? Пользователю потребуется подключить устройства заново.',
+                                async () => {
+                                    button.disabled = true;
+                                    try {
+                                        const csrfToken = document.querySelector('#userDetailsModal input[name="csrf_token"]')?.value || getCsrfToken();
+                                        const response = await fetch(`/users/subscriptions/${encodeURIComponent(keyId)}/reset-hwid`, {
+                                            method: 'POST',
+                                            headers: { 'X-CSRFToken': csrfToken, 'Accept': 'application/json' },
+                                            credentials: 'same-origin'
+                                        });
+                                        const result = await response.json();
+                                        if (!response.ok || !result.ok) throw new Error(result.error || 'Не удалось сбросить устройства');
+                                        showToast('success', result.deleted ? `Сброшено устройств: ${result.deleted}` : 'Устройства не зарегистрированы');
+                                        await fetchUserDetails(uid);
+                                    } catch (error) {
+                                        showToast('danger', error.message || 'Ошибка сброса устройств');
+                                    } finally {
+                                        button.disabled = false;
+                                    }
+                                }
+                            );
+                        });
+                    });
+                    document.getElementById('udm-subs-list').querySelectorAll('[data-sub-action]').forEach(button => {
+                        button.addEventListener('click', () => {
+                            const url = button.dataset.subUrl || '';
+                            if (button.dataset.subAction === 'copy') {
+                                copyToClipboard(url, button);
+                                return;
+                            }
+                            try {
+                                const parsedUrl = new URL(url);
+                                if (parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'http:') {
+                                    window.open(parsedUrl.href, '_blank', 'noopener,noreferrer');
+                                }
+                            } catch (_) { }
+                        });
+                    });
+                    document.getElementById('udm-subs-list').querySelectorAll('[data-sub-email], [data-sub-username], [data-sub-uuid]').forEach(element => {
+                        element.addEventListener('click', () => {
+                            const value = element.dataset.subEmail || element.dataset.subUsername || element.dataset.subUuid || '';
+                            copyToClipboard(value, element);
+                        });
+                    });
 
                     function formatWithRelative(dateStr) {
                         if (!dateStr) return 'N/A';
@@ -1712,68 +2989,237 @@
                         return `<span class="inline-flex px-2 py-0.5 rounded-md border ${cls} text-[9px] font-black uppercase tracking-wider">${escapeHtml(status || 'N/A')}</span>`;
                     }
 
-                    function renderTxDetails(tx) {
-                        const parts = Array.isArray(tx.details) ? tx.details : [];
-                        const chips = parts.map(item => `<span class="inline-flex px-2 py-1 rounded-lg bg-white/5 border border-white/5 text-white/60 text-[10px]">${escapeHtml(item)}</span>`).join('');
-                        const metadata = tx.metadata && Object.keys(tx.metadata).length
-                            ? `<details class="mt-2"><summary class="cursor-pointer text-[10px] text-primary/80 hover:text-primary font-bold uppercase tracking-wider">metadata JSON</summary><pre class="mt-2 max-w-[520px] whitespace-pre-wrap break-all rounded-xl bg-black/30 border border-white/5 p-3 text-[10px] text-white/50">${escapeHtml(JSON.stringify(tx.metadata, null, 2))}</pre></details>`
-                            : '';
-                        return `<div class="min-w-[320px] max-w-[620px]"><div class="flex flex-wrap gap-1.5">${chips || '<span class="text-white/30">Нет деталей</span>'}</div>${metadata}</div>`;
+                    function formatTransactionDate(value) {
+                        if (value === null || value === undefined || String(value).trim() === '') return null;
+                        const raw = String(value).trim();
+                        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+                        if (match) return `${match[3]}.${match[2]}.${match[1]}, ${match[4]}:${match[5]}:${match[6]}`;
+                        const parsed = new Date(raw);
+                        return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleString('ru-RU');
                     }
+
+                    function openTransactionDetails(tx) {
+                        if (!tx || typeof tx !== 'object') {
+                            showToast('danger', 'Не удалось открыть детали операции');
+                            return;
+                        }
+
+                        const metadata = tx.metadata && typeof tx.metadata === 'object' && !Array.isArray(tx.metadata)
+                            ? tx.metadata
+                            : {};
+                        const value = (...keys) => {
+                            for (const key of keys) {
+                                const item = tx[key] ?? metadata[key];
+                                if (item !== null && item !== undefined && String(item).trim() !== '') return item;
+                            }
+                            return null;
+                        };
+                        const display = item => {
+                            if (item === null || item === undefined || String(item).trim() === '') return null;
+                            if (typeof item === 'boolean') return item ? 'Да' : 'Нет';
+                            return String(item);
+                        };
+                        const formatDate = item => {
+                            const raw = display(item);
+                            if (!raw) return null;
+                            const parsed = new Date(raw);
+                            return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleString('ru-RU');
+                        };
+                        const addField = (fields, label, item, formatter = display) => {
+                            const result = formatter(item);
+                            if (result !== null) fields.push([label, result]);
+                        };
+                        const renderGroup = (title, icon, fields, accent) => {
+                            if (!fields.length) return '';
+                            return `<section class="udm-tx-group"><header><span class="material-symbols-outlined">${icon}</span><h4>${title}</h4></header><dl>${fields.map(([label, content]) => `<div class="udm-tx-field"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(content)}</dd></div>`).join('')}</dl></section>`;
+                        };
+
+                        const paymentId = display(tx.payment_id);
+                        const transactionId = display(tx.transaction_id);
+                        const date = formatTransactionDate(tx.date);
+                        const customerName = display(tx.customer_name || tx.username);
+                        const customerId = display(tx.customer_id);
+                        const telegramId = display(tx.telegram_id || tx.customer_id);
+                        const provider = display(tx.method_label || tx.payment_method);
+                        const amount = formatMoney(tx.amount, Number(tx.amount || 0) < 0);
+                        const isBalance = Boolean(tx.old_balance !== null && tx.old_balance !== undefined || tx.new_balance !== null && tx.new_balance !== undefined || tx.delta !== null && tx.delta !== undefined);
+
+                        document.getElementById('txd-icon').textContent = isBalance ? 'account_balance_wallet' : 'receipt_long';
+                        document.getElementById('txd-title').textContent = isBalance ? (tx.action_label || tx.type || 'Операция с балансом') : (tx.action_label || tx.type || 'Платёж');
+                        document.getElementById('txd-subtitle').textContent = [paymentId ? `Платёж #${paymentId}` : null, provider, date].filter(Boolean).join(' · ');
+                        document.getElementById('txd-context').innerHTML = `
+                            <div class="udm-tx-context-top"><span class="material-symbols-outlined">receipt_long</span><div><span>Платёж</span><strong>${escapeHtml(paymentId ? `#${paymentId}` : `#${transactionId || '—'}`)}</strong></div></div>
+                            <div class="udm-tx-context-provider">${escapeHtml(provider || 'Провайдер не указан')}<span>·</span>${escapeHtml(date || 'Дата не указана')}</div>
+                            <div class="udm-tx-context-user"><span class="material-symbols-outlined">person</span><div><span>Пользователь</span><strong>${escapeHtml(customerName || '—')}</strong><small>${telegramId ? `Telegram ID ${escapeHtml(telegramId)}` : (customerId ? `ID ${escapeHtml(customerId)}` : 'ID не записан')}</small></div></div>`;
+
+                        document.getElementById('txd-summary').innerHTML = [
+                            ['Сумма', amount, Number(tx.amount || 0) < 0 ? 'text-rose-300' : 'text-emerald-300'],
+                            ['Статус', tx.status || '—', ['paid', 'completed', 'success'].includes(String(tx.status || '').toLowerCase()) ? 'text-emerald-300' : (String(tx.status || '').toLowerCase() === 'pending' ? 'text-amber-300' : 'text-rose-300')]
+                        ].map(([label, content, color]) => `<div class="udm-tx-summary-card"><span>${label}</span><strong class="${color}">${escapeHtml(content)}</strong></div>`).join('');
+
+                        const paymentFields = [];
+                        addField(paymentFields, 'ID транзакции', transactionId);
+                        addField(paymentFields, 'ID платежа', paymentId);
+                        addField(paymentFields, 'Сумма', tx.amount !== null && tx.amount !== undefined ? amount : null);
+                        if (tx.amount_currency !== null && tx.amount_currency !== undefined || tx.currency_name) {
+                            addField(paymentFields, 'Сумма у провайдера', [display(tx.amount_currency), display(tx.currency_name)].filter(Boolean).join(' '));
+                        }
+                        addField(paymentFields, 'Статус', tx.status);
+                        addField(paymentFields, 'Дата', tx.date, formatTransactionDate);
+                        addField(paymentFields, 'Обновлён', value('updated_at', 'updatedAt', 'updated_date'), formatTransactionDate);
+                        addField(paymentFields, 'Проведён кем', value('processed_by', 'processedBy', 'admin_login', 'admin_username'));
+                        addField(paymentFields, 'Проведён', value('processed_at', 'processedAt'), formatTransactionDate);
+                        addField(paymentFields, 'Отменён', value('canceled_at', 'cancelled_at', 'canceledAt', 'cancelledAt'), formatTransactionDate);
+                        addField(paymentFields, 'ID администратора проведения', value('admin_id', 'adminId', 'processed_by_id', 'processedById'));
+                        addField(paymentFields, 'Причина проведения', value('reason', 'process_reason', 'processReason'));
+                        addField(paymentFields, 'ID администратора отмены', value('cancelled_by_id', 'canceled_by_id', 'cancelledById', 'canceledById'));
+                        addField(paymentFields, 'Причина отмены', value('cancel_reason', 'cancelReason', 'cancellation_reason'));
+                        addField(paymentFields, 'Описание', value('description', 'payment_description', 'paymentDescription'));
+                        addField(paymentFields, 'Причина изменения', value('reason'));
+
+                        const providerFields = [];
+                        addField(providerFields, 'Провайдер', provider);
+                        addField(providerFields, 'ID у провайдера', value('provider_payment_id', 'providerPaymentId', 'invoice_id', 'invoiceId', 'cryptobot_invoice_id', 'crypto_invoice_id'));
+                        addField(providerFields, 'Ссылка на оплату', value('payment_url', 'paymentUrl', 'confirmation_url', 'confirmationUrl', 'pay_url', 'payUrl'));
+                        addField(providerFields, 'YooKassa ID', value('yookassa_id', 'yooKassaId', 'yookassa_payment_id', 'yooKassaPaymentId'));
+                        addField(providerFields, 'Ключ идемпотентности', value('idempotency_key', 'idempotence_key', 'idempotenceKey', 'Idempotence-Key'));
+
+                         const purchaseFields = [];
+                         const balanceFields = [];
+                        const discountValue = value('discount', 'discount_amount', 'discountAmount', 'promo_applied_amount', 'promo_discount');
+                        const saleType = value('sale_type', 'saleType', 'action_label', 'action');
+                        const months = value('months');
+                        const plan = value('plan_name', 'plan') || tx.plan;
+                         const promoCode = value('promo_code', 'promoCode');
+                         const originalPrice = value('original_price', 'originalPrice');
+                         const sellerDiscount = value('seller_discount', 'sellerDiscount');
+                         const sellerDiscountPercent = value('seller_discount_percent', 'sellerDiscountPercent');
+                         const referralDiscount = value('referral_discount', 'referralDiscount');
+                         const referralDiscountPercent = value('referral_discount_percent', 'referralDiscountPercent');
+                         const totalDiscount = value('total_discount', 'totalDiscount');
+                        addField(purchaseFields, 'Тип продажи', saleType);
+                        addField(purchaseFields, 'Тариф', plan);
+                         addField(purchaseFields, 'Период', months !== null ? `${months} мес.` : null);
+                         addField(purchaseFields, 'Скидка', discountValue);
+                          addField(purchaseFields, 'Промокод', promoCode);
+                          const discountOriginFields = [];
+                          const discountOriginSummary = [
+                              sellerDiscount !== null && Number(sellerDiscount) > 0 ? `Продавец: ${formatMoney(sellerDiscount)}` : null,
+                              referralDiscount !== null && Number(referralDiscount) > 0 ? `Реферал: ${formatMoney(referralDiscount)}` : null,
+                              promoCode && discountValue !== null ? `Промокод ${display(promoCode)}: ${formatMoney(discountValue)}` : null
+                          ].filter(Boolean).join(' · ');
+                          addField(paymentFields, 'Происхождение скидки', discountOriginSummary || null);
+                          addField(discountOriginFields, 'Исходная стоимость', originalPrice !== null ? formatMoney(originalPrice) : null);
+                         addField(discountOriginFields, 'Скидка продавца', sellerDiscount !== null ? `${formatMoney(sellerDiscount)}${sellerDiscountPercent !== null ? ` (${display(sellerDiscountPercent)}%)` : ''}` : null);
+                         addField(discountOriginFields, 'Скидка за первую покупку по рефералу', referralDiscount !== null ? `${formatMoney(referralDiscount)}${referralDiscountPercent !== null ? ` (${display(referralDiscountPercent)}%)` : ''}` : null);
+                         addField(discountOriginFields, 'Скидка по промокоду', promoCode && discountValue !== null ? `${formatMoney(discountValue)} · ${display(promoCode)}` : null);
+                         addField(discountOriginFields, 'Общая экономия', totalDiscount !== null ? formatMoney(totalDiscount) : null);
+                        addField(purchaseFields, 'Email клиента', value('customer_email', 'email'));
+                        addField(purchaseFields, 'Хост', value('host_name', 'host'));
+                        addField(purchaseFields, 'ID ключа', value('key_id'));
+                        addField(balanceFields, 'Изменение', tx.delta !== null && tx.delta !== undefined ? formatMoney(tx.delta, true) : null);
+                        addField(balanceFields, 'Баланс до', tx.old_balance !== null && tx.old_balance !== undefined ? formatMoney(tx.old_balance) : null);
+                        addField(balanceFields, 'Баланс после', tx.new_balance !== null && tx.new_balance !== undefined ? formatMoney(tx.new_balance) : null);
+                        addField(balanceFields, 'Причина', tx.reason);
+                        addField(balanceFields, 'Кто изменил', tx.processed_by);
+                        addField(balanceFields, 'ID администратора', tx.admin_id);
+                        addField(balanceFields, 'Источник', tx.source_username);
+                        addField(balanceFields, 'ID источника', tx.source_user_id);
+                        addField(balanceFields, 'Связанный платёж', tx.source_payment_id);
+
+                        const userFields = [];
+                        addField(userFields, 'Пользователь', customerName);
+                        addField(userFields, 'Telegram ID', value('telegram_id', 'telegramId') || telegramId);
+
+                        if (purchaseFields.some(([label]) => label === 'Тип продажи')) {
+                            const typeField = purchaseFields.find(([label]) => label === 'Тип продажи');
+                            const saleLabels = { new: 'Новая подписка', extend: 'Продление', top_up: 'Пополнение баланса', topup: 'Пополнение баланса' };
+                            typeField[1] = saleLabels[String(typeField[1]).toLowerCase()] || typeField[1];
+                        }
+
+                        const groups = [
+                            renderGroup('Платёж', 'receipt_long', paymentFields),
+                            renderGroup('Провайдер', 'account_balance', providerFields),
+                            renderGroup('Пользователь', 'person', userFields),
+                             renderGroup('Состав покупки', 'shopping_bag', purchaseFields),
+                             renderGroup('Происхождение скидки', 'sell', discountOriginFields),
+                            isBalance ? renderGroup('Движение баланса', 'account_balance_wallet', balanceFields) : ''
+                        ].filter(Boolean);
+
+                        document.getElementById('txd-groups').innerHTML = groups.join('');
+                        const rawMetadata = tx.raw_metadata || (Object.keys(metadata).length ? JSON.stringify(metadata) : '');
+                        const rawWrap = document.getElementById('txd-raw-wrap');
+                        rawWrap.classList.toggle('hidden', !rawMetadata);
+                        document.getElementById('txd-raw').textContent = rawMetadata
+                            ? (() => {
+                                try { return JSON.stringify(typeof rawMetadata === 'string' ? JSON.parse(rawMetadata) : rawMetadata, null, 2); }
+                                catch (_) { return String(rawMetadata); }
+                            })()
+                            : '';
+                        openModal('transactionDetailsModal');
+                    }
+
+                    document.getElementById('userDetailsModal').addEventListener('click', event => {
+                        const button = event.target.closest('[data-transaction-details]');
+                        const transaction = button ? transactionDetailsByButton.get(button) : null;
+                        if (transaction) openTransactionDetails(transaction);
+                    });
 
                     function renderTxRow(tx, isBalance = false) {
                         const amount = Number(tx.amount || 0);
                         const amountClass = amount < 0 ? 'text-red-400' : amount > 0 ? 'text-emerald-400' : 'text-white';
-                        const payId = tx.payment_id || '—';
-                        const shortPayId = payId.length > 18 ? `${payId.slice(0, 8)}…${payId.slice(-6)}` : payId;
-                        const currencyLine = tx.amount_currency || tx.currency_name
-                            ? `<div class="text-[10px] text-white/35 mt-1">${escapeHtml(tx.amount_currency || '—')} ${escapeHtml(tx.currency_name || '')}</div>`
-                            : '';
+                        const transactionCode = tx.transaction_code || tx.transaction_id;
+                        const paymentId = tx.payment_id || '—';
+                        const paymentIdText = String(paymentId);
+                        const shortPaymentId = paymentIdText.length > 22 ? `${paymentIdText.slice(0, 10)}…${paymentIdText.slice(-7)}` : paymentIdText;
+                        const dateText = formatTransactionDate(tx.date) || 'Дата не указана';
+                        const eventName = tx.action_label || tx.type || 'Операция';
+                        const eventType = String(tx.sale_type || tx.action || tx.type || tx.action_label || '').toLowerCase();
+                        const eventStyle = (() => {
+                            if (isBalance) return { icon: amount < 0 ? 'south_west' : 'north_east', color: amount < 0 ? 'bg-rose-400/10 text-rose-300' : 'bg-orange-400/10 text-orange-300' };
+                            if (/extend|renew| продлен|продлен|продление/.test(eventType)) return { icon: 'autorenew', color: 'bg-sky-400/10 text-sky-300' };
+                            if (/new|purchase|buy|покуп|новая подписка/.test(eventType)) return { icon: 'shopping_bag', color: 'bg-emerald-400/10 text-emerald-300' };
+                            if (/top.?up|topup|пополн/.test(eventType)) return { icon: 'account_balance_wallet', color: 'bg-amber-400/10 text-amber-300' };
+                            if (/refund|возврат|отмен/.test(eventType)) return { icon: 'undo', color: 'bg-rose-400/10 text-rose-300' };
+                            return { icon: 'receipt_long', color: 'bg-violet-400/10 text-violet-300' };
+                        })();
+                        const details = [transactionCode ? `Запись #${transactionCode}` : null, `Платёж ${shortPaymentId}`].filter(Boolean);
                         return `
-                    <tr class="hover:bg-white/5 transition-colors group align-top">
-                        <td class="px-5 py-3 text-xs text-white/70 whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono">
-                            <div>${formatWithRelative(tx.date)}</div>
-                            <div class="mt-2 space-y-1">
-                                <div class="text-[10px] text-white/35">TX: <span class="text-white/60">#${escapeHtml(tx.transaction_id || '—')}</span></div>
-                                <button type="button" data-copy="${escapeHtml(payId)}" onclick="copyToClipboard(this.dataset.copy, this)" class="text-left text-[10px] text-primary/80 hover:text-primary" title="${escapeHtml(payId)}">PAY: ${escapeHtml(shortPayId)}</button>
-                            </div>
-                        </td>
-                        <td class="px-5 py-3 text-xs border-b border-dashed border-white/5 group-last:border-none">
-                            <div class="font-bold text-white">${escapeHtml(tx.type || tx.action_label || 'Событие')}</div>
-                            <div class="mt-1 text-[10px] text-white/35 font-mono">${escapeHtml(tx.action || 'no_action')}</div>
-                        </td>
-                        <td class="px-5 py-3 text-xs border-b border-dashed border-white/5 group-last:border-none">${renderTxDetails(tx)}</td>
-                        <td class="px-5 py-3 text-xs border-b border-dashed border-white/5 group-last:border-none whitespace-nowrap">
-                            <div class="font-bold text-white/70">${escapeHtml(tx.method_label || tx.payment_method || 'N/A')}</div>
-                            <div class="mt-1">${statusBadge(tx.status)}</div>
-                        </td>
-                        <td class="px-5 py-3 text-xs font-bold whitespace-nowrap border-b border-dashed border-white/5 group-last:border-none font-mono ${amountClass}">
-                            ${formatMoney(amount, isBalance)}
-                            ${currencyLine}
-                        </td>
-                    </tr>`;
+                    <article class="udm-history-row rounded-xl border border-white/[0.07] transition-colors" data-history-kind="${isBalance ? 'balance' : 'payment'}" data-history-search="${escapeHtml([tx.type, tx.action_label, tx.method_label, tx.payment_method, paymentId, tx.date].filter(Boolean).join(' ').toLowerCase())}">
+                        <div class="udm-history-cell udm-history-date-cell"><span class="udm-history-cell-label">Дата / ID</span><time>${escapeHtml(dateText)}</time><span class="font-mono text-[10px] text-white/40">ID ${escapeHtml(transactionCode || paymentIdText)}</span></div>
+                        <div class="udm-history-cell udm-history-event-cell"><span class="udm-history-cell-label">Событие</span><div class="udm-history-event"><span class="${eventStyle.color} flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"><span class="material-symbols-outlined text-base">${eventStyle.icon}</span></span><strong class="text-xs text-white">${escapeHtml(eventName)}</strong></div></div>
+                        <div class="udm-history-cell udm-history-details-cell"><span class="udm-history-cell-label">Детали</span><div class="flex flex-wrap items-center gap-x-3 gap-y-1">${details.map((item, index) => index === 1 ? `<button type="button" data-copy="${escapeHtml(paymentIdText)}" onclick="copyToClipboard(this.dataset.copy, this)" class="font-mono text-[10px] text-primary/70 hover:text-primary" title="Скопировать ID платежа">${escapeHtml(item)}</button>` : `<span class="font-mono text-[10px] text-white/45">${escapeHtml(item)}</span>`).join('')}<button type="button" class="udm-transaction-details-button flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-white/50 hover:border-primary/25 hover:bg-primary/10 hover:text-primary" data-transaction-details aria-label="Показать подробности операции" title="Подробности операции"><span class="material-symbols-outlined text-[16px]">info</span></button></div></div>
+                        <div class="udm-history-cell udm-history-status-cell"><span class="udm-history-cell-label">Метод / статус</span><span class="udm-history-method">${escapeHtml(tx.method_label || tx.payment_method || '—')}</span>${statusBadge(tx.status)}</div>
+                        <div class="udm-history-cell udm-history-amount-cell"><span class="udm-history-cell-label">Сумма</span><strong class="udm-history-amount ${amountClass}">${formatMoney(amount, isBalance)}</strong></div>
+                    </article>`;
                     }
 
-                    const emptyHistoryRow = '<tr><td colspan="5" class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</td></tr>';
+                    const emptyHistoryRow = '<div class="px-5 py-8 text-center text-white/30 text-xs uppercase tracking-widest font-bold">История пуста</div>';
 
                     const paymentHistory = document.getElementById('udm-payment-history');
                     document.getElementById('udm-tab-count-payments').textContent = String(data.payment_history?.length || 0);
                     paymentHistory.innerHTML = data.payment_history?.length
                         ? data.payment_history.map(tx => renderTxRow(tx, false)).join('')
                         : emptyHistoryRow;
+                    paymentHistory.querySelectorAll('[data-transaction-details]').forEach((button, index) => {
+                        transactionDetailsByButton.set(button, data.payment_history[index]);
+                    });
 
                     const balanceHistory = document.getElementById('udm-balance-history');
                     document.getElementById('udm-tab-count-balance').textContent = String(data.balance_history?.length || 0);
                     balanceHistory.innerHTML = data.balance_history?.length
                         ? data.balance_history.map(tx => renderTxRow(tx, true)).join('')
                         : emptyHistoryRow;
+                    balanceHistory.querySelectorAll('[data-transaction-details]').forEach((button, index) => {
+                        transactionDetailsByButton.set(button, data.balance_history[index]);
+                    });
 
                     setUserDetailsTab('subscriptions');
                     document.getElementById('udm-loading').classList.add('hidden');
                     document.getElementById('udm-content').classList.remove('hidden');
                 } else {
-                    showToast('danger', 'Не удалось загрузить данные пользователя');
-                    closeModal('userDetailsModal');
+                    showToast('danger', data?.error || 'Не удалось загрузить данные пользователя');
+                    return;
                 }
 
                 try {
@@ -1882,18 +3328,50 @@
                     console.error(e);
                 }
 
-            } catch (_) {
-                showToast('danger', 'Ошибка сети');
-                closeModal('userDetailsModal');
+            } catch (error) {
+                console.error('Ошибка загрузки информации о пользователе:', error);
+                const loading = document.getElementById('udm-loading');
+                loading.classList.remove('hidden');
+                const loadingMessage = loading.querySelector('p');
+                if (loadingMessage) {
+                    loadingMessage.textContent = error.message || 'Не удалось загрузить данные пользователя';
+                }
+                showToast('danger', error.message || 'Не удалось загрузить данные пользователя');
             }
         }
 
         table.addEventListener('click', async function (e) {
-            const btn = e.target.closest('.btn-user-details');
-            if (!btn) return;
-            const uid = btn.getAttribute('data-uid');
+            const row = e.target.closest('[data-user-details-row]');
+            if (!row) return;
+            const cell = e.target.closest('td');
+            if (!cell || !row.contains(cell)) return;
+            const safeElement = cell.querySelector('button, a, form, input, select, textarea, img, [data-toggle="keys"]');
+            if (safeElement && e.target.closest('button, a, form, input, select, textarea, img, [data-toggle="keys"]')) return;
+            const textWalker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+            let textNode;
+            while ((textNode = textWalker.nextNode())) {
+                if (!textNode.textContent.trim()) continue;
+                const range = document.createRange();
+                range.selectNodeContents(textNode);
+                const clickedText = Array.from(range.getClientRects()).some(rect => e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom);
+                if (clickedText) return;
+            }
+            const clickedImage = Array.from(cell.querySelectorAll('img')).some(image => {
+                const rect = image.getBoundingClientRect();
+                return e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+            });
+            if (clickedImage) return;
+            if (e.target.closest('button, a, form, input, select, textarea, [data-toggle="keys"]')) return;
+            const uid = row.getAttribute('data-uid');
+            if (!uid) return;
+            const detailsModal = document.getElementById('userDetailsModal');
+            detailsModal.setAttribute('aria-busy', 'true');
             openModal('userDetailsModal');
-            await fetchUserDetails(uid);
+            requestAnimationFrame(() => {
+                fetchUserDetails(uid).finally(() => {
+                    detailsModal.setAttribute('aria-busy', 'false');
+                });
+            });
         });
 
         document.getElementById('userDetailsModal').addEventListener('click', function (e) {
@@ -1943,7 +3421,7 @@
 
                             if (pinBadge) {
                                 pinBadge.classList.toggle('hidden', !isPinnedNow);
-                                pinBadge.style.color = '#22c55e';
+                        pinBadge.style.color = '';
                             }
                             if (pinText) pinText.textContent = isPinnedNow ? 'Открепить' : 'Закрепить';
                             if (pinIcon) {
@@ -2009,6 +3487,14 @@
                 };
                 openModal('banConfirmModal');
             }
+        });
+
+        document.getElementById('users-tbody').addEventListener('click', function (event) {
+            const avatar = event.target.closest('.user-avatar');
+            if (!avatar) return;
+            event.stopPropagation();
+            document.getElementById('userAvatarLarge').src = avatar.src;
+            openModal('userAvatarModal');
         });
 
         document.getElementById('udm-detach-referrals')?.addEventListener('click', async function () {
@@ -2207,5 +3693,25 @@
             showToast('danger', 'Не удалось скопировать');
         });
     }
+</script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    (function() {
+        const initLucide = (root = document) => {
+            if (typeof window.refreshUiIcons === 'function') {
+                window.refreshUiIcons(root);
+                return;
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons({ root, attrs: { 'stroke-width': 1.75 } });
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => initLucide());
+        } else {
+            initLucide();
+        }
+
+        window.refreshLucideIcons = initLucide;
+    })();
 </script>
 {% endblock %}

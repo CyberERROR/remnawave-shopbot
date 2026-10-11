@@ -1,20 +1,19 @@
-{% set user_count = stats.get('user_count') or 0 %}
-{% set total_keys = stats.get('total_keys') or 0 %}
-{% set total_spent = stats.get('total_spent') or 0 %}
-{% set host_count = stats.get('host_count') or 0 %}
-{% set tickets_count = open_tickets_count or 0 %}
-{% set no_purchases_count = stats.get('no_purchases_count') or 0 %}
-{% set inactive_buyers_count = stats.get('inactive_buyers_count') or 0 %}
-{% set trials_count = stats.get('trials_count') or 0 %}
-{% set active_buyers_count = stats.get('active_buyers_count') or 0 %}
-{% set active_keys_count = stats.get('active_keys_count') or 0 %}
-{% set yookassa_income = stats.get('yookassa_income') or 0 %}
-{% set platega_income = stats.get('platega_income') or 0 %}
-{% set stars_income = stats.get('stars_income') or 0 %}
-{% set cryptobot_income = stats.get('cryptobot_income') or 0 %}
-{% set heleket_income = stats.get('heleket_income') or 0 %}
-{% set tonconnect_income = stats.get('tonconnect_income') or 0 %}
-{% set payment_total = yookassa_income + platega_income + stars_income + cryptobot_income + heleket_income + tonconnect_income %}
+{% set user_count = stats.get('user_count') if stats.get('user_count') is not none else 0 %}
+{% set total_keys = stats.get('total_keys') if stats.get('total_keys') is not none else 0 %}
+{% set total_spent = stats.get('total_spent') if stats.get('total_spent') is not none else 0 %}
+{% set host_count = stats.get('host_count') if stats.get('host_count') is not none else 0 %}
+{% set tickets_count = open_tickets_count if open_tickets_count is not none else 0 %}
+{% set no_purchases_count = stats.get('no_purchases_count') if stats.get('no_purchases_count') is not none else 0 %}
+{% set inactive_buyers_count = stats.get('inactive_buyers_count') if stats.get('inactive_buyers_count') is not none else 0 %}
+{% set trials_count = stats.get('trials_count') if stats.get('trials_count') is not none else 0 %}
+{% set active_buyers_count = stats.get('active_buyers_count') if stats.get('active_buyers_count') is not none else 0 %}
+{% set active_keys_count = stats.get('active_keys_count') if stats.get('active_keys_count') is not none else 0 %}
+{% set yookassa_income = stats.get('yookassa_income') if stats.get('yookassa_income') is not none else 0 %}
+{% set platega_income = stats.get('platega_income') if stats.get('platega_income') is not none else 0 %}
+{% set stars_income = stats.get('stars_income') if stats.get('stars_income') is not none else 0 %}
+{% set cryptobot_income = stats.get('cryptobot_income') if stats.get('cryptobot_income') is not none else 0 %}
+{% set heleket_income = stats.get('heleket_income') if stats.get('heleket_income') is not none else 0 %}
+{% set payment_total = yookassa_income + platega_income + stars_income + cryptobot_income + heleket_income %}
 {% set key_ratio = (total_keys * 100 / user_count) if user_count else 0 %}
 {% set host_ratio = (host_count * 100 / total_keys) if total_keys else 0 %}
 {% set tickets_ratio = (tickets_count * 100 / user_count) if user_count else 0 %}
@@ -24,225 +23,109 @@
 {% set active_buyers_ratio = (active_buyers_count * 100 / user_count) if user_count else 0 %}
 {% set active_keys_ratio = (active_keys_count * 100 / user_count) if user_count else 0 %}
 
-{% macro stat_card(title, value, icon, accent, shell, glow, subtitle='', percent=None, progress=None, suffix='', extra_class='') %}
-<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl {{ extra_class }}">
-    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
-    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
-    <div class="absolute -top-10 -right-8 w-24 h-24 {{ glow }} rounded-full blur-3xl opacity-80 pointer-events-none"></div>
-    <div class="relative z-10 flex h-full flex-col">
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                    <p class="truncate text-white/28 text-[9px] font-black uppercase tracking-[0.16em]">{{ title }}</p>
-                    {% if percent is not none %}
-                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(percent) }}%</span>
+{% macro kpi_card(title, value, hint, icon, color, delta=None, progress=None, span=1) %}
+    {% if color == 'sky' %}
+        {% set accent = 'text-sky-300' %}{% set wash = 'bg-sky-400/[0.08]' %}{% set fill = 'bg-sky-400' %}
+    {% elif color == 'emerald' %}
+        {% set accent = 'text-emerald-300' %}{% set wash = 'bg-emerald-400/[0.08]' %}{% set fill = 'bg-emerald-400' %}
+    {% elif color == 'amber' %}
+        {% set accent = 'text-amber-300' %}{% set wash = 'bg-amber-400/[0.08]' %}{% set fill = 'bg-amber-400' %}
+    {% else %}
+        {% set accent = 'text-violet-300' %}{% set wash = 'bg-violet-400/[0.08]' %}{% set fill = 'bg-violet-400' %}
+    {% endif %}
+    {% set is_currency = title in ['Заработано', 'YooKassa', 'Platega', 'TG Stars', 'CryptoBot', 'Heleket'] %}
+    {% set is_group = title in ['Не купили', 'Нет активных', 'На триале', 'Купили ключ', 'Активные ключи'] %}
+    <article class="relative min-w-0 h-[84px] overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+        <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full {{ wash }} blur-2xl"></div>
+        <div class="relative flex h-full min-w-0 flex-col">
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex min-w-0 items-center gap-2">
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full {{ wash }} {{ accent }}"><i data-lucide="{{ icon }}" class="h-4 w-4" aria-hidden="true"></i></span>
+                    <p class="truncate text-xs font-medium text-white/60" title="{{ hint }}">{{ title }}</p>
+                </div>
+                {% if delta is not none %}
+                    <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums {% if delta > 0 %}bg-emerald-400/10 text-emerald-300{% elif delta < 0 %}bg-red-400/10 text-red-300{% else %}bg-white/[0.06] text-white/40{% endif %}">{{ '%+.0f'|format(delta) if delta else '0' }}%</span>
+                 {% elif title == 'Пользователей' %}
+                     <span id="kpi-users-delta" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums {% if stats.get('users_delta', 0) > 0 %}bg-emerald-400/10 text-emerald-300{% elif stats.get('users_delta', 0) < 0 %}bg-red-400/10 text-red-300{% else %}bg-white/[0.06] text-white/40{% endif %}">{{ '%+.0f'|format(stats.get('users_delta', 0)) if stats.get('users_delta', 0) else '0' }}%</span>
+                 {% elif title == 'Заработано' %}
+                     <span id="kpi-income-delta" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums {% if stats.get('income_delta', 0) > 0 %}bg-emerald-400/10 text-emerald-300{% elif stats.get('income_delta', 0) < 0 %}bg-red-400/10 text-red-300{% else %}bg-white/[0.06] text-white/40{% endif %}">{{ '%+.0f'|format(stats.get('income_delta', 0)) if stats.get('income_delta', 0) else '0' }}%</span>
+                 {% endif %}
+            </div>
+            <div class="mt-auto flex items-end justify-between gap-2">
+                <div class="min-w-0">
+                    {% if value == 'error' %}
+                        <p class="text-xs font-medium text-red-300">Ошибка данных</p>
+                    {% elif value is none %}
+                        <div class="h-7 w-16 animate-pulse rounded-md bg-white/[0.08]"></div>
+                    {% else %}
+                        <p class="text-2xl font-semibold leading-none tracking-tight tabular-nums {% if value == 0 %}text-white/40{% else %}text-white{% endif %}">{{ '{:,.0f}'.format(value).replace(',', ' ') }}{% if is_currency %} ₽{% endif %}</p>
                     {% endif %}
                 </div>
-                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ value }}{% if suffix %} {{ suffix }}{% endif %}</h4>
-                {% if subtitle %}
-                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">{{ subtitle }}</p>
+                {% if title == 'Заработано' %}
+                    <svg class="h-7 w-16 shrink-0 {{ accent }}" viewBox="0 0 64 28" fill="none" aria-label="Динамика дохода"><path d="M1 23C9 22 10 16 17 18C24 20 25 9 33 13C40 17 44 5 51 8C56 10 59 5 63 3" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                {% elif title == 'Пользователей' %}
+                    <svg class="h-7 w-16 shrink-0 {{ accent }}" viewBox="0 0 64 28" fill="none" aria-label="Рост аудитории"><path d="M1 22C9 20 11 23 18 17C25 11 29 16 36 12C43 8 48 13 54 7C58 4 60 5 63 3" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                {% elif title == 'Ключей' %}
+                    <svg class="h-7 w-16 shrink-0 {{ accent }}" viewBox="0 0 64 28" fill="none" aria-label="Динамика выдачи ключей"><path d="M1 24C8 22 12 17 18 20C24 23 29 9 36 13C43 17 47 6 53 9C58 11 60 6 63 4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                {% elif title == 'Серверов' %}
+                    <svg class="h-7 w-16 shrink-0 {{ accent }}" viewBox="0 0 64 28" fill="none" aria-label="Доступность серверов"><path d="M1 14H12L17 7L24 21L31 10L37 17L43 12H52L57 5L63 14" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                {% elif title == 'Тикеты' %}
+                    <svg class="h-7 w-16 shrink-0 {{ accent }}" viewBox="0 0 64 28" fill="none" aria-label="Динамика обращений"><path d="M1 7C8 9 11 5 17 9C23 13 27 10 33 16C39 22 45 14 50 18C55 22 59 16 63 20" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                {% elif is_group %}
+                    <button type="button" onclick="openUserGroupModal('{{ {'Не купили': 'no_purchases', 'Нет активных': 'inactive_buyers', 'На триале': 'trials', 'Купили ключ': 'active_buyers', 'Активные ключи': 'active_keys'}[title] }}', '{{ title }}')" class="{{ accent }} rounded-md p-1 transition hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60" title="Открыть список пользователей"><i data-lucide="arrow-up-right" class="h-4 w-4" aria-hidden="true"></i><span class="sr-only">Открыть {{ title }}</span></button>
                 {% endif %}
             </div>
-            <div class="w-9 h-9 rounded-xl border flex items-center justify-center {{ accent }} {{ shell }} shadow-lg shrink-0">
-                <span class="material-symbols-outlined text-[16px]">{{ icon }}</span>
-            </div>
+            {% if progress is not none %}
+                <div class="mt-2 h-px overflow-hidden bg-white/[0.08]"><div class="h-full {{ fill }}" style="width: {{ [progress, 100]|min }}%"></div></div>
+            {% endif %}
         </div>
-        {% if progress is not none %}
-        <div class="mt-auto pt-2">
-            <div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
-                <div class="h-full rounded-full bg-gradient-to-r {{ accent|replace('text-', 'from-')|replace('-400', '-400/95')|replace('-300', '-300/95') }} to-white/20" style="width: {{ [progress, 100]|min }}%;"></div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
+    </article>
 {% endmacro %}
 
-{{ stat_card('Пользователей', user_count, 'group', 'text-sky-300', 'bg-sky-500/10 border-sky-500/15', 'bg-sky-500/[0.10]', 'Базовая аудитория бота') }}
-{{ stat_card('Ключей', total_keys, 'vpn_key', 'text-blue-300', 'bg-blue-500/10 border-blue-500/15', 'bg-blue-500/[0.10]', 'Доля от базы пользователей', key_ratio, key_ratio) }}
-{{ stat_card('Заработано', "{:,.0f}".format(total_spent).replace(',', ' '), 'payments', 'text-emerald-300', 'bg-emerald-500/10 border-emerald-500/15', 'bg-emerald-500/[0.10]', 'Суммарный доход панели', None, None, '₽') }}
-{{ stat_card('Серверов', host_count, 'dns', 'text-amber-300', 'bg-amber-500/10 border-amber-500/15', 'bg-amber-500/[0.10]', 'Соотношение к общему числу ключей', host_ratio, host_ratio) }}
-{{ stat_card('Тикеты', tickets_count, 'confirmation_number', 'text-rose-300', 'bg-rose-500/10 border-rose-500/15', 'bg-rose-500/[0.10]', 'Открытые обращения от общей базы', tickets_ratio, tickets_ratio) }}
+{% set overview = [
+    ('Пользователей', user_count, 'Все пользователи бота', 'users', 'sky', None, None, 1),
+    ('Ключей', total_keys, 'Всего выдано ключей', 'key-round', 'sky', key_ratio, None, 1),
+    ('Заработано', total_spent, 'Суммарный доход панели', 'chart-no-axes-combined', 'sky', None, None, 2),
+    ('Серверов', host_count, 'Подключённые серверы', 'server', 'sky', host_ratio, None, 1),
+    ('Тикеты', tickets_count, 'Открытые обращения', 'message-circle', 'sky', tickets_ratio, None, 1)
+] %}
+{% set payments = [
+    ('YooKassa', yookassa_income, 'Доля от общего потока', 'landmark', 'emerald'),
+    ('Platega', platega_income, 'Доля от общего потока', 'credit-card', 'emerald'),
+    ('TG Stars', stars_income, 'Доля от общего потока', 'star', 'emerald'),
+    ('CryptoBot', cryptobot_income, 'Доля от общего потока', 'bitcoin', 'emerald'),
+    ('Heleket', heleket_income, 'Доля от общего потока', 'wallet-cards', 'emerald')
+] %}
+{% set funnel = [
+    ('Не купили', no_purchases_count, 'Пользователи без первой оплаты', 'user-x', no_purchases_ratio),
+    ('Нет активных', inactive_buyers_count, 'Покупали, но сейчас без активного ключа', 'clock-3', inactive_buyers_ratio),
+    ('На триале', trials_count, 'Пользователи с пробным доступом', 'gift', trials_ratio),
+    ('Купили ключ', active_buyers_count, 'Покупатели с активным доступом', 'badge-check', active_buyers_ratio),
+    ('Активные ключи', active_keys_count, 'Ключи с текущим активным статусом', 'key-round', active_keys_ratio)
+] %}
 
-{{ stat_card('YooKassa', "{:,.0f}".format(yookassa_income).replace(',', ' '), 'account_balance_wallet', 'text-indigo-300', 'bg-indigo-500/10 border-indigo-500/15', 'bg-indigo-500/[0.10]', 'Доля от общего платежного потока', (yookassa_income * 100 / payment_total) if payment_total else 0, (yookassa_income * 100 / payment_total) if payment_total else 0, '₽', 'payment-stat-block') }}
-{{ stat_card('Platega', "{:,.0f}".format(platega_income).replace(',', ' '), 'credit_card', 'text-cyan-300', 'bg-cyan-500/10 border-cyan-500/15', 'bg-cyan-500/[0.10]', 'Доля от общего платежного потока', (platega_income * 100 / payment_total) if payment_total else 0, (platega_income * 100 / payment_total) if payment_total else 0, '₽', 'payment-stat-block') }}
-{{ stat_card('TG Stars', "{:,.0f}".format(stars_income).replace(',', ' '), 'grade', 'text-amber-300', 'bg-amber-500/10 border-amber-500/15', 'bg-amber-500/[0.10]', 'Доля от общего платежного потока', (stars_income * 100 / payment_total) if payment_total else 0, (stars_income * 100 / payment_total) if payment_total else 0, '₽', 'payment-stat-block') }}
-{{ stat_card('CryptoBot', "{:,.0f}".format(cryptobot_income).replace(',', ' '), 'currency_bitcoin', 'text-violet-300', 'bg-violet-500/10 border-violet-500/15', 'bg-violet-500/[0.10]', 'Доля от общего платежного потока', (cryptobot_income * 100 / payment_total) if payment_total else 0, (cryptobot_income * 100 / payment_total) if payment_total else 0, '₽', 'payment-stat-block') }}
-
-<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block"
-    id="toggle-stats-card">
-    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
-    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
-    <div class="absolute -top-10 -right-8 w-24 h-24 bg-emerald-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
-    <div class="relative z-10 flex h-full flex-col">
-        <div class="flex items-start justify-between gap-3">
-            <div id="view-stat-heleket" class="stat-view min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Heleket</p>
-                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format((heleket_income * 100 / payment_total) if payment_total else 0) }}%</span>
-                </div>
-                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ "{:,.0f}".format(heleket_income).replace(',', ' ') }} ₽</h4>
-                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Доля от общего платежного потока</p>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-emerald-400/95 to-white/20" style="width: {{ [(heleket_income * 100 / payment_total) if payment_total else 0, 100]|min }}%;"></div></div>
-            </div>
-
-            <div id="view-stat-ton" class="stat-view hidden min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">TonConnect</p>
-                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format((tonconnect_income * 100 / payment_total) if payment_total else 0) }}%</span>
-                </div>
-                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-emerald-300 tracking-tight leading-none tabular-nums">{{ "{:,.0f}".format(tonconnect_income).replace(',', ' ') }} ₽</h4>
-                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Доля от общего платежного потока</p>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-sky-400/95 to-white/20" style="width: {{ [(tonconnect_income * 100 / payment_total) if payment_total else 0, 100]|min }}%;"></div></div>
-            </div>
-
-            <button onclick="toggleStat(event)"
-                class="w-9 h-9 rounded-xl border border-emerald-500/15 bg-emerald-500/10 flex items-center justify-center text-emerald-300 shadow-lg hover:bg-emerald-500/15 transition-all duration-300 shrink-0">
-                <span class="material-symbols-outlined text-[16px]" id="toggle-stat-icon">payments</span>
-            </button>
-        </div>
-    </div>
-
-    <script>
-        (function () {
-            const current = localStorage.getItem('dashboard_toggle_stat') || 'heleket';
-            applyToggleStat(current);
-        })();
-
-        window.toggleStat = function (event) {
-            if (event) event.stopPropagation();
-            const current = localStorage.getItem('dashboard_toggle_stat') || 'heleket';
-            const next = current === 'heleket' ? 'ton' : 'heleket';
-            localStorage.setItem('dashboard_toggle_stat', next);
-            applyToggleStat(next);
-        };
-
-        function applyToggleStat(mode) {
-            const hView = document.getElementById('view-stat-heleket');
-            const tView = document.getElementById('view-stat-ton');
-            const icon = document.getElementById('toggle-stat-icon');
-
-            if (!hView || !tView) return;
-
-            if (mode === 'heleket') {
-                hView.classList.remove('hidden');
-                tView.classList.add('hidden');
-                if (icon) icon.innerText = 'payments';
-            } else {
-                hView.classList.add('hidden');
-                tView.classList.remove('hidden');
-                if (icon) icon.innerText = 'account_balance_wallet';
-            }
-        }
-    </script>
-</div>
-
-<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
-    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
-    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
-    <div class="absolute -top-10 -right-8 w-24 h-24 bg-slate-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
-    <div class="relative z-10 flex h-full flex-col">
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Не купили ключ</p>
-                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(no_purchases_ratio) }}%</span>
-                </div>
-                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ no_purchases_count }}</h4>
-                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Пользователи без первой оплаты</p>
-            </div>
-            <button onclick="openUserGroupModal('no_purchases', 'Не купили ключ')" class="w-9 h-9 rounded-xl border border-slate-500/15 bg-slate-500/10 flex items-center justify-center text-slate-300 shadow-lg hover:bg-slate-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-                <span class="material-symbols-outlined text-[16px]">person_off</span>
-            </button>
-        </div>
-        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-slate-300/95 to-white/20" style="width: {{ [no_purchases_ratio, 100]|min }}%;"></div></div></div>
+<div>
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Обзор</p>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {% for title, value, hint, icon, color, delta, progress, span in overview %}
+            <div class="min-w-0">{{ kpi_card(title, value, hint, icon, color, delta, progress, span) }}</div>
+        {% endfor %}
     </div>
 </div>
-
-<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
-    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
-    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
-    <div class="absolute -top-10 -right-8 w-24 h-24 bg-orange-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
-    <div class="relative z-10 flex h-full flex-col">
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Нет активных</p>
-                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(inactive_buyers_ratio) }}%</span>
-                </div>
-                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ inactive_buyers_count }}</h4>
-                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Покупали, но сейчас без активного ключа</p>
-            </div>
-            <button onclick="openUserGroupModal('inactive_buyers', 'Нет активных (Покупали)')" class="w-9 h-9 rounded-xl border border-orange-500/15 bg-orange-500/10 flex items-center justify-center text-orange-300 shadow-lg hover:bg-orange-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-                <span class="material-symbols-outlined text-[16px]">history</span>
-            </button>
-        </div>
-        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-orange-300/95 to-white/20" style="width: {{ [inactive_buyers_ratio, 100]|min }}%;"></div></div></div>
+<div class="payment-stat-block">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Платежи</p>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {% for title, value, hint, icon, color in payments %}
+            {% set ratio = (value * 100 / payment_total) if payment_total else 0 %}
+            {{ kpi_card(title, value, hint, icon, color, ratio, ratio) }}
+        {% endfor %}
     </div>
 </div>
-
-<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
-    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
-    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
-    <div class="absolute -top-10 -right-8 w-24 h-24 bg-pink-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
-    <div class="relative z-10 flex h-full flex-col">
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">На триале</p>
-                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(trials_ratio) }}%</span>
-                </div>
-                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ trials_count }}</h4>
-                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Пользователи с пробным доступом</p>
-            </div>
-            <button onclick="openUserGroupModal('trials', 'Пользователи на триале')" class="w-9 h-9 rounded-xl border border-pink-500/15 bg-pink-500/10 flex items-center justify-center text-pink-300 shadow-lg hover:bg-pink-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-                <span class="material-symbols-outlined text-[16px]">card_giftcard</span>
-            </button>
-        </div>
-        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-pink-300/95 to-white/20" style="width: {{ [trials_ratio, 100]|min }}%;"></div></div></div>
-    </div>
-</div>
-
-<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
-    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
-    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
-    <div class="absolute -top-10 -right-8 w-24 h-24 bg-teal-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
-    <div class="relative z-10 flex h-full flex-col">
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Купили ключ</p>
-                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(active_buyers_ratio) }}%</span>
-                </div>
-                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ active_buyers_count }}</h4>
-                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Покупатели с активным доступом</p>
-            </div>
-            <button onclick="openUserGroupModal('active_buyers', 'Покупатели с активным ключом')" class="w-9 h-9 rounded-xl border border-teal-500/15 bg-teal-500/10 flex items-center justify-center text-teal-300 shadow-lg hover:bg-teal-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-                <span class="material-symbols-outlined text-[16px]">verified_user</span>
-            </button>
-        </div>
-        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-teal-300/95 to-white/20" style="width: {{ [active_buyers_ratio, 100]|min }}%;"></div></div></div>
-    </div>
-</div>
-
-<div class="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0f0e]/80 p-3.5 sm:p-4 min-h-[108px] group shadow-2xl shadow-black/30 backdrop-blur-2xl payment-stat-block">
-    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.035] via-transparent to-transparent pointer-events-none"></div>
-    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none"></div>
-    <div class="absolute -top-10 -right-8 w-24 h-24 bg-fuchsia-500/[0.10] rounded-full blur-3xl opacity-80 pointer-events-none"></div>
-    <div class="relative z-10 flex h-full flex-col">
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                    <p class="truncate text-white/30 text-[9px] font-black uppercase tracking-[0.16em]">Активные ключи</p>
-                    <span class="shrink-0 rounded-full border border-white/[0.08] bg-black/25 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white/55">{{ "%.0f"|format(active_keys_ratio) }}%</span>
-                </div>
-                <h4 class="mt-1 text-lg sm:text-[20px] font-black text-white tracking-tight leading-none tabular-nums">{{ active_keys_count }}</h4>
-                <p class="mt-1 text-[9px] leading-tight font-bold tracking-[0.01em] text-white/40">Ключи с текущим активным статусом</p>
-            </div>
-            <button onclick="openUserGroupModal('active_keys', 'Все активные ключи')" class="w-9 h-9 rounded-xl border border-fuchsia-500/15 bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-300 shadow-lg hover:bg-fuchsia-500/15 hover:scale-105 transition-all duration-300 cursor-pointer shrink-0">
-                <span class="material-symbols-outlined text-[16px]">vpn_key</span>
-            </button>
-        </div>
-        <div class="mt-auto pt-2"><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"><div class="h-full rounded-full bg-gradient-to-r from-fuchsia-300/95 to-white/20" style="width: {{ [active_keys_ratio, 100]|min }}%;"></div></div></div>
+<div class="payment-stat-block">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Воронка</p>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {% for title, value, hint, icon, ratio in funnel %}
+            {{ kpi_card(title, value, hint, icon, 'violet', ratio, ratio) }}
+        {% endfor %}
     </div>
 </div>

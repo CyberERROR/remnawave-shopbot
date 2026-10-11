@@ -23,6 +23,8 @@ ssh_sessions = {}
 ssh_sessions_lock = threading.Lock()
 server_country_cache = {}
 server_country_cache_lock = threading.Lock()
+node_update_tasks = {}
+node_update_tasks_lock = threading.Lock()
 
 def clean_ansi(text):
     if not text: return ""
@@ -214,6 +216,39 @@ def register_node_routes(app, login_required, get_common_template_data):
         delete_ssh_target
     )
     from shop_bot.data_manager import speedtest_runner
+
+    def update_remnanode(server_type, name):
+        server, error = get_ssh_server(name, server_type)
+        if error:
+            return {'ok': False, 'error': 'Нода не найдена'}
+        creds, error = get_ssh_credentials(server)
+        if error:
+            return {'ok': False, 'error': 'Не удается войти на сервер'}
+        host, port, username, password, key_path = creds
+        version_command = "docker image inspect remnawave/node:latest --format '{{if .RepoDigests}}{{index .RepoDigests 0}}{{else}}{{.Id}}{{end}}' 2>/dev/null"
+        before_version = execute_ssh_command(host, port, username, password, version_command, timeout=20, key_path=key_path)
+        logger.info(f"Обновление ноды Remnawave {server_type}/{name} ({host}:{port})")
+        pull_result = execute_ssh_command(host, port, username, password, 'cd /opt/remnanode && docker compose pull', timeout=240, key_path=key_path)
+        if not pull_result.get('ok'):
+            return {'ok': False, 'error': pull_result.get('error') or 'Не удалось загрузить образ ноды'}
+        restart_result = execute_ssh_command(host, port, username, password, 'cd /opt/remnanode && docker compose down && docker compose up -d && docker compose logs --tail=100', timeout=120, key_path=key_path)
+        if not restart_result.get('ok'):
+            return {'ok': False, 'error': restart_result.get('error') or 'Не удалось перезапустить ноду'}
+        prune_result = execute_ssh_command(host, port, username, password, 'docker image prune -f', timeout=60, key_path=key_path)
+        if not prune_result.get('ok'):
+            return {'ok': False, 'error': prune_result.get('error') or 'Не удалось очистить неиспользуемые образы'}
+        after_version = execute_ssh_command(host, port, username, password, version_command, timeout=20, key_path=key_path)
+        before_output = before_version.get('output', '').strip()
+        after_output = after_version.get('output', '').strip()
+        pull_output = pull_result.get('output', '').lower()
+        updated = before_output != after_output or any(value in pull_output for value in ('downloaded newer image', 'pull complete', 'pulled'))
+        return {
+            'ok': True,
+            'updated': updated,
+            'message': 'Нода Remnawave обновлена до актуальной версии' if updated else 'Уже установлена последняя версия ноды',
+            'version_before': before_output,
+            'version_after': after_output
+        }
 
     @app.route('/node')
     @login_required
@@ -858,28 +893,41 @@ def register_node_routes(app, login_required, get_common_template_data):
     @login_required
     def node_server_update(server_type, name):
         try:
-            server, error = get_ssh_server(name, server_type)
-            if error: return error
-            creds, error = get_ssh_credentials(server)
-            if error: return error
-            host, port, username, password, key_path = creds
-            command = 'cd /opt/remnanode && docker compose pull && docker compose down && docker compose up -d && docker compose logs --tail=100'
-            logger.info(f"Обновление ноды Remnawave {server_type}/{name} ({host}:{port})")
-            result = execute_ssh_command(host, port, username, password, command, timeout=180, key_path=key_path)
-            if result.get('ok') or result.get('exit_status') == 0:
-                return jsonify({
-                    'ok': True,
-                    'message': 'Нода Remnawave обновлена до актуальной версии',
-                    'output': result.get('output', '')
-                })
-            return jsonify({
-                'ok': False,
-                'error': result.get('error') or 'Не удалось обновить ноду Remnawave',
-                'output': result.get('output', '')
-            }), 500
+            result = update_remnanode(server_type, name)
+            return jsonify(result), 200 if result.get('ok') else 500
         except Exception as e:
             logger.error(f"Ошибка обновления ноды {server_type}/{name}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @app.route('/node/servers/update/<server_type>/<name>/start', methods=['POST'])
+    @login_required
+    def node_server_update_start(server_type, name):
+        task_id = str(uuid.uuid4())
+        with node_update_tasks_lock:
+            node_update_tasks[task_id] = {'done': False, 'result': None}
+
+        def run_update():
+            try:
+                result = update_remnanode(server_type, name)
+            except Exception as error:
+                logger.error(f"Ошибка фонового обновления ноды {server_type}/{name}: {error}")
+                result = {'ok': False, 'error': 'Не удалось обновить ноду'}
+            with node_update_tasks_lock:
+                node_update_tasks[task_id] = {'done': True, 'result': result}
+
+        threading.Thread(target=run_update, daemon=True).start()
+        return jsonify({'ok': True, 'task_id': task_id})
+
+    @app.route('/node/servers/update/status/<task_id>')
+    @login_required
+    def node_server_update_status(task_id):
+        with node_update_tasks_lock:
+            task = node_update_tasks.get(task_id)
+        if not task:
+            return jsonify({'ok': False, 'error': 'Задача обновления не найдена'}), 404
+        if not task['done']:
+            return jsonify({'ok': True, 'done': False})
+        return jsonify({'ok': True, 'done': True, 'result': task['result']})
 
     @app.route('/node/servers/deploy/check-status/<name>', methods=['GET'])
     @login_required

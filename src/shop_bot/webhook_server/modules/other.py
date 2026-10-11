@@ -278,7 +278,7 @@ def execute_ssh_command(host, port, username, password, command, timeout=10, key
 
 # ===== АСИНХРОННАЯ ОТПРАВКА РАССЫЛКИ =====
 # Выполняет рассылку сообщений пользователям с поддержкой медиа и кнопок
-async def send_broadcast_async(bot, users, text, media_path=None, media_type=None, buttons=None, mode='all', task_id=None, skip_banned=False):
+async def send_broadcast_async(bot, users, text, media_path=None, media_type=None, buttons=None, mode='all', task_id=None, skip_banned=False, keyboard_columns=1):
     sent, failed, skipped, total = 0, 0, 0, len(users)
     blocked_bot, deactivated = 0, 0
     added_to_banned, removed_from_banned = 0, 0
@@ -351,7 +351,7 @@ async def send_broadcast_async(bot, users, text, media_path=None, media_type=Non
                     except Exception:
                         btn_kwargs.pop('style', None)
                         builder.add(InlineKeyboardButton(**btn_kwargs))
-                builder.adjust(1)
+                builder.adjust(keyboard_columns)
                 keyboard = builder.as_markup() if builder.export() else None
             
             if media_path and media_type:
@@ -610,6 +610,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def broadcast_preview():
         try:
             text, buttons_json, media_filename = request.form.get('text', ''), request.form.get('buttons', '[]'), request.form.get('media_filename', '')
+            keyboard_columns = min(3, max(1, int(request.form.get('keyboard_columns', '1'))))
             buttons = json.loads(buttons_json) if buttons_json else []
             
             admin_id, error = get_admin_id_safe()
@@ -648,7 +649,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
                     except Exception:
                         btn_kwargs.pop('style', None)
                         builder.add(InlineKeyboardButton(**btn_kwargs))
-                builder.adjust(1)
+                builder.adjust(keyboard_columns)
                 keyboard = builder.as_markup() if builder.export() else None
             
             media_path, media_type = None, None
@@ -705,6 +706,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     def broadcast_send():
         try:
             text, mode, buttons_json, media_filename = request.form.get('text', ''), request.form.get('mode', 'all'), request.form.get('buttons', '[]'), request.form.get('media_filename', '')
+            keyboard_columns = min(3, max(1, int(request.form.get('keyboard_columns', '1'))))
             telegram_ids_raw = request.form.get('telegram_ids', '')
             skip_banned = request.form.get('skip_banned') == 'true'
             
@@ -821,7 +823,7 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
             if not loop or not loop.is_running(): return jsonify({'ok': False, 'error': 'Цикл событий недоступен'}), 500
             
             task_id = str(uuid.uuid4())
-            asyncio.run_coroutine_threadsafe(send_broadcast_async(bot, all_users, text, media_path, media_type, buttons, mode, task_id, skip_banned), loop)
+            asyncio.run_coroutine_threadsafe(send_broadcast_async(bot, all_users, text, media_path, media_type, buttons, mode, task_id, skip_banned, keyboard_columns), loop)
             return jsonify({'ok': True, 'task_id': task_id, 'total_users': len(all_users)})
         except Exception as e:
             logger.error(f"Ошибка запуска рассылки: {e}")

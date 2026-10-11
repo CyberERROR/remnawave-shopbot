@@ -36,6 +36,7 @@
     <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
 
 
@@ -144,6 +145,10 @@
 
         .modal-overlay.open {
             display: flex;
+        }
+
+        #custom-confirm-modal {
+            z-index: 1060;
         }
 
         .modal-content {
@@ -496,20 +501,18 @@
     {% macro nav_link(endpoint, label, icon, group=[]) %}
     {% set is_active = request.endpoint == endpoint or request.endpoint in group %}
     <a href="{{ url_for(endpoint) }}" title="{{ label }}"
-        class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 relative group overflow-hidden {{ 'bg-white/10 text-white border border-white/10 shadow-[0_4px_20px_-5px_rgba(255,255,255,0.05)]' if is_active else 'text-white/60 hover:text-white hover:bg-white/5' }}">
+        class="relative flex min-h-9 items-center gap-3 overflow-hidden rounded-xl border px-3 py-2 transition-all duration-150 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 {{ 'border-white/[0.12] bg-white/[0.08] font-semibold text-white' if is_active else 'border-transparent text-white/60 hover:border-white/[0.06] hover:bg-white/[0.04] hover:text-white' }}">
         {% if is_active %}
-        <div class="absolute inset-y-0 left-0 w-1 bg-primary rounded-r-full shadow-[0_0_10px_rgba(19,236,128,0.8)]">
+            <div class="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-primary">
         </div>
         {% endif %}
+        <i data-lucide="{{ icon }}" class="h-4 w-4 flex-shrink-0 transition-colors {{ 'text-primary' if is_active else 'text-white/50 group-hover:text-white/80' }}" aria-hidden="true"></i>
         <span
-            class="material-symbols-outlined text-[22px] flex-shrink-0 transition-transform group-hover:scale-110 {{ 'text-primary drop-shadow-[0_0_8px_rgba(19,236,128,0.5)]' if is_active else 'group-hover:text-white/80' }}">{{
-            icon }}</span>
-        <span
-            class="text-[14px] font-semibold tracking-wide whitespace-nowrap sidebar-text {{ 'text-white' if is_active else '' }}">{{
+            class="text-xs sm:text-sm font-medium whitespace-nowrap sidebar-text {{ 'text-white' if is_active else '' }}">{{
             label }}</span>
         {% if endpoint == 'support_list_page' %}
         <span id="sidebar-support-badge"
-            class="hidden absolute right-3 w-5 h-5 rounded-full bg-primary text-background-dark text-[10px] font-bold items-center justify-center shadow-[0_0_10px_rgba(19,236,128,0.4)] sidebar-badge"></span>
+            class="hidden absolute right-3 min-w-5 h-5 rounded-full bg-white/[0.08] px-1.5 text-white text-[10px] font-medium tabular-nums items-center justify-center sidebar-badge"></span>
         {% endif %}
     </a>
     {% endmacro %}
@@ -517,26 +520,23 @@
     {% macro nav_link_header(endpoint, label, icon, group=[]) %}
     {% set is_active = request.endpoint == endpoint or request.endpoint in group %}
     <a href="{{ url_for(endpoint) }}"
-        class="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 whitespace-nowrap flex-shrink-0 {{ 'bg-white/10 text-white shadow-lg shadow-white/5' if is_active else 'text-white/50 hover:text-white hover:bg-white/5' }}">
-        <span class="material-symbols-outlined text-[20px] {{ 'text-primary' if is_active else '' }}">{{
-            icon }}</span>
-        <span class="text-sm font-semibold tracking-wide">{{ label }}</span>
+        class="flex min-h-8 flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-2.5 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 {{ 'border-white/[0.12] bg-white/[0.08] font-semibold text-white' if is_active else 'border-transparent text-white/60 hover:border-white/[0.06] hover:bg-white/[0.04] hover:text-white' }}">
+        <i data-lucide="{{ icon }}" class="h-4 w-4 transition-colors {{ 'text-primary' if is_active else 'text-white/50' }}" aria-hidden="true"></i>
+        <span class="text-xs font-medium">{{ label }}</span>
         {% if endpoint == 'support_list_page' %}
         <span id="sidebar-support-badge"
-            class="hidden ml-1 w-5 h-5 rounded-full bg-primary text-background-dark text-[10px] font-bold flex items-center justify-center"></span>
+            class="hidden ml-1 min-w-5 h-5 rounded-full bg-white/[0.08] px-1.5 text-white text-[10px] font-medium tabular-nums items-center justify-center"></span>
         {% endif %}
     </a>
     {% endmacro %}
 
     {% macro status_indicator(color, label, pulse=false) %}
-    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-{{ color }}/10 border border-{{ color }}/20">
+    <div class="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-1.5">
         <span class="relative flex h-2 w-2">
-            {% if pulse %}<span
-                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-{{ color }} opacity-75"></span>{%
-            endif %}
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-{{ color }}"></span>
+            {% if pulse %}<span class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 {% if color == 'primary' %}bg-primary{% elif color == 'yellow-400' %}bg-amber-400{% else %}bg-red-400{% endif %}"></span>{% endif %}
+            <span class="relative inline-flex h-2 w-2 rounded-full {% if color == 'primary' %}bg-primary{% elif color == 'yellow-400' %}bg-amber-400{% else %}bg-red-400{% endif %}"></span>
         </span>
-        <span class="text-xs font-bold text-{{ color }} uppercase tracking-wider">{{ label }}</span>
+        <span class="font-mono text-xs tabular-nums uppercase tracking-wider {% if color == 'primary' %}text-primary{% elif color == 'yellow-400' %}text-amber-300{% else %}text-red-300{% endif %}">{{ label }}</span>
     </div>
     {% endmacro %}
 
@@ -548,113 +548,110 @@
 
             {% if settings.dashboard_layout == 'sidebar' %}
             <div id="sidebar-overlay"
-                class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity lg:hidden"
+                class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm transition-opacity xl:hidden"
                 onclick="toggleSidebar()"></div>
 
             <aside id="main-sidebar"
-                class="fixed lg:static inset-y-0 left-0 z-50 w-72 bg-[#14281e] dark:bg-[#0a0f0d] border-r border-white/5 flex flex-col transition-transform duration-300 transform -translate-x-full lg:translate-x-0 overflow-y-auto no-scrollbar shadow-2xl lg:shadow-none pt-4 lg:pt-0 rounded-tr-3xl rounded-br-3xl">
+                 class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col overflow-y-auto border-r border-white/[0.08] bg-[#0b0f0e]/95 pt-4 shadow-2xl backdrop-blur-2xl transition-transform duration-300 no-scrollbar xl:static xl:translate-x-0 xl:pt-0 xl:shadow-none">
                 <script>
-                    if (localStorage.getItem('sidebar-collapsed') === 'true' && window.innerWidth >= 1024) {
+                    if (localStorage.getItem('sidebar-collapsed') === 'true' && window.innerWidth >= 1280) {
                         const sb = document.getElementById('main-sidebar');
                         if (sb) {
-                            sb.classList.remove('w-72', 'transition-transform', 'duration-300'); // Временно отключаем transition
+                            sb.classList.remove('w-72', 'transition-transform', 'duration-300');
                             sb.classList.add('w-[80px]');
-                            // Возвращаем transition после смены ширины
                             setTimeout(() => sb.classList.add('transition-transform', 'duration-300'), 50);
                         }
                     }
                 </script>
-                <div class="px-6 py-5 flex items-center justify-between border-b border-white/5 relative h-[72px]">
+                <div class="px-4 py-4 flex items-center justify-between border-b border-white/[0.08] relative min-h-[64px]">
                     <a href="{{ url_for('dashboard_page') }}"
                         class="flex items-center gap-3 hover:opacity-90 transition-opacity sidebar-brand-link">
                         <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"
                             class="h-8 w-auto object-contain drop-shadow-md flex-shrink-0"
                             onerror="this.style.display='none'" />
                         <h1 id="brand-title"
-                            class="text-lg font-bold text-white tracking-wide whitespace-nowrap overflow-hidden text-ellipsis sidebar-text"
+                            class="text-sm font-semibold text-white tracking-tight whitespace-nowrap overflow-hidden text-ellipsis sidebar-text"
                             data-refresh-part="brand">{{ brand_title or 'Admin Panel' }}</h1>
                     </a>
                     <div class="flex items-center gap-1">
                         <div class="sidebar-header-actions transition-opacity duration-300 flex items-center gap-1">
                             <button type="button" id="brand-edit"
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                                class="flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-white/50 transition duration-150 hover:border-white/[0.08] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                                 title="Сменить название">
-                                <span class="material-symbols-outlined text-[20px]">edit</span>
+                                <i data-lucide="pencil" class="h-4 w-4" aria-hidden="true"></i>
                             </button>
                             <button type="button" onclick="toggleSidebar()"
-                                class="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                <span class="material-symbols-outlined text-[24px]">close</span>
+                                class="xl:hidden flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition-all hover:bg-white/[0.06] hover:text-white">
+                                <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
                             </button>
                         </div>
                         <button type="button" onclick="toggleDesktopSidebar()"
-                            class="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all outline-none">
-                            <span class="material-symbols-outlined text-[20px] transition-transform duration-300"
-                                id="desktop-sidebar-icon">menu_open</span>
+                                class="hidden h-8 w-8 items-center justify-center rounded-xl border border-transparent text-white/50 transition duration-150 hover:border-white/[0.08] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 xl:flex">
+                            <i data-lucide="panel-left-close" class="h-4 w-4 transition-transform duration-300" id="desktop-sidebar-icon" aria-hidden="true"></i>
                             <script>
-                                if (localStorage.getItem('sidebar-collapsed') === 'true' && window.innerWidth >= 1024) {
-                                    document.getElementById('desktop-sidebar-icon').textContent = 'menu';
+                                if (localStorage.getItem('sidebar-collapsed') === 'true' && window.innerWidth >= 1280) {
+                                    document.getElementById('desktop-sidebar-icon').setAttribute('data-lucide', 'panel-left-open');
                                 }
                             </script>
                         </button>
                     </div>
                 </div>
 
-                <nav class="flex-1 px-4 py-6 space-y-8">
+                <nav class="flex-1 px-3 py-5 space-y-5">
                     <div>
-                        <div class="flex items-center gap-2 px-3 mb-3 sidebar-section-title">
-                            <div class="w-1 h-3.5 bg-sky-500 rounded-full flex-shrink-0"></div>
+                        <div class="flex items-center gap-2 px-3 mb-2 sidebar-section-title">
+                            <div class="w-0.5 h-3 rounded-full bg-primary flex-shrink-0"></div>
                             <span
-                                class="text-[10px] font-bold text-white/40 uppercase tracking-widest whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Обзор</span>
+                                class="text-[11px] font-semibold text-white/50 uppercase tracking-[0.14em] whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Обзор</span>
                         </div>
                         <div class="space-y-1">
-                            {{ nav_link('dashboard_page', 'Главная', 'star') }}
+                            {{ nav_link('dashboard_page', 'Главная', 'layout-dashboard') }}
                         </div>
                     </div>
 
-                    <div class="border-b border-white/5 mx-3 border-dashed"></div>
+                    <div class="border-b border-white/[0.06] mx-3"></div>
 
                     <div>
-                        <div class="flex items-center gap-2 px-3 mb-3 sidebar-section-title">
-                            <div class="w-1 h-3.5 bg-primary rounded-full flex-shrink-0"></div>
+                        <div class="flex items-center gap-2 px-3 mb-2 sidebar-section-title">
+                            <div class="w-0.5 h-3 rounded-full bg-sky-400 flex-shrink-0"></div>
                             <span
-                                class="text-[10px] font-bold text-white/40 uppercase tracking-widest whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Управление</span>
+                                class="text-[11px] font-semibold text-white/50 uppercase tracking-[0.14em] whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Управление</span>
                         </div>
                         <div class="space-y-1">
-                            {{ nav_link('users_page', 'Пользователи', 'group') }}
-                            {{ nav_link('admin_keys_page', 'Ключи', 'key') }}
-                            {{ nav_link('support_list_page', 'Поддержка', 'support_agent', ['support_ticket_page']) }}
-                            {{ nav_link('button_constructor_page', 'Конструктор кнопок', 'build') }}
+                            {{ nav_link('users_page', 'Пользователи', 'users-round') }}
+                            {{ nav_link('admin_keys_page', 'Ключи', 'key-round') }}
+                            {{ nav_link('support_list_page', 'Поддержка', 'messages-square', ['support_ticket_page']) }}
+                            {{ nav_link('button_constructor_page', 'Конструктор кнопок', 'blocks') }}
                         </div>
                     </div>
 
-                    <div class="border-b border-white/5 mx-3 border-dashed"></div>
+                    <div class="border-b border-white/[0.06] mx-3"></div>
 
                     <div>
-                        <div class="flex items-center gap-2 px-3 mb-3 sidebar-section-title">
-                            <div class="w-1 h-3.5 bg-purple-500 rounded-full flex-shrink-0"></div>
+                        <div class="flex items-center gap-2 px-3 mb-2 sidebar-section-title">
+                            <div class="w-0.5 h-3 rounded-full bg-violet-400 flex-shrink-0"></div>
                             <span
-                                class="text-[10px] font-bold text-white/40 uppercase tracking-widest whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Система</span>
+                                class="text-[11px] font-semibold text-white/50 uppercase tracking-[0.14em] whitespace-nowrap overflow-hidden opacity-100 transition-opacity duration-300">Система</span>
                         </div>
                         <div class="space-y-1">
                             {{ nav_link('settings_page', 'Настройки', 'settings') }}
-                            {{ nav_link('monitor_page', 'Мониторинг', 'monitoring') }}
-                            {{ nav_link('node_page', 'Ноды', 'dns') }}
-                            {{ nav_link('premna_page', 'Remnawave', 'graphic_eq') }}
+                            {{ nav_link('monitor_page', 'Мониторинг', 'activity') }}
+                            {{ nav_link('node_page', 'Ноды', 'server') }}
+                            {{ nav_link('premna_page', 'Remnawave', 'waves') }}
 
 
 
                             {% set is_other_active = request.endpoint == 'other_page' %}
                             <div class="sidebar-accordion">
                                 <button type="button" onclick="toggleAccordion(this)" title="Прочее"
-                                    class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 relative group overflow-hidden {{ 'bg-white/5 text-white' if is_other_active else 'text-white/60 hover:text-white hover:bg-white/5' }}">
+                                    class="flex min-h-10 w-full items-center justify-between rounded-xl border border-transparent px-3 py-2 transition-all duration-200 relative group overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 {{ 'bg-white/[0.06] text-white border-white/[0.08]' if is_other_active else 'text-white/60 hover:border-white/[0.06] hover:bg-white/[0.03] hover:text-white' }}">
                                     <div class="flex items-center gap-3">
+                                        <i data-lucide="ellipsis" class="h-4 w-4 flex-shrink-0 {{ 'text-primary' if is_other_active else 'text-white/50 group-hover:text-white/80' }}" aria-hidden="true"></i>
                                         <span
-                                            class="material-symbols-outlined text-[20px] flex-shrink-0 transition-transform group-hover:scale-110 {{ 'text-primary' if is_other_active else '' }}">more_horiz</span>
-                                        <span
-                                            class="text-[14px] font-semibold tracking-wide whitespace-nowrap sidebar-text text-left">Прочее</span>
+                                        class="text-xs sm:text-sm font-medium whitespace-nowrap sidebar-text text-left">Прочее</span>
                                     </div>
                                     <span
-                                        class="material-symbols-outlined text-[18px] transition-transform duration-300 accordion-icon rotate-180 sidebar-text">expand_more</span>
+                                        class="accordion-icon rotate-180 transition-transform duration-300 sidebar-text"><i data-lucide="chevron-down" class="h-4 w-4 text-white/40" aria-hidden="true"></i></span>
                                 </button>
 
                                 <div
@@ -676,12 +673,10 @@
                                         <a href="{{ url }}" title="{{ label }}"
                                             data-base-url="{{ url_for('other_page') }}" {% if current_tab
                                             %}onclick="handleOtherPageNav(event, '{{ current_tab }}')" {% endif %}
-                                            class="flex items-center gap-3 pl-[20px] pr-3 py-2.5 rounded-lg transition-all duration-200 group {{ 'text-white' if is_sub_active else 'text-white/50 hover:text-white hover:bg-white/5' }}">
+                                            class="flex min-h-9 items-center gap-3 rounded-lg border border-transparent border-l border-l-white/[0.08] py-2 pl-9 pr-3 transition-all duration-150 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 {{ 'bg-white/[0.04] text-white border-white/[0.06]' if is_sub_active else 'text-white/50 hover:border-white/[0.05] hover:bg-white/[0.03] hover:text-white' }}">
+                                            <i data-lucide="{{ icon }}" class="h-4 w-4 flex-shrink-0 {{ 'text-primary' if is_sub_active else 'text-white/50 group-hover:text-white/80' }}" aria-hidden="true"></i>
                                             <span
-                                                class="material-symbols-outlined text-[18px] flex-shrink-0 {{ 'text-primary' if is_sub_active else 'group-hover:text-white/80' }}">{{
-                                                icon }}</span>
-                                            <span
-                                                class="text-[14px] font-medium tracking-wide whitespace-nowrap sidebar-text">{{
+                                                class="text-xs font-medium tracking-wide whitespace-nowrap sidebar-text">{{
                                                 label }}</span>
                                         </a>
                                         {% endmacro %}
@@ -690,11 +685,11 @@
                                         {{ accordion_link(url_for('other_page') ~ '?tab=broadcast', 'Рассылка', 'send',
                                         'broadcast') }}
                                         {{ accordion_link(url_for('other_page') ~ '?tab=promo', 'Промо коды',
-                                        'confirmation_number', 'promo') }}
-                                        {{ accordion_link(url_for('other_page') ~ '?tab=logs', 'Логи Бота', 'article',
+                                        'ticket-percent', 'promo') }}
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=logs', 'Логи Бота', 'file-text',
                                         'logs') }}
                                         {% if webapp_exists %}
-                                        {{ accordion_link(url_for('other_page') ~ '?tab=webapp', 'WebApp', 'language',
+                                        {{ accordion_link(url_for('other_page') ~ '?tab=webapp', 'WebApp', 'globe',
                                         'webapp') }}
                                         {% endif %}
                                     </div>
@@ -725,52 +720,62 @@
                     </div>
                 </nav>
 
-                <div class="p-4 border-t border-white/5 mt-auto space-y-3">
+                <div class="mt-auto space-y-3 border-t border-white/[0.08] p-3">
+                    <div class="flex h-9 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3" title="Статистика за сегодня">
+                        <span class="text-[10px] font-medium text-white/50 whitespace-nowrap">Сегодня:</span>
+                        <span class="flex items-center gap-1 text-[10px] font-mono tabular-nums text-white/70" title="Новые пользователи">
+                            +{{ sidebar_today_stats.get('today_new_users', 0) }}<i data-lucide="user-round" class="h-3 w-3 text-sky-300" aria-hidden="true"></i>
+                        </span>
+                        <span class="flex items-center gap-1 text-[10px] font-mono tabular-nums text-white/70" title="Купленные ключи">
+                            +{{ sidebar_today_stats.get('today_bought_keys', 0) }}<i data-lucide="key-round" class="h-3 w-3 text-primary" aria-hidden="true"></i>
+                        </span>
+                        <span class="flex items-center gap-1 text-[10px] font-mono tabular-nums text-white/70" title="Выданные пробные тарифы">
+                            +{{ sidebar_today_stats.get('today_trials', 0) }}<i data-lucide="gift" class="h-3 w-3 text-violet-300" aria-hidden="true"></i>
+                        </span>
+                        <span class="flex items-center gap-1 text-[10px] font-mono tabular-nums text-white/70" title="Заработано сегодня со всех платёжных систем">
+                            +{{ sidebar_today_stats.get('today_income', 0)|round(0)|int }}<span class="text-amber-300 font-sans" aria-hidden="true">₽</span>
+                        </span>
+                    </div>
                     <div class="flex items-center justify-center gap-1.5 py-1 sidebar-actions-grid">
                         {% if main_running or support_running %}
                         <form action="{{ url_for('stop_both_bots_route') }}" method="post" class="inline"
                             data-confirm="Остановить работу всех модулей?">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                             <button type="submit" title="Остановить систему"
-                                class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center transition-all group hover:bg-white/10">
-                                <span
-                                    class="material-symbols-outlined text-lg text-red-400 group-hover:text-red-300 group-hover:scale-110 transition-transform">stop_circle</span>
+                                class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition duration-150 group hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                <i data-lucide="circle-stop" class="h-4 w-4 text-red-300 transition-transform group-hover:scale-110" aria-hidden="true"></i>
                             </button>
                         </form>
                         {% elif all_settings_ok and support_settings_ok %}
                         <form action="{{ url_for('start_both_bots_route') }}" method="post" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                             <button type="submit" title="Запустить систему"
-                                class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center transition-all group hover:bg-white/10">
-                                <span
-                                    class="material-symbols-outlined text-lg text-primary group-hover:text-primary group-hover:scale-110 transition-transform">play_circle</span>
+                                class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition duration-150 group hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                <i data-lucide="circle-play" class="h-4 w-4 text-primary transition-transform group-hover:scale-110" aria-hidden="true"></i>
                             </button>
                         </form>
                         {% endif %}
                         <button type="button" id="btn-restart-bot" title="Полная перезагрузка"
-                            class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center transition-all group hover:bg-white/10">
-                            <span
-                                class="material-symbols-outlined text-lg text-blue-400 group-hover:text-blue-300 group-hover:scale-110 transition-transform">restart_alt</span>
+                                class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition duration-150 group hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                            <i data-lucide="rotate-cw" class="h-4 w-4 text-sky-300 transition-transform group-hover:scale-110" aria-hidden="true"></i>
                         </button>
                         <button type="button" id="theme-toggle-btn" title="Переключить тему"
-                            class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center transition-all group hover:bg-white/10">
-                            <span class="material-symbols-outlined text-lg text-white/50 dark:hidden">dark_mode</span>
-                            <span
-                                class="material-symbols-outlined text-lg text-primary hidden dark:block">light_mode</span>
+                            class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition duration-150 group hover:border-white/20 hover:bg-white/[0.06]">
+                            <i data-lucide="moon" class="hidden h-4 w-4 text-white/50 dark:block" aria-hidden="true"></i>
+                            <i data-lucide="sun" class="h-4 w-4 text-white/50 dark:hidden" aria-hidden="true"></i>
                         </button>
                         <form action="{{ url_for('logout_page') }}" method="post" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                             <button type="submit" title="Выйти"
-                                class="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center transition-all group hover:bg-red-500/20">
-                                <span
-                                    class="material-symbols-outlined text-lg text-white/40 group-hover:text-red-400 group-hover:scale-110 transition-transform">logout</span>
+                                class="flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/15 bg-red-400/[0.08] transition duration-150 group hover:border-red-400/25 hover:bg-red-400/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60">
+                                <i data-lucide="log-out" class="h-4 w-4 text-white/50 transition-transform group-hover:scale-110 group-hover:text-red-300" aria-hidden="true"></i>
                             </button>
                         </form>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 sidebar-bottom-grid">
                         <div
-                            class="flex items-center justify-between px-2.5 h-9 rounded-xl bg-white/5 border border-white/5 sidebar-bottom-status">
+                            class="flex h-9 items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 sidebar-bottom-status">
                             <div class="flex items-center gap-1.5">
                                 {% if main_running and support_running %}
                                 <span class="relative flex h-2 w-2">
@@ -779,7 +784,7 @@
                                     <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                                 </span>
                                 <span
-                                    class="text-[9px] font-bold text-primary uppercase tracking-wider sidebar-text">Live</span>
+                                        class="text-[10px] font-medium text-primary uppercase tracking-wider sidebar-text">Live</span>
                                 {% elif main_running or support_running %}
                                 <span class="relative flex h-2 w-2">
                                     <span
@@ -787,13 +792,13 @@
                                     <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-400"></span>
                                 </span>
                                 <span
-                                    class="text-[9px] font-bold text-yellow-400 uppercase tracking-wider sidebar-text">Limited</span>
+                                        class="text-[10px] font-medium text-amber-300 uppercase tracking-wider sidebar-text">Limited</span>
                                 {% else %}
                                 <span class="relative flex h-2 w-2">
                                     <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                                 </span>
                                 <span
-                                    class="text-[9px] font-bold text-red-500 uppercase tracking-wider sidebar-text">Stopped</span>
+                                        class="text-[10px] font-medium text-red-300 uppercase tracking-wider sidebar-text">Stop</span>
                                 {% endif %}
                             </div>
                             <span
@@ -802,7 +807,7 @@
 
                         <button type="button" id="about-info-btn-mobile" onclick="openModal('aboutModal')"
                             title="О проекте"
-                            class="flex items-center justify-center px-2.5 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all group border border-white/5 relative overflow-hidden">
+                            class="flex h-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 text-white/50 transition duration-150 group hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 relative overflow-hidden">
                             <span id="about-info-icon-mobile"
                                 class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">info</span>
                             <span id="about-new-badge-mobile" class="hidden relative flex items-center justify-center">
@@ -822,32 +827,32 @@
 
                 {% if settings.dashboard_layout == 'sidebar' %}
                 <header
-                    class="w-full border-b border-white/5 p-3 lg:hidden sticky top-0 z-40 bg-[#102219]/90 dark:bg-black/90 backdrop-blur-md transition-colors duration-300">
+                    class="sticky top-0 z-40 h-14 w-full border-b border-white/[0.08] bg-[#0b0f0e]/80 px-3 backdrop-blur-2xl xl:hidden">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <button type="button" onclick="toggleSidebar()"
-                                class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-all">
-                                <span class="material-symbols-outlined text-2xl">menu</span>
+                                class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                <i data-lucide="menu" class="h-4 w-4" aria-hidden="true"></i>
                             </button>
-                            <div class="flex items-center gap-2">
+                        <div class="flex min-w-0 items-center gap-2">
                                 <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"
-                                    class="h-8 w-auto object-contain" onerror="this.style.display='none'" />
+                                    class="h-7 w-auto object-contain" onerror="this.style.display='none'" />
                             </div>
                         </div>
                     </div>
                 </header>
                 {% else %}
                 <header
-                    class="w-full bg-[#102219] dark:bg-black border-b border-white/10 p-4 lg:p-6 sticky top-0 z-50 transition-colors duration-300">
-                    <div class="max-w-7xl mx-auto">
-                        <div class="flex items-center justify-between mb-6">
+                    class="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-[#0b0f0e]/80 px-3 backdrop-blur-2xl lg:px-6">
+                    <div class="max-w-7xl mx-auto py-3">
+                        <div class="flex h-14 items-center justify-between">
                             <div class="flex items-center gap-4">
                                 <a href="{{ url_for('dashboard_page') }}"
                                     class="flex items-center gap-3 hover:opacity-90 transition-opacity">
                                     <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"
-                                        class="h-9 w-auto object-contain drop-shadow-md"
+                                        class="h-7 w-auto object-contain"
                                         onerror="this.style.display='none'" />
-                                    <h1 id="brand-title" class="text-xl font-bold text-white tracking-wide"
+                                    <h1 id="brand-title" class="text-sm font-semibold text-white tracking-tight"
                                         data-refresh-part="brand">{{ brand_title or 'Admin Panel' }}</h1>
                                 </a>
 
@@ -855,14 +860,14 @@
 
                                 <div class="flex items-center gap-1">
                                     <button type="button" id="brand-edit"
-                                        class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                                    class="flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-white/50 transition duration-150 hover:border-white/[0.08] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                                         title="Сменить название">
-                                        <span class="material-symbols-outlined text-xl">edit</span>
+                                        <i data-lucide="pencil" class="h-4 w-4" aria-hidden="true"></i>
                                     </button>
                                     <button type="button" id="about-info-btn"
-                                        class="w-9 h-9 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                                        class="flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-white/50 transition duration-150 hover:border-white/[0.08] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                                         title="О проекте">
-                                        <span id="about-info-icon" class="material-symbols-outlined text-xl">info</span>
+                                        <i id="about-info-icon" data-lucide="info" class="h-4 w-4" aria-hidden="true"></i>
                                         <span id="about-new-badge"
                                             class="hidden relative flex items-center justify-center">
                                             <span
@@ -882,124 +887,116 @@
                                     %}data-confirm="{{ confirm }}" {% endif %}>
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                     <button type="submit" title="{{ title }}"
-                                        class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 {{ action_color }}">
-                                        <span
-                                            class="material-symbols-outlined text-xl {{ text_class }} {{ hover_class }} group-hover:scale-110 transition-transform">{{
-                                            icon }}</span>
+                                        class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition duration-150 group hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 {{ action_color }}">
+                                        <i data-lucide="{{ icon }}" class="h-4 w-4 {{ text_class }} {{ hover_class }} transition-transform group-hover:scale-110" aria-hidden="true"></i>
                                     </button>
                                 </form>
                                 {% else %}
                                 <button type="button" id="{{ url }}" title="{{ title }}"
-                                    class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 {{ action_color }}">
-                                    <span
-                                        class="material-symbols-outlined text-xl {{ text_class }} {{ hover_class }} group-hover:scale-110 transition-transform">{{
-                                        icon }}</span>
+                                    class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition duration-150 group hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 {{ action_color }}">
+                                    <i data-lucide="{{ icon }}" class="h-4 w-4 {{ text_class }} {{ hover_class }} transition-transform group-hover:scale-110" aria-hidden="true"></i>
                                 </button>
                                 {% endif %}
                                 {% endmacro %}
 
                                 {% if main_running or support_running %}
-                                {{ header_icon_btn(url_for('stop_both_bots_route'), 'stop_circle', 'Остановить систему',
+                                {{ header_icon_btn(url_for('stop_both_bots_route'), 'circle-stop', 'Остановить систему',
                                 'text-red-400', 'group-hover:text-red-300', confirm='Остановить работу всех модулей?')
                                 }}
                                 {% elif all_settings_ok and support_settings_ok %}
-                                {{ header_icon_btn(url_for('start_both_bots_route'), 'play_circle', 'Запустить систему',
+                                {{ header_icon_btn(url_for('start_both_bots_route'), 'circle-play', 'Запустить систему',
                                 'text-primary', 'group-hover:text-primary') }}
                                 {% endif %}
 
-                                {{ header_icon_btn('btn-restart-bot', 'restart_alt', 'Полная перезагрузка',
+                                {{ header_icon_btn('btn-restart-bot', 'rotate-cw', 'Полная перезагрузка',
                                 'text-blue-400',
                                 'group-hover:text-blue-300', is_form=false) }}
-                                {{ header_icon_btn(url_for('logout_page'), 'logout', 'Выйти', 'text-white/40',
+                                {{ header_icon_btn(url_for('logout_page'), 'log-out', 'Выйти', 'text-white/40',
                                 'group-hover:text-white') }}
 
                                 <button type="button" id="theme-toggle-btn" title="Переключить тему"
-                                    class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group hover:bg-white/10 ml-1">
-                                    <span
-                                        class="material-symbols-outlined text-xl text-white/50 dark:hidden">dark_mode</span>
-                                    <span
-                                        class="material-symbols-outlined text-xl text-primary hidden dark:block">light_mode</span>
+                                    class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition duration-150 group hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ml-1">
+                                    <i data-lucide="moon" class="hidden h-4 w-4 text-white/50 dark:block" aria-hidden="true"></i>
+                                    <i data-lucide="sun" class="h-4 w-4 text-white/50 dark:hidden" aria-hidden="true"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-between mt-4">
-                            <nav class="flex items-center w-full gap-2 pb-1 relative">
+                        <div class="flex min-w-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-3">
+                            <nav class="flex items-center w-full gap-2 relative">
                                 <div
-                                    class="flex items-center gap-2 overflow-x-auto flex-1 md:flex-none no-scrollbar mask-gradient-right">
-                                    {{ nav_link_header('dashboard_page', 'Главная', 'home') }}
-                                    {{ nav_link_header('users_page', 'Пользователи', 'group') }}
-                                    {{ nav_link_header('admin_keys_page', 'Ключи', 'key') }}
-                                    {{ nav_link_header('support_list_page', 'Поддержка', 'support_agent',
+                                    class="flex items-center gap-1.5 overflow-x-auto flex-1 md:flex-none no-scrollbar mask-gradient-right">
+                                    {{ nav_link_header('dashboard_page', 'Главная', 'layout-dashboard') }}
+                                    {{ nav_link_header('users_page', 'Пользователи', 'users-round') }}
+                                    {{ nav_link_header('admin_keys_page', 'Ключи', 'key-round') }}
+                                    {{ nav_link_header('support_list_page', 'Поддержка', 'messages-square',
                                     ['support_ticket_page']) }}
-                                    {{ nav_link_header('settings_page', 'Настройки', 'settings') }}
-                                    {{ nav_link_header('premna_page', 'Remnawave', 'graphic_eq') }}
+                                     {{ nav_link_header('settings_page', 'Настройки', 'settings') }}
+                                     {{ nav_link_header('node_page', 'Ноды', 'server') }}
+                                     {{ nav_link_header('premna_page', 'Remnawave', 'waves') }}
                                 </div>
 
                                 <div
-                                    class="relative group shrink-0 ml-1 pl-2 border-l border-white/5 md:border-0 md:ml-0 md:pl-0">
+                                    class="relative group shrink-0 ml-2 pl-2 border-l border-white/[0.08] md:border-0 md:ml-0 md:pl-0">
                                     {% set is_other_active = request.endpoint in ['other_page', 'monitor_page',
                                     'button_constructor_page'] %}
                                     <div
-                                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap {{ 'bg-white/10 text-white shadow-lg shadow-white/5 border border-white/10' if is_other_active else 'text-white/70 hover:text-white hover:bg-white/5' }}">
-                                        <span
-                                            class="material-symbols-outlined text-[20px] {{ 'text-primary' if is_other_active else '' }}">more_horiz</span>
-                                        <span class="text-sm font-bold tracking-tight hidden sm:inline">Прочее</span>
-                                        <span
-                                            class="material-symbols-outlined text-[16px] opacity-50 group-hover:rotate-180 transition-transform">expand_more</span>
+                                        class="flex min-h-8 cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl border px-2.5 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 {{ 'border-white/[0.12] bg-white/[0.08] font-semibold text-white' if is_other_active else 'border-transparent text-white/60 hover:border-white/[0.06] hover:bg-white/[0.04] hover:text-white' }}">
+                                        <i data-lucide="ellipsis" class="h-4 w-4 {{ 'text-primary' if is_other_active else 'text-white/50' }}" aria-hidden="true"></i>
+                                        <span class="text-xs font-medium hidden sm:inline">Прочее</span>
+                                        <i data-lucide="chevron-down" class="h-3.5 w-3.5 text-white/40 transition-transform group-hover:rotate-180" aria-hidden="true"></i>
                                     </div>
 
                                     <div
                                         class="absolute right-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible z-[9999]">
                                         <div
-                                            class="w-[180px] bg-[#102219]/40 dark:bg-[#000000]/40 backdrop-blur-md border border-white/10 rounded-2xl p-1.5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] flex flex-col gap-0.5">
+                                            class="flex w-56 flex-col gap-0.5 rounded-2xl border border-white/10 bg-[#0b0f0e]/95 p-1.5 shadow-2xl backdrop-blur-2xl">
                                             <a href="{{ url_for('monitor_page') }}"
-                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[#06bd5d] hover:bg-white/5 transition-all group/item">
-                                                <span class="material-symbols-outlined text-[16px]">monitoring</span>
-                                                <span class="text-[12px] font-semibold">Мониторинг</span>
+                                                class="flex min-h-8 items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-1.5 text-xs font-medium text-white/70 transition duration-150 hover:border-white/[0.06] hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 group/item">
+                                                <i data-lucide="activity" class="h-4 w-4 text-white/50" aria-hidden="true"></i>
+                                                <span>Мониторинг</span>
                                             </a>
                                             <a href="{{ url_for('button_constructor_page') }}"
-                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[#06bd5d] hover:bg-white/5 transition-all">
-                                                <span class="material-symbols-outlined text-[16px]">build</span>
-                                                <span class="text-[12px] font-semibold">Конструктор кнопок</span>
+                                                class="flex min-h-8 items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-1.5 text-xs font-medium text-white/70 transition duration-150 hover:border-white/[0.06] hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                                <i data-lucide="blocks" class="h-4 w-4 text-white/50" aria-hidden="true"></i>
+                                                <span>Конструктор кнопок</span>
                                             </a>
                                             <div class="h-px bg-white/5 my-1 mx-2"></div>
                                             <a href="{{ url_for('other_page') }}?tab=broadcast"
                                                 data-base-url="{{ url_for('other_page') }}"
                                                 onclick="handleOtherPageNav(event, 'broadcast')"
-                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                                <span class="material-symbols-outlined text-[16px]">send</span>
-                                                <span class="text-[12px] font-semibold">Рассылка</span>
+                                                class="flex min-h-8 items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-white/50 transition duration-150 hover:border-white/[0.06] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                                <i data-lucide="send" class="h-4 w-4 text-white/50" aria-hidden="true"></i>
+                                                <span>Рассылка</span>
                                             </a>
                                             <a href="{{ url_for('other_page') }}?tab=promo"
                                                 data-base-url="{{ url_for('other_page') }}"
                                                 onclick="handleOtherPageNav(event, 'promo')"
-                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                                <span
-                                                    class="material-symbols-outlined text-[16px]">confirmation_number</span>
-                                                <span class="text-[12px] font-semibold">Промо коды</span>
+                                                class="flex min-h-8 items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-white/50 transition duration-150 hover:border-white/[0.06] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                                <i data-lucide="ticket-percent" class="h-4 w-4 text-white/50" aria-hidden="true"></i>
+                                                <span>Промо коды</span>
                                             </a>
                                             <a href="{{ url_for('other_page') }}?tab=servers"
                                                 data-base-url="{{ url_for('other_page') }}"
                                                 onclick="handleOtherPageNav(event, 'servers')"
-                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                                <span class="material-symbols-outlined text-[16px]">dns</span>
-                                                <span class="text-[12px] font-semibold">Сервера</span>
+                                                class="flex min-h-8 items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-white/50 transition duration-150 hover:border-white/[0.06] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                                <i data-lucide="server" class="h-4 w-4 text-white/50" aria-hidden="true"></i>
+                                                <span>Сервера</span>
                                             </a>
                                             <a href="{{ url_for('other_page') }}?tab=logs"
                                                 data-base-url="{{ url_for('other_page') }}"
                                                 onclick="handleOtherPageNav(event, 'logs')"
-                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                                <span class="material-symbols-outlined text-[16px]">article</span>
-                                                <span class="text-[12px] font-semibold">Логи Бота</span>
+                                                class="flex min-h-8 items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-white/50 transition duration-150 hover:border-white/[0.06] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                                <i data-lucide="file-text" class="h-4 w-4 text-white/50" aria-hidden="true"></i>
+                                                <span>Логи Бота</span>
                                             </a>
                                             {% if webapp_exists %}
                                             <a href="{{ url_for('other_page') }}?tab=webapp"
                                                 data-base-url="{{ url_for('other_page') }}"
                                                 onclick="handleOtherPageNav(event, 'webapp')"
-                                                class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                                                <span class="material-symbols-outlined text-[16px]">language</span>
-                                                <span class="text-[12px] font-semibold">WebApp</span>
+                                                class="flex min-h-8 items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-white/50 transition duration-150 hover:border-white/[0.06] hover:bg-white/[0.03] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                                <i data-lucide="globe" class="h-4 w-4 text-white/50" aria-hidden="true"></i>
+                                                <span>WebApp</span>
                                             </a>
                                             {% endif %}
                                         </div>
@@ -1007,9 +1004,9 @@
                                 </div>
                             </nav>
 
-                            <div class="items-center gap-3 hidden lg:flex pl-4 border-l border-white/10 ml-4">
+                            <div class="items-center gap-3 hidden lg:flex pl-3 border-l border-white/[0.08]">
                                 <span
-                                    class="text-[10px] font-bold uppercase tracking-widest text-white/30">Status</span>
+                                    class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">Status</span>
                                 {% if main_running and support_running %}
                                 {{ status_indicator('primary', 'Live', true) }}
                                 {% elif main_running or support_running %}
@@ -1039,12 +1036,12 @@
             <div class="modal-content p-6 max-w-lg">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary">edit</span>
+                        <i data-lucide="pencil" class="h-5 w-5 text-primary" aria-hidden="true"></i>
                         Название панели
                     </h3>
                     <button onclick="closeModal('brandModal')"
-                        class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
-                        <span class="material-symbols-outlined">close</span>
+                        class="flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-white/30 transition duration-150 hover:border-white/[0.08] hover:bg-white/[0.03] hover:text-white">
+                        <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
                     </button>
                 </div>
 
@@ -1075,14 +1072,14 @@
             <div class="modal-content modal-about-scale p-0 overflow-hidden">
                 <div class="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                     <h3 class="text-xl font-bold text-white/90 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary">info</span>
+                        <i data-lucide="info" class="h-5 w-5 text-primary" aria-hidden="true"></i>
                         О проекте <span
                             class="px-2 py-0.5 rounded-md bg-white/5 text-white/40 text-xs font-mono ml-2">v{{
                             project_info.version }}</span>
                     </h3>
                     <button onclick="closeModal('aboutModal')"
-                        class="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all">
-                        <span class="material-symbols-outlined">close</span>
+                        class="flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-white/30 transition duration-150 hover:border-white/[0.08] hover:bg-white/[0.03] hover:text-white">
+                        <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
                     </button>
                 </div>
 
@@ -1173,25 +1170,21 @@
         </div>
 
         <!-- Global Custom Confirmation Modal -->
-        <div id="custom-confirm-modal" class="modal-overlay">
-            <div class="modal-content p-6 max-w-md text-center">
-                <div
-                    class="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mx-auto mb-4 border border-red-500/10 shadow-[0_0_30px_rgba(239,68,68,0.15)]">
-                    <span class="material-symbols-outlined text-3xl">warning</span>
+        <div id="custom-confirm-modal" class="modal-overlay fixed inset-0 items-center justify-center bg-black/70 p-3 backdrop-blur-md sm:p-5">
+            <div class="modal-content relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#0b0f0e]/95 shadow-2xl shadow-black/50 backdrop-blur-2xl">
+                <div class="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-rose-400/[0.08] blur-3xl"></div>
+                <div class="pointer-events-none absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-amber-400/[0.06] blur-3xl"></div>
+                <div class="relative z-10 flex items-start gap-3 border-b border-white/10 p-4 sm:p-5">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-rose-400/20 bg-rose-400/10 text-rose-300"><i data-lucide="triangle-alert" class="h-[18px] w-[18px]" aria-hidden="true"></i></span>
+                    <div class="min-w-0 flex-1">
+                        <span class="mb-1 inline-flex rounded-md border border-rose-400/20 bg-rose-400/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">Подтверждение</span>
+                        <h3 id="confirm-modal-title" class="text-base font-bold tracking-tight text-white sm:text-lg">Вы уверены?</h3>
+                        <p id="confirm-modal-text" class="mt-1 max-w-xl text-xs leading-relaxed text-white/50">Это действие необратимо. Пожалуйста, подтвердите выполнение.</p>
+                    </div>
                 </div>
-                <h3 id="confirm-modal-title" class="text-xl font-bold text-white mb-2">Вы уверены?</h3>
-                <p id="confirm-modal-text" class="text-white/60 text-sm leading-relaxed mb-8">Это действие необратимо.
-                    Пожалуйста, подтвердите выполнение.</p>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <button type="button" onclick="closeConfirmModal(false)"
-                        class="px-5 py-3 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-all border border-white/5">
-                        Отмена
-                    </button>
-                    <button type="button" onclick="closeConfirmModal(true)"
-                        class="px-5 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all">
-                        Да, выполнить
-                    </button>
+                <div class="relative z-10 flex justify-end gap-2 p-4 sm:p-5">
+                    <button type="button" onclick="closeConfirmModal(false)" class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold tracking-wide text-white/65 transition-all duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">Отмена</button>
+                    <button type="button" onclick="closeConfirmModal(true)" class="rounded-lg border border-rose-400/20 bg-rose-400/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-rose-200 transition-all duration-150 hover:bg-rose-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">Да, выполнить</button>
                 </div>
             </div>
         </div>
@@ -1822,7 +1815,8 @@
 
                 if (btn) {
                     btn.disabled = true;
-                    btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">sync</span>';
+                    btn.innerHTML = '<i data-lucide="loader-circle" class="h-4 w-4 animate-spin" aria-hidden="true"></i>';
+                    window.lucide?.createIcons({ root: btn, attrs: { 'stroke-width': 1.75 } });
                 }
 
                 try {
@@ -1940,12 +1934,14 @@
                 if (isCollapsed) {
                     sidebar.classList.remove('w-[80px]');
                     sidebar.classList.add('w-72');
-                    icon.textContent = 'menu_open';
+                    icon.setAttribute('data-lucide', 'panel-left-close');
+                    window.lucide?.createIcons({ root: icon.parentElement, attrs: { 'stroke-width': 1.75 } });
                     localStorage.setItem('sidebar-collapsed', 'false');
                 } else {
                     sidebar.classList.add('w-[80px]');
                     sidebar.classList.remove('w-72');
-                    icon.textContent = 'menu';
+                    icon.setAttribute('data-lucide', 'panel-left-open');
+                    window.lucide?.createIcons({ root: icon.parentElement, attrs: { 'stroke-width': 1.75 } });
                     localStorage.setItem('sidebar-collapsed', 'true');
                 }
             }
@@ -1964,6 +1960,7 @@
                 } else {
                     overlay.classList.remove('hidden');
                     setTimeout(() => overlay.classList.add('opacity-100'), 10);
+                    document.body.classList.add('overflow-hidden');
                 }
             }
 
@@ -1988,16 +1985,51 @@
         </script>
 
         <script>
-            window.renderSvgEmoji = function (container = document.body) {
-                if (!window.twemoji || !container) return;
-                twemoji.parse(container, {
-                    folder: 'svg',
-                    ext: '.svg',
-                    base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
-                });
-            };
+            (() => {
+                const emojiCacheKey = 'ui-emoji-pack-v1';
+                const emojiCacheTtl = 604800000;
+                const emojiPack = {
+                    expiresAt: 0,
+                    version: 1,
+                    emojis: []
+                };
 
-            document.addEventListener('DOMContentLoaded', () => window.renderSvgEmoji());
+                try {
+                    const cachedPack = JSON.parse(localStorage.getItem(emojiCacheKey) || 'null');
+                    if (cachedPack && cachedPack.expiresAt > Date.now()) Object.assign(emojiPack, cachedPack);
+                } catch (_) { }
+
+                if (!emojiPack.expiresAt || emojiPack.expiresAt <= Date.now()) {
+                    emojiPack.expiresAt = Date.now() + emojiCacheTtl;
+                    try { localStorage.setItem(emojiCacheKey, JSON.stringify(emojiPack)); } catch (_) { }
+                }
+
+                window.renderSvgEmoji = function (container = document.body) {
+                    if (!window.twemoji || !container) return;
+                    twemoji.parse(container, {
+                        folder: 'svg',
+                        ext: '.svg',
+                        base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
+                    });
+                };
+
+                window.refreshUiIcons = function (root = document) {
+                    if (!root) return;
+                    window.renderSvgEmoji(root);
+                    window.lucide?.createIcons({ root, attrs: { 'stroke-width': 1.75 } });
+                };
+
+                window.refreshLucideIcons = window.refreshUiIcons;
+                window.cacheEmojiPack = function (container = document) {
+                    if (!container || !window.twemoji) return;
+                    const emojis = Array.from(container.querySelectorAll('img.emoji')).map(image => image.alt).filter(Boolean);
+                    if (!emojis.length) return;
+                    emojiPack.emojis = Array.from(new Set(emojiPack.emojis.concat(emojis)));
+                    emojiPack.expiresAt = Date.now() + emojiCacheTtl;
+                    try { localStorage.setItem(emojiCacheKey, JSON.stringify(emojiPack)); } catch (_) { }
+                };
+                document.addEventListener('DOMContentLoaded', () => window.refreshUiIcons());
+            })();
         </script>
 
         {% block scripts %}{% endblock %}

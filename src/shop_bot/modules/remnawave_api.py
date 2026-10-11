@@ -659,6 +659,79 @@ async def reset_user_traffic(user_id: int | str) -> bool:
     return True
 
 
+async def reset_user_traffic_on_host(user_id: int | str, host_name: str | None = None) -> bool:
+    if not user_id:
+        return False
+    encoded_user_id = quote(str(user_id))
+    path = f"/api/users/{encoded_user_id}/actions/reset-traffic"
+    if host_name:
+        await _request_for_host(host_name, "POST", path)
+    else:
+        await _request("POST", path)
+    return True
+
+
+async def update_user_traffic_limit_on_host(
+    user_id: int | str,
+    traffic_limit_gb: int | None,
+    host_name: str | None = None,
+) -> bool:
+    if not user_id:
+        return False
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return False
+    traffic_limit_bytes = int(traffic_limit_gb * (1024 ** 3)) if traffic_limit_gb and traffic_limit_gb > 0 else 0
+    payload = {
+        "id": resolved_id,
+        "trafficLimitBytes": traffic_limit_bytes,
+    }
+    path = "/api/users"
+    if host_name:
+        await _request_for_host(host_name, "PATCH", path, json_payload=payload, expected_status=(200, 201))
+    else:
+        await _request("PATCH", path, json_payload=payload, expected_status=(200, 201))
+    return True
+
+
+async def update_user_hwid_limit_on_host(
+    user_id: int | str,
+    hwid_limit: int,
+    host_name: str | None = None,
+) -> bool:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return False
+    payload = {"id": resolved_id, "hwidDeviceLimit": hwid_limit}
+    if host_name:
+        await _request_for_host(host_name, "PATCH", "/api/users", json_payload=payload, expected_status=(200, 201))
+    else:
+        await _request("PATCH", "/api/users", json_payload=payload, expected_status=(200, 201))
+    return True
+
+
+async def get_user_traffic_stats_on_host(
+    user_id: int | str,
+    host_name: str | None = None,
+) -> dict[str, Any] | None:
+    if not user_id:
+        return None
+    user = await get_user_by_id(user_id, host_name=host_name)
+    if not user or not isinstance(user, dict):
+        return None
+    limit_bytes = user.get("trafficLimitBytes") or user.get("trafficLimit") or 0
+    used_bytes = user.get("usedTrafficBytes") or user.get("trafficUsed") or 0
+    limit_gb = float(limit_bytes) / (1024 ** 3) if limit_bytes else 0.0
+    used_gb = float(used_bytes) / (1024 ** 3) if used_bytes else 0.0
+    return {
+        "user_id": user_id,
+        "traffic_limit_bytes": limit_bytes,
+        "used_traffic_bytes": used_bytes,
+        "traffic_limit_gb": limit_gb,
+        "used_traffic_gb": used_gb,
+    }
+
+
 async def set_user_status(user_id: int | str, active: bool) -> bool:
     if not user_id:
         return False
@@ -666,6 +739,33 @@ async def set_user_status(user_id: int | str, active: bool) -> bool:
     action = "enable" if active else "disable"
     await _request("POST", f"/api/users/{encoded_user_id}/actions/{action}")
     return True
+
+
+async def revoke_user_subscription(
+    user_id: int | str,
+    *,
+    host_name: str | None = None,
+    short_uuid: str | None = None,
+) -> dict[str, Any] | None:
+    if not user_id:
+        return None
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return None
+    path = f"/api/users/{quote(str(resolved_id))}/actions/revoke"
+    payload: dict[str, Any] = {}
+    if short_uuid:
+        payload.update({"revokeOnlyPasswords": False, "shortUuid": short_uuid})
+    response = await (
+        _request_for_host(host_name, "POST", path, json_payload=payload)
+        if host_name
+        else _request("POST", path, json_payload=payload)
+    )
+    response_payload = response.json() if response.content else {}
+    response_data = response_payload.get("response", response_payload) if isinstance(response_payload, dict) else None
+    if isinstance(response_data, dict) and isinstance(response_data.get("user"), dict):
+        return response_data["user"]
+    return response_data if isinstance(response_data, dict) else None
 
 
 async def add_users_to_external_squad(host_name: str, squad_uuid: str, user_ids: list[int]) -> bool:
@@ -954,3 +1054,19 @@ async def delete_user_device(user_id: int | str, hwid: str, host_name: str | Non
     except Exception as e:
         logger.error(f"Remnawave: ошибка удаления устройства {hwid} (user {user_id}): {e}")
         return False
+
+
+async def delete_all_user_devices(user_id: int | str, host_name: str | None = None) -> dict[str, int]:
+    devices = await get_user_devices(user_id, host_name=host_name)
+    deleted = 0
+    failed = 0
+    for device in devices:
+        hwid = device.get("hwid") if isinstance(device, dict) else None
+        if not hwid:
+            failed += 1
+            continue
+        if await delete_user_device(user_id, str(hwid), host_name=host_name):
+            deleted += 1
+        else:
+            failed += 1
+    return {"deleted": deleted, "failed": failed}

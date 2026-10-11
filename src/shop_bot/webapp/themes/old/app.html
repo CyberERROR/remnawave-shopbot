@@ -506,6 +506,23 @@
                 </div>
             </div>
 
+                        <div id="traffic-tier-slider" class="glass-card border border-white/10 rounded-xl p-3 mt-2"
+                style="display:none;">
+                <div class="flex items-center gap-3 mb-2.5">
+                    <div class="w-8 h-8 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                        <span class="material-icons-round text-cyan-400 text-sm">data_usage</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="traffic-tier-count-label" class="text-sm font-black text-white">Базовый</span>
+                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Трафик</span>
+                        </div>
+                        <div id="traffic-tier-price-label" class="text-[9px] text-gray-500">Дополнительный трафик</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5" id="traffic-tier-dots-container"></div>
+            </div>
+
             <div id="device-tier-slider" class="glass-card border border-white/10 rounded-xl p-3 mt-2"
                 style="display:none;">
                 <div class="flex items-center gap-3 mb-2.5">
@@ -609,6 +626,23 @@
                         {{ renew_keys_dropdown_options }}
                     </div>
                 </div>
+            </div>
+
+                        <div id="traffic-tier-slider-renew" class="glass-card border border-white/10 rounded-xl p-3 mt-2"
+                style="display:none;">
+                <div class="flex items-center gap-3 mb-2.5">
+                    <div class="w-8 h-8 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                        <span class="material-icons-round text-cyan-400 text-sm">data_usage</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="traffic-tier-count-label-renew" class="text-sm font-black text-white">Базовый</span>
+                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Трафик</span>
+                        </div>
+                        <div id="traffic-tier-price-label-renew" class="text-[9px] text-gray-500">Дополнительный трафик</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5" id="traffic-tier-dots-container-renew"></div>
             </div>
 
             <div id="device-tier-slider-renew" class="glass-card border border-white/10 rounded-xl p-3 mt-2"
@@ -1335,7 +1369,7 @@
             if (renewPlanGrid) {
                 const firstPlan = renewPlanGrid.querySelector('.plan-btn[data-host]');
                 if (firstPlan && typeof loadDeviceTiers === 'function') {
-                    loadDeviceTiers(firstPlan.getAttribute('data-host'), 'renew');
+                    loadDeviceTiers(firstPlan.getAttribute('data-host'), 'renew', window.selectedKeyId, firstPlan.getAttribute('data-plan-id'));
                 }
             }
 
@@ -1471,6 +1505,7 @@
             if (payText) payText.textContent = btnLabel + price + ' ₽';
 
             const target = isRenewPage ? 'renew' : 'purchase';
+            loadDeviceTiers(host, target, isRenewPage ? window.selectedKeyId : null, planId);
             recalcSelectedPlanPrice(target);
         };
 
@@ -1949,17 +1984,150 @@
             }
         }
 
+        
+        let activeTrafficTierData = { purchase: { tiers: [], selected: 0, trafficTierId: null, trafficPrice: 0 }, renew: { tiers: [], selected: 0, trafficTierId: null, trafficPrice: 0 } };
+
+        function loadTrafficTiersData(data, target) {
+            const isRenew = target === 'renew';
+            const slider = document.getElementById(isRenew ? 'traffic-tier-slider-renew' : 'traffic-tier-slider');
+            if (!slider) return;
+
+            if (data.ok && data.traffic_mode === 'tiers' && data.traffic_tiers && data.traffic_tiers.length > 0) {
+                if (isRenew && data.traffic_no_choice_renew) {
+                    slider.style.display = 'none';
+                    return;
+                }
+                if (!isRenew && data.traffic_no_choice_buy) {
+                    slider.style.display = 'none';
+                    return;
+                }
+                renderTrafficTierDots(data.traffic_tiers, target, data.base_traffic_gb, data.selected_traffic_gb);
+            } else {
+                slider.style.display = 'none';
+                activeTrafficTierData[target] = { tiers: [], selected: 0, trafficTierId: null, trafficPrice: 0 };
+            }
+        }
+
+        function renderTrafficTierDots(tiers, target, baseTrafficGb = 0, selectedTrafficGb = 0) {
+            const isRenew = target === 'renew';
+            const slider = document.getElementById(isRenew ? 'traffic-tier-slider-renew' : 'traffic-tier-slider');
+            const container = document.getElementById(isRenew ? 'traffic-tier-dots-container-renew' : 'traffic-tier-dots-container');
+            if (!slider || !container) return;
+
+            const allOptions = [{ tier_id: 0, traffic_gb: baseTrafficGb, price: 0 }, ...tiers];
+            activeTrafficTierData[target] = { tiers: allOptions, selected: 0, trafficTierId: null, trafficPrice: 0 };
+
+            let dotsHtml = '<div class="relative flex-1 flex items-center traffic-tier-drag-container" style="cursor: pointer; touch-action: pan-y; padding: 15px 0; margin: -10px 0;">';
+            dotsHtml += '<div class="absolute left-0 right-0 h-[7px] bg-white/10 rounded-full pointer-events-none"></div>';
+            dotsHtml += '<div id="' + (isRenew ? 'traffic-tier-track-fill-renew' : 'traffic-tier-track-fill') + '" class="absolute left-0 h-[7px] bg-cyan-400 rounded-full transition-all duration-150 pointer-events-none" style="width:0%"></div>';
+            dotsHtml += '<div class="relative flex justify-between w-full pointer-events-none">';
+
+            allOptions.forEach((opt, idx) => {
+                const isActive = idx === 0;
+                const activeClass = isActive ? 'bg-cyan-400 border-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.4)]' : 'bg-[#1a1a1a] border-white/20';
+                dotsHtml += `<div class="traffic-tier-dot w-5 h-5 rounded-full border-2 ${activeClass} transition-all duration-150 relative z-10 pointer-events-none" data-idx="${idx}" data-target="${target}"></div>`;
+            });
+
+            dotsHtml += '</div></div>';
+            container.innerHTML = dotsHtml;
+            slider.style.display = 'block';
+            updateTrafficTierLabels(target, 0);
+
+            bindTrafficTierDragEvents(container.querySelector('.traffic-tier-drag-container'), allOptions.length, target);
+            const selectedIndex = allOptions.findIndex(opt => opt.tier_id > 0 && opt.traffic_gb === selectedTrafficGb);
+            if (selectedIndex > 0) {
+                const selectedDot = container.querySelector(`.traffic-tier-dot[data-idx="${selectedIndex}"]`);
+                if (selectedDot) window.selectTrafficTierDot(selectedDot);
+            }
+        }
+
+        function bindTrafficTierDragEvents(container, totalTiers, target) {
+            let isDragging = false;
+            function handleMove(e) {
+                if (!isDragging) return;
+                if (e.cancelable && e.type === 'touchmove') e.preventDefault();
+                const idx = getTierIndexFromEvent(e, container, totalTiers);
+                const data = activeTrafficTierData[target];
+                if (data && data.selected !== idx) {
+                    const dot = container.querySelector(`.traffic-tier-dot[data-idx="${idx}"]`);
+                    if (dot) window.selectTrafficTierDot(dot);
+                }
+            }
+            function handleStart(e) {
+                isDragging = true;
+                const idx = getTierIndexFromEvent(e, container, totalTiers);
+                const dot = container.querySelector(`.traffic-tier-dot[data-idx="${idx}"]`);
+                if (dot) window.selectTrafficTierDot(dot);
+            }
+            function handleEnd() { isDragging = false; }
+            container.addEventListener('mousedown', handleStart);
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('mouseup', handleEnd);
+            container.addEventListener('touchstart', handleStart, { passive: true });
+            document.addEventListener('touchmove', handleMove, { passive: false });
+            document.addEventListener('touchend', handleEnd);
+            document.addEventListener('touchcancel', handleEnd);
+        }
+
+        window.selectTrafficTierDot = function (el) {
+            const idx = parseInt(el.getAttribute('data-idx'));
+            const target = el.getAttribute('data-target');
+            const data = activeTrafficTierData[target];
+            if (!data || !data.tiers[idx]) return;
+
+            data.selected = idx;
+            const opt = data.tiers[idx];
+            data.trafficTierId = opt.tier_id > 0 ? opt.tier_id : null;
+            data.trafficPrice = opt.price;
+
+            const isRenew = target === 'renew';
+            const dots = el.closest('.traffic-tier-drag-container').querySelectorAll('.traffic-tier-dot');
+            dots.forEach((d, i) => {
+                if (i <= idx) {
+                    d.className = 'traffic-tier-dot w-5 h-5 rounded-full border-2 bg-cyan-400 border-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.4)] transition-all duration-150 relative z-10 pointer-events-none';
+                } else {
+                    d.className = 'traffic-tier-dot w-5 h-5 rounded-full border-2 bg-[#1a1a1a] border-white/20 transition-all duration-150 relative z-10 pointer-events-none';
+                }
+            });
+
+            const pct = data.tiers.length > 1 ? (idx / (data.tiers.length - 1)) * 100 : 0;
+            const fill = document.getElementById(isRenew ? 'traffic-tier-track-fill-renew' : 'traffic-tier-track-fill');
+            if (fill) fill.style.width = pct + '%';
+
+            updateTrafficTierLabels(target, idx);
+            recalcSelectedPlanPrice(target);
+        };
+
+        function updateTrafficTierLabels(target, idx) {
+            const isRenew = target === 'renew';
+            const data = activeTrafficTierData[target];
+            if (!data || !data.tiers[idx]) return;
+            const opt = data.tiers[idx];
+            const countEl = document.getElementById(isRenew ? 'traffic-tier-count-label-renew' : 'traffic-tier-count-label');
+            const priceEl = document.getElementById(isRenew ? 'traffic-tier-price-label-renew' : 'traffic-tier-price-label');
+
+            if (countEl) countEl.textContent = opt.tier_id === 0 ? (opt.traffic_gb > 0 ? `${opt.traffic_gb} ГБ` : '∞') : `+${opt.traffic_gb} ГБ`;
+            if (priceEl) {
+                if (opt.tier_id === 0) {
+                    priceEl.textContent = 'Включено в тариф';
+                } else {
+                    priceEl.textContent = `+${opt.price} ₽/мес`;
+                }
+            }
+        }
+
         let activeTierData = { purchase: { tiers: [], selected: 0, deviceCount: 1, tierPrice: 0 }, renew: { tiers: [], selected: 0, deviceCount: 1, tierPrice: 0 } };
         let tierCache = {};
 
-        async function loadDeviceTiers(hostName, target) {
+        async function loadDeviceTiers(hostName, target, keyId = null, planId = null) {
             if (!hostName) return;
             const isRenew = target === 'renew';
-            const key = hostName + (isRenew ? '_renew' : '_new');
+            const key = hostName + (isRenew ? '_renew_' + (keyId || '') : '_new') + '_plan_' + (planId || '');
             const slider = document.getElementById(isRenew ? 'device-tier-slider-renew' : 'device-tier-slider');
 
             if (tierCache[key]) {
-                renderTierDots(tierCache[key].tiers, target, tierCache[key].baseCount);
+                renderTierDots(tierCache[key].tiers, target, tierCache[key].baseCount, tierCache[key].selectedDeviceCount);
+                if (isRenew && tierCache[key].tierLockExtend) slider.style.display = 'none';
                 return;
             }
 
@@ -1967,20 +2135,16 @@
                 const resp = await fetch('/api/device-tiers', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ host_name: hostName })
+                    body: JSON.stringify({ host_name: hostName, key_id: isRenew ? keyId : null, plan_id: planId })
                 });
                 const data = await resp.json();
+                loadTrafficTiersData(data, target);
 
                 if (data.ok && data.device_mode === 'tiers' && data.tiers && data.tiers.length > 0) {
-                    if (isRenew && data.tier_lock_extend) {
-                        slider.style.display = 'none';
-                        activeTierData[target] = { tiers: [], selected: 0, deviceCount: data.base_device_count || 1, tierPrice: 0 };
-                        return;
-                    }
-
                     const baseCount = data.base_device_count || 1;
-                    tierCache[key] = { tiers: data.tiers, baseCount: baseCount };
-                    renderTierDots(data.tiers, target, baseCount);
+                    tierCache[key] = { tiers: data.tiers, baseCount: baseCount, selectedDeviceCount: data.selected_device_count, tierLockExtend: data.tier_lock_extend };
+                    renderTierDots(data.tiers, target, baseCount, data.selected_device_count);
+                    if (isRenew && data.tier_lock_extend) slider.style.display = 'none';
                 } else {
                     slider.style.display = 'none';
                     activeTierData[target] = { tiers: [], selected: 0, deviceCount: data.base_device_count || 1, tierPrice: 0 };
@@ -2044,7 +2208,7 @@
             document.addEventListener('touchcancel', handleEnd);
         }
 
-        function renderTierDots(tiers, target, baseCount = 1) {
+        function renderTierDots(tiers, target, baseCount = 1, selectedDeviceCount = null) {
             const isRenew = target === 'renew';
             const slider = document.getElementById(isRenew ? 'device-tier-slider-renew' : 'device-tier-slider');
             const container = document.getElementById(isRenew ? 'tier-dots-container-renew' : 'tier-dots-container');
@@ -2069,6 +2233,11 @@
             updateTierLabels(target, 0);
 
             bindTierDragEvents(container.querySelector('.tier-drag-container'), allOptions.length, target);
+            const selectedIndex = allOptions.findIndex(opt => opt.device_count === selectedDeviceCount);
+            if (selectedIndex > 0) {
+                const selectedDot = container.querySelector(`.tier-dot[data-idx="${selectedIndex}"]`);
+                if (selectedDot) window.selectTierDot(selectedDot);
+            }
         }
 
         window.selectTierDot = function (el) {
@@ -2122,13 +2291,14 @@
             const btnId = isRenew ? 'renew-pay-button' : 'pay-button';
             const textId = isRenew ? 'renew-pay-button-text' : 'pay-button-text';
             const data = activeTierData[target];
+            const trafficData = activeTrafficTierData[target];
 
             document.querySelectorAll(pageScope + ' .plan-btn').forEach(btn => {
                 if (btn.closest('.server-plans-container') && btn.closest('.server-plans-container').style.display === 'none') return;
                 const basePrice = parseFloat(btn.getAttribute('data-base-price') || btn.getAttribute('data-price') || '0');
                 if (!btn.getAttribute('data-base-price')) btn.setAttribute('data-base-price', basePrice);
                 const mf = parseFloat(btn.getAttribute('data-month-factor') || btn.getAttribute('data-months') || '1');
-                const tierTotal = (data.tierPrice || 0) * mf;
+                const tierTotal = ((data.tierPrice || 0) + (trafficData.trafficPrice || 0)) * mf;
                 const newPrice = Math.round(basePrice + tierTotal);
                 btn.setAttribute('data-price', newPrice);
                 const priceEl = btn.querySelector('.plan-price');
@@ -2139,7 +2309,7 @@
             if (!payBtn || payBtn.disabled) return;
             const basePrice = parseFloat(payBtn.getAttribute('data-base-price') || payBtn.getAttribute('data-price') || '0');
             const mf = parseFloat(payBtn.getAttribute('data-month-factor') || payBtn.getAttribute('data-months') || '1');
-            const tierTotal = (data.tierPrice || 0) * mf;
+            const tierTotal = ((data.tierPrice || 0) + (trafficData.trafficPrice || 0)) * mf;
             const newPrice = Math.round(basePrice + tierTotal);
             payBtn.setAttribute('data-price', newPrice);
             const label = isRenew ? 'Продлить за ' : 'Оплатить ';
@@ -2208,7 +2378,8 @@
         }
 
         async function openPaymentModal(planId, hostName, action, keyId, price, planName, tierDeviceCount = 1, tierPrice = 0, planMonths = "1") {
-            currentPaymentData = { planId, hostName, action, keyId, price, planName, tierDeviceCount, tierPrice, planMonths, promoCode: null };
+            const trd = activeTrafficTierData[action === "extend" ? "renew" : "purchase"];
+            currentPaymentData = { planId, hostName, action, keyId, price, planName, tierDeviceCount, tierPrice, planMonths, trafficTierId: trd ? trd.trafficTierId : null, trafficPrice: trd ? trd.trafficPrice : 0, promoCode: null };
             selectedMethod = null;
             activePaymentUrl = null;
 
@@ -2396,6 +2567,8 @@
                         host_name: currentPaymentData.hostName,
                         action: currentPaymentData.action,
                         key_id: currentPaymentData.keyId ? parseInt(currentPaymentData.keyId) : null,
+                        traffic_tier_id: currentPaymentData.trafficTierId || null,
+                        traffic_price: currentPaymentData.trafficPrice || 0,
                         tier_device_count: currentPaymentData.tierDeviceCount || 1,
                         tier_price: currentPaymentData.tierPrice || 0,
                         promo_code: currentPaymentData.promoCode

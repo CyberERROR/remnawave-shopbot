@@ -477,6 +477,7 @@ async def periodic_subscription_check(bot_controller: BotController):
         try:
             await sync_keys_with_panels()
 
+            await _check_expired_traffic_purchases()
 
             await _maybe_run_periodic_speedtests()
 
@@ -503,6 +504,13 @@ async def periodic_subscription_check(bot_controller: BotController):
             
         logger.info(f"Scheduler: Цикл завершён. Следующая проверка через {CHECK_INTERVAL_SECONDS} сек.")
         await asyncio.sleep(CHECK_INTERVAL_SECONDS)
+
+async def _check_expired_traffic_purchases():
+    try:
+        from shop_bot.data_manager.traffic_service import expire_old_traffic_purchases
+        await expire_old_traffic_purchases()
+    except Exception as e:
+        logger.error(f"Scheduler: Ошибка при обработке истёкших докупок трафика: {e}", exc_info=True)
 
 async def _maybe_run_periodic_speedtests():
     global _last_speedtests_run_at

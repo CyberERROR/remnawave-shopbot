@@ -694,6 +694,8 @@ def _ensure_users_columns(cursor: sqlite3.Cursor) -> None:
         "seller_active": "INTEGER DEFAULT 0",
         "app_theme": "TEXT DEFAULT 'forest'",
         "username_manually_set": "BOOLEAN DEFAULT 0",
+        "first_name": "TEXT",
+        "phone_number": "TEXT",
         "auth_token": "TEXT",
         "auth_email": "TEXT",
         "auth_pass": "TEXT",
@@ -746,6 +748,9 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
         "tier_lock_extend": "INTEGER DEFAULT 0",
         "button_style": "TEXT DEFAULT NULL",
         "icon_emoji_id": "TEXT DEFAULT NULL",
+        "traffic_mode": "TEXT DEFAULT 'plan'",
+        "traffic_no_choice_buy": "INTEGER DEFAULT 0",
+        "traffic_no_choice_renew": "INTEGER DEFAULT 0",
     }
     for column, definition in extras.items():
         _ensure_table_column(cursor, "xui_hosts", column, definition)
@@ -765,6 +770,37 @@ def _ensure_device_tiers_table(cursor: sqlite3.Cursor) -> None:
             UNIQUE(host_name, device_count)
         )
     ''')
+
+
+def _ensure_traffic_tiers_table(cursor: sqlite3.Cursor) -> None:
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS traffic_tiers (
+            tier_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            host_name TEXT NOT NULL,
+            traffic_gb INTEGER NOT NULL,
+            price REAL NOT NULL DEFAULT 0,
+            sort_order INTEGER DEFAULT 0,
+            UNIQUE(host_name, traffic_gb)
+        )
+    ''')
+
+
+def _ensure_key_traffic_purchases_table(cursor: sqlite3.Cursor) -> None:
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS key_traffic_purchases (
+            purchase_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key_id INTEGER NOT NULL,
+            traffic_gb INTEGER NOT NULL,
+            price REAL NOT NULL DEFAULT 0,
+            purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NOT NULL,
+            payment_id TEXT,
+            status TEXT DEFAULT 'active',
+            FOREIGN KEY (key_id) REFERENCES vpn_keys (key_id) ON DELETE CASCADE
+        )
+    ''')
+    _ensure_index(cursor, "idx_key_traffic_purchases_key", "key_traffic_purchases", "key_id")
+    _ensure_index(cursor, "idx_key_traffic_purchases_status", "key_traffic_purchases", "status")
 
 
 # ===== _ENSURE_PLANS_COLUMNS =====
@@ -1024,6 +1060,8 @@ def run_migration():
             _ensure_users_columns(cursor)
             _ensure_hosts_columns(cursor)
             _ensure_device_tiers_table(cursor)
+            _ensure_traffic_tiers_table(cursor)
+            _ensure_key_traffic_purchases_table(cursor)
             _ensure_plans_columns(cursor)
             _ensure_support_tickets_columns(cursor)
             _ensure_support_messages_columns(cursor)
@@ -1301,6 +1339,14 @@ def _ensure_default_button_configs(cursor: sqlite3.Cursor) -> None:
                 (menu_type, button_id, text, callback_data, url, row_position, column_position, sort_order, button_width, is_active)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, ("key_info_menu", button_id, text, callback_data, url, row_pos, col_pos, sort_order, width))
+
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO button_configs
+        (menu_type, button_id, text, callback_data, row_position, column_position, sort_order, button_width, is_active)
+        VALUES ('key_info_menu', 'subscription_addons', '➕ Допы подписки', 'subscription_addons_{key_id}', 1, 0, 2, 2, 0)
+        """
+    )
 
 
 # ==========================================
@@ -1942,6 +1988,50 @@ def get_device_tier_by_id(tier_id: int) -> dict | None:
 def update_host_device_mode(host_name: str, mode: str) -> bool:
     r = _exec("UPDATE xui_hosts SET device_mode=? WHERE TRIM(host_name)=TRIM(?)", (mode, host_name))
     return r is not None and r.rowcount > 0
+
+
+def get_traffic_tiers(host_name: str) -> list[dict]:
+    return _fetch_list("SELECT * FROM traffic_tiers WHERE TRIM(host_name)=TRIM(?) ORDER BY sort_order, traffic_gb", (host_name,))
+
+def add_traffic_tier(host_name: str, traffic_gb: int, price: float) -> int | None:
+    r = _exec("INSERT OR REPLACE INTO traffic_tiers (host_name, traffic_gb, price) VALUES (?,?,?)", (host_name, traffic_gb, price))
+    return r.lastrowid if r else None
+
+def update_traffic_tier(tier_id: int, traffic_gb: int, price: float) -> bool:
+    r = _exec("UPDATE traffic_tiers SET traffic_gb=?, price=? WHERE tier_id=?", (tier_id, traffic_gb, price))
+    return r is not None and r.rowcount > 0
+
+def delete_traffic_tier(tier_id: int) -> bool:
+    r = _exec("DELETE FROM traffic_tiers WHERE tier_id=?", (tier_id,))
+    return r is not None and r.rowcount > 0
+
+def get_traffic_tier_by_id(tier_id: int) -> dict | None:
+    return _fetch_row("SELECT * FROM traffic_tiers WHERE tier_id=?", (tier_id,))
+
+def update_host_traffic_mode(host_name: str, mode: str) -> bool:
+    r = _exec("UPDATE xui_hosts SET traffic_mode=? WHERE TRIM(host_name)=TRIM(?)", (mode, host_name))
+    return r is not None and r.rowcount > 0
+
+def update_host_traffic_no_choice(host_name: str, no_choice_buy: int, no_choice_renew: int) -> bool:
+    r = _exec("UPDATE xui_hosts SET traffic_no_choice_buy=?, traffic_no_choice_renew=? WHERE TRIM(host_name)=TRIM(?)", (no_choice_buy, no_choice_renew, host_name))
+    return r is not None and r.rowcount > 0
+
+def add_key_traffic_purchase(key_id: int, traffic_gb: int, price: float, expires_at: str, payment_id: str = None) -> int | None:
+    r = _exec("INSERT INTO key_traffic_purchases (key_id, traffic_gb, price, expires_at, payment_id, status) VALUES (?,?,?,?,?,'active')", (key_id, traffic_gb, price, expires_at, payment_id))
+    return r.lastrowid if r else None
+
+def get_active_key_traffic_purchases(key_id: int) -> list[dict]:
+    return _fetch_list("SELECT * FROM key_traffic_purchases WHERE key_id=? AND status='active' AND datetime(expires_at) > datetime('now')", (key_id,))
+
+def get_key_active_traffic_gb(key_id: int) -> int:
+    row = _fetch_row("SELECT COALESCE(SUM(traffic_gb), 0) AS total_gb FROM key_traffic_purchases WHERE key_id=? AND status='active' AND datetime(expires_at) > datetime('now')", (key_id,))
+    return int(row['total_gb']) if row and row.get('total_gb') is not None else 0
+
+def expire_key_traffic_purchases() -> list[dict]:
+    expired = _fetch_list("SELECT * FROM key_traffic_purchases WHERE status='active' AND datetime(expires_at) <= datetime('now')")
+    if expired:
+        _exec("UPDATE key_traffic_purchases SET status='expired' WHERE status='active' AND datetime(expires_at) <= datetime('now')")
+    return expired
 
 
 # ===== DELETE_KEY_BY_ID =====
@@ -2781,16 +2871,27 @@ def update_host_button_style(host_name: str, button_style: str = None, icon_emoj
 # =======================
 
 
-def register_user_if_not_exists(telegram_id: int, username: str, referrer_id):
-    row = _fetch_row("SELECT referred_by FROM users WHERE telegram_id = ?", (telegram_id,), "")
+def register_user_if_not_exists(telegram_id: int, username: str | None, referrer_id, first_name: str | None = None, phone_number: str | None = None):
+    row = _fetch_row("SELECT referred_by, phone_number FROM users WHERE telegram_id = ?", (telegram_id,), "")
     
     if not row:
         _exec(
-            "INSERT INTO users (telegram_id, username, registration_date, referred_by, app_theme) VALUES (?, ?, ?, ?, ?)",
-            (telegram_id, username, get_msk_time().replace(tzinfo=None).replace(microsecond=0), referrer_id, "forest"),
+            "INSERT INTO users (telegram_id, username, first_name, phone_number, registration_date, referred_by, app_theme) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (telegram_id, username, first_name, phone_number, get_msk_time().replace(tzinfo=None).replace(microsecond=0), referrer_id, "forest"),
             f"Не удалось зарегистрировать пользователя {telegram_id}"
         )
     else:
+        _exec(
+            "UPDATE users SET first_name = ? WHERE telegram_id = ?",
+            (first_name, telegram_id),
+            ""
+        )
+        if phone_number and not row['phone_number']:
+            _exec(
+                "UPDATE users SET phone_number = ? WHERE telegram_id = ?",
+                (phone_number, telegram_id),
+                ""
+            )
         _exec(
             "UPDATE users SET username = ? WHERE telegram_id = ? AND NOT COALESCE(username_manually_set, 0)",
             (username, telegram_id),
@@ -2800,6 +2901,15 @@ def register_user_if_not_exists(telegram_id: int, username: str, referrer_id):
         current_ref = row['referred_by']
         if referrer_id and (current_ref is None or str(current_ref).strip() == "") and int(referrer_id) != int(telegram_id):
             _exec("UPDATE users SET referred_by = ? WHERE telegram_id = ?", (int(referrer_id), telegram_id), "")
+
+
+def update_user_phone_number(telegram_id: int, phone_number: str) -> bool:
+    cursor = _exec(
+        "UPDATE users SET phone_number = ? WHERE telegram_id = ?",
+        (phone_number, telegram_id),
+        f"Не удалось обновить номер телефона пользователя {telegram_id}"
+    )
+    return cursor is not None and cursor.rowcount > 0
 
 def add_to_referral_balance(user_id: int, amount: float):
     _exec("UPDATE users SET referral_balance = referral_balance + ? WHERE telegram_id = ?", (amount, user_id), f"Не удалось добавить реферальный баланс для пользователя {user_id}")

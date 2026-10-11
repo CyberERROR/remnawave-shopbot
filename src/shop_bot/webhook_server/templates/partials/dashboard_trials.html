@@ -1,33 +1,20 @@
 {% for trial in recent_trials %}
-<tr class="transition-all duration-200 hover:bg-white/[0.03] group">
-    <td class="px-4 py-3 whitespace-nowrap">
-        <div class="flex items-center gap-2.5">
-            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500/20 to-white/5 border border-orange-500/15 flex items-center justify-center text-orange-400 text-[10px] font-black uppercase shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                {% if trial.username %}{{ trial.username[0] | upper }}{% else %}U{% endif %}
+    {% set expiry = trial.expire_at or trial.expiry_date %}
+    {% set expiry_parts = expiry.split(' ')[0].split('-') if expiry else [] %}
+    {% set remaining = expiry|relative_time(is_future=True) if expiry else '—' %}
+    {% set expired = 'истёк' in remaining|lower %}
+    {% set near_expiry = 'час' in remaining or 'минут' in remaining or remaining == '0 дней' %}
+    <tr class="group grid grid-cols-[minmax(120px,1fr)_minmax(90px,1fr)_40px] items-center border-b border-white/[0.05] text-left transition duration-150 hover:bg-white/[0.03] max-md:grid-cols-2 max-md:gap-x-2 max-md:py-1" onclick="window.location.href='{{ url_for('users_page', q=trial.telegram_id) }}'" tabindex="0" onkeydown="if(event.key==='Enter')window.location.href='{{ url_for('users_page', q=trial.telegram_id) }}'">
+        <td class="min-w-0 px-3 py-2 max-md:col-start-1 max-md:row-start-1">
+            <div class="flex min-w-0 items-center gap-2">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/[0.08] text-xs font-medium uppercase text-amber-300">{{ (trial.username or 'U')[0]|upper }}</span>
+                <span class="min-w-0"><span class="block truncate text-sm text-white/80 demo-blur-username">{% if trial.username %}@{{ trial.username }}{% else %}User {{ trial.telegram_id }}{% endif %}</span>{% if trial.username %}<button type="button" class="block truncate font-mono text-xs text-white/60" onclick="event.stopPropagation();copySingleId(event, '{{ trial.telegram_id }}')" title="Скопировать ID">{{ trial.telegram_id }}</button>{% endif %}</span>
             </div>
-            <div class="min-w-0">
-                <div class="text-xs font-bold text-white truncate max-w-[110px] demo-blur-username">
-                    {% if trial.username %}@{{ trial.username }}{% else %}User {{ trial.telegram_id }}{% endif %}
-                </div>
-                <button type="button" class="text-[9px] text-white/25 hover:text-orange-400 transition-colors font-mono tracking-wider" onclick="copySingleId(event, '{{ trial.telegram_id }}')" title="Скопировать ID">{{ trial.telegram_id }}</button>
-            </div>
-        </div>
-    </td>
-    <td class="px-4 py-3 whitespace-nowrap">
-        {% if trial.created_at %}
-        {% set d_parts = trial.created_at.split(' ')[0].split('-') %}
-        <div class="text-[11px] font-bold text-white/60 tabular-nums">{{ d_parts[2] }}.{{ d_parts[1] }}</div>
-        <div class="text-[9px] text-white/25 font-bold mt-0.5">{{ trial.created_at | relative_time }}</div>
-        {% else %}
-        <div class="text-[11px] text-white/30">—</div>
-        {% endif %}
-    </td>
-    <td class="px-4 py-3 whitespace-nowrap text-right">
-        <a href="{{ url_for('users_page', q=trial.telegram_id) }}"
-            class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/20 hover:bg-orange-500/10 hover:border-orange-500/20 hover:text-orange-400 transition-all duration-200"
-            title="Профиль">
-            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
-        </a>
-    </td>
-</tr>
+        </td>
+        <td class="min-w-0 px-3 py-2 max-md:col-start-2 max-md:row-start-1">
+            {% if expiry_parts|length == 3 %}<span class="block truncate text-sm text-white/80 tabular-nums">до {{ expiry_parts[2] }} {{ {'01':'янв','02':'фев','03':'мар','04':'апр','05':'май','06':'июн','07':'июл','08':'авг','09':'сен','10':'окт','11':'ноя','12':'дек'}[expiry_parts[1]] }}</span>{% else %}<span class="block text-sm text-white/40">Срок не указан</span>{% endif %}
+            <span class="block truncate text-xs {% if expired %}text-white/60{% elif near_expiry %}text-amber-300{% else %}text-white/60{% endif %}">{% if expired %}Истёк{% elif remaining == '—' %}Срок неизвестен{% else %}осталось {{ remaining }}{% endif %}</span>
+        </td>
+        <td class="px-2 py-2 text-right max-md:hidden"><a href="{{ url_for('users_page', q=trial.telegram_id) }}" onclick="event.stopPropagation()" aria-label="Открыть профиль пользователя" class="inline-flex rounded-full p-1 text-white/60 transition duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"><i data-lucide="external-link" class="h-4 w-4" aria-hidden="true"></i></a></td>
+    </tr>
 {% endfor %}

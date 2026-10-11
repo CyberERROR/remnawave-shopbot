@@ -69,7 +69,7 @@ from shop_bot.data_manager.remnawave_repository import (
     get_device_tier_by_id,
     redeem_universal_promo,
 )
-from shop_bot.data_manager.database import get_seller_user, adjust_user_balance
+from shop_bot.data_manager.database import get_seller_user, adjust_user_balance, update_user_phone_number
 
 from shop_bot.config import (
     get_profile_text,
@@ -223,45 +223,61 @@ def get_seller_external_squad(user_id: int) -> str | None:
 # ===== Конец функции get_seller_external_squad =====
 
 
-# ===== РАСЧЕТ ЦЕНЫ ЗАКАЗА =====
-# Вычисляет итоговую стоимость подписки с учетом потенциальных скидок для рефералов и промокодов
-def calculate_order_price(plan: dict, user_data: dict, promo_code: str = None, promo_discount: Decimal = 0) -> Decimal:
-    base_price = Decimal(str(plan['price']))
-    
-    # Seller Discount
+def get_order_discount_breakdown(plan: dict, user_data: dict, promo_code: str = None, promo_discount: Decimal = 0) -> dict:
+    user_data = user_data or {}
+    original_price = Decimal(str(plan['price']))
+    current_price = original_price
+    seller_discount = Decimal('0.00')
+    referral_discount = Decimal('0.00')
+    uid = user_data.get('telegram_id') or user_data.get('user_id') or user_data.get('id')
+
     try:
-        # Determine User ID from user_data
-        uid = user_data.get('telegram_id') or user_data.get('user_id') or user_data.get('id')
         if uid:
             sale_percent = get_seller_discount_percent(int(uid))
             if sale_percent > 0:
-                discount = (base_price * sale_percent / 100).quantize(Decimal("0.01"))
-                base_price -= discount
-                # logger.info(f"CalcPrice: Applied {sale_percent}% discount. New price: {base_price}")
+                seller_discount = (current_price * sale_percent / 100).quantize(Decimal("0.01"))
+                current_price -= seller_discount
     except Exception as e:
         logger.error(f"Error in calculate_order_price discount block: {e}")
 
-    if user_data.get('referred_by') and user_data.get('total_spent', 0) == 0 and not [k for k in get_user_keys(uid) if not (k.get('key_email') or '').startswith('trial_')]:
+    referral_percent = Decimal('0.00')
+    if uid and user_data.get('referred_by') and user_data.get('total_spent', 0) == 0 and not [k for k in get_user_keys(uid) if not (k.get('key_email') or '').startswith('trial_')]:
         try:
-            discount_percentage = Decimal(get_setting("referral_discount") or "0")
-            if discount_percentage > 0:
-                discount_amount = (base_price * discount_percentage / 100).quantize(Decimal("0.01"))
-                base_price -= discount_amount
-                logger.info(f"Расчет цены: Применена скидка реферала {discount_percentage}% для пользователя {uid}")
+            referral_percent = Decimal(get_setting("referral_discount") or "0")
+            if referral_percent > 0:
+                referral_discount = (current_price * referral_percent / 100).quantize(Decimal("0.01"))
+                current_price -= referral_discount
+                logger.info(f"Расчет цены: Применена скидка реферала {referral_percent}% для пользователя {uid}")
         except Exception as e:
             logger.error(f"Ошибка: Не удалось рассчитать реферальную скидку для {uid}: {e}")
 
+    promo_discount_value = Decimal('0.00')
     if promo_code and promo_discount > 0:
-        try: 
-            discount_dec = Decimal(str(promo_discount))
-            base_price = (base_price - discount_dec).quantize(Decimal("0.01"))
+        try:
+            promo_discount_value = Decimal(str(promo_discount))
+            current_price = (current_price - promo_discount_value).quantize(Decimal("0.01"))
             logger.info(f"Расчет цены: Применен промокод {promo_code} со скидкой {promo_discount} RUB")
-        except Exception as e: 
+        except Exception as e:
             logger.error(f"Ошибка: Сбой применения промокода {promo_code}: {e}")
-            discount_dec = Decimal("0.00")
-    
-    if base_price < Decimal('0.01'): base_price = Decimal('0.01')
-    return base_price
+
+    if current_price < Decimal('0.01'):
+        current_price = Decimal('0.01')
+
+    return {
+        "original_price": float(original_price),
+        "seller_discount": float(seller_discount),
+        "seller_discount_percent": float(sale_percent) if uid and 'sale_percent' in locals() else 0.0,
+        "referral_discount": float(referral_discount),
+        "referral_discount_percent": float(referral_percent),
+        "promo_discount": float(promo_discount_value),
+        "promo_code": (promo_code or '').strip() or None,
+        "total_discount": float(original_price - current_price),
+        "final_price": float(current_price),
+    }
+
+def calculate_order_price(plan: dict, user_data: dict, promo_code: str = None, promo_discount: Decimal = 0) -> Decimal:
+    breakdown = get_order_discount_breakdown(plan, user_data, promo_code, promo_discount)
+    return Decimal(str(breakdown['final_price']))
 # ===== Конец функции calculate_order_price =====
 
 # ===== СОЗДАНИЕ ОЖИДАЮЩЕГО ПЛАТЕЖА =====
@@ -283,7 +299,14 @@ async def create_pending_payment(user_id: int, amount: float, payment_method: st
         "promo_discount": metadata_source.get("promo_discount"),
         "tier_device_count": metadata_source.get("tier_device_count"),
         "tier_price": metadata_source.get("tier_price"),
+        "traffic_tier_id": metadata_source.get("traffic_tier_id"),
+        "traffic_price": metadata_source.get("traffic_price"),
     }
+    if plan_id:
+        plan = get_plan_by_id(plan_id)
+        user_data = get_user(user_id)
+        if plan and user_data:
+            metadata.update(get_order_discount_breakdown(plan, user_data, metadata.get("promo_code"), metadata.get("promo_discount", 0)))
     create_payload_pending(payment_id, user_id, float(amount), metadata)
     logger.info(f"Платеж: Создан ожидающий платеж {payment_id} для пользователя {user_id} на сумму {amount} ({action})")
     return payment_id, metadata
@@ -605,6 +628,12 @@ def registration_required(f):
 def get_user_router() -> Router:
     user_router = Router()
 
+    @user_router.message(F.contact)
+    async def save_user_contact(message: types.Message):
+        contact = message.contact
+        if contact and contact.user_id == message.from_user.id and contact.phone_number:
+            update_user_phone_number(message.from_user.id, contact.phone_number)
+
     # ===== ОБРАБОТЧИК КОМАНДЫ /START =====
     # Инициализирует взаимодействие с ботом, регистрирует пользователя и обрабатывает реферальные инвайты
     @user_router.message(CommandStart())
@@ -613,7 +642,8 @@ def get_user_router() -> Router:
         if message.from_user.is_bot:
             return
         user_id = message.from_user.id
-        username = message.from_user.username or message.from_user.full_name
+        username = message.from_user.username
+        first_name = ' '.join(part for part in (message.from_user.first_name, message.from_user.last_name) if part) or None
         referrer_id = None
         
         # Проверяем, существует ли пользователь, ДО обработки реферального кода
@@ -631,8 +661,8 @@ def get_user_router() -> Router:
             except (IndexError, ValueError):
                 logger.warning(f"Получен некорректный реферальный код: {command.args}")
                 
-        register_user_if_not_exists(user_id, username, referrer_id)
-        logger.info(f"Старт: Пользователь {user_id} (@{username}) зашел в бота. Реферер: {referrer_id}")
+        register_user_if_not_exists(user_id, username, referrer_id, first_name)
+        logger.info(f"Старт: Пользователь {user_id} (@{username or '—'}) зашел в бота. Реферер: {referrer_id}")
 
         if referrer_id:
             try:
@@ -2411,6 +2441,152 @@ def get_user_router() -> Router:
 
         await smart_edit_message(message, text, keyboards.create_devices_list_keyboard(devices, key_id, page, total_pages), photo_path=photo_path)
 
+    async def _get_addon_key(callback: types.CallbackQuery, key_id: int):
+        key = rw_repo.get_key_by_id(key_id)
+        if not key or key.get('user_id') != callback.from_user.id:
+            await callback.answer("Ключ не найден", show_alert=True)
+            return None
+        try:
+            expiry = datetime.fromisoformat(key['expiry_date'])
+            days_left = max(1, (expiry - get_msk_time().replace(tzinfo=None)).days)
+        except Exception:
+            days_left = 1
+        return key, days_left
+
+    @user_router.callback_query(F.data.startswith("subscription_addons_"))
+    @anti_spam
+    @registration_required
+    async def subscription_addons_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        try:
+            key_id = int(callback.data.rsplit("_", 1)[1])
+        except ValueError:
+            return
+        result = await _get_addon_key(callback, key_id)
+        if not result:
+            return
+        key, _ = result
+        host = get_host(key.get('host_name')) or {}
+        show_devices = host.get('device_mode') == 'tiers' and bool(get_device_tiers(key.get('host_name')))
+        from shop_bot.data_manager.database import get_traffic_tiers
+        show_traffic = host.get('traffic_mode') == 'tiers' and bool(get_traffic_tiers(key.get('host_name')))
+        await smart_edit_message(
+            callback.message,
+            "➕ <b>Допы подписки</b>\n\nВыберите, что хотите дополнительно докупить:",
+            keyboards.create_subscription_addons_keyboard(key_id, show_devices, show_traffic),
+        )
+
+    @user_router.callback_query(F.data.startswith("addon_devices_menu_"))
+    @anti_spam
+    @registration_required
+    async def addon_devices_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer()
+        try:
+            key_id = int(callback.data.rsplit("_", 1)[1])
+        except ValueError:
+            return
+        result = await _get_addon_key(callback, key_id)
+        if not result:
+            return
+        key, days_left = result
+        user_info = await remnawave_api.get_user_by_uuid(key.get('remnawave_user_uuid'), host_name=key.get('host_name'))
+        current_limit = int((user_info or {}).get('hwidDeviceLimit') or 0)
+        if current_limit == 0:
+            return await callback.answer("Для безлимитного лимита докупка устройств недоступна", show_alert=True)
+        await state.update_data(addon_key_id=key_id, addon_days_left=days_left, addon_current_devices=current_limit)
+        await smart_edit_message(
+            callback.message,
+            f"📱 <b>Докупить устройства</b>\n\nСейчас доступно: <b>{current_limit} устройств</b>\nВыберите новый лимит:",
+            keyboards.create_addon_devices_keyboard(key_id, current_limit, get_device_tiers(key.get('host_name')), days_left),
+        )
+
+    @user_router.callback_query(F.data.startswith("addon_traffic_menu_"))
+    @anti_spam
+    @registration_required
+    async def addon_traffic_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer()
+        try:
+            key_id = int(callback.data.rsplit("_", 1)[1])
+        except ValueError:
+            return
+        result = await _get_addon_key(callback, key_id)
+        if not result:
+            return
+        key, days_left = result
+        stats = await remnawave_api.get_user_traffic_stats_on_host(key.get('remnawave_user_uuid'), host_name=key.get('host_name'))
+        if not stats or not stats.get('traffic_limit_gb'):
+            return await callback.answer("Для безлимитного трафика докупка недоступна", show_alert=True)
+        current_limit = stats['traffic_limit_gb']
+        used = stats['used_traffic_gb']
+        await state.update_data(addon_key_id=key_id, addon_days_left=days_left, addon_current_traffic=current_limit, addon_used_traffic=used)
+        from shop_bot.data_manager.database import get_traffic_tiers
+        await smart_edit_message(
+            callback.message,
+            f"📦 <b>Докупить гигабайты</b>\n\nТекущий лимит: <b>{current_limit:.0f} ГБ</b>\nИспользовано: <b>{used:.2f} ГБ</b>\nДоступно: <b>{max(0, current_limit - used):.2f} ГБ</b>\n\nВыберите пакет:",
+            keyboards.create_addon_traffic_keyboard(key_id, get_traffic_tiers(key.get('host_name')), days_left),
+        )
+
+    @user_router.callback_query(F.data.startswith("addon_device_select_"))
+    @anti_spam
+    @registration_required
+    async def addon_device_select_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer()
+        try:
+            _, _, _, key_id, tier_id = callback.data.split("_", 4)
+            key_id, tier_id = int(key_id), int(tier_id)
+        except ValueError:
+            return
+        result = await _get_addon_key(callback, key_id)
+        if not result:
+            return
+        key, days_left = result
+        tier = get_device_tier_by_id(tier_id)
+        current_limit = int((await state.get_data()).get('addon_current_devices') or 0)
+        if not tier or tier.get('host_name') != key.get('host_name') or int(tier['device_count']) <= current_limit:
+            return await callback.answer("Этот лимит недоступен", show_alert=True)
+        added = int(tier['device_count']) - current_limit
+        price = round(float(tier['price']) * added * days_left / 30, 2)
+        await state.update_data(addon_type='devices', addon_key_id=key_id, addon_target_devices=int(tier['device_count']), addon_price=price)
+        await smart_edit_message(callback.message, f"📑 <b>Подтверждение</b>\n<blockquote>• Сейчас: {current_limit} устройств\n• Докупается: +{added} устройств\n• Станет: {tier['device_count']} устройств\n• До конца подписки: {days_left} дн.</blockquote>\n\n<b>🧾 К оплате: {price:.2f}₽</b>", keyboards.create_addon_confirm_keyboard(key_id, 'devices'))
+
+    @user_router.callback_query(F.data.startswith("addon_traffic_select_"))
+    @anti_spam
+    @registration_required
+    async def addon_traffic_select_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer()
+        try:
+            _, _, _, key_id, tier_id = callback.data.split("_", 4)
+            key_id, tier_id = int(key_id), int(tier_id)
+        except ValueError:
+            return
+        result = await _get_addon_key(callback, key_id)
+        if not result:
+            return
+        key, days_left = result
+        from shop_bot.data_manager.database import get_traffic_tier_by_id
+        tier = get_traffic_tier_by_id(tier_id)
+        data = await state.get_data()
+        if not tier or tier.get('host_name') != key.get('host_name'):
+            return await callback.answer("Этот пакет недоступен", show_alert=True)
+        current_limit = float(data.get('addon_current_traffic') or 0)
+        used = float(data.get('addon_used_traffic') or 0)
+        added = int(tier['traffic_gb'])
+        price = round(float(tier['price']) * days_left / 30, 2)
+        await state.update_data(addon_type='traffic', addon_key_id=key_id, addon_traffic_tier_id=tier_id, addon_price=price)
+        await smart_edit_message(callback.message, f"📑 <b>Подтверждение</b>\n<blockquote>• Текущий лимит: {current_limit:.0f} ГБ\n• Использовано: {used:.2f} ГБ\n• Докупается: +{added} ГБ\n• Новый лимит: {current_limit + added:.0f} ГБ\n• Будет доступно: {max(0, current_limit - used) + added:.2f} ГБ\n• До конца подписки: {days_left} дн.</blockquote>\n\n<b>🧾 К оплате: {price:.2f}₽</b>", keyboards.create_addon_confirm_keyboard(key_id, 'traffic'))
+
+    @user_router.callback_query(F.data.startswith("addon_confirm_"))
+    @anti_spam
+    @registration_required
+    async def addon_confirm_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer()
+        data = await state.get_data()
+        key_id = data.get('addon_key_id')
+        if not key_id or data.get('addon_type') not in ('devices', 'traffic'):
+            return await callback.answer("Выберите дополнение заново", show_alert=True)
+        await state.update_data(action='addon', key_id=key_id, final_price=data.get('addon_price'), host_name=(rw_repo.get_key_by_id(key_id) or {}).get('host_name'))
+        await show_payment_options(callback.message, state)
+
     @user_router.callback_query(F.data.startswith("key_devices_"))
     @anti_spam
     @registration_required
@@ -2651,16 +2827,50 @@ def get_user_router() -> Router:
                 await _show_device_tiers(callback.message, tiers, host_name, plan_id, action, key_id)
                 return
 
-        await _proceed_to_email_or_pay(callback.message, state)
+        await _proceed_after_device_selection(callback.message, state)
     # ===== Конец функции plan_selection_handler =====
         logger.info(f"Выбор тарифа: Пользователь {callback.from_user.id} выбрал тариф {plan_id} на хосте {host_name} (действие: {action})")
 
     async def _show_device_tiers(message, tiers, host_name, plan_id, action, key_id, selected_tier_id=None):
         img_setting = "extend_plan_image" if action == "extend" else "buy_plan_image"
+        plan = get_plan_by_id(plan_id)
+        included_devices = int(plan.get('hwid_limit') or 0) if plan else 0
+        included_label = "∞" if included_devices == 0 else str(included_devices)
         await smart_edit_message(
             message,
-            "📱 <b>Выберите количество устройств</b>\n\nЦена зависит от выбранного количества:",
+            f"📱 <b>Выберите количество устройств</b>\nВ тариф входит: <b>{included_label} устройств</b>\n\nЦена зависит от выбранного количества:",
             keyboards.create_device_tiers_keyboard(tiers, host_name, plan_id, action, key_id, selected_tier_id=selected_tier_id),
+            get_setting(img_setting)
+        )
+
+    async def _proceed_after_device_selection(message, state):
+        data = await state.get_data()
+        host_name = data.get('host_name', '')
+        action = data.get('action', 'new')
+        host_data = get_host(host_name)
+        if host_data and host_data.get('traffic_mode') == 'tiers':
+            if action == 'new' and host_data.get('traffic_no_choice_buy'):
+                await _proceed_to_email_or_pay(message, state)
+                return
+            if action == 'extend' and host_data.get('traffic_no_choice_renew'):
+                await _proceed_to_email_or_pay(message, state)
+                return
+            from shop_bot.data_manager.database import get_traffic_tiers
+            ttiers = get_traffic_tiers(host_name)
+            if ttiers:
+                await _show_traffic_tiers(message, ttiers, host_name, data.get('plan_id', 0), action, data.get('key_id', 0))
+                return
+        await _proceed_to_email_or_pay(message, state)
+
+    async def _show_traffic_tiers(message, ttiers, host_name, plan_id, action, key_id, selected_traffic_tier_id=None):
+        img_setting = "extend_plan_image" if action == "extend" else "buy_plan_image"
+        plan = get_plan_by_id(plan_id)
+        included_traffic = int(plan.get('traffic_limit_gb') or 0) if plan else 0
+        included_label = "∞" if included_traffic == 0 else f"{included_traffic} ГБ"
+        await smart_edit_message(
+            message,
+            f"📊 <b>Выберите дополнительный трафик</b>\nВ тариф входит: <b>{included_label}</b>\n\nЦена зависит от выбранного пакета ГБ:",
+            keyboards.create_traffic_tiers_keyboard(ttiers, host_name, plan_id, action, key_id, selected_traffic_tier_id=selected_traffic_tier_id),
             get_setting(img_setting)
         )
 
@@ -2708,6 +2918,36 @@ def get_user_router() -> Router:
         data = await state.get_data()
         if not data.get('tier_device_count'):
             return
+        await _proceed_after_device_selection(callback.message, state)
+
+    @user_router.callback_query(F.data.startswith("select_traffic_tier_"))
+    @anti_spam
+    @registration_required
+    async def traffic_tier_selection_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer()
+        try:
+            tier_id = int(callback.data.split("_")[3])
+        except:
+            return
+        data = await state.get_data()
+        host_name = data.get('host_name', '')
+        if tier_id == 0:
+            await state.update_data(traffic_tier_id=0, traffic_gb=0, traffic_price=0.0, selected_traffic_tier_id=0)
+        else:
+            from shop_bot.data_manager.database import get_traffic_tier_by_id
+            tier = get_traffic_tier_by_id(tier_id)
+            if not tier:
+                return
+            await state.update_data(traffic_tier_id=tier['tier_id'], traffic_gb=tier['traffic_gb'], traffic_price=float(tier['price']), selected_traffic_tier_id=tier_id)
+        from shop_bot.data_manager.database import get_traffic_tiers
+        ttiers = get_traffic_tiers(host_name)
+        await _show_traffic_tiers(callback.message, ttiers, host_name, data.get('plan_id', 0), data.get('action', 'new'), data.get('key_id', 0), selected_traffic_tier_id=tier_id)
+
+    @user_router.callback_query(F.data == "confirm_traffic_tier")
+    @anti_spam
+    @registration_required
+    async def confirm_traffic_tier_handler(callback: types.CallbackQuery, state: FSMContext):
+        await callback.answer()
         await _proceed_to_email_or_pay(callback.message, state)
 
     @user_router.callback_query(PaymentProcess.waiting_for_email, F.data == "back_to_plans")
@@ -2778,6 +3018,17 @@ def get_user_router() -> Router:
     # Вычисляет итоговую стоимость и выводит кнопки доступных платежных шлюзов
     async def show_payment_options(message: types.Message, state: FSMContext, bot: Bot = None, prompt_message_id: int = None):
         data = await state.get_data(); user = get_user(message.chat.id)
+        if data.get('action') == 'addon':
+            price = Decimal(str(data.get('addon_price') or data.get('final_price') or 0)).quantize(Decimal("0.01"))
+            if price <= 0:
+                return await smart_edit_message(message, "❌ Стоимость дополнения не определена.", keyboards.create_back_to_menu_keyboard())
+            await state.update_data(final_price=float(price))
+            balance = get_balance(message.chat.id)
+            text = f"💳 <b>Оплата дополнения</b>\n\n<b>🧾 К оплате: {price:.2f}₽</b>\n\n{CHOOSE_PAYMENT_METHOD_MESSAGE}"
+            kb = keyboards.create_payment_method_keyboard(PAYMENT_METHODS, action='addon', key_id=data.get('addon_key_id'), show_balance=(balance >= float(price)), main_balance=balance, price=float(price), promo_applied=False, back_callback=f"subscription_addons_{data.get('addon_key_id')}", balance_only=True)
+            await smart_edit_message(message, text, kb, get_setting("payment_method_image"))
+            await state.set_state(PaymentProcess.waiting_for_payment_method)
+            return
         plan = get_plan_by_id(data.get('plan_id'))
         if not plan: return await (message.edit_text if isinstance(message, types.Message) else message.answer)("❌ Ошибка: Тариф не найден.")
         
@@ -2786,6 +3037,12 @@ def get_user_router() -> Router:
         duration_days = int(plan.get('duration_days') or 0) or (months * 30)
         month_factor = Decimal(str(duration_days)) / Decimal('30')
         price += Decimal(str(data.get('tier_price', 0))) * month_factor
+        price += Decimal(str(data.get('traffic_price', 0))) * month_factor
+        if data.get('action') == 'extend' and data.get('key_id') and not data.get('traffic_price'):
+            active_tp = rw_repo.get_active_key_traffic_purchases(int(data['key_id']))
+            if active_tp:
+                active_traffic_price = sum(float(p.get('price', 0)) for p in active_tp)
+                price += Decimal(str(active_traffic_price)) * month_factor
         await state.update_data(final_price=float(price))
         
         balance = get_balance(message.chat.id)
@@ -2799,7 +3056,37 @@ def get_user_router() -> Router:
                 f"🛍 Ваша скидка: {disc_val:.2f} RUB\n"
             )
             
-        text = f"💰 К оплате: {price:.2f} RUB\n{promo_text}\n{CHOOSE_PAYMENT_METHOD_MESSAGE}"
+        host_data = get_host(data.get('host_name', '')) or {}
+        details = []
+        base_price = calculate_order_price(plan, user, data.get('promo_code'), data.get('promo_discount', 0))
+        details.append(f"• Тариф: {base_price:.2f}₽")
+
+        if host_data.get('device_mode') == 'tiers':
+            included_devices = int(plan.get('hwid_limit') or 0)
+            selected_devices = data.get('tier_device_count')
+            device_price = Decimal(str(data.get('tier_price', 0))) * month_factor
+            included_label = "∞" if included_devices == 0 else f"{included_devices} устр."
+            if selected_devices and int(selected_devices) > included_devices and included_devices > 0:
+                extra_devices = int(selected_devices) - included_devices
+                details.append(f"• {included_label} (вкл.) +{extra_devices} устр.: +{device_price:.2f}₽")
+            else:
+                details.append(f"• Устройства: {included_label} (вкл.)")
+
+        if host_data.get('traffic_mode') == 'tiers':
+            included_traffic = int(plan.get('traffic_limit_gb') or 0)
+            traffic_tier_id = data.get('traffic_tier_id')
+            traffic_price = Decimal(str(data.get('traffic_price', 0))) * month_factor
+            included_label = "∞" if included_traffic == 0 else f"{included_traffic} ГБ"
+            if traffic_tier_id:
+                from shop_bot.data_manager.database import get_traffic_tier_by_id
+                traffic_tier = get_traffic_tier_by_id(int(traffic_tier_id))
+                if traffic_tier:
+                    details.append(f"• {included_label} (вкл.) +{traffic_tier['traffic_gb']} ГБ: +{traffic_price:.2f}₽")
+            else:
+                details.append(f"• Трафик: {included_label} (вкл.)")
+
+        summary = "\n".join(details)
+        text = f"📑 <b>Итог:</b>\n<blockquote>{summary}</blockquote>\n\n<b>🧾 К оплате: {price:.2f}₽</b>{promo_text}\n{CHOOSE_PAYMENT_METHOD_MESSAGE}"
         
         back_cb = "back_to_email_prompt" if get_setting("skip_email") != "1" else (f"select_host_new_{data.get('host_name')}" if data.get('action') == 'new' else "manage_keys")
         kb = keyboards.create_payment_method_keyboard(PAYMENT_METHODS, action=data.get('action'), key_id=data.get('key_id'), show_balance=(balance >= float(price)), main_balance=balance, price=float(price), promo_applied=bool(data.get('promo_code')), back_callback=back_cb)
@@ -2947,7 +3234,7 @@ def get_user_router() -> Router:
             pid, meta = await create_pending_payment(user_id=callback.from_user.id, amount=float(price), payment_method="CryptoBot", action=data['action'], metadata_source=data, plan_id=plan['plan_id'], months=plan['months'])
             logger.info(f"Оплата (CryptoBot): пользователь {callback.from_user.id}, план {plan['plan_id']}, сумма {price} RUB")
             
-            payload = ":".join([str(callback.from_user.id), str(plan['months']), f"{price:.2f}", str(data['action']), str(data.get('key_id') or "None"), str(data.get('host_name') or ""), str(plan['plan_id']), str(data.get('customer_email') or "None"), "CryptoBot", str(data.get('promo_code') or "None"), f"{data.get('promo_discount', 0):.2f}", str(data.get('tier_device_count') or 'None')])
+            payload = ":".join([str(callback.from_user.id), str(plan['months']), f"{price:.2f}", str(data['action']), str(data.get('key_id') or "None"), str(data.get('host_name') or ""), str(plan['plan_id']), str(data.get('customer_email') or "None"), "CryptoBot", str(data.get('promo_code') or "None"), f"{data.get('promo_discount', 0):.2f}", str(data.get('tier_device_count') or 'None'), str(data.get('traffic_tier_id') or 'None')])
             res = await create_cryptobot_api_invoice(amount=float(price), payload_str=payload)
             
             if res:
@@ -2989,6 +3276,8 @@ def get_user_router() -> Router:
             metadata = {"user_id": p[0], "months": p[1], "price": p[2], "action": p[3], "key_id": p[4], "host_name": p[5], "plan_id": p[6], "customer_email": (p[7] if p[7] != 'None' else None), "payment_method": p[8], "transaction_id": str(inv_id), "payment_id": stable_payment_id}
             if len(p) >= 12:
                 metadata["tier_device_count"] = p[11] if p[11] != 'None' else None
+            if len(p) >= 13:
+                metadata["traffic_tier_id"] = p[12] if p[12] != 'None' else None
             
             await process_successful_payment(bot, metadata)
             await callback.message.answer("✅ <b>Оплата подтверждена!</b> Ваш ключ/баланс успешно обновлены.")
@@ -3031,14 +3320,36 @@ def get_user_router() -> Router:
     @user_router.callback_query(PaymentProcess.waiting_for_payment_method, F.data == "pay_balance")
     @anti_spam
     async def pay_with_main_balance_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
-        await callback.answer(); data = await state.get_data(); plan = get_plan_by_id(data.get('plan_id'))
+        await callback.answer(); data = await state.get_data()
+        if data.get('action') == 'addon':
+            price = float(data.get('final_price') or data.get('addon_price') or 0)
+            if price <= 0 or not deduct_from_balance(callback.from_user.id, price):
+                return await callback.answer("⚖️ Недостаточно средств на балансе.", show_alert=True)
+            meta = {
+                "user_id": callback.from_user.id,
+                "months": 0,
+                "price": price,
+                "action": "addon",
+                "key_id": data.get('addon_key_id'),
+                "host_name": data.get('host_name'),
+                "payment_method": "Balance",
+                "payment_id": str(uuid.uuid4()),
+                "addon_type": data.get('addon_type'),
+                "addon_target_devices": data.get('addon_target_devices'),
+                "addon_traffic_tier_id": data.get('addon_traffic_tier_id'),
+            }
+            await state.clear()
+            await process_successful_payment(bot, meta)
+            return
+        plan = get_plan_by_id(data.get('plan_id'))
         if not plan: return await state.clear()
 
         price = float(data.get('final_price', plan['price']))
         logger.info(f"Оплата (Баланс): пользователь {callback.from_user.id}, план {plan['plan_id']}, сумма {price} RUB")
         if not deduct_from_balance(callback.from_user.id, price): return await callback.answer("⚖️ Недостаточно средств на балансе.", show_alert=True)
 
-        meta = {"user_id": callback.from_user.id, "months": int(plan['months']), "price": price, "action": data.get('action'), "key_id": data.get('key_id'), "host_name": data.get('host_name'), "plan_id": data.get('plan_id'), "customer_email": data.get('customer_email'), "payment_method": "Balance", "chat_id": callback.message.chat.id, "message_id": callback.message.message_id, "promo_code": (data.get('promo_code') or '').strip(), "promo_discount": float(data.get('promo_discount', 0)), "tier_device_count": data.get('tier_device_count'), "tier_price": data.get('tier_price', 0)}
+        meta = {"user_id": callback.from_user.id, "months": int(plan['months']), "price": price, "action": data.get('action'), "key_id": data.get('key_id'), "host_name": data.get('host_name'), "plan_id": data.get('plan_id'), "customer_email": data.get('customer_email'), "payment_method": "Balance", "chat_id": callback.message.chat.id, "message_id": callback.message.message_id, "promo_code": (data.get('promo_code') or '').strip(), "promo_discount": float(data.get('promo_discount', 0)), "tier_device_count": data.get('tier_device_count'), "tier_price": data.get('tier_price', 0), "traffic_tier_id": data.get('traffic_tier_id'), "traffic_price": data.get('traffic_price', 0)}
+        meta.update(get_order_discount_breakdown(plan, get_user(callback.from_user.id), meta.get('promo_code'), meta.get('promo_discount', 0)))
         logger.info(f"Оплата Баланс: Успешное списание {price} RUB с баланса пользователя {callback.from_user.id}")
         await state.clear(); await process_successful_payment(bot, meta)
     # ===== Конец функции pay_with_main_balance_handler =====
@@ -3485,6 +3796,48 @@ async def process_successful_payment(bot: Bot | None, metadata: dict) -> bool:
                 except: pass
             return True
 
+        if action == "addon":
+            key = rw_repo.get_key_by_id(kid)
+            if not key or key.get('user_id') != uid:
+                return False
+            addon_type = metadata.get('addon_type')
+            if addon_type == 'devices':
+                target_limit = _to_int(metadata.get('addon_target_devices'))
+                if target_limit <= 0:
+                    return False
+                applied = await remnawave_api.update_user_hwid_limit_on_host(
+                    key.get('remnawave_user_uuid'), target_limit, key.get('host_name')
+                )
+            elif addon_type == 'traffic':
+                tier_id = _to_int(metadata.get('addon_traffic_tier_id'))
+                if tier_id <= 0:
+                    return False
+                try:
+                    expiry = datetime.fromisoformat(key['expiry_date'])
+                    expires_at = expiry.strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    return False
+                from shop_bot.data_manager.traffic_service import process_traffic_purchase
+                result = await process_traffic_purchase(
+                    kid,
+                    tier_id,
+                    payment_id=pay_id,
+                    expires_at=expires_at,
+                    price_override=price,
+                )
+                applied = bool(result.get('success') and result.get('synced'))
+            else:
+                return False
+            if not applied:
+                add_to_balance(uid, price)
+                return False
+            addon_meta = dict(metadata)
+            addon_meta['reason'] = 'subscription_addon'
+            log_transaction(username=(get_user(uid) or {}).get('username', 'N/A'), transaction_id=None, payment_id=pay_id or str(uuid.uuid4()), user_id=uid, status='paid', amount_rub=price, amount_currency=None, currency_name=None, payment_method=pay_method or 'Unknown', metadata=json.dumps(addon_meta, ensure_ascii=False))
+            if bot:
+                await bot.send_message(uid, "✅ <b>Дополнение успешно подключено.</b>", reply_markup=keyboards.create_dynamic_key_info_keyboard(kid))
+            return True
+
         # --- ВЫДАЧА ИЛИ ПРОДЛЕНИЕ КЛЮЧА ---
         proc_msg = None
         if not str(uid).startswith("999"):
@@ -3552,6 +3905,32 @@ async def process_successful_payment(bot: Bot | None, metadata: dict) -> bool:
                     return False
 
             p_log_id = metadata.get('payment_id') or str(uuid.uuid4())
+
+            traffic_tier_id = metadata.get('traffic_tier_id')
+            if traffic_tier_id and str(traffic_tier_id).isdigit() and int(traffic_tier_id) > 0:
+                from shop_bot.data_manager.traffic_service import process_traffic_purchase
+                await process_traffic_purchase(
+                    key_id=kid,
+                    tier_id=int(traffic_tier_id),
+                    months=int(months),
+                    payment_id=p_log_id,
+                )
+            else:
+                if action == "extend":
+                    active_purchases = rw_repo.get_active_key_traffic_purchases(kid)
+                    if active_purchases:
+                        expires_dt = datetime.now(timezone.utc) + timedelta(days=30 * max(1, int(months)))
+                        expires_at_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
+                        for pur in active_purchases:
+                            rw_repo.add_key_traffic_purchase(
+                                key_id=kid,
+                                traffic_gb=int(pur['traffic_gb']),
+                                price=float(pur['price']),
+                                expires_at=expires_at_str,
+                                payment_id=p_log_id,
+                            )
+                from shop_bot.data_manager.traffic_service import sync_key_traffic_limit
+                await sync_key_traffic_limit(kid)
 
             # Реферальные начисления за покупку
             if (pay_method or '').lower() != 'balance':

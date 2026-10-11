@@ -4,15 +4,15 @@
 {% set cf = current_filter or 'general' %}
 {% set ns = namespace(last_m=1, last_d=1) %}
 {% if tp > 1 %}
-<div class="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/10 shadow-lg backdrop-blur-sm">
+<div class="flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.03] p-1 backdrop-blur-sm">
     {% if cp > 1 %}
-    <a class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all transform hover:-translate-x-0.5 ajax-nav"
+    <a class="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-all transform hover:-translate-x-0.5 ajax-nav"
         href="{{ url_for('admin_keys_page', page=cp-1, q=query, filter=cf) }}" title="Назад">
-        <span class="material-symbols-outlined text-sm">chevron_left</span>
+        <i data-lucide="chevron-left" class="h-4 w-4" aria-hidden="true"></i>
     </a>
     {% endif %}
 
-    <a class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all {% if 1 == cp %}bg-primary text-background-dark shadow-lg shadow-primary/20 scale-105{% else %}text-white/50 hover:text-white hover:bg-white/10{% endif %} ajax-nav"
+    <a class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all {% if 1 == cp %}bg-white/[0.08] text-white{% else %}text-white/50 hover:text-white hover:bg-white/10{% endif %} ajax-nav"
         href="{{ url_for('admin_keys_page', page=1, q=query, filter=cf) }}">1</a>
 
     {% for p in range(2, tp + 1) %}
@@ -22,16 +22,16 @@
             {% set gap_d = is_d and (p - ns.last_d > 1) %}
 
             {% if gap_m and gap_d %}
-            <span class="w-8 h-8 flex items-center justify-center text-white/20 select-none text-[10px]">...</span>
+            <span class="flex h-7 w-7 items-center justify-center text-white/20 select-none text-[10px]">...</span>
             {% elif gap_d %}
             <span
-                class="w-8 h-8 flex items-center justify-center text-white/20 select-none hidden md:flex text-[10px]">...</span>
+                class="flex h-7 w-7 items-center justify-center text-white/20 select-none hidden md:flex text-[10px]">...</span>
             {% elif gap_m %}
             <span
-                class="w-8 h-8 flex items-center justify-center text-white/20 select-none md:hidden text-[10px]">...</span>
+                class="flex h-7 w-7 items-center justify-center text-white/20 select-none md:hidden text-[10px]">...</span>
             {% endif %}
 
-            <a class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all {% if p == cp %}bg-primary text-background-dark shadow-lg shadow-primary/20 scale-105{% else %}text-white/50 hover:text-white hover:bg-white/10{% endif %} {% if not is_m %}hidden md:flex{% endif %} ajax-nav"
+            <a class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all {% if p == cp %}bg-white/[0.08] text-white{% else %}text-white/50 hover:text-white hover:bg-white/10{% endif %} {% if not is_m %}hidden md:flex{% endif %} ajax-nav"
                 href="{{ url_for('admin_keys_page', page=p, q=query, filter=cf) }}">{{ p }}</a>
 
             {% if is_m %}{% set ns.last_m = p %}{% endif %}
@@ -40,9 +40,9 @@
             {% endfor %}
 
             {% if cp < tp %} <a
-                class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all transform hover:translate-x-0.5 ajax-nav"
+                class="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-all transform hover:translate-x-0.5 ajax-nav"
                 href="{{ url_for('admin_keys_page', page=cp+1, q=query, filter=cf) }}" title="Вперед">
-                <span class="material-symbols-outlined text-sm">chevron_right</span>
+                <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
                 </a>
                 {% endif %}
 </div>

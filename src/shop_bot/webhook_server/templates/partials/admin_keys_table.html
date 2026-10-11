@@ -1,84 +1,19 @@
 {% for k in keys %}
-<tr class="hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0 group">
-    <td class="px-5 py-4 whitespace-nowrap text-xs font-mono text-white/60 group-hover:text-white transition-colors">#{{
-        k.key_id }}</td>
-    <td class="px-5 py-4 whitespace-nowrap text-sm font-medium text-white">
-        {% if k.username %}
-        <span class="demo-blur-username">@{{ k.username }}</span>
-        {% else %}
-        {{ k.user_id or '—' }}
-        {% endif %}
-    </td>
-    <td class="px-5 py-4 whitespace-nowrap text-xs text-white/70">
-        <span class="px-2 py-1 rounded bg-white/5 border border-white/10">{{ k.host_name }}</span>
-    </td>
-    <td class="px-5 py-4 whitespace-nowrap text-xs text-white/50 font-mono demo-blur-sensitive">{{ k.key_email }}</td>
-    <td class="px-5 py-4 text-xs text-white/30 max-w-[150px] truncate font-mono select-all hover:text-white/70 transition-colors demo-blur-sensitive"
-        title="{{ k.remnawave_user_uuid }}">{{ k.remnawave_user_uuid }}</td>
-    <td class="px-5 py-4 whitespace-nowrap">
-        {% if k.expiry_date %}
-        <div class="flex flex-col">
-            <span class="text-xs text-white font-medium">{{ k.expiry_date }}</span>
-            <span class="text-[10px] text-primary">{{ k.expiry_date | relative_time(is_future=True) }}</span>
-        </div>
-        {% else %}
-        <span class="text-xs text-white/30">—</span>
-        {% endif %}
-    </td>
-    <td class="px-5 py-4 whitespace-nowrap text-xs text-white/40">
-        <div class="flex flex-col">
-            <span>{{ k.created_date or '—' }}</span>
-            {% if k.created_date %}
-            <span class="text-[10px] text-white/30">{{ k.created_date | relative_time(is_future=False) }}</span>
-            {% endif %}
-        </div>
-    </td>
-    <td class="px-5 py-4 whitespace-nowrap text-right">
-        <div class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-            {% if k.user_id %}
-            <a href="{{ url_for('users_page', q=k.user_id) }}"
-                class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/50 hover:bg-primary/20 hover:text-primary transition-all"
-                title="Профиль">
-                <span class="material-symbols-outlined text-lg">person</span>
-            </a>
-            {% endif %}
-            <button type="button"
-                class="btn-edit-comment w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-all"
-                data-key-id="{{ k.key_id }}" data-current-comment="{{ (k.comment or k.description or '')|e }}"
-                title="Комментарий">
-                <span class="material-symbols-outlined text-lg">comment</span>
-            </button>
-            <button type="button"
-                class="btn-open-expiry w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-500/70 hover:bg-yellow-500/20 hover:text-yellow-400 transition-all border border-yellow-500/10"
-                data-key-id="{{ k.key_id }}" title="Изменить срок">
-                <span class="material-symbols-outlined text-lg">schedule</span>
-            </button>
-            <button type="button"
-                class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500/70 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all border border-emerald-500/10"
-                onclick="copyKey(this)" data-key="{{ k.subscription_url or k.access_url or '' }}"
-                title="Скопировать ключ">
-                <span class="material-symbols-outlined text-lg">content_copy</span>
-            </button>
-            <form action="{{ url_for('delete_key_route', key_id=k.key_id) }}" method="post" class="inline ajax-form"
-                data-confirm="Удалить ключ #{{ k.key_id }}?">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <button type="submit"
-                    class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500/70 hover:bg-red-500/20 hover:text-red-400 transition-all border border-red-500/10"
-                    title="Удалить">
-                    <span class="material-symbols-outlined text-lg">delete</span>
-                </button>
-            </form>
-        </div>
-    </td>
+<tr class="keys-record-row {{ 'keys-record-row-alt' if loop.index is even else '' }} group border-b border-white/[0.04] transition duration-150 hover:bg-white/[0.035]">
+    <td class="whitespace-nowrap px-5 py-3 font-mono text-xs text-white/60 transition-colors group-hover:text-white"><span class="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/15 bg-sky-400/[0.06] px-2 py-1 text-sky-200/80"><i data-lucide="key-round" class="h-3.5 w-3.5" aria-hidden="true"></i>#{{ k.key_id }}</span></td>
+    <td class="whitespace-nowrap px-5 py-3 text-sm font-medium text-white">{% if k.username %}<span class="demo-blur-username">@{{ k.username }}</span>{% else %}{{ k.user_id or '—' }}{% endif %}</td>
+    <td class="whitespace-nowrap px-5 py-3 text-xs text-white/70"><span class="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/15 bg-sky-400/[0.06] px-2.5 py-1 text-sky-200/80"><i data-lucide="server" class="h-3.5 w-3.5" aria-hidden="true"></i>{{ k.host_name }}</span></td>
+    <td class="whitespace-nowrap px-5 py-3 font-mono text-xs text-white/50 demo-blur-sensitive">{{ k.key_email }}</td>
+    <td class="max-w-[150px] truncate px-5 py-3 font-mono text-xs text-white/30 transition-colors hover:text-white/70 select-all demo-blur-sensitive" title="{{ k.remnawave_user_uuid }}">{{ k.remnawave_user_uuid }}</td>
+    <td class="whitespace-nowrap px-5 py-3">{% if k.expiry_date %}<div class="flex flex-col"><span class="text-xs font-medium text-white">{{ k.expiry_date }}</span><span class="text-[10px] font-semibold text-emerald-300/80">{{ k.expiry_date | relative_time(is_future=True) }}</span></div>{% else %}<span class="text-xs text-white/40">—</span>{% endif %}</td>
+    <td class="whitespace-nowrap px-5 py-3 text-xs text-white/40"><div class="flex flex-col"><span>{{ k.created_date or '—' }}</span>{% if k.created_date %}<span class="text-[10px] text-white/30">{{ k.created_date | relative_time(is_future=False) }}</span>{% endif %}</div></td>
+    <td class="whitespace-nowrap px-5 py-3 text-right"><div class="flex items-center justify-end gap-1.5 opacity-80 transition-opacity group-hover:opacity-100">
+        {% if k.user_id %}<a href="{{ url_for('users_page', q=k.user_id) }}" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/60 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white" title="Профиль"><i data-lucide="user-round" class="h-4 w-4" aria-hidden="true"></i></a>{% endif %}
+        <button type="button" class="btn-edit-comment flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/60 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white" data-key-id="{{ k.key_id }}" data-current-comment="{{ (k.comment or k.description or '')|e }}" title="Добавить комментарий"><i data-lucide="message-square" class="h-4 w-4" aria-hidden="true"></i></button>
+        <button type="button" class="btn-open-expiry flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/60 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white" data-key-id="{{ k.key_id }}" title="Продлить"><i data-lucide="calendar-plus" class="h-4 w-4" aria-hidden="true"></i></button>
+        <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/60 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white" onclick="copyKey(this)" data-key="{{ k.subscription_url or k.access_url or '' }}" title="Скопировать"><i data-lucide="copy" class="h-4 w-4" aria-hidden="true"></i></button>
+        <form action="{{ url_for('delete_key_route', key_id=k.key_id) }}" method="post" class="inline ajax-form" data-confirm="Удалить ключ #{{ k.key_id }}?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /><button type="submit" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition-all hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-300" title="Удалить"><i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i></button></form>
+    </div></td>
 </tr>
-{% if k.comment or k.description %}
-<tr class="bg-white/[0.02] border-b border-white/5 last:border-0 pointer-events-none">
-    <td colspan="8" class="px-5 py-3 text-white/50 text-xs italic">
-        <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-sm">sticky_note_2</span>
-            {{ k.comment or k.description }}
-        </div>
-    </td>
-</tr>
-{% endif %}
+{% if k.comment or k.description %}<tr class="keys-note-row pointer-events-none"><td colspan="8" class="px-5 pb-3 pt-0 text-xs italic text-white/45"><div class="flex items-center gap-2"><i data-lucide="sticky-note" class="h-4 w-4" aria-hidden="true"></i>{{ k.comment or k.description }}</div></td></tr>{% endif %}
 {% endfor %}

@@ -452,10 +452,11 @@ def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int
     plan = get_plan_by_id(plan_id) if plan_id else None
     months = int(plan.get('months') or 1) if plan else 1
     base_devices = int(get_setting(f"base_device_{host_name}") or "1")
+    base_label = str(base_devices)
 
     builder = InlineKeyboardBuilder()
     base_icon = "🟢" if selected_tier_id == 0 else "⚪️"
-    builder.button(text=f"{base_icon} {base_devices} (вкл.)", callback_data="select_tier_0")
+    builder.button(text=f"{base_icon} {base_label} устр. (вкл.)", callback_data="select_tier_0")
     total_btns = 1
     for t in tiers:
         is_selected = (selected_tier_id == t['tier_id'])
@@ -463,7 +464,7 @@ def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int
         diff = t['device_count'] - base_devices
         if diff < 0: diff = 0
         total_price = diff * t['price'] * months
-        label = f"{icon} {t['device_count']} (+{total_price:.0f}₽)"
+        label = f"{icon} {t['device_count']} устр. (+{total_price:.0f}₽)"
         builder.button(text=label, callback_data=f"select_tier_{t['tier_id']}")
         total_btns += 1
     if selected_tier_id is not None:
@@ -482,6 +483,85 @@ def create_device_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int
     builder.adjust(*rows)
     return builder.as_markup()
 
+
+def create_traffic_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: int, action: str, key_id: int = 0, selected_traffic_tier_id: int = None) -> InlineKeyboardMarkup:
+    from shop_bot.data_manager.database import get_plan_by_id
+    plan = get_plan_by_id(plan_id) if plan_id else None
+    months = int(plan.get('months') or 1) if plan else 1
+    base_traffic_gb = int(plan.get('traffic_limit_gb') or 0) if plan else 0
+    base_label = "∞" if base_traffic_gb == 0 else f"{base_traffic_gb} ГБ"
+
+    builder = InlineKeyboardBuilder()
+    base_icon = "🟢" if selected_traffic_tier_id == 0 else "⚪️"
+    builder.button(text=f"{base_icon} {base_label} (вкл.)", callback_data="select_traffic_tier_0")
+    total_btns = 1
+    for t in tiers:
+        is_selected = (selected_traffic_tier_id == t['tier_id'])
+        icon = "🟢" if is_selected else "⚪️"
+        total_price = float(t['price']) * months
+        label = f"{icon} +{t['traffic_gb']} ГБ (+{total_price:.0f}₽)"
+        builder.button(text=label, callback_data=f"select_traffic_tier_{t['tier_id']}")
+        total_btns += 1
+    if selected_traffic_tier_id is not None:
+        builder.button(text="✅ Продолжить", callback_data="confirm_traffic_tier")
+    if action == "extend":
+        back_cb = "manage_keys"
+    else:
+        from shop_bot.data_manager.remnawave_repository import get_all_hosts
+        hosts = get_all_hosts(visible_only=True) or []
+        back_cb = "back_to_main_menu" if len(hosts) == 1 else "buy_new_key"
+    builder.button(text="⬅️ Назад", callback_data=back_cb)
+    rows = [2] * ((total_btns + 1) // 2)
+    if selected_traffic_tier_id is not None:
+        rows.append(1)
+    rows.append(1)
+    builder.adjust(*rows)
+    return builder.as_markup()
+
+
+def create_subscription_addons_keyboard(key_id: int, show_devices: bool, show_traffic: bool) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    if show_devices:
+        builder.button(text="📱 Докупить устройства", callback_data=f"addon_devices_menu_{key_id}")
+    if show_traffic:
+        builder.button(text="📊 Докупить трафик", callback_data=f"addon_traffic_menu_{key_id}")
+    builder.button(text="⬅️ Назад к ключу", callback_data=f"show_key_{key_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def create_addon_confirm_keyboard(key_id: int, addon_type: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Перейти к оплате", callback_data=f"addon_confirm_{addon_type}_{key_id}")
+    builder.button(text="⬅️ Назад", callback_data=f"addon_{addon_type}_menu_{key_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def create_addon_devices_keyboard(key_id: int, current_limit: int, tiers: list[dict], days_left: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for tier in tiers:
+        target_limit = int(tier['device_count'])
+        if target_limit <= current_limit:
+            continue
+        extra = target_limit - current_limit
+        price = float(tier['price']) * extra * days_left / 30
+        builder.button(text=f"{target_limit} устр. (+{extra}, +{price:.0f}₽)", callback_data=f"addon_device_select_{key_id}_{tier['tier_id']}")
+    builder.button(text="⬅️ Назад", callback_data=f"subscription_addons_{key_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def create_addon_traffic_keyboard(key_id: int, tiers: list[dict], days_left: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for tier in tiers:
+        price = float(tier['price']) * days_left / 30
+        builder.button(text=f"+{tier['traffic_gb']} ГБ (+{price:.0f}₽)", callback_data=f"addon_traffic_select_{key_id}_{tier['tier_id']}")
+    builder.button(text="⬅️ Назад", callback_data=f"subscription_addons_{key_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 def create_skip_email_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="➡️ Продолжить без почты", callback_data="skip_email")
@@ -497,11 +577,14 @@ def create_payment_method_keyboard(
     main_balance: float | None = None,
     price: float | None = None,
     promo_applied: bool = False,
-    back_callback: str = "back_to_email_prompt"
+    back_callback: str = "back_to_email_prompt",
+    balance_only: bool = False,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     for method in get_available_payment_methods(include_balance=bool(show_balance), balance=main_balance):
+        if balance_only and method["method"] != "balance":
+            continue
         callback_data = method.get("purchase_callback")
         if not callback_data:
             continue
@@ -514,7 +597,7 @@ def create_payment_method_keyboard(
     
 
 
-    if not promo_applied:
+    if not promo_applied and not balance_only:
         builder.button(text="🎟 Ввести промокод", callback_data="enter_promo_code")
 
     builder.button(text="⬅️ Назад", callback_data=back_callback)
