@@ -213,7 +213,7 @@ def register_premna_routes(app, login_required, get_common_template_data):
         statistics, error = _get_statistics()
         return render_template(
             'premna.html',
-            statistics=statistics,
+            statistics=statistics if statistics is not None else {},
             statistics_error=error,
             **get_common_template_data(),
         )
