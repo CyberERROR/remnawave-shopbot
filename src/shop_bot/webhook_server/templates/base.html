@@ -1133,6 +1133,22 @@
                     </div>
 
                     <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <h4 class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-white/60">
+                                <span class="material-symbols-outlined text-base text-blue-400">history</span>
+                                Список изменений
+                            </h4>
+                            <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/25">GitHub
+                                Releases</span>
+                        </div>
+                        <div id="releases-state"
+                            class="rounded-xl border border-white/5 bg-black/20 px-4 py-6 text-center text-xs text-white/40">
+                            Загрузка списка изменений...
+                        </div>
+                        <div id="releases-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+                    </div>
+
+                    <div class="space-y-3">
                         {% set links = [
                         (project_info.links.repository, 'code', 'Репозиторий проекта', 'Исходный код и документация',
                         'text-white', 'text-white/50'),
@@ -1762,9 +1778,180 @@
                 aboutBtns.forEach(btn => {
                     btn.addEventListener('click', async () => {
                         openModal('aboutModal');
+                        window.loadReleases?.();
                         await checkForUpdates();
                     });
                 });
+            })();
+
+            (function () {
+                const listEl = document.getElementById('releases-list');
+                const stateEl = document.getElementById('releases-state');
+                if (!listEl || !stateEl) return;
+
+                let cachedReleases = null;
+
+                function escapeHtml(text) {
+                    return String(text)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;');
+                }
+
+                function renderInline(text) {
+                    return text
+                        .replace(/`([^`]+)`/g, '<code class="rounded bg-white/[0.08] px-1 py-0.5 font-mono text-[10px] text-primary/80">$1</code>')
+                        .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-white/90">$1</strong>')
+                        .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" class="text-blue-400 underline decoration-blue-400/30 hover:text-blue-300">$1</a>');
+                }
+
+                function renderMarkdown(source) {
+                    const lines = escapeHtml(source).split(/\r?\n/);
+                    const html = [];
+                    let inList = false;
+                    let inCode = false;
+
+                    const closeList = () => {
+                        if (inList) { html.push('</ul>'); inList = false; }
+                    };
+
+                    for (const raw of lines) {
+                        const line = raw.trim();
+                        const lower = line.toLowerCase();
+
+                        if (line.startsWith('```')) {
+                            closeList();
+                            html.push(inCode ? '</pre>' : '<pre class="my-2 overflow-x-auto rounded-lg border border-white/5 bg-black/40 p-2 font-mono text-[10px] text-white/70">');
+                            inCode = !inCode;
+                            continue;
+                        }
+                        if (inCode) { html.push(escapeHtml(raw)); continue; }
+
+                        if (!line) { closeList(); continue; }
+                        if (lower.startsWith('&lt;img') || lower.startsWith('&lt;/') || lower.startsWith('&lt;p ') || lower.startsWith('&lt;div') || lower.startsWith('&lt;br')) { continue; }
+                        if (/^\{\{.*\}\}$/.test(line) || /^[_\-=]{3,}$/.test(line)) { closeList(); html.push('<div class="my-2 h-px bg-white/[0.06]"></div>'); continue; }
+
+                        const heading = line.match(/^(#{1,6})\s+(.+)$/);
+                        if (heading) {
+                            closeList();
+                            const size = heading[1].length <= 2 ? 'text-xs font-bold text-white/90 mt-3' : 'text-[11px] font-bold text-white/80 mt-3';
+                            html.push(`<div class="${size} mb-1">${renderInline(heading[2].replace(/^[\p{Emoji}\uFE0F\u200D\u20E3\s]+/u, ''))}</div>`);
+                            continue;
+                        }
+
+                        const bullet = line.match(/^\s*(?:[-*+]|\d+[.)])\s+(.+)$/);
+                        if (bullet) {
+                            if (!inList) { html.push('<ul class="my-1 space-y-1 pl-4">'); inList = true; }
+                            html.push(`<li class="list-disc text-[11px] leading-relaxed text-white/55 marker:text-primary/50">${renderInline(bullet[1])}</li>`);
+                            continue;
+                        }
+
+                        closeList();
+                        html.push(`<p class="my-1 text-[11px] leading-relaxed text-white/55">${renderInline(line)}</p>`);
+                    }
+
+                    closeList();
+                    if (inCode) html.push('</pre>');
+                    return html.join('');
+                }
+
+                function formatDate(value) {
+                    const parts = String(value || '').split('-');
+                    if (parts.length !== 3) return value || '';
+                    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+                }
+
+                function buildCard(release) {
+                    const card = document.createElement('div');
+                    card.className = 'rounded-xl border border-white/5 bg-white/[0.03] overflow-hidden transition-all hover:border-white/10';
+
+                    const header = document.createElement('div');
+                    header.className = 'flex items-center gap-2 px-3 py-2.5 border-b border-white/5 bg-black/20';
+
+                    const tag = document.createElement('span');
+                    tag.className = 'flex-shrink-0 rounded-md bg-primary/15 border border-primary/25 px-2 py-0.5 font-mono text-[10px] font-bold text-primary';
+                    tag.textContent = release.tag || release.name || '—';
+                    header.appendChild(tag);
+
+                    if (release.prerelease) {
+                        const pre = document.createElement('span');
+                        pre.className = 'flex-shrink-0 rounded-md bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300';
+                        pre.textContent = 'Beta';
+                        header.appendChild(pre);
+                    }
+
+                    const date = document.createElement('span');
+                    date.className = 'ml-auto flex-shrink-0 font-mono text-[10px] text-white/30';
+                    date.textContent = formatDate(release.published_at);
+                    header.appendChild(date);
+
+                    card.appendChild(header);
+
+                    const bodyWrap = document.createElement('div');
+                    bodyWrap.className = 'relative';
+
+                    const body = document.createElement('div');
+                    body.className = 'max-h-28 overflow-hidden px-3 py-2 transition-all duration-300';
+                    body.innerHTML = release.body ? renderMarkdown(release.body) : '<p class="text-[11px] text-white/35">Описание изменений отсутствует</p>';
+                    bodyWrap.appendChild(body);
+
+                    const fade = document.createElement('div');
+                    fade.className = 'pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white/[0.04] to-transparent';
+                    bodyWrap.appendChild(fade);
+                    card.appendChild(bodyWrap);
+
+                    const actions = document.createElement('div');
+                    actions.className = 'flex items-center justify-between gap-2 px-3 py-2 border-t border-white/5';
+
+                    const toggle = document.createElement('button');
+                    toggle.type = 'button';
+                    toggle.className = 'text-[10px] font-bold uppercase tracking-wider text-white/40 transition-colors hover:text-primary';
+                    toggle.textContent = 'Читать полностью';
+                    toggle.addEventListener('click', () => {
+                        const expanded = body.classList.toggle('max-h-28');
+                        body.classList.toggle('max-h-[600px]', !expanded);
+                        fade.classList.toggle('hidden', !expanded);
+                        toggle.textContent = expanded ? 'Читать полностью' : 'Свернуть';
+                    });
+                    actions.appendChild(toggle);
+
+                    const link = document.createElement('a');
+                    link.href = release.url;
+                    link.target = '_blank';
+                    link.className = 'flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400/70 transition-colors hover:text-blue-300';
+                    link.innerHTML = 'GitHub <span class="material-symbols-outlined text-xs">open_in_new</span>';
+                    actions.appendChild(link);
+
+                    card.appendChild(actions);
+                    return card;
+                }
+
+                function render(releases) {
+                    listEl.innerHTML = '';
+                    if (!releases.length) {
+                        stateEl.textContent = 'Не удалось получить список изменений';
+                        stateEl.classList.remove('hidden');
+                        return;
+                    }
+                    stateEl.classList.add('hidden');
+                    releases.forEach(release => listEl.appendChild(buildCard(release)));
+                    window.refreshUiIcons?.(listEl);
+                }
+
+                window.loadReleases = async function (force = false) {
+                    if (cachedReleases && !force) { render(cachedReleases); return; }
+                    stateEl.textContent = 'Загрузка списка изменений...';
+                    stateEl.classList.remove('hidden');
+                    try {
+                        const data = await apiRequest('/update/releases');
+                        cachedReleases = (data && data.releases) || [];
+                        render(cachedReleases);
+                    } catch (e) {
+                        stateEl.textContent = 'Не удалось получить список изменений';
+                        stateEl.classList.remove('hidden');
+                    }
+                };
             })();
 
             // ===== ПЕРЕЗАГРУЗКА СЕРВИСОВ =====
