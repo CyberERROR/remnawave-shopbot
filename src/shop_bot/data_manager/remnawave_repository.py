@@ -129,6 +129,7 @@ def record_key(
     description: str | None = None,
     comment_key: str | None = None,
     created_at_ms: int | None = None,
+    plan_id: int | None = None,
 ) -> int | None:
     expire_ms = expire_at_ms if expire_at_ms is not None else _default_expire_at_ms()
     email_normalized = _normalize_email(email)
@@ -157,6 +158,7 @@ def record_key(
                 tag=tag,
                 description=description,
                 comment_key=comment_key,
+                plan_id=plan_id,
             )
             return key_id
 
@@ -175,6 +177,7 @@ def record_key(
             tag=tag,
             comment_key=comment_key,
             created_at_ms=created_at_ms,
+            plan_id=plan_id,
         )
     except Exception:
         logger.exception("Remnawave repository failed to record key for user %s", user_id)
@@ -188,6 +191,7 @@ def record_key_from_payload(
     host_name: str | None = None,
     description: str | None = None,
     tag: str | None = None,
+    plan_id: int | None = None,
 ) -> int | None:
     if not payload:
         return None
@@ -228,6 +232,7 @@ def record_key_from_payload(
         tag=tag or payload.get('tag'),
         description=description or payload.get('description'),
         created_at_ms=created_at_ms,
+        plan_id=plan_id if plan_id is not None else payload.get('plan_id'),
     )
 
 
@@ -247,6 +252,7 @@ def update_key(
     description: str | None = None,
     comment_key: str | None = None,
     is_pinned: bool | None = None,
+    plan_id: int | None = None,
 ) -> bool:
     return database.update_key_fields(
         key_id,
@@ -263,6 +269,7 @@ def update_key(
         description=description,
         comment_key=comment_key,
         is_pinned=is_pinned,
+        plan_id=plan_id,
     )
 
 

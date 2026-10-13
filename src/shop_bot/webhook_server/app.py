@@ -2060,6 +2060,7 @@ def create_webhook_app(bot_controller_instance):
                 payload=result,
                 host_name=host_name,
                 description=comment,
+                plan_id=plan_id,
             )
             if not key_id:
                 return jsonify({"ok": False, "error": "db_failed"}), 500
@@ -2160,6 +2161,7 @@ def create_webhook_app(bot_controller_instance):
                 payload=result,
                 host_name=host_name,
                 description=comment or 'Gift key',
+                plan_id=plan_id,
             )
             if not key_id:
                 return jsonify({"ok": False, "error": "db_failed"}), 500

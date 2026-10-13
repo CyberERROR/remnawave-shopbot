@@ -273,7 +273,8 @@ def initialize_db():
                     tag TEXT,
                     description TEXT,
                     comment_key TEXT,
-                    is_pinned BOOLEAN DEFAULT 0
+                    is_pinned BOOLEAN DEFAULT 0,
+                    plan_id INTEGER
                 )
             ''')
 
@@ -936,7 +937,8 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
             tag TEXT,
             description TEXT,
             comment_key TEXT,
-            is_pinned BOOLEAN DEFAULT 0
+            is_pinned BOOLEAN DEFAULT 0,
+            plan_id INTEGER
         )
     ''')
     old_columns = _get_table_columns(cursor, "vpn_keys_legacy")
@@ -973,6 +975,7 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
         f"{col('description')} AS description",
         f"{col('comment_key')} AS comment_key",
         f"{col('is_pinned', '0')} AS is_pinned",
+        f"{col('plan_id')} AS plan_id",
     ])
 
     cursor.execute(
@@ -995,7 +998,8 @@ def _rebuild_vpn_keys_table(cursor: sqlite3.Cursor) -> None:
             tag,
             description,
             comment_key,
-            is_pinned
+            is_pinned,
+            plan_id
         )
         SELECT
             {select_clause}
@@ -1036,13 +1040,15 @@ def _ensure_vpn_keys_schema(cursor: sqlite3.Cursor) -> None:
                 tag TEXT,
                 description TEXT,
                 comment_key TEXT,
-                is_pinned BOOLEAN DEFAULT 0
+                is_pinned BOOLEAN DEFAULT 0,
+                plan_id INTEGER
             )
         ''')
         _finalize_vpn_key_indexes(cursor)
         return
     _rebuild_vpn_keys_table(cursor)
     _ensure_table_column(cursor, "vpn_keys", "is_pinned", "BOOLEAN DEFAULT 0")
+    _ensure_table_column(cursor, "vpn_keys", "plan_id", "INTEGER")
 
 
 # ===================================
@@ -3703,6 +3709,7 @@ def add_new_key(
     tag: str | None = None,
     comment_key: str | None = None,
     created_at_ms: int | None = None,
+    plan_id: int | None = None,
 ) -> int | None:
     host_name_norm = normalize_host_name(host_name) if host_name else None
     email_normalized = _normalize_email(key_email) or key_email.strip()
@@ -3715,13 +3722,13 @@ def add_new_key(
         INSERT INTO vpn_keys (
             user_id, host_name, squad_uuid, remnawave_user_uuid, short_uuid, email, key_email,
             subscription_url, expire_at, created_at, updated_at, traffic_limit_bytes,
-            traffic_limit_strategy, tag, description, comment_key
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            traffic_limit_strategy, tag, description, comment_key, plan_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             user_id, host_name_norm, squad_uuid, remnawave_user_uuid, short_uuid, email_normalized,
             email_normalized, subscription_url, expire_str, created_str, created_str,
-            traffic_limit_bytes, strategy_value, tag, description, comment_key
+            traffic_limit_bytes, strategy_value, tag, description, comment_key, plan_id
         ),
         f"Не удалось добавить новый ключ для пользователя {user_id}"
     )
@@ -3768,6 +3775,7 @@ def update_key_fields(
     description: str | None = None,
     comment_key: str | None = None,
     is_pinned: bool | None = None,
+    plan_id: int | None = None,
 ) -> bool:
     updates: dict[str, Any] = {}
     if user_id is not None:
@@ -3801,6 +3809,8 @@ def update_key_fields(
         updates["comment_key"] = comment_key
     if is_pinned is not None:
         updates["is_pinned"] = 1 if is_pinned else 0
+    if plan_id is not None:
+        updates["plan_id"] = plan_id
     return _apply_key_updates(key_id, updates)
 # ===========================
 

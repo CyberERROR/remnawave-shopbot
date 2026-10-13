@@ -3901,14 +3901,14 @@ async def process_successful_payment(bot: Bot | None, metadata: dict) -> bool:
                 return False
 
             if action == "new":
-                kid = rw_repo.record_key_from_payload(user_id=uid, payload=res, host_name=host)
+                kid = rw_repo.record_key_from_payload(user_id=uid, payload=res, host_name=host, plan_id=plan_id)
                 if not kid: 
                     add_to_balance(uid, float(price))
                     logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка БД нового ключа)")
                     if proc_msg and bot: await proc_msg.edit_text("❌ При сохранении ключа произошла системная ошибка. Средства возвращены на баланс.")
                     return False
             else:
-                if not rw_repo.update_key(kid, remnawave_user_uuid=res['client_uuid'], expire_at_ms=res['expiry_timestamp_ms']): 
+                if not rw_repo.update_key(kid, remnawave_user_uuid=res['client_uuid'], expire_at_ms=res['expiry_timestamp_ms'], plan_id=plan_id): 
                     add_to_balance(uid, float(price))
                     logger.error(f"Возврат средств: {price} RUB возвращено пользователю {uid} (ошибка обновления БД)")
                     if proc_msg and bot: await proc_msg.edit_text("❌ Ошибка обновления данных ключа в системе. Средства возвращены на баланс.")
