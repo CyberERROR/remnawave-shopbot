@@ -256,17 +256,37 @@
             font-weight: 700;
         }
 
-        .fire-plan-action {
+        .fire-plan-conditions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4375rem;
+            min-width: 0;
             margin-left: auto;
-            color: #6b7280;
-            font-size: 1rem;
-            transition: color 0.2s ease, transform 0.2s ease;
+            padding: 0 0.375rem;
+            color: #9ca3af;
+            font: 600 14px 'Inter', sans-serif;
+            white-space: nowrap;
         }
 
-        .fire-plan-tile:hover .fire-plan-action,
-        .fire-plan-tile.border-primary .fire-plan-action {
-            color: #34d399;
-            transform: translate(1px, -1px);
+        .fire-plan-condition {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.1875rem;
+        }
+
+        .fire-plan-condition + .fire-plan-condition::before {
+            content: '|';
+            margin-right: 0.1875rem;
+            color: #6b7280;
+        }
+
+        .fire-plan-condition .material-icons-round {
+            color: #6ee7b7;
+            font-size: 10px;
+        }
+
+        .fire-plan-condition-value {
+            color: #f9fafb;
         }
 
         .fire-plan-check {
@@ -489,7 +509,7 @@
                             <span class="material-icons-round text-primary text-sm">public</span>
                         </div>
                         <div class="text-left">
-                            <div class="text-[9px] text-gray-500 uppercase font-bold tracking-wider">Локация сервера
+                            <div class="text-[9px] text-gray-500 uppercase font-bold tracking-wider">Выберите тариф
                             </div>
                             <div id="display-selected-server" class="text-xs font-bold text-white">Нидерланды • NL #1
                             </div>

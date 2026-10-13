@@ -2,12 +2,12 @@
 <a href="javascript:void(0)" onclick="openTicketChat('{{ ticket.ticket_id }}')" class="group block rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition-all hover:border-white/20 hover:bg-white/[0.06] {% if ticket.status == 'open' and ticket.last_sender == 'user' %}border-amber-400/20 bg-amber-400/[0.04]{% endif %}">
     <div class="flex items-start gap-3">
         <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full {% if ticket.status == 'open' %}bg-gradient-to-br from-sky-400 to-sky-600{% else %}bg-gradient-to-br from-slate-400 to-slate-600 opacity-60{% endif %} text-xs font-bold text-white">
-            {{ ticket.username[0]|upper if ticket.username else 'U' }}
+            {{ ((ticket.first_name or ticket.username or 'U'))[0]|upper }}
         </div>
         <div class="min-w-0 flex-1 space-y-1">
             <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-white">{% if ticket.username %}{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}</p>
+                    <p class="truncate text-sm font-semibold text-white">{% if ticket.first_name %}{{ ticket.first_name }}{% elif ticket.username %}@{{ ticket.username }}{% else %}User #{{ ticket.user_id }}{% endif %}</p>
                     <p class="font-mono text-[10px] font-medium text-white/50">ID: {{ ticket.user_id }}</p>
                 </div>
                 <span class="shrink-0 font-mono text-[10px] font-medium tabular-nums text-white/40 desktop-rel-time" data-timestamp="{{ ticket.updated_at or ticket.created_at }}">{{ (ticket.updated_at or ticket.created_at or "").split(' ')[1][:5] }}</span>

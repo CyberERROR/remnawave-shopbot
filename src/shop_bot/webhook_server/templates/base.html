@@ -260,16 +260,23 @@
         .soft-select-toggle {
             width: 100%;
             text-align: left;
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
             color: white;
             cursor: pointer;
+            transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .soft-select-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .soft-select-toggle:focus-visible {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
         }
 
         .soft-select-menu {
@@ -279,9 +286,12 @@
             left: 0;
             right: 0;
             margin-top: 0.25rem;
-            background: #1a2f24;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.5rem;
+            background: rgba(11, 15, 14, 0.98) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 0.75rem !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            backdrop-filter: blur(20px) !important;
+            padding: 0.25rem !important;
             max-height: 300px;
             overflow-y: auto;
             z-index: 100;
@@ -296,28 +306,42 @@
             display: block;
         }
 
-        .dark .soft-select-menu,
         .dark .modal-content {
             background: rgba(0, 0, 0, 0.98) !important;
             backdrop-filter: blur(20px) !important;
         }
 
         .soft-select-item {
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
             cursor: pointer;
             color: rgba(255, 255, 255, 0.7);
+            transition: background-color 0.15s ease, color 0.15s ease;
         }
 
-        .soft-select-item:hover,
+        .soft-select-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #ffffff;
+        }
+
         .soft-select-item.is-active {
-            background: rgba(19, 236, 128, 0.1);
-            color: #13ec80;
+            background: rgba(52, 211, 153, 0.1);
+            color: #6ee7b7;
         }
 
         .soft-select select {
             position: absolute;
             opacity: 0;
             pointer-events: none;
+        }
+
+        select {
+            color-scheme: dark;
+        }
+
+        select option {
+            background-color: #0b0f0e;
+            color: #e5e5e5;
         }
 
         @keyframes pulse {
@@ -619,6 +643,7 @@
                         </div>
                         <div class="space-y-1">
                             {{ nav_link('users_page', 'Пользователи', 'users-round') }}
+                            {{ nav_link('tariff_page', 'Тарифы', 'credit-card') }}
                             {{ nav_link('admin_keys_page', 'Ключи', 'key-round') }}
                             {{ nav_link('support_list_page', 'Поддержка', 'messages-square', ['support_ticket_page']) }}
                             {{ nav_link('button_constructor_page', 'Конструктор кнопок', 'blocks') }}
@@ -928,6 +953,7 @@
                                     class="flex items-center gap-1.5 overflow-x-auto flex-1 md:flex-none no-scrollbar mask-gradient-right">
                                     {{ nav_link_header('dashboard_page', 'Главная', 'layout-dashboard') }}
                                     {{ nav_link_header('users_page', 'Пользователи', 'users-round') }}
+                                    {{ nav_link_header('tariff_page', 'Тарифы', 'credit-card') }}
                                     {{ nav_link_header('admin_keys_page', 'Ключи', 'key-round') }}
                                     {{ nav_link_header('support_list_page', 'Поддержка', 'messages-square',
                                     ['support_ticket_page']) }}

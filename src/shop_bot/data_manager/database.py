@@ -350,7 +350,7 @@ def initialize_db():
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS xui_hosts(
                     host_name TEXT PRIMARY KEY,
-                    squad_uuid TEXT UNIQUE,
+                    squad_uuid TEXT,
                     description TEXT,
                     default_traffic_limit_bytes INTEGER,
                     default_traffic_strategy TEXT DEFAULT 'NO_RESET',
@@ -756,6 +756,51 @@ def _ensure_hosts_columns(cursor: sqlite3.Cursor) -> None:
         _ensure_table_column(cursor, "xui_hosts", column, definition)
 
 
+def _ensure_xui_hosts_squad_uuid_not_unique(cursor: sqlite3.Cursor) -> None:
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='xui_hosts'")
+    if not cursor.fetchone():
+        return
+    has_unique_squad = False
+    cursor.execute("PRAGMA index_list(xui_hosts)")
+    for idx in cursor.fetchall():
+        if len(idx) < 4 or not idx[2]:
+            continue
+        cursor.execute(f"PRAGMA index_info('{idx[1]}')")
+        cols = [r[2] for r in cursor.fetchall()]
+        if cols == ["squad_uuid"]:
+            has_unique_squad = True
+            break
+    if not has_unique_squad:
+        return
+    cursor.execute("PRAGMA table_info(xui_hosts)")
+    columns = cursor.fetchall()
+    if not columns:
+        return
+    col_defs = []
+    col_names = []
+    for col in columns:
+        name = col[1]
+        col_type = col[2] or ""
+        notnull = col[3]
+        default = col[4]
+        pk = col[5]
+        col_names.append(f'"{name}"')
+        definition = f'"{name}" {col_type}'.rstrip()
+        if pk:
+            definition += " PRIMARY KEY"
+        elif notnull:
+            definition += " NOT NULL"
+        if default is not None:
+            definition += f" DEFAULT {default}"
+        col_defs.append(definition)
+    cols_sql = ", ".join(col_names)
+    cursor.execute(f"CREATE TABLE xui_hosts_migr ({', '.join(col_defs)})")
+    cursor.execute(f"INSERT INTO xui_hosts_migr ({cols_sql}) SELECT {cols_sql} FROM xui_hosts")
+    cursor.execute("DROP TABLE xui_hosts")
+    cursor.execute("ALTER TABLE xui_hosts_migr RENAME TO xui_hosts")
+    logging.info("Миграция: снято ограничение UNIQUE с xui_hosts.squad_uuid")
+
+
 # =================================
 
 
@@ -1059,6 +1104,7 @@ def run_migration():
             cursor.execute("PRAGMA foreign_keys = OFF")
             _ensure_users_columns(cursor)
             _ensure_hosts_columns(cursor)
+            _ensure_xui_hosts_squad_uuid_not_unique(cursor)
             _ensure_device_tiers_table(cursor)
             _ensure_traffic_tiers_table(cursor)
             _ensure_key_traffic_purchases_table(cursor)
@@ -4126,9 +4172,10 @@ def create_support_ticket(user_id: int, subject: str | None = None) -> int | Non
     )
     if row and row['ticket_id']: return int(row['ticket_id'])
 
+    now_msk = _now_str()
     cursor = _exec(
-        "INSERT INTO support_tickets (user_id, subject) VALUES (?, ?)",
-        (user_id, subject),
+        "INSERT INTO support_tickets (user_id, subject, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        (user_id, subject, now_msk, now_msk),
         f"Не удалось создать тикет поддержки для пользователя {user_id}"
     )
     return cursor.lastrowid if cursor else None
@@ -4145,9 +4192,10 @@ def get_or_create_open_ticket(user_id: int, subject: str | None = None) -> tuple
         f"Не удалось получить тикет для пользователя {user_id}"
     )
     if row and row['ticket_id']: return int(row['ticket_id']), False
+    now_msk = _now_str()
     cursor = _exec(
-        "INSERT INTO support_tickets (user_id, subject) VALUES (?, ?)",
-        (user_id, subject),
+        "INSERT INTO support_tickets (user_id, subject, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        (user_id, subject, now_msk, now_msk),
         f"Не удалось создать/получить тикет для пользователя {user_id}"
     )
     if cursor and cursor.lastrowid: return int(cursor.lastrowid), True
@@ -4159,12 +4207,13 @@ def get_or_create_open_ticket(user_id: int, subject: str | None = None) -> tuple
 
 # ===== ADD_SUPPORT_MESSAGE =====
 def add_support_message(ticket_id: int, sender: str, content: str, media: str | None = None) -> int | None:
+    now_msk = _now_str()
     cursor = _exec(
-        "INSERT INTO support_messages (ticket_id, sender, content, media) VALUES (?, ?, ?, ?)",
-        (ticket_id, sender, content, media),
+        "INSERT INTO support_messages (ticket_id, sender, content, media, created_at) VALUES (?, ?, ?, ?, ?)",
+        (ticket_id, sender, content, media, now_msk),
         f"Не удалось добавить сообщение в тикет {ticket_id}"
     )
-    if cursor and cursor.lastrowid: mid = cursor.lastrowid; _exec("UPDATE support_tickets SET updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?", (ticket_id,), "Не удалось обновить время тикета"); return mid
+    if cursor and cursor.lastrowid: mid = cursor.lastrowid; _exec("UPDATE support_tickets SET updated_at = ? WHERE ticket_id = ?", (now_msk, ticket_id), "Не удалось обновить время тикета"); return mid
     return None
 # =============================
 
@@ -4172,8 +4221,8 @@ def add_support_message(ticket_id: int, sender: str, content: str, media: str | 
 # ===== UPDATE_TICKET_THREAD_INFO =====
 def update_ticket_thread_info(ticket_id: int, forum_chat_id: str | None, message_thread_id: int | None) -> bool:
     cursor = _exec(
-        "UPDATE support_tickets SET forum_chat_id = ?, message_thread_id = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
-        (forum_chat_id, message_thread_id, ticket_id),
+        "UPDATE support_tickets SET forum_chat_id = ?, message_thread_id = ?, updated_at = ? WHERE ticket_id = ?",
+        (forum_chat_id, message_thread_id, _now_str(), ticket_id),
         f"Не удалось обновить инфо о треде для тикета {ticket_id}"
     )
     return cursor is not None and cursor.rowcount > 0
@@ -4241,8 +4290,8 @@ def get_ticket_messages(ticket_id: int) -> list[dict]:
 # ===== SET_TICKET_STATUS =====
 def set_ticket_status(ticket_id: int, status: str) -> bool:
     cursor = _exec(
-        "UPDATE support_tickets SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
-        (status, ticket_id),
+        "UPDATE support_tickets SET status = ?, updated_at = ? WHERE ticket_id = ?",
+        (status, _now_str(), ticket_id),
         f"Не удалось установить статус '{status}' для тикета {ticket_id}"
     )
     return cursor is not None and cursor.rowcount > 0
@@ -4254,8 +4303,8 @@ def set_ticket_status(ticket_id: int, status: str) -> bool:
 # ===== UPDATE_TICKET_SUBJECT =====
 def update_ticket_subject(ticket_id: int, subject: str) -> bool:
     cursor = _exec(
-        "UPDATE support_tickets SET subject = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?",
-        (subject, ticket_id),
+        "UPDATE support_tickets SET subject = ?, updated_at = ? WHERE ticket_id = ?",
+        (subject, _now_str(), ticket_id),
         f"Не удалось обновить тему для тикета {ticket_id}"
     )
     return cursor is not None and cursor.rowcount > 0
@@ -4290,6 +4339,7 @@ def get_tickets_paginated(page: int = 1, per_page: int = 20, status: str | None 
     base_query = """
         SELECT t.*, 
                u.username,
+               u.first_name,
                (SELECT sender FROM support_messages 
                 WHERE ticket_id = t.ticket_id 
                 ORDER BY created_at DESC LIMIT 1) as last_sender

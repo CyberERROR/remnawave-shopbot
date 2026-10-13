@@ -1,0 +1,1380 @@
+{% extends "base.html" %}
+{% block title %}Тарифы{% endblock %}
+
+{% block head %}
+<style>
+    .swatch-default { background: rgba(255,255,255,.03); color: rgba(255,255,255,.6); }
+    .swatch-danger { background: rgba(248,113,113,.08); color: #fca5a5; }
+    .swatch-success { background: rgba(52,211,153,.08); color: #6ee7b7; }
+    .swatch-primary { background: rgba(125,211,252,.08); color: #7dd3fc; }
+    #tab-hosts { min-width: 0; }
+    #tab-hosts input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+    #tab-hosts textarea,
+    #tab-hosts select { max-width: 100%; min-width: 0; }
+    #tab-hosts .grid > div { position: relative; z-index: 1; }
+    @media (max-width: 640px) {
+        #tab-hosts .grid { min-width: 0; }
+        #tab-hosts [id^="device-tiers-list-"] > *,
+        #tab-hosts [id^="traffic-tiers-list-"] > * { max-width: 100%; overflow-wrap: anywhere; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% set ns = namespace(total_plans=0, total_price=0, limited=0, visible_hosts=0) %}
+{% for host in hosts %}
+    {% set ns.total_plans = ns.total_plans + (host.plans | length) %}
+    {% for plan in host.plans %}
+        {% set ns.total_price = ns.total_price + (plan.price or 0) %}
+        {% if (plan.traffic_limit_gb or 0) > 0 or (plan.hwid_limit or 0) > 0 %}
+            {% set ns.limited = ns.limited + 1 %}
+        {% endif %}
+    {% endfor %}
+    {% if host.see is none or host.see == 1 %}
+        {% set ns.visible_hosts = ns.visible_hosts + 1 %}
+    {% endif %}
+{% endfor %}
+{% set avg_price = (ns.total_price / ns.total_plans) if ns.total_plans > 0 else 0 %}
+
+<header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div class="min-w-0">
+        <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-bold tracking-tight text-white">Тарифы</h1>
+            <span class="rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-0.5 text-[10px] font-semibold text-emerald-300">Финансы</span>
+        </div>
+        <p class="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">Хосты, тарифы и дополнительные опции</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+        <button type="button" onclick="openAddHostSection()" class="inline-flex items-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/[0.08] px-3 py-2 text-xs font-medium text-sky-300 transition duration-150 hover:bg-sky-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60">
+            <i data-lucide="server" class="h-4 w-4" aria-hidden="true"></i>
+            Добавить хост
+        </button>
+        <button type="button" onclick="window.location.reload()" class="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white/60 transition duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+            <i data-lucide="refresh-cw" class="h-4 w-4" aria-hidden="true"></i>
+            <span class="hidden sm:inline">Обновить</span>
+        </button>
+    </div>
+</header>
+
+<section id="tab-hosts" class="tab-content">
+    <div class="space-y-5">
+
+        <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <article class="relative flex min-h-[93px] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-emerald-400/[0.08] blur-2xl"></div>
+                <div class="relative flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-white/60">Всего тарифов</p>
+                        <p class="mt-1 text-xs text-white/60">На всех хостах</p>
+                    </div>
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300"><i data-lucide="credit-card" class="h-4 w-4" aria-hidden="true"></i></span>
+                </div>
+                <div class="relative mt-auto pt-2">
+                    <p class="text-2xl font-semibold tracking-tight tabular-nums {% if ns.total_plans %}text-white{% else %}text-white/40{% endif %}">{{ ns.total_plans }}</p>
+                </div>
+            </article>
+            <article class="relative flex min-h-[93px] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-sky-400/[0.08] blur-2xl"></div>
+                <div class="relative flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-white/60">Активные хосты</p>
+                        <p class="mt-1 text-xs text-white/60">Из {{ hosts|length }} подключённых</p>
+                    </div>
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="server" class="h-4 w-4" aria-hidden="true"></i></span>
+                </div>
+                <div class="relative mt-auto pt-2">
+                    <p class="text-2xl font-semibold tracking-tight tabular-nums {% if ns.visible_hosts %}text-white{% else %}text-white/40{% endif %}">{{ ns.visible_hosts }}</p>
+                </div>
+            </article>
+            <article class="relative flex min-h-[93px] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-emerald-400/[0.08] blur-2xl"></div>
+                <div class="relative flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-white/60">Средняя цена</p>
+                        <p class="mt-1 text-xs text-white/60">По всем тарифам</p>
+                    </div>
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300"><i data-lucide="banknote" class="h-4 w-4" aria-hidden="true"></i></span>
+                </div>
+                <div class="relative mt-auto pt-2">
+                    <p class="text-2xl font-semibold tracking-tight tabular-nums {% if avg_price > 0 %}text-white{% else %}text-white/40{% endif %}">{{ avg_price|round(0)|int }}<span class="ml-0.5 align-baseline text-xs font-medium text-white/50">₽</span></p>
+                </div>
+            </article>
+            <article class="relative flex min-h-[93px] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-400/[0.08] blur-2xl"></div>
+                <div class="relative flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-white/60">С лимитами</p>
+                        <p class="mt-1 text-xs text-white/60">Трафик или HWID из {{ ns.total_plans }}</p>
+                    </div>
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300"><i data-lucide="gauge" class="h-4 w-4" aria-hidden="true"></i></span>
+                </div>
+                <div class="relative mt-auto pt-2">
+                    <p class="text-2xl font-semibold tracking-tight tabular-nums {% if ns.limited %}text-white{% else %}text-white/40{% endif %}">{{ ns.limited }}</p>
+                </div>
+            </article>
+        </section>
+
+        <section class="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4 lg:flex-row lg:items-center">
+            <div class="relative min-w-0 flex-1">
+                <i data-lucide="search" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                <input id="tariff-search" type="text" placeholder="Поиск по названию тарифа..." autocomplete="off" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+            </div>
+            <div class="soft-select min-w-0 lg:w-64" data-target="tariff-host-filter">
+                <button type="button" class="soft-select-toggle flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-left text-xs font-medium text-white/60 transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60" id="tariff_host_filter_toggle">
+                    <span class="soft-select-text">Все хосты</span>
+                    <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+                <div class="soft-select-menu" id="tariff_host_filter_menu"></div>
+                <select id="tariff-host-filter" class="hidden">
+                    <option value="">Все хосты</option>
+                    {% for host in hosts %}
+                    <option value="{{ host.host_name }}">{{ host.host_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </section>
+
+        <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+            <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-sky-400/[0.08] blur-3xl"></div>
+            <div class="relative flex cursor-pointer flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4" onclick="toggleAddHostForm()">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="circle-plus" class="h-4 w-4" aria-hidden="true"></i></span>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-semibold tracking-tight text-white">Добавить новый хост</h3>
+                        <p class="text-xs text-white/60">Подключите ещё одну панель Remnawave в ваш бот</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-down" id="add-host-icon" class="h-4 w-4 text-white/30 transition-transform duration-300" aria-hidden="true"></i>
+            </div>
+
+            <div id="add-host-form" class="relative hidden border-t border-white/[0.08] bg-black/20">
+                <form action="{{ url_for('add_host_route') }}" method="post" class="grid grid-cols-1 gap-3 p-3 sm:p-4 md:grid-cols-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Название хоста</label>
+                        <div class="relative">
+                            <i data-lucide="tag" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                            <input type="text" name="host_name" placeholder="server1" required class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2.5 pl-10 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Базовый URL Remnawave</label>
+                        <div class="relative">
+                            <i data-lucide="link" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                            <input type="url" name="remnawave_base_url" placeholder="https://panel.example.com" required autocomplete="off" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2.5 pl-10 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">API Token</label>
+                        <div class="relative">
+                            <i data-lucide="key-round" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                            <input type="password" name="remnawave_api_token" placeholder="••••••••••••••••" required autocomplete="new-password" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2.5 pl-10 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Squad UUID (опционально)</label>
+                        <div class="relative">
+                            <i data-lucide="layout-grid" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                            <input type="text" name="squad_uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2.5 pl-10 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                        </div>
+                    </div>
+                    <div class="flex justify-end md:col-span-2">
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-2 text-xs font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                            <i data-lucide="save" class="h-4 w-4" aria-hidden="true"></i>
+                            Сохранить хост
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="hosts-grid-container" class="space-y-4">
+            {% if hosts %}
+            {% for host in hosts %}
+            {% set plans_count = host.plans|length %}
+            <div class="host-card group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] transition duration-150"
+                draggable="true" data-host-name="{{ host.host_name }}">
+
+                <div class="relative flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                    <div class="flex min-w-0 flex-1 cursor-pointer items-center gap-3" onclick="toggleHostContent('{{ host.host_name }}')">
+                        <span class="drag-handle flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-full text-white/30 transition-colors hover:text-white/70 active:cursor-grabbing" onclick="event.stopPropagation()"><i data-lucide="grip-vertical" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="server" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h4 class="truncate text-sm font-semibold tracking-tight text-white">{{ host.host_name }}</h4>
+                                {% if host.see is none or host.see == 1 %}
+                                <span class="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">Видим</span>
+                                {% else %}
+                                <span class="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-white/50">Скрыт</span>
+                                {% endif %}
+                                <i data-lucide="chevron-down" id="host-icon-{{ host.host_name }}" class="h-4 w-4 shrink-0 text-white/30 transition-transform duration-300" aria-hidden="true"></i>
+                            </div>
+                            <p class="mt-0.5 text-[11px] text-white/50">Remnawave · {{ plans_count }} {{ 'тариф' if plans_count % 10 == 1 and plans_count % 100 != 11 else ('тарифа' if plans_count % 10 in [2, 3, 4] and plans_count % 100 not in [12, 13, 14] else 'тарифов') }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2" onclick="event.stopPropagation();">
+                        <form action="{{ url_for('toggle_host_visibility_route', host_name=host.host_name) }}" method="post" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            {% if host.see is none or host.see == 1 %}
+                            <input type="hidden" name="visible" value="0" />
+                            <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/20 bg-amber-400/[0.08] px-2.5 py-1.5 text-[11px] font-medium text-amber-300 transition duration-150 hover:bg-amber-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60">
+                                <i data-lucide="eye-off" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                Скрыть
+                            </button>
+                            {% else %}
+                            <input type="hidden" name="visible" value="1" />
+                            <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-2.5 py-1.5 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                <i data-lucide="eye" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                Показать
+                            </button>
+                            {% endif %}
+                        </form>
+                        <form action="{{ url_for('delete_host_route', host_name=host.host_name) }}" method="post" class="inline" data-confirm="Удалить хост {{ host.host_name }} и все его тарифы?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg border border-red-400/20 bg-red-400/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-red-300 transition duration-150 hover:bg-red-400/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60">
+                                <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                Удалить
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="host-content-{{ host.host_name }}" class="relative hidden space-y-4 bg-black/20 p-3 sm:p-4">
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                        <form action="{{ url_for('update_host_url_route') }}" method="post" class="flex min-w-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <div class="mb-3 flex items-center gap-2">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="link" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <label class="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">URL панели</label>
+                            </div>
+                            <div class="mt-auto space-y-2">
+                                <input type="text" name="host_url" value="{{ host.host_url or '' }}" placeholder="https://panel.example.com" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                                <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                    <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Сохранить
+                                </button>
+                            </div>
+                        </form>
+
+                        <form action="{{ url_for('rename_host_route') }}" method="post" class="flex min-w-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="old_host_name" value="{{ host.host_name }}" />
+                            <div class="mb-3 flex items-center gap-2">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="tag" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <label class="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Имя хоста</label>
+                            </div>
+                            <div class="mt-auto space-y-2">
+                                <input type="text" name="new_host_name" value="{{ host.host_name }}" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                                <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                    <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Сменить имя
+                                </button>
+                            </div>
+                        </form>
+
+                        <form action="{{ url_for('update_host_button_style_route') }}" method="post" class="flex min-w-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <div class="mb-3 flex items-center gap-2">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300"><i data-lucide="palette" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <label class="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Стиль кнопки</label>
+                            </div>
+                            <div class="mt-auto space-y-2">
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    {% set cur_style = host.button_style or '' %}
+                                    {% for val, lbl, cls in [('', '—', 'swatch-default'), ('danger', '🔴', 'swatch-danger'), ('success', '🟢', 'swatch-success'), ('primary', '🔵', 'swatch-primary')] %}
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="button_style" value="{{ val }}" class="peer sr-only" {% if cur_style == val %}checked{% endif %} />
+                                        <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-xs font-bold transition duration-150 peer-checked:border-emerald-400/60 peer-checked:ring-1 peer-checked:ring-emerald-400/60 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60 {{ cls }}">{{ lbl }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <input type="text" name="icon_emoji_id" value="{{ host.icon_emoji_id or '' }}" placeholder="Emoji ID (опц.)" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                    <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Сохранить
+                                </button>
+                            </div>
+                        </form>
+
+                        <form action="{{ url_for('update_host_subscription_route') }}" method="post" class="flex min-w-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <div class="mb-3 flex items-center gap-2">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="bell" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <label class="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">URL подписки</label>
+                            </div>
+                            <div class="mt-auto space-y-2">
+                                <input type="text" name="host_subscription_url" value="{{ host.subscription_url or '' }}" placeholder="https://sub.example.com" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                                <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                    <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Сохранить
+                                </button>
+                            </div>
+                        </form>
+
+                        <form action="{{ url_for('update_host_traffic_settings_route') }}" method="post" class="flex min-w-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                            <input type="hidden" name="traffic_limit_strategy" id="traffic_limit_strategy_input_{{ host.host_name }}" value="{{ host.default_traffic_strategy }}" />
+                            <div class="mb-3 flex items-center gap-2">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300"><i data-lucide="rotate-ccw" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <label class="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Сброс трафика</label>
+                            </div>
+                            <div class="mt-auto space-y-2">
+                                <div class="group/select relative w-full" tabindex="0">
+                                    {% set current_strategy = host.default_traffic_strategy or 'NO_RESET' %}
+                                    {% set strategy_labels = {'NO_RESET': 'Никогда', 'DAY': 'Ежедневно', 'WEEK': 'Еженедельно', 'MONTH': 'Ежемесячно'} %}
+                                    <div class="flex w-full cursor-pointer items-center justify-between rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white/70 transition duration-150">
+                                        <span id="strategy_label_{{ host.host_name }}">{{ strategy_labels[current_strategy] }}</span>
+                                        <i data-lucide="chevron-down" class="h-4 w-4 text-white/30" aria-hidden="true"></i>
+                                    </div>
+                                    <div class="absolute bottom-full left-0 right-0 z-50 mb-1 hidden overflow-hidden rounded-xl border border-white/10 bg-[#0b0f0e]/95 shadow-2xl backdrop-blur-xl group-focus-within/select:block">
+                                        <div class="p-1">
+                                            {% for key, lbl in strategy_labels.items() %}
+                                            <div onclick="selectTrafficStrategy('{{ host.host_name }}', '{{ key }}', '{{ lbl }}')" class="cursor-pointer rounded-lg px-3 py-2 text-xs text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white">
+                                                {{ lbl }}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                    <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Применить
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                        <div class="flex flex-col rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                            <div class="mb-3 flex items-center gap-2">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="key-round" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <div class="min-w-0">
+                                    <h5 class="text-sm font-semibold tracking-tight text-white">Remnawave доступ</h5>
+                                    <p class="text-xs text-white/60">API Token и Squad UUID хоста</p>
+                                </div>
+                            </div>
+
+                            <form action="{{ url_for('update_host_remnawave_route') }}" method="post" class="flex flex-1 flex-col gap-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">API Token</label>
+                                    <div class="relative">
+                                        <i data-lucide="key-round" class="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                        <input type="password" name="remnawave_api_token" id="host-api-token-{{ host.host_name }}" value="{{ host.remnawave_api_token or '' }}" placeholder="••••••••••••••••" autocomplete="new-password" class="w-full rounded-lg border border-white/[0.08] bg-black/30 py-1.5 pl-9 pr-9 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                                        <button type="button" onclick="togglePasswordVisibility('host-api-token-{{ host.host_name }}')" aria-label="Показать токен" class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-white/30 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                                            <i data-lucide="eye" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Squad UUID (опционально)</label>
+                                    <div class="relative">
+                                        <i data-lucide="layout-grid" class="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                        <input type="text" name="squad_uuid" value="{{ host.squad_uuid or '' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="w-full rounded-lg border border-white/[0.08] bg-black/30 py-1.5 pl-9 pr-3 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                                    </div>
+                                </div>
+                                <div class="mt-auto flex justify-end pt-1">
+                                    <button type="submit" class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                        <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                        Сохранить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="flex flex-col rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                            <label class="group/toggle flex cursor-pointer items-center justify-between gap-3">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300"><i data-lucide="file-text" class="h-4 w-4" aria-hidden="true"></i></span>
+                                    <div class="min-w-0">
+                                        <h5 class="text-sm font-semibold tracking-tight text-white">Своё описание (HTML)</h5>
+                                        <p class="text-xs text-white/60">Отображается в меню выбора тарифа</p>
+                                    </div>
+                                </div>
+                                <span class="relative inline-flex shrink-0 items-center">
+                                    <input type="checkbox" id="toggle-description-{{ host.host_name }}" onchange="toggleDescriptionForm('{{ host.host_name }}')" class="peer sr-only" {% if host.description %}checked{% endif %} />
+                                    <span class="block h-5 w-9 rounded-full bg-white/[0.08] transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-500 peer-checked:after:translate-x-full peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60"></span>
+                                </span>
+                            </label>
+                            <div id="description-form-{{ host.host_name }}" class="{% if not host.description %}hidden{% endif %} mt-2 flex flex-1 flex-col border-t border-white/[0.06] pt-2">
+                                <form action="{{ url_for('update_host_description_route') }}" method="post" class="flex flex-1 flex-col gap-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                    <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                                    <textarea name="host_description" rows="4" placeholder="Введите HTML-описание для этого хоста..." class="w-full flex-1 resize-none rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-violet-400/30">{{ host.description or '' }}</textarea>
+                                    <div class="flex justify-end">
+                                        <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                            <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                            Сохранить
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="monitor-smartphone" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <div class="min-w-0">
+                                    <h5 class="text-sm font-semibold tracking-tight text-white">Режим устройств</h5>
+                                    <p class="text-xs text-white/60">Как определяется лимит устройств</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50" id="device-mode-label-{{ host.host_name }}">
+                                    {{ 'Выбор' if host.device_mode == 'tiers' else 'По тарифу' }}
+                                </span>
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="checkbox" class="peer sr-only" {% if host.device_mode=='tiers' %}checked{% endif %} onchange="toggleDeviceMode('{{ host.host_name }}', this.checked)" />
+                                    <span class="block h-5 w-9 rounded-full bg-white/[0.08] transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-sky-500 peer-checked:after:translate-x-full peer-focus-visible:ring-2 peer-focus-visible:ring-sky-300/60"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="device-tiers-block-{{ host.host_name }}" class="{% if host.device_mode != 'tiers' %}hidden{% endif %} mt-3 border-t border-white/[0.06] pt-3">
+                            <div id="device-tiers-list-{{ host.host_name }}" class="mb-3 flex flex-wrap gap-2">
+                                {% set basen = settings.get('base_device_' ~ host.host_name, '1') %}
+                                <div id="base-tier-display-{{ host.host_name }}" class="group flex cursor-pointer items-center gap-2 rounded-lg border border-sky-400/20 bg-sky-400/[0.05] px-3 py-2 transition duration-150" onclick="editBaseTier('{{ host.host_name }}')">
+                                    <span class="font-mono text-xs font-semibold tabular-nums text-sky-300" id="base-tier-count-{{ host.host_name }}">{{ basen }} устр.</span>
+                                    <span class="text-[10px] text-white/30">—</span>
+                                    <span class="text-[10px] text-white/50">базовое</span>
+                                    <i data-lucide="pencil" class="ml-1 h-3 w-3 text-white/30 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true"></i>
+                                </div>
+                                <div id="base-tier-edit-{{ host.host_name }}" class="hidden items-center gap-2 rounded-lg border border-sky-400/30 bg-black/30 px-3 py-1.5">
+                                    <input type="number" id="base-tier-input-{{ host.host_name }}" value="{{ basen }}" min="1" class="w-12 border-b border-sky-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-sky-300 outline-none focus:border-sky-300" onkeydown="if(event.key === 'Enter') saveBaseTier('{{ host.host_name }}')" />
+                                    <span class="whitespace-nowrap text-[10px] text-white/40">устр. — базовое</span>
+                                    <button type="button" onclick="saveBaseTier('{{ host.host_name }}')" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md text-emerald-300 transition-colors hover:bg-emerald-400/10"><i data-lucide="check" class="h-3 w-3" aria-hidden="true"></i></button>
+                                </div>
+                                {% for tier in host.device_tiers %}
+                                <div class="group flex cursor-pointer items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 transition duration-150" id="tier-display-{{ tier.tier_id }}" onclick="editExtraTier('{{ tier.tier_id }}')">
+                                    <span class="font-mono text-xs font-semibold tabular-nums text-sky-300" id="tier-display-count-{{ tier.tier_id }}">{{ tier.device_count }} устр.</span>
+                                    <span class="text-[10px] text-white/30">—</span>
+                                    <span class="font-mono text-xs font-semibold tabular-nums text-white" id="tier-display-price-{{ tier.tier_id }}">{{ '%.0f'|format(tier.price) }}₽/шт</span>
+                                    <i data-lucide="pencil" class="ml-1 h-3 w-3 text-white/30 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true"></i>
+                                    <button type="button" onclick="event.stopPropagation(); deleteDeviceTier('{{ tier.tier_id }}', '{{ host.host_name }}')" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md border border-red-400/20 bg-red-400/[0.06] text-red-300 transition duration-150 hover:bg-red-400/[0.12]">
+                                        <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                <div id="tier-edit-{{ tier.tier_id }}" class="hidden items-center gap-2 rounded-lg border border-sky-400/30 bg-black/30 px-3 py-1.5">
+                                    <input type="number" id="tier-input-count-{{ tier.tier_id }}" value="{{ tier.device_count }}" min="2" class="w-10 border-b border-sky-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-sky-300 outline-none focus:border-sky-300" />
+                                    <span class="text-[10px] text-white/30">—</span>
+                                    <input type="number" id="tier-input-price-{{ tier.tier_id }}" value="{{ '%.0f'|format(tier.price) }}" min="0" class="w-10 border-b border-sky-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-white outline-none focus:border-sky-300" />
+                                    <span class="whitespace-nowrap text-[10px] text-white/40">₽/шт</span>
+                                    <button type="button" onclick="saveExtraTier('{{ tier.tier_id }}')" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md text-emerald-300 transition-colors hover:bg-emerald-400/10"><i data-lucide="check" class="h-3 w-3" aria-hidden="true"></i></button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                                <div class="min-w-0 flex-1 space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Кол-во устройств</label>
+                                    <input type="number" min="2" id="tier-count-{{ host.host_name }}" placeholder="3" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                                </div>
+                                <div class="min-w-0 flex-1 space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Цена за устр. (₽)</label>
+                                    <input type="number" min="0" step="1" id="tier-price-{{ host.host_name }}" placeholder="40" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-sky-400/30" />
+                                </div>
+                                <button type="button" onclick="addDeviceTier('{{ host.host_name }}')" class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-sky-400/20 bg-sky-400/[0.08] px-3 py-2 text-[11px] font-medium text-sky-300 transition duration-150 hover:bg-sky-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60">
+                                    <i data-lucide="plus" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Добавить
+                                </button>
+                            </div>
+                            <div class="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+                                <div class="min-w-0">
+                                    <span class="text-[11px] font-medium text-white/70">Без выбора при продлении</span>
+                                    <p class="text-xs text-white/50">Цена продления авто-включает текущие устройства</p>
+                                </div>
+                                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                    <input type="checkbox" class="peer sr-only" {% if host.tier_lock_extend %}checked{% endif %} onchange="toggleTierLockExtend('{{ host.host_name }}', this.checked)" />
+                                    <span class="block h-5 w-9 rounded-full bg-white/[0.08] transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-sky-500 peer-checked:after:translate-x-full peer-focus-visible:ring-2 peer-focus-visible:ring-sky-300/60"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300"><i data-lucide="database" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <div class="min-w-0">
+                                    <h5 class="text-sm font-semibold tracking-tight text-white">Режим докупки трафика</h5>
+                                    <p class="text-xs text-white/60">Дополнительные пакеты гигабайтов</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50" id="traffic-mode-label-{{ host.host_name }}">
+                                    {{ 'Выбор' if host.traffic_mode == 'tiers' else 'По тарифу' }}
+                                </span>
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="checkbox" class="peer sr-only" {% if host.traffic_mode == 'tiers' %}checked{% endif %} onchange="toggleTrafficMode('{{ host.host_name }}', this.checked)" />
+                                    <span class="block h-5 w-9 rounded-full bg-white/[0.08] transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-500 peer-checked:after:translate-x-full peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="traffic-tiers-block-{{ host.host_name }}" class="{% if host.traffic_mode != 'tiers' %}hidden{% endif %} mt-3 border-t border-white/[0.06] pt-3">
+                            <div id="traffic-tiers-list-{{ host.host_name }}" class="mb-3 flex flex-wrap gap-2">
+                                {% for ttier in host.traffic_tiers %}
+                                <div class="group flex cursor-pointer items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 transition duration-150" id="traffic-tier-display-{{ ttier.tier_id }}" onclick="editTrafficTier('{{ ttier.tier_id }}')">
+                                    <span class="font-mono text-xs font-semibold tabular-nums text-emerald-300" id="traffic-tier-display-gb-{{ ttier.tier_id }}">+{{ ttier.traffic_gb }} ГБ</span>
+                                    <span class="text-[10px] text-white/30">—</span>
+                                    <span class="font-mono text-xs font-semibold tabular-nums text-white" id="traffic-tier-display-price-{{ ttier.tier_id }}">{{ '%.0f'|format(ttier.price) }}₽/мес</span>
+                                    <i data-lucide="pencil" class="ml-1 h-3 w-3 text-white/30 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true"></i>
+                                    <button type="button" onclick="event.stopPropagation(); deleteTrafficTier('{{ ttier.tier_id }}', '{{ host.host_name }}')" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md border border-red-400/20 bg-red-400/[0.06] text-red-300 transition duration-150 hover:bg-red-400/[0.12]">
+                                        <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                <div id="traffic-tier-edit-{{ ttier.tier_id }}" class="hidden items-center gap-2 rounded-lg border border-emerald-400/30 bg-black/30 px-3 py-1.5">
+                                    <span class="text-[10px] text-white/40">+</span>
+                                    <input type="number" id="traffic-tier-input-gb-{{ ttier.tier_id }}" value="{{ ttier.traffic_gb }}" min="1" class="w-12 border-b border-emerald-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-emerald-300 outline-none focus:border-emerald-300" />
+                                    <span class="text-[10px] text-white/30">ГБ —</span>
+                                    <input type="number" id="traffic-tier-input-price-{{ ttier.tier_id }}" value="{{ '%.0f'|format(ttier.price) }}" min="0" class="w-12 border-b border-emerald-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-white outline-none focus:border-emerald-300" />
+                                    <span class="whitespace-nowrap text-[10px] text-white/40">₽/мес</span>
+                                    <button type="button" onclick="saveTrafficTier('{{ ttier.tier_id }}')" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md text-emerald-300 transition-colors hover:bg-emerald-400/10"><i data-lucide="check" class="h-3 w-3" aria-hidden="true"></i></button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                                <div class="min-w-0 flex-1 space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Пакет ГБ</label>
+                                    <input type="number" min="1" id="traffic-tier-gb-{{ host.host_name }}" placeholder="50" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                </div>
+                                <div class="min-w-0 flex-1 space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Цена (₽/мес)</label>
+                                    <input type="number" min="0" step="1" id="traffic-tier-price-{{ host.host_name }}" placeholder="50" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                </div>
+                                <button type="button" onclick="addTrafficTier('{{ host.host_name }}')" class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                    <i data-lucide="plus" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Добавить
+                                </button>
+                            </div>
+                            <div class="mt-3 flex flex-col gap-2 border-t border-white/[0.06] pt-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <span class="text-[11px] font-medium text-white/70">Без выбора при покупке</span>
+                                        <p class="text-xs text-white/50">Скрывает выбор дополнительных ГБ при первичной покупке</p>
+                                    </div>
+                                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                        <input type="checkbox" id="traffic-no-choice-buy-{{ host.host_name }}" class="peer sr-only" {% if host.traffic_no_choice_buy %}checked{% endif %} onchange="toggleTrafficNoChoice('{{ host.host_name }}')" />
+                                        <span class="block h-5 w-9 rounded-full bg-white/[0.08] transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-500 peer-checked:after:translate-x-full peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60"></span>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-2">
+                                    <div class="min-w-0">
+                                        <span class="text-[11px] font-medium text-white/70">Без выбора при продлении</span>
+                                        <p class="text-xs text-white/50">Продление авто-включает текущие оплаченные докупки ГБ</p>
+                                    </div>
+                                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                        <input type="checkbox" id="traffic-no-choice-renew-{{ host.host_name }}" class="peer sr-only" {% if host.traffic_no_choice_renew %}checked{% endif %} onchange="toggleTrafficNoChoice('{{ host.host_name }}')" />
+                                        <span class="block h-5 w-9 rounded-full bg-white/[0.08] transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-500 peer-checked:after:translate-x-full peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="plans-shell relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150 sm:p-4">
+                        <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-emerald-400/[0.08] blur-3xl"></div>
+                        <div class="relative mb-3 flex flex-wrap items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300"><i data-lucide="credit-card" class="h-4 w-4" aria-hidden="true"></i></span>
+                            <div class="min-w-0">
+                                <h5 class="text-sm font-semibold tracking-tight text-white">Тарифы хоста</h5>
+                                <p class="text-xs text-white/60">{{ plans_count }} {{ 'тариф' if plans_count % 10 == 1 and plans_count % 100 != 11 else ('тарифа' if plans_count % 10 in [2, 3, 4] and plans_count % 100 not in [12, 13, 14] else 'тарифов') }}</p>
+                            </div>
+                        </div>
+
+                        {% if host.plans %}
+                        <div id="plans-grid-{{ host.host_name }}" class="relative grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                            {% for plan in host.plans %}
+                            <div id="plan-card-{{ plan.plan_id }}" data-plan-name="{{ plan.plan_name }}" class="plan-card group/plan relative flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-black/20 p-2.5 transition duration-150">
+                                <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-emerald-400/[0.08] blur-2xl"></div>
+                                <div id="view-plan-{{ plan.plan_id }}" class="relative flex flex-1 flex-col">
+                                    <div class="min-w-0">
+                                        <h6 class="truncate text-xs font-semibold tracking-tight text-white" title="{{ plan.plan_name }}">{{ plan.plan_name }}</h6>
+                                        <div class="mt-1 flex flex-wrap items-center gap-1">
+                                            <span class="rounded-full border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-white/60">{{ plan.months }} мес</span>
+                                            <span class="rounded-full border border-sky-400/20 bg-sky-400/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-sky-300">{{ host.host_name }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <p class="text-xl font-semibold tracking-tight tabular-nums {% if not plan.price %}text-white/40{% else %}text-white{% endif %}">{{ '%.0f'|format(plan.price) }}<span class="ml-0.5 align-baseline text-xs font-medium text-white/50">₽</span></p>
+                                    </div>
+                                    <div class="mt-2 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-2">
+                                        <div class="min-w-0">
+                                            <p class="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Трафик</p>
+                                            <p class="mt-0.5 truncate text-xs font-medium tabular-nums text-white/80">{{ plan.traffic_limit_gb or '∞' }}{% if plan.traffic_limit_gb %} ГБ{% endif %}</p>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">HWID</p>
+                                            <p class="mt-0.5 truncate text-xs font-medium tabular-nums text-white/80">{{ plan.hwid_limit or '∞' }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-auto flex items-center gap-1.5 border-t border-white/[0.06] pt-2">
+                                        <button type="button" onclick="document.getElementById('view-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('edit-plan-{{ plan.plan_id }}').classList.remove('hidden')" class="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[11px] font-medium text-white/60 transition duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                                            <i data-lucide="pencil" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                            Изменить
+                                        </button>
+                                        <form action="{{ url_for('delete_plan_route', plan_id=plan.plan_id) }}" method="post" class="min-w-0 flex-1">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                            <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-400/20 bg-red-400/[0.06] px-2 py-1 text-[11px] font-medium text-red-300 transition duration-150 hover:bg-red-400/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60">
+                                                <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                                Удалить
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                <div id="edit-plan-{{ plan.plan_id }}" class="relative hidden flex-1 flex-col">
+                                    <form action="{{ url_for('update_plan_route', plan_id=plan.plan_id) }}" method="post" class="flex flex-1 flex-col gap-2">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                        <input type="text" name="plan_name" value="{{ plan.plan_name }}" placeholder="Название" required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                        <div class="grid grid-cols-2 gap-1.5">
+                                            <input type="number" name="months" value="{{ plan.months }}" placeholder="Мес." required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                            <input type="number" name="price" value="{{ plan.price }}" placeholder="Цена" required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-1.5">
+                                            <input type="number" name="traffic_limit_gb" value="{{ plan.traffic_limit_gb if plan.traffic_limit_gb is not none else '' }}" placeholder="ГБ (0=∞)" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                            <input type="number" name="hwid_limit" value="{{ plan.hwid_limit if plan.hwid_limit is not none else '' }}" placeholder="HWID" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                        </div>
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            {% set p_style = plan.button_style or '' %}
+                                            {% for val, lbl, cls in [('', '—', 'swatch-default'), ('danger', '🔴', 'swatch-danger'), ('success', '🟢', 'swatch-success'), ('primary', '🔵', 'swatch-primary')] %}
+                                            <label class="cursor-pointer">
+                                                <input type="radio" name="button_style" value="{{ val }}" class="peer sr-only" {% if p_style == val %}checked{% endif %} />
+                                                <span class="inline-flex h-5 w-5 items-center justify-center rounded border border-white/10 text-[9px] font-bold transition duration-150 peer-checked:border-emerald-400/60 peer-checked:ring-1 peer-checked:ring-emerald-400/60 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60 {{ cls }}">{{ lbl }}</span>
+                                            </label>
+                                            {% endfor %}
+                                        </div>
+                                        <input type="text" name="icon_emoji_id" value="{{ plan.icon_emoji_id or '' }}" placeholder="Emoji ID (опц.)" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[10px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                        <div class="mt-auto grid grid-cols-2 gap-1.5 pt-1">
+                                            <button type="submit" class="flex items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">ОК</button>
+                                            <button type="button" onclick="document.getElementById('edit-plan-{{ plan.plan_id }}').classList.add('hidden'); document.getElementById('view-plan-{{ plan.plan_id }}').classList.remove('hidden')" class="flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/60 transition duration-150 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">Отмена</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div id="plans-empty-{{ host.host_name }}" class="relative rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 text-center">
+                            <i data-lucide="package-open" class="mx-auto h-5 w-5 text-white/30" aria-hidden="true"></i>
+                            <p class="mt-2 text-xs text-white/50">Для этого хоста пока нет тарифов</p>
+                        </div>
+                        {% endif %}
+
+                        <div id="add-plan-form-{{ host.host_name }}" class="relative mt-3 rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                            <form action="{{ url_for('add_plan_route') }}" method="post" class="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-9">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                                <div class="space-y-1 sm:col-span-2 xl:col-span-2">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Название</label>
+                                    <input type="text" name="plan_name" placeholder="Pro Plan" required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Месяцев</label>
+                                    <input type="number" name="months" placeholder="12" required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Цена (₽)</label>
+                                    <input type="number" name="price" placeholder="500" required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Трафик (ГБ)</label>
+                                    <input type="number" name="traffic_limit_gb" placeholder="100" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">HWID</label>
+                                    <input type="number" name="hwid_limit" placeholder="1" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Стиль</label>
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        {% for val, lbl, cls in [('', '—', 'swatch-default'), ('danger', '🔴', 'swatch-danger'), ('success', '🟢', 'swatch-success'), ('primary', '🔵', 'swatch-primary')] %}
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="button_style" value="{{ val }}" class="peer sr-only" {% if val == '' %}checked{% endif %} />
+                                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 text-[10px] font-bold transition duration-150 peer-checked:border-emerald-400/60 peer-checked:ring-1 peer-checked:ring-emerald-400/60 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60 {{ cls }}">{{ lbl }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Emoji ID</label>
+                                    <input type="text" name="icon_emoji_id" placeholder="Emoji ID" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                                </div>
+                                <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 sm:col-span-2 lg:col-span-1">
+                                    <i data-lucide="plus" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Добавить
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8 text-center">
+                <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-sky-400/[0.08] blur-3xl"></div>
+                <i data-lucide="server" class="mx-auto h-5 w-5 text-white/30" aria-hidden="true"></i>
+                <p class="mt-2 text-xs text-white/50">Хосты ещё не добавлены</p>
+                <button type="button" onclick="openAddHostSection()" class="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-sky-400/20 bg-sky-400/[0.08] px-3 py-2 text-xs font-medium text-sky-300 transition duration-150 hover:bg-sky-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60">
+                    <i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i>
+                    Добавить хост
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    document.addEventListener('DOMContentLoaded', () => { initGlobalLogic(); initInteractiveElements(); });
+
+    function initGlobalLogic() {
+
+        async function handleHostForm(form) {
+            const formData = new FormData(form);
+            const action = form.action;
+
+            try {
+                const res = await sendRequest(action, 'POST', formData);
+
+                if (res.ok) {
+                    if (action.includes('/delete-host')) {
+                        const hostName = decodeURIComponent(action.split('/delete-host/')[1]);
+                        const card = document.querySelector(`.host-card[data-host-name="${hostName}"]`);
+                        if (card) {
+                            card.remove();
+                            showToast('success', res.message || 'Хост удален');
+                        } else {
+                            showToast('success', res.message || 'Хост удален');
+                            setTimeout(() => window.location.reload(), 500);
+                        }
+                    } else if (action.includes('/toggle-host-visibility')) {
+                        const hostName = decodeURIComponent(action.split('/toggle-host-visibility/')[1]);
+                        const btn = form.querySelector('button');
+                        const hiddenInput = form.querySelector('input[name="visible"]');
+
+                        if (hiddenInput && btn) {
+                            const newVal = hiddenInput.value === '1' ? '0' : '1';
+                            hiddenInput.value = newVal;
+
+                            if (newVal === '1') {
+                                btn.className = "inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-2.5 py-1.5 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60";
+                                btn.innerHTML = '<i data-lucide="eye" class="h-3.5 w-3.5" aria-hidden="true"></i>Показать';
+                            } else {
+                                btn.className = "inline-flex items-center gap-1.5 rounded-lg border border-amber-400/20 bg-amber-400/[0.08] px-2.5 py-1.5 text-[11px] font-medium text-amber-300 transition duration-150 hover:bg-amber-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60";
+                                btn.innerHTML = '<i data-lucide="eye-off" class="h-3.5 w-3.5" aria-hidden="true"></i>Скрыть';
+                            }
+                            window.refreshUiIcons?.(btn);
+                            showToast('success', res.message || 'Видимость обновлена');
+                        } else {
+                            showToast('success', res.message || 'Видимость обновлена');
+                        }
+                    } else {
+                        showToast('success', res.message || 'Настройки сохранены');
+                        await reloadContent();
+                    }
+                } else {
+                    showToast('danger', res.error || 'Ошибка');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('danger', 'Ошибка отправки формы');
+            }
+        }
+
+        document.addEventListener('submit', async (e) => {
+            const form = e.target;
+
+            if (form.action && (form.action.includes('/add-plan') || form.action.includes('/update-plan') || form.action.includes('/delete-plan'))) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const isDelete = form.action.includes('delete-plan');
+                if (isDelete) {
+                    const confirmed = await showCustomConfirm('Удалить тариф?');
+                    if (!confirmed) return;
+                }
+
+                await handlePlanForm(form, form.action.includes('update'), isDelete);
+            }
+            else if (form.action && (
+                form.action.includes('/add-host') ||
+                form.action.includes('/delete-host') ||
+                form.action.includes('/rename-host') ||
+                form.action.includes('/toggle-host-visibility') ||
+                form.action.includes('/update-host-')
+            )) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const isDelete = form.action.includes('/delete-host');
+                if (isDelete) {
+                    const hostName = decodeURIComponent(form.action.split('/delete-host/')[1]);
+                    const confirmed = await showCustomConfirm(`Удалить хост '${hostName}' и все его тарифы?`);
+                    if (!confirmed) return;
+                }
+
+                await handleHostForm(form);
+            }
+        }, true);
+
+        window.toggleAddHostForm = () => toggleElementState('add-host', 'addHostFormCollapsed');
+        window.toggleHostContent = (name) => toggleElementState(name, 'hostCollapsed_' + name);
+        window.selectTrafficStrategy = (host, val, label) => {
+            document.getElementById('traffic_limit_strategy_input_' + host).value = val;
+            document.getElementById('strategy_label_' + host).textContent = label;
+            document.activeElement.blur();
+        };
+        window.toggleDescriptionForm = async (host) => {
+            const chk = document.getElementById('toggle-description-' + host), frm = document.getElementById('description-form-' + host);
+            if (chk && frm) {
+                frm.classList.toggle('hidden', !chk.checked);
+                if (!chk.checked) {
+                    const formData = new FormData();
+                    formData.append('host_name', host);
+                    formData.append('host_description', '');
+                    const res = await sendRequest(frm.querySelector('form').action, 'POST', formData);
+                    if (res.ok) showToast('success', 'Описание сброшено');
+                }
+            }
+        };
+
+        window.openAddHostSection = () => {
+            const form = document.getElementById('add-host-form');
+            if (!form) return;
+            if (form.classList.contains('hidden')) window.toggleAddHostForm();
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            form.querySelector('input[name="host_name"]')?.focus();
+        };
+
+        window.togglePasswordVisibility = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isPass = el.type === 'password';
+            el.type = isPass ? 'text' : 'password';
+            const btn = el.nextElementSibling;
+            if (btn && btn.tagName === 'BUTTON') {
+                const holder = btn.querySelector('i, svg');
+                if (holder) {
+                    const icon = document.createElement('i');
+                    icon.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+                    icon.className = 'h-3.5 w-3.5';
+                    icon.setAttribute('aria-hidden', 'true');
+                    holder.replaceWith(icon);
+                    window.refreshUiIcons?.(btn);
+                }
+            }
+        };
+
+        if (localStorage.getItem('addHostFormCollapsed') === 'false') window.toggleAddHostForm();
+        restoreHostStates();
+    }
+
+    function restoreHostStates() {
+        document.querySelectorAll('[id^="host-content-"]').forEach(el => {
+            const name = el.id.replace('host-content-', '');
+            if (localStorage.getItem('hostCollapsed_' + name) === 'false') {
+                el.classList.remove('hidden');
+                const icon = document.getElementById('host-icon-' + name);
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            }
+        });
+    }
+
+    function toggleElementState(id, storageKey) {
+        const el = document.getElementById(id.startsWith('add-host') ? 'add-host-form' : 'host-content-' + id);
+        const icon = document.getElementById(id.startsWith('add-host') ? 'add-host-icon' : 'host-icon-' + id);
+        if (el) {
+            el.classList.toggle('hidden');
+            const isHidden = el.classList.contains('hidden');
+            if (storageKey) localStorage.setItem(storageKey, isHidden);
+            if (icon) icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    }
+
+    function ensureHostExpanded(hostName) {
+        const content = document.getElementById('host-content-' + hostName);
+        if (content && content.classList.contains('hidden')) window.toggleHostContent(hostName);
+    }
+
+    window.applyTariffFilters = function () {
+        const query = (document.getElementById('tariff-search')?.value || '').trim().toLowerCase();
+        const hostFilter = document.getElementById('tariff-host-filter')?.value || '';
+        document.querySelectorAll('#hosts-grid-container .host-card').forEach(card => {
+            const hostName = card.getAttribute('data-host-name') || '';
+            const hostMatch = !hostFilter || hostName === hostFilter;
+            let matches = 0;
+            card.querySelectorAll('.plan-card').forEach(planCard => {
+                const name = (planCard.getAttribute('data-plan-name') || '').toLowerCase();
+                const planMatch = !query || name.includes(query);
+                planCard.classList.toggle('hidden', !planMatch);
+                if (planMatch) matches += 1;
+            });
+            card.classList.toggle('hidden', !hostMatch || (query.length > 0 && matches === 0));
+        });
+    };
+
+    function initTariffToolbar() {
+        const searchEl = document.getElementById('tariff-search');
+        if (searchEl && searchEl.dataset.bound !== 'true') {
+            searchEl.dataset.bound = 'true';
+            searchEl.addEventListener('input', () => window.applyTariffFilters());
+        }
+        const hostEl = document.getElementById('tariff-host-filter');
+        if (hostEl && hostEl.dataset.bound !== 'true') {
+            hostEl.dataset.bound = 'true';
+            hostEl.addEventListener('change', () => {
+                if (hostEl.value) ensureHostExpanded(hostEl.value);
+                window.applyTariffFilters();
+            });
+        }
+        if (window.initSoftSelect) window.initSoftSelect('tariff-host-filter', 'Все хосты');
+    }
+
+    function initInteractiveElements() {
+        initForms();
+        initDragAndDrop('hosts-grid-container', 'host-card', '/other/servers/hosts/reorder', 'data-host-name');
+        initTariffToolbar();
+    }
+
+    async function reloadContent() {
+        try {
+            const res = await fetch(window.location.href, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache' },
+                credentials: 'include'
+            });
+            const html = await res.text();
+
+            if (html.includes('id' + '="login-identifier-v2"')) {
+                console.warn('[DEBUG] reloadContent detected Login Page! Refresh prevented.');
+                showToast('warning', 'Не удалось обновить список: требуется авторизация');
+                return;
+            }
+
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            document.querySelectorAll('.tab-content').forEach(old => {
+                const newContent = doc.getElementById(old.id);
+                if (newContent) {
+                    old.innerHTML = newContent.innerHTML;
+                }
+            });
+            window.refreshUiIcons?.(document.getElementById('tab-hosts'));
+            initInteractiveElements();
+            restoreHostStates();
+        } catch (e) { console.error('Smart Refresh failed:', e); }
+    }
+
+    function initForms() {
+        document.querySelectorAll('form').forEach(form => {
+            if (form.getAttribute('data-processed')) return; form.setAttribute('data-processed', 'true');
+            if (['settings-form', 'settings-form-part2'].includes(form.id)) return;
+
+            form.onsubmit = async function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const confirmMsg = this.getAttribute('data-confirm');
+
+                if (confirmMsg) {
+                    const confirmed = await showCustomConfirm(confirmMsg);
+                    if (!confirmed) return;
+                }
+
+                if (form.querySelector('[formaction]')) return;
+
+                let msg = 'Сохранено'; const action = this.action;
+                if (action.includes('add_host')) msg = 'Хост добавлен';
+                else if (action.includes('delete_host')) msg = 'Хост удалён';
+                else if (action.includes('rename_host')) msg = 'Хост переименован';
+                else if (action.includes('create_ssh_target')) msg = 'SSH-цель добавлена';
+                else if (action.includes('delete_ssh_target')) msg = 'SSH-цель удалена';
+                handleFormSubmit(this, msg, true);
+            };
+        });
+
+        document.querySelectorAll('button[formaction]').forEach(btn => {
+            if (btn.getAttribute('data-processed')) return; btn.setAttribute('data-processed', 'true');
+            if (btn.getAttribute('formaction').match(/backup|restore/)) return;
+            btn.onclick = function (e) {
+                e.preventDefault(); const form = this.closest('form'), originalAction = form.action;
+                form.action = this.getAttribute('formaction');
+                handleFormSubmit(form, 'Выполнено', false).then(() => form.action = originalAction);
+            };
+        });
+    }
+
+    async function sendRequest(url, method = 'POST', body = null, isJson = false) {
+        try {
+            const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+            const headers = { 'X-CSRFToken': csrfToken || '', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+            if (isJson) headers['Content-Type'] = 'application/json';
+            const options = { method, headers }; if (body) options.body = isJson ? JSON.stringify(body) : body;
+            const res = await fetch(url, options);
+            if (res.redirected) return { ok: true, redirected: true, url: res.url };
+            try { return await res.json(); } catch { return { ok: res.ok }; }
+        } catch (e) { console.error(e); return { ok: false, error: e.message }; }
+    }
+
+    async function handleFormSubmit(form, successMsg, useSmartRefresh = false) {
+        const formData = new FormData(form); if (form.id === 'settings-form' || form.id === 'settings-form-part2') formData.set('next_hash', location.hash.slice(1) || 'panel');
+        const result = await sendRequest(form.action, 'POST', formData);
+        if (result.ok) { showToast('success', result.message || successMsg); if (useSmartRefresh) await reloadContent(); }
+        else showToast('danger', result.error || 'Ошибка');
+    }
+
+    async function handlePlanForm(form, isUpdate = false, isDelete = false) {
+        const formData = new FormData(form);
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+        const headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken || '' };
+        try {
+            const res = await fetch(form.action, { method: 'POST', headers, body: formData });
+            const data = await res.json();
+            if (data.ok) {
+                const msg = isDelete ? 'Тариф удалён' : (isUpdate ? 'Тариф обновлён' : 'Тариф добавлен');
+                showToast('success', msg);
+
+                if (isDelete) {
+                    const planId = form.action.split('/delete-plan/')[1];
+                    const card = document.getElementById('plan-card-' + planId);
+                    if (card) card.remove();
+                } else if (data.plan) {
+                    const plan = data.plan;
+                    const hostName = formData.get('host_name') || '';
+                    const cardHtml = renderPlanCard(plan, csrfToken, hostName);
+
+                    if (isUpdate) {
+                        window.location.reload();
+                        return;
+                    } else {
+                        const gridId = 'plans-grid-' + hostName;
+                        let grid = document.getElementById(gridId);
+
+                        if (!grid) {
+                            const hostSection = form.closest('.plans-shell');
+                            const emptyDiv = hostSection?.querySelector('[id^="plans-empty-"]');
+                            if (emptyDiv) {
+                                const newGrid = document.createElement('div');
+                                newGrid.id = gridId;
+                                newGrid.className = 'relative grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5';
+                                emptyDiv.replaceWith(newGrid);
+                                grid = newGrid;
+                            }
+                        }
+
+                        if (grid) {
+                            grid.insertAdjacentHTML('beforeend', cardHtml);
+                            window.refreshUiIcons?.(grid);
+                        }
+                        form.reset();
+                    }
+                }
+            } else {
+                showToast('danger', 'Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        } catch (e) { showToast('danger', 'Ошибка: ' + e.message); }
+    }
+
+    function renderPlanCard(plan, csrfToken, hostName) {
+        const escapeAttr = (value) => String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const traffic = plan.traffic_limit_gb || '∞';
+        const hwid = plan.hwid_limit || '∞';
+        const price = Math.round(plan.price);
+        const priceClass = Number(plan.price) > 0 ? 'text-white' : 'text-white/40';
+        const planName = escapeAttr(plan.plan_name);
+        const hostLabel = escapeAttr(hostName || '');
+        const style = escapeAttr(plan.button_style || '');
+        const emoji = escapeAttr(plan.icon_emoji_id || '');
+        const swatches = [['', '—', 'swatch-default'], ['danger', '🔴', 'swatch-danger'], ['success', '🟢', 'swatch-success'], ['primary', '🔵', 'swatch-primary']]
+            .map(([val, lbl, cls]) => `<label class="cursor-pointer"><input type="radio" name="button_style" value="${val}" class="peer sr-only" ${style === val ? 'checked' : ''} /><span class="inline-flex h-5 w-5 items-center justify-center rounded border border-white/10 text-[9px] font-bold transition duration-150 peer-checked:border-emerald-400/60 peer-checked:ring-1 peer-checked:ring-emerald-400/60 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60 ${cls}">${lbl}</span></label>`)
+            .join('');
+        return `
+        <div id="plan-card-${plan.plan_id}" data-plan-name="${planName}" class="plan-card group/plan relative flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-black/20 p-2.5 transition duration-150">
+            <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-emerald-400/[0.08] blur-2xl"></div>
+            <div id="view-plan-${plan.plan_id}" class="relative flex flex-1 flex-col">
+                <div class="min-w-0">
+                    <h6 class="truncate text-xs font-semibold tracking-tight text-white" title="${planName}">${planName}</h6>
+                    <div class="mt-1 flex flex-wrap items-center gap-1">
+                        <span class="rounded-full border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-white/60">${plan.months} мес</span>
+                        <span class="rounded-full border border-sky-400/20 bg-sky-400/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-sky-300">${hostLabel}</span>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xl font-semibold tracking-tight tabular-nums ${priceClass}">${price}<span class="ml-0.5 align-baseline text-xs font-medium text-white/50">₽</span></p>
+                </div>
+                <div class="mt-2 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-2">
+                    <div class="min-w-0">
+                        <p class="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">Трафик</p>
+                        <p class="mt-0.5 truncate text-xs font-medium tabular-nums text-white/80">${traffic}${plan.traffic_limit_gb ? ' ГБ' : ''}</p>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">HWID</p>
+                        <p class="mt-0.5 truncate text-xs font-medium tabular-nums text-white/80">${hwid}</p>
+                    </div>
+                </div>
+                <div class="mt-auto flex items-center gap-1.5 border-t border-white/[0.06] pt-2">
+                    <button type="button" onclick="document.getElementById('view-plan-${plan.plan_id}').classList.add('hidden'); document.getElementById('edit-plan-${plan.plan_id}').classList.remove('hidden')" class="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[11px] font-medium text-white/60 transition duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                        <i data-lucide="pencil" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                        Изменить
+                    </button>
+                    <form action="/delete-plan/${plan.plan_id}" method="post" class="min-w-0 flex-1">
+                        <input type="hidden" name="csrf_token" value="${csrfToken}" />
+                        <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-400/20 bg-red-400/[0.06] px-2 py-1 text-[11px] font-medium text-red-300 transition duration-150 hover:bg-red-400/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60">
+                            <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div id="edit-plan-${plan.plan_id}" class="relative hidden flex-1 flex-col">
+                <form action="/update-plan/${plan.plan_id}" method="post" class="flex flex-1 flex-col gap-2">
+                    <input type="hidden" name="csrf_token" value="${csrfToken}" />
+                    <input type="text" name="plan_name" value="${planName}" placeholder="Название" required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <input type="number" name="months" value="${plan.months}" placeholder="Мес." required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                        <input type="number" name="price" value="${price}" placeholder="Цена" required class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <input type="number" name="traffic_limit_gb" value="${plan.traffic_limit_gb ?? ''}" placeholder="ГБ (0=∞)" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                        <input type="number" name="hwid_limit" value="${plan.hwid_limit ?? ''}" placeholder="HWID" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5">${swatches}</div>
+                    <input type="text" name="icon_emoji_id" value="${emoji}" placeholder="Emoji ID (опц.)" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[10px] text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-emerald-400/30" />
+                    <div class="mt-auto grid grid-cols-2 gap-1.5 pt-1">
+                        <button type="submit" class="flex items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">ОК</button>
+                        <button type="button" onclick="document.getElementById('edit-plan-${plan.plan_id}').classList.add('hidden'); document.getElementById('view-plan-${plan.plan_id}').classList.remove('hidden')" class="flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/60 transition duration-150 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">Отмена</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+    }
+
+    function initDragAndDrop(containerId, itemClass, url, dataAttr) {
+        const container = document.getElementById(containerId); if (!container) return;
+        let dragged = null;
+        container.ondragstart = e => {
+            const card = e.target.closest('.' + itemClass);
+            if (card && card.getAttribute('draggable') === 'true') { dragged = card; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => card.classList.add('opacity-50', 'scale-95'), 0); } else e.preventDefault();
+        };
+        container.ondragend = () => { if (dragged) { dragged.classList.remove('opacity-50', 'scale-95'); dragged = null; saveOrder(); } };
+        container.ondragover = e => {
+            e.preventDefault(); const target = e.target.closest('.' + itemClass);
+            if (target && target !== dragged && dragged) { const sibs = [...container.querySelectorAll('.' + itemClass)]; container.insertBefore(dragged, sibs.indexOf(dragged) < sibs.indexOf(target) ? target.nextSibling : target); }
+        };
+        container.onmousedown = e => e.target.closest('.' + itemClass)?.setAttribute('draggable', !!e.target.closest('.drag-handle'));
+        async function saveOrder() { const order = [...container.querySelectorAll('.' + itemClass)].map(el => el.getAttribute(dataAttr)); await sendRequest(url, 'POST', { order }, true); }
+    }
+
+    async function toggleTrafficMode(hostName, checked) {
+        const mode = checked ? 'tiers' : 'plan';
+        const label = document.getElementById('traffic-mode-label-' + hostName);
+        if (label) label.textContent = checked ? 'Выбор' : 'По тарифу';
+        const block = document.getElementById('traffic-tiers-block-' + hostName);
+        if (block) { if (checked) block.classList.remove('hidden'); else block.classList.add('hidden'); }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('mode', mode);
+        const r = await sendRequest('/update-host-traffic-mode', 'POST', fd);
+        if (r.ok) showToast('success', 'Режим трафика сохранён');
+        else showToast('danger', r.error || 'Ошибка сохранения');
+    }
+
+    async function toggleTrafficNoChoice(hostName) {
+        const buyCb = document.getElementById('traffic-no-choice-buy-' + hostName);
+        const renewCb = document.getElementById('traffic-no-choice-renew-' + hostName);
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('no_choice_buy', buyCb && buyCb.checked ? 1 : 0);
+        fd.append('no_choice_renew', renewCb && renewCb.checked ? 1 : 0);
+        const r = await sendRequest('/update-host-traffic-no-choice', 'POST', fd);
+        if (r.ok) showToast('success', 'Настройки трафика сохранены');
+        else showToast('danger', r.error || 'Ошибка сохранения');
+    }
+
+    async function addTrafficTier(hostName) {
+        const gbInput = document.getElementById('traffic-tier-gb-' + hostName);
+        const priceInput = document.getElementById('traffic-tier-price-' + hostName);
+        if (!gbInput || !priceInput) return;
+        const gb = parseInt(gbInput.value);
+        const price = parseFloat(priceInput.value);
+        if (isNaN(gb) || gb < 1) { showToast('danger', 'Укажите пакет трафика в ГБ'); return; }
+        if (isNaN(price) || price < 0) { showToast('danger', 'Укажите корректную цену'); return; }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('traffic_gb', gb);
+        fd.append('price', price);
+        const r = await sendRequest('/add-traffic-tier', 'POST', fd);
+        if (r.ok) { showToast('success', 'Пакет трафика добавлен'); location.reload(); }
+        else { showToast('danger', r.error || 'Ошибка добавления'); }
+    }
+
+    function editTrafficTier(tierId) {
+        document.getElementById('traffic-tier-display-' + tierId).classList.add('hidden');
+        document.getElementById('traffic-tier-display-' + tierId).classList.remove('flex');
+        const editDiv = document.getElementById('traffic-tier-edit-' + tierId);
+        editDiv.classList.remove('hidden');
+        editDiv.classList.add('flex');
+        document.getElementById('traffic-tier-input-gb-' + tierId).focus();
+    }
+
+    async function saveTrafficTier(tierId) {
+        const gbInput = document.getElementById('traffic-tier-input-gb-' + tierId);
+        const priceInput = document.getElementById('traffic-tier-input-price-' + tierId);
+        if (!gbInput || !priceInput) return;
+        const gb = parseInt(gbInput.value);
+        const price = parseFloat(priceInput.value);
+        if (isNaN(gb) || gb < 1) { showToast('danger', 'Укажите пакет ГБ от 1'); return; }
+        if (isNaN(price) || price < 0) { showToast('danger', 'Укажите цену 0 или выше'); return; }
+        const fd = new FormData();
+        fd.append('traffic_gb', gb);
+        fd.append('price', price);
+        const r = await sendRequest('/edit-traffic-tier/' + tierId, 'POST', fd);
+        if (r.ok) { showToast('success', 'Пакет трафика обновлён'); location.reload(); }
+        else { showToast('danger', r.error || 'Ошибка сохранения'); }
+    }
+
+    async function deleteTrafficTier(tierId, hostName) {
+        const confirmed = await showCustomConfirm('Удалить данный пакет трафика?');
+        if (!confirmed) return;
+        const r = await sendRequest('/delete-traffic-tier/' + tierId, 'POST');
+        if (r.ok) { showToast('success', 'Пакет трафика удалён'); location.reload(); }
+        else { showToast('danger', r.error || 'Ошибка удаления'); }
+    }
+
+    async function toggleDeviceMode(hostName, checked) {
+        const mode = checked ? 'tiers' : 'plan';
+        const label = document.getElementById('device-mode-label-' + hostName);
+        if (label) label.textContent = checked ? 'Выбор' : 'По тарифу';
+        const block = document.getElementById('device-tiers-block-' + hostName);
+        if (block) { if (checked) block.classList.remove('hidden'); else block.classList.add('hidden'); }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('device_mode', mode);
+        const r = await sendRequest('/update-host-device-mode', 'POST', fd);
+        if (r.ok) showToast('success', 'Режим устройств сохранён');
+        else showToast('danger', r.error || 'Ошибка сохранения');
+    }
+
+    function editBaseTier(hostName) {
+        document.getElementById('base-tier-display-' + hostName).classList.add('hidden');
+        document.getElementById('base-tier-display-' + hostName).classList.remove('flex');
+        const editDiv = document.getElementById('base-tier-edit-' + hostName);
+        editDiv.classList.remove('hidden');
+        editDiv.classList.add('flex');
+        const input = document.getElementById('base-tier-input-' + hostName);
+        input.focus();
+        input.select();
+    }
+
+    async function saveBaseTier(hostName) {
+        const input = document.getElementById('base-tier-input-' + hostName);
+        if (!input) return;
+        const parsed = parseInt(input.value);
+        if (isNaN(parsed) || parsed < 1) { showToast('danger', 'Укажите число 1 или более'); return; }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('count', parsed);
+        const r = await sendRequest('/update-host-base-devices', 'POST', fd);
+        if (r.ok) {
+            const el = document.getElementById('base-tier-count-' + hostName);
+            if (el) el.textContent = r.count + ' устр.';
+            showToast('success', 'Базовое кол-во устройств сохранено');
+            input.value = r.count;
+            document.getElementById('base-tier-edit-' + hostName).classList.add('hidden');
+            document.getElementById('base-tier-edit-' + hostName).classList.remove('flex');
+            document.getElementById('base-tier-display-' + hostName).classList.remove('hidden');
+            document.getElementById('base-tier-display-' + hostName).classList.add('flex');
+        } else {
+            showToast('danger', r.error || 'Ошибка');
+        }
+    }
+
+    function editExtraTier(tierId) {
+        document.getElementById('tier-display-' + tierId).classList.add('hidden');
+        document.getElementById('tier-display-' + tierId).classList.remove('flex');
+        const editDiv = document.getElementById('tier-edit-' + tierId);
+        editDiv.classList.remove('hidden');
+        editDiv.classList.add('flex');
+        document.getElementById('tier-input-count-' + tierId).focus();
+    }
+
+    async function saveExtraTier(tierId) {
+        const countInput = document.getElementById('tier-input-count-' + tierId);
+        const priceInput = document.getElementById('tier-input-price-' + tierId);
+        if (!countInput || !priceInput) return;
+        const count = parseInt(countInput.value);
+        const price = parseFloat(priceInput.value);
+        if (isNaN(count) || count < 2 || isNaN(price) || price < 0) { showToast('danger', 'Укажите корректные значения'); return; }
+
+        const fd = new FormData();
+        fd.append('device_count', count);
+        fd.append('price', price);
+        const r = await sendRequest('/edit-device-tier/' + tierId, 'POST', fd);
+        if (r.ok) {
+            document.getElementById('tier-display-count-' + tierId).textContent = count + ' устр.';
+            document.getElementById('tier-display-price-' + tierId).textContent = Math.round(price) + '₽/шт';
+            showToast('success', 'Резерв устройств обновлён');
+            document.getElementById('tier-edit-' + tierId).classList.add('hidden');
+            document.getElementById('tier-edit-' + tierId).classList.remove('flex');
+            document.getElementById('tier-display-' + tierId).classList.remove('hidden');
+            document.getElementById('tier-display-' + tierId).classList.add('flex');
+        } else {
+            showToast('danger', r.error || 'Ошибка');
+        }
+    }
+
+    async function addDeviceTier(hostName) {
+        const countEl = document.getElementById('tier-count-' + hostName);
+        const priceEl = document.getElementById('tier-price-' + hostName);
+        const count = parseInt(countEl?.value);
+        const price = parseFloat(priceEl?.value);
+        if (!count || count < 2 || isNaN(price) || price < 0) { showToast('danger', 'Укажите корректные значения'); return; }
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('device_count', count);
+        fd.append('price', price);
+        const r = await sendRequest('/add-device-tier', 'POST', fd);
+        if (r.ok && r.tier_id) {
+            const list = document.getElementById('device-tiers-list-' + hostName);
+            if (list) {
+                window.location.reload();
+            }
+            if (countEl) countEl.value = '';
+            if (priceEl) priceEl.value = '';
+            showToast('success', 'Тир добавлен');
+        } else showToast('danger', r.error || 'Ошибка');
+    }
+
+    async function deleteDeviceTier(tierId, hostName) {
+        const confirmed = await showCustomConfirm('Удалить уровень устройств?');
+        if (!confirmed) return;
+        const r = await sendRequest('/delete-device-tier/' + tierId, 'POST');
+        if (r.ok) {
+            const displayRow = document.getElementById('tier-display-' + tierId);
+            const editRow = document.getElementById('tier-edit-' + tierId);
+            if (displayRow) displayRow.remove();
+            if (editRow) editRow.remove();
+            showToast('success', 'Тир удалён');
+        } else showToast('danger', r.error || 'Ошибка');
+    }
+
+    async function toggleTierLockExtend(hostName, checked) {
+        const fd = new FormData();
+        fd.append('host_name', hostName);
+        fd.append('value', checked ? '1' : '0');
+        const r = await sendRequest('/update-tier-lock-extend', 'POST', fd);
+        if (r.ok) showToast('success', 'Настройка сохранена');
+        else showToast('danger', r.error || 'Ошибка');
+    }
+
+</script>
+
+{% endblock %}

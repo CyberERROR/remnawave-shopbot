@@ -2,7 +2,7 @@
 {% block title %}Поддержка{% endblock %}
 
 {% block content %}
-<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
     <div class="space-y-1">
         <h2 class="flex items-center gap-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Поддержка
@@ -22,19 +22,19 @@
     </div>
 </div>
 
-<section class="mb-6 space-y-2">
+<section class="mb-4 space-y-2">
     <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Обзор</p>
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {% for s, l, icon, count, color in [
-            ('', 'Все обращения', 'messages-square', all_count, 'violet'),
-            ('open', 'Открытые', 'circle-dot', open_count, 'sky'),
-            ('', 'Ожидают ответа', 'clock-3', open_count, 'amber'),
-            ('closed', 'Завершенные', 'check-circle-2', closed_count, 'emerald')
+        {% for s, l, icon, count, color, key in [
+            ('', 'Все обращения', 'messages-square', all_count, 'violet', 'all'),
+            ('open', 'Открытые', 'circle-dot', open_count, 'sky', 'open'),
+            ('', 'Ожидают ответа', 'clock-3', waiting_count, 'amber', 'waiting'),
+            ('closed', 'Завершенные', 'check-circle-2', closed_count, 'emerald', 'closed')
         ] %}
         {% set accent_text = 'text-' + color + '-300' %}
         {% set accent_wash = 'bg-' + color + '-400/[0.08]' %}
         {% set accent_fill = 'bg-' + color + '-400' %}
-        <a href="{{ url_for('support_list_page', status=s) }}" class="relative min-w-0 h-[84px] overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150 hover:border-white/20 hover:-translate-y-0.5 {% if filter_status == s %}border-{{ color }}-400/30 bg-{{ color }}-400/[0.06]{% endif %}">
+        <a href="{{ url_for('support_list_page', status=s) }}" class="relative min-w-0 h-[84px] overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 {% if filter_status == s %}border-{{ color }}-400/30 bg-{{ color }}-400/[0.06]{% endif %}">
             <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full {{ accent_wash }} blur-2xl"></div>
             <div class="relative flex h-full min-w-0 flex-col">
                 <div class="flex items-start justify-between gap-2">
@@ -44,7 +44,7 @@
                     </div>
                 </div>
                 <div class="mt-auto">
-                    <p class="text-2xl font-semibold leading-none tracking-tight tabular-nums {% if count == 0 %}text-white/40{% else %}text-white{% endif %}">{{ count }}</p>
+                    <p data-overview-count="{{ key }}" class="text-2xl font-semibold leading-none tracking-tight tabular-nums {% if count == 0 %}text-white/40{% else %}text-white{% endif %}">{{ count }}</p>
                 </div>
             </div>
         </a>
@@ -52,10 +52,10 @@
     </div>
 </section>
 
-<section class="mb-6">
-    <div class="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12 lg:min-h-[680px]">
+<section class="mb-4">
+    <div class="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
         <div class="lg:col-span-4">
-            <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+            <div class="flex max-h-[70vh] min-h-[480px] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] lg:h-[calc(100vh-300px)]">
                 <div class="shrink-0 space-y-3 border-b border-white/[0.08] p-4">
                     <div class="flex items-center justify-between gap-3">
                         <h3 class="text-sm font-bold tracking-tight text-white">Список обращений</h3>
@@ -80,7 +80,7 @@
             </div>
         </div>
         <div class="lg:col-span-8">
-            <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]" id="chat-panel">
+            <div class="flex max-h-[70vh] min-h-[480px] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] lg:h-[calc(100vh-260px)]" id="chat-panel">
                 <div class="flex h-full flex-col items-center justify-center p-8 text-center">
                     <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03]">
                         <i data-lucide="message-square-text" class="h-8 w-8 text-white/40" aria-hidden="true"></i>
@@ -123,32 +123,47 @@
             </div>
         </div>
         <div class="p-6 space-y-4">
+            <div class="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3.5">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
+                    <i data-lucide="construction" class="h-4 w-4" aria-hidden="true"></i>
+                </span>
+                <div>
+                    <p class="text-xs font-bold text-amber-200">В разработке</p>
+                    <p class="mt-0.5 text-xs text-white/60">Раздел находится в разработке. Ниже показаны примеры будущих шаблонов, они неактивны.</p>
+                </div>
+            </div>
             <div class="relative">
                 <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" aria-hidden="true"></i>
-                <input type="text" placeholder="Поиск по шаблонам..." class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                <input type="text" placeholder="Поиск по шаблонам..." disabled class="w-full cursor-not-allowed rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs font-medium text-white placeholder:text-white/50 opacity-60 outline-none transition-all" />
             </div>
-            <div class="space-y-3">
+            <div class="space-y-3 opacity-60">
                 <div>
-                    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Оплата</p>
+                    <div class="mb-2 flex items-center gap-2">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Оплата</p>
+                        <span class="rounded-full border border-white/[0.12] bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/50">Пример</span>
+                    </div>
                     <div class="space-y-2">
-                        <button class="group w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-all hover:border-white/20 hover:bg-white/[0.06]">
+                        <button type="button" disabled class="group w-full cursor-not-allowed rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left">
                             <p class="text-xs font-semibold text-white">Оплата успешно зачислена</p>
                             <p class="mt-1 text-xs text-white/60">Ваша оплата успешно зачислена на счёт. Подписка активирована</p>
                         </button>
-                        <button class="group w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-all hover:border-white/20 hover:bg-white/[0.06]">
+                        <button type="button" disabled class="group w-full cursor-not-allowed rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left">
                             <p class="text-xs font-semibold text-white">Проблема с оплатой</p>
                             <p class="mt-1 text-xs text-white/60">Проверьте правильность платёжных данных и повторите попытку</p>
                         </button>
                     </div>
                 </div>
                 <div>
-                    <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Настройка VPN</p>
+                    <div class="mb-2 flex items-center gap-2">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Настройка VPN</p>
+                        <span class="rounded-full border border-white/[0.12] bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/50">Пример</span>
+                    </div>
                     <div class="space-y-2">
-                        <button class="group w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-all hover:border-white/20 hover:bg-white/[0.06]">
+                        <button type="button" disabled class="group w-full cursor-not-allowed rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left">
                             <p class="text-xs font-semibold text-white">Инструкция по подключению</p>
                             <p class="mt-1 text-xs text-white/60">Скачайте приложение, добавьте ключ и включите подключение</p>
                         </button>
-                        <button class="group w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition-all hover:border-white/20 hover:bg-white/[0.06]">
+                        <button type="button" disabled class="group w-full cursor-not-allowed rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left">
                             <p class="text-xs font-semibold text-white">Смена сервера</p>
                             <p class="mt-1 text-xs text-white/60">Для смены сервера обратитесь в личном кабинете в раздел настроек</p>
                         </button>
@@ -160,7 +175,7 @@
 </div>
 
 <div id="userInfoModal" class="modal-overlay" onclick="if(event.target===this)closeUserInfoModal()">
-    <div class="w-full max-w-lg transform overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f0d] p-0 opacity-0 scale-95 transition-all duration-300" id="userInfoModalContent">
+    <div class="w-full max-w-4xl max-h-[90vh] overflow-y-auto transform rounded-2xl border border-white/10 bg-[#0a0f0d] p-0 opacity-0 scale-95 transition-all duration-300" id="userInfoModalContent">
         <div class="relative overflow-hidden border-b border-white/[0.08] bg-violet-400/[0.04] p-6">
             <div class="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-violet-400/10 blur-3xl"></div>
             <div class="relative flex items-center justify-between">
@@ -178,52 +193,17 @@
                 </button>
             </div>
         </div>
-        <div class="space-y-5 p-6">
-            <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Баланс</p>
-                    <p class="text-xl font-semibold tabular-nums text-white">450 ₽</p>
-                </div>
-                <div class="space-y-1">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Активных ключей</p>
-                    <p class="text-xl font-semibold tabular-nums text-white">2</p>
-                </div>
+        <div class="space-y-5 p-6" id="userInfoBody">
+            <div class="flex flex-col items-center justify-center py-16 opacity-30">
+                <div class="mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-white/40">Загрузка данных...</span>
             </div>
-            <div class="space-y-2">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Сервер</p>
-                <div class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-                    <p class="text-sm font-medium text-white">DE-Frankfurt-01</p>
-                    <p class="mt-0.5 font-mono text-[10px] text-white/50">Германия</p>
-                </div>
-            </div>
-            <div class="space-y-2">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Подписка до</p>
-                <p class="text-sm font-medium text-white">15 марта 2026</p>
-            </div>
-            <div class="space-y-2">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Последние платежи</p>
-                <div class="space-y-1.5">
-                    <div class="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
-                        <span class="text-xs font-medium text-white/70">10 янв 2026</span>
-                        <span class="font-mono text-xs font-semibold text-emerald-300">+300 ₽</span>
-                    </div>
-                    <div class="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
-                        <span class="text-xs font-medium text-white/70">25 дек 2025</span>
-                        <span class="font-mono text-xs font-semibold text-emerald-300">+500 ₽</span>
-                    </div>
-                    <div class="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
-                        <span class="text-xs font-medium text-white/70">10 дек 2025</span>
-                        <span class="font-mono text-xs font-semibold text-emerald-300">+300 ₽</span>
-                    </div>
-                </div>
-            </div>
-            <a id="user-profile-link" href="/users?q=" class="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 py-2.5 text-xs font-semibold text-emerald-300 transition duration-150 hover:bg-emerald-400/20"><i data-lucide="external-link" class="h-4 w-4" aria-hidden="true"></i>Перейти в профиль</a>
         </div>
     </div>
 </div>
 
 <div id="geminiModal" class="modal-overlay" onclick="if(event.target===this)closeGeminiModal()">
-    <div class="w-full max-w-2xl transform overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f0d] p-0 opacity-0 scale-95 transition-all duration-300" id="geminiModalContent">
+    <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto transform rounded-2xl border border-white/10 bg-[#0a0f0d] p-0 opacity-0 scale-95 transition-all duration-300" id="geminiModalContent">
         <div class="relative overflow-hidden border-b border-white/[0.08] bg-primary/[0.04] p-6">
             <div class="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/10 blur-3xl"></div>
             <div class="relative flex items-center justify-between">
@@ -288,6 +268,23 @@
                     <button onclick="toggleKeyVisibility()" type="button" class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-white/30 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
                         <i data-lucide="eye" id="keyVisibilityIcon" class="h-4 w-4" aria-hidden="true"></i>
                     </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="space-y-2">
+                    <label class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Base URL</label>
+                    <input type="text" id="geminiBaseUrlInput" name="gemini_base_url" autocomplete="off" spellcheck="false" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 outline-none transition-all focus:ring-1 focus:ring-primary/30" placeholder="https://api.example.com/v1">
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Model</label>
+                        <button onclick="loadGeminiModels()" type="button" class="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-white/40 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60" title="Загрузить список моделей, доступных ключу">
+                            <i data-lucide="refresh-cw" class="h-3 w-3" aria-hidden="true"></i>
+                            Список моделей
+                        </button>
+                    </div>
+                    <input type="text" id="geminiModelInput" name="gemini_model" list="geminiModelsList" autocomplete="off" spellcheck="false" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 outline-none transition-all focus:ring-1 focus:ring-primary/30" placeholder="Введите название модели">
+                    <datalist id="geminiModelsList"></datalist>
                 </div>
             </div>
             <div class="space-y-2">
@@ -406,6 +403,35 @@
 
         window.loadTicketsList();
         window.addEventListener('popstate', () => location.reload());
+
+        window.loadSupportCounts = async () => {
+            try {
+                const res = await fetch("{{ url_for('support_counts_json') }}", { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.ok) return;
+                const mapping = {
+                    all: data.all_count,
+                    open: data.open_count,
+                    waiting: data.waiting_count,
+                    closed: data.closed_count
+                };
+                document.querySelectorAll('[data-overview-count]').forEach(el => {
+                    const key = el.dataset.overviewCount;
+                    if (!(key in mapping)) return;
+                    const value = Number(mapping[key] || 0);
+                    if (el.textContent.trim() !== String(value)) {
+                        el.textContent = value;
+                    }
+                    el.classList.toggle('text-white/40', value === 0);
+                    el.classList.toggle('text-white', value !== 0);
+                });
+            } catch (e) {
+                console.debug('Не удалось обновить счётчики:', e.message);
+            }
+        };
+        window.loadSupportCounts();
+        setInterval(() => { if (!document.hidden) window.loadSupportCounts(); }, 5000);
     });
 
     window.openTicketChat = function(ticketId) {
@@ -458,6 +484,7 @@
     }
 
     let ticketPollingInterval = null;
+    let ticketMessagesFetching = false;
 
     function startTicketPolling(ticketId) {
         if (ticketPollingInterval) {
@@ -467,11 +494,37 @@
     }
 
     async function loadTicketMessagesPartial(ticketId) {
+        if (ticketMessagesFetching) return;
+        ticketMessagesFetching = true;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
         try {
-            const res = await fetch('/support/' + ticketId + '?partial=true');
+            let messagesBox = document.getElementById('messages-feed');
+            if (!messagesBox) {
+                const res = await fetch('/support/' + ticketId + '?partial=1', { signal: controller.signal });
+                if (!res.ok) return;
+                const html = await res.text();
+                const chatPanel = document.getElementById('chat-panel');
+                if (!chatPanel) return;
+                chatPanel.innerHTML = html;
+                refreshSupportIcons(chatPanel);
+                const form = chatPanel.querySelector('#replyForm');
+                if (form) {
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        await handleTicketReply(ticketId, form);
+                    });
+                }
+                const aiBtn = chatPanel.querySelector('button[onclick*="generateGeminiResponse"]');
+                if (aiBtn) {
+                    aiBtn.setAttribute('onclick', '');
+                    aiBtn.addEventListener('click', (e) => generateGeminiResponseInPanel(ticketId, e));
+                }
+                messagesBox = document.getElementById('messages-feed');
+            }
+            const res = await fetch('/support/' + ticketId + '?partial=true', { signal: controller.signal });
             if (res.ok) {
                 const html = await res.text();
-                const messagesBox = document.getElementById('messages-feed');
                 if (messagesBox) {
                     const wasAtBottom = (messagesBox.scrollHeight - messagesBox.scrollTop <= messagesBox.clientHeight + 100);
                     messagesBox.innerHTML = html;
@@ -482,7 +535,12 @@
                 }
             }
         } catch (err) {
-            console.error('Ошибка обновления сообщений:', err);
+            if (err && err.name !== 'AbortError') {
+                console.debug('Обновление сообщений временно недоступно:', err.message);
+            }
+        } finally {
+            clearTimeout(timeoutId);
+            ticketMessagesFetching = false;
         }
     }
 
@@ -506,6 +564,7 @@
                 const messagesBox = document.getElementById('messages-feed');
                 if (messagesBox) messagesBox.scrollTop = messagesBox.scrollHeight;
                 if (window.showToast) showToast('success', 'Сообщение отправлено');
+                if (window.loadSupportCounts) window.loadSupportCounts();
             }
         } catch (e) {
             console.error(e);
@@ -517,14 +576,17 @@
 
     async function generateGeminiResponseInPanel(ticketId, event) {
         const tx = document.getElementById('chat-message-input');
-        const btn = event.currentTarget;
+        if (!tx) return;
+        const btn = (event.currentTarget || event.target)?.closest('button');
+        if (!btn || btn.disabled) return;
         const icon = btn.querySelector('[data-lucide]');
 
-        if (btn.disabled) return;
         btn.disabled = true;
-        icon.setAttribute('data-lucide', 'loader-2');
-        icon.classList.add('animate-spin');
-        refreshSupportIcons(btn);
+        if (icon) {
+            icon.setAttribute('data-lucide', 'loader-2');
+            icon.classList.add('animate-spin');
+            refreshSupportIcons(btn);
+        }
 
         try {
             const r = await fetch('/admin/gemini/generate', {
@@ -544,15 +606,20 @@
             if (window.showToast) showToast('danger', 'Ошибка сети');
         } finally {
             btn.disabled = false;
-            icon.setAttribute('data-lucide', 'sparkles');
-            icon.classList.remove('animate-spin');
-            refreshSupportIcons(btn);
+            const resetIcon = btn.querySelector('[data-lucide]');
+            if (resetIcon) {
+                resetIcon.setAttribute('data-lucide', 'sparkles');
+                resetIcon.classList.remove('animate-spin');
+                refreshSupportIcons(btn);
+            }
         }
     }
 
 
     async function openGeminiModal() {
         const keyInp = document.getElementById('geminiKeyInput');
+        const baseUrlInp = document.getElementById('geminiBaseUrlInput');
+        const modelInp = document.getElementById('geminiModelInput');
         const promptInp = document.getElementById('geminiPromptInput');
         const supportEnabledInp = document.getElementById('supportEnabledInput');
         const scheduleEnabledInp = document.getElementById('supportScheduleEnabledInput');
@@ -561,6 +628,8 @@
         const content = document.getElementById('geminiModalContent');
 
         keyInp.value = '';
+        baseUrlInp.value = '';
+        modelInp.value = '';
         promptInp.value = '';
 
         try {
@@ -568,6 +637,8 @@
             const data = await res.json();
             if (data.ok) {
                 if (data.key) keyInp.value = data.key;
+                if (data.base_url) baseUrlInp.value = data.base_url;
+                if (data.model) modelInp.value = data.model;
                 if (data.prompt) promptInp.value = data.prompt;
                 supportEnabledInp.checked = data.support_enabled;
                 scheduleEnabledInp.checked = data.schedule_enabled;
@@ -616,6 +687,8 @@
 
     async function saveGeminiKey() {
         const key = document.getElementById('geminiKeyInput').value.trim();
+        const baseUrl = document.getElementById('geminiBaseUrlInput').value.trim();
+        const model = document.getElementById('geminiModelInput').value.trim();
         const prompt = document.getElementById('geminiPromptInput').value.trim();
         const supportEnabled = document.getElementById('supportEnabledInput').checked;
         const scheduleEnabled = document.getElementById('supportScheduleEnabledInput').checked;
@@ -628,13 +701,47 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': "{{ csrf_token() }}"
                 },
-                body: JSON.stringify({ key: key, prompt: prompt, support_enabled: supportEnabled, schedule_enabled: scheduleEnabled, schedule_start: scheduleStart, schedule_end: scheduleEnd })
+                body: JSON.stringify({ key: key, base_url: baseUrl, model: model, prompt: prompt, support_enabled: supportEnabled, schedule_enabled: scheduleEnabled, schedule_start: scheduleStart, schedule_end: scheduleEnd })
             });
             if (res.ok) {
                 showToast('success', 'Настройки поддержки сохранены');
                 closeGeminiModal();
             } else showToast('danger', 'Ошибка сохранения');
         } catch (e) { showToast('danger', 'Ошибка сети'); }
+    }
+
+    async function loadGeminiModels() {
+        const key = document.getElementById('geminiKeyInput').value.trim();
+        const baseUrl = document.getElementById('geminiBaseUrlInput').value.trim();
+        if (!key) {
+            showToast('danger', 'Сначала укажите API Key');
+            return;
+        }
+        try {
+            const res = await fetch("{{ url_for('gemini_models') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({ key: key, base_url: baseUrl })
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                showToast('danger', data.error || 'Не удалось получить список моделей');
+                return;
+            }
+            const list = document.getElementById('geminiModelsList');
+            list.innerHTML = '';
+            (data.models || []).forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                list.appendChild(option);
+            });
+            showToast('success', 'Доступно моделей: ' + (data.models || []).length);
+        } catch (e) {
+            showToast('danger', 'Ошибка сети');
+        }
     }
 
     function confirmDeleteAllTickets() {
@@ -678,6 +785,7 @@
             closeCloseTicketModal();
             await window.loadTicketsList?.();
             await loadTicketInPanel(closedTicketId);
+            if (window.loadSupportCounts) window.loadSupportCounts();
             if (window.showToast) showToast('success', 'Обращение закрыто');
         } catch (error) {
             if (window.showToast) showToast('danger', 'Не удалось закрыть обращение');
@@ -701,10 +809,237 @@
         setTimeout(() => closeModal('templatesModal'), 300);
     }
 
-    function openUserInfoModal(userId) {
-        const profileLink = document.getElementById('user-profile-link');
+    function _formatMoney(value) {
+        const num = Number(value || 0);
+        return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+    }
+
+    function _formatTraffic(gb) {
+        const num = Number(gb || 0);
+        if (num >= 1024) return (num / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' ТБ';
+        return num.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' ГБ';
+    }
+
+    function _esc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function renderUserInfo(data) {
+        const body = document.getElementById('userInfoBody');
+        if (!body) return;
+        const u = data.user || {};
+        const stats = data.subs_stats || {};
+        const subs = data.subscriptions || [];
+        const payments = (data.payment_history || []).slice(0, 5);
+        const displayName = u.username ? '@' + u.username : 'User #' + u.telegram_id;
+
+        const statCard = (label, value, accent) => `
+            <div class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">${label}</p>
+                <p class="mt-1 text-lg font-semibold tabular-nums ${accent || 'text-white'}">${value}</p>
+            </div>`;
+
+        let subsHtml = '<p class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-xs text-white/50">Подписок нет</p>';
+        if (subs.length) {
+            subsHtml = subs.map(s => `
+                <div class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3" data-sub-key-id="${_esc(s.key_id)}">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-semibold text-white">${_esc(s.host_name)} · ключ #${_esc(s.key_id)}</p>
+                            <p class="mt-0.5 font-mono text-[10px] text-white/50">${_esc(s.plan)}</p>
+                        </div>
+                        <span class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.is_expired ? 'border-red-400/20 bg-red-400/10 text-red-300' : 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'}">${s.is_expired ? 'Истёк' : 'Активен'}</span>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/60">
+                        <span>До: <span class="text-white/80">${_esc(s.expire_date)}</span></span>
+                        <span>${_esc(s.status_text)}</span>
+                        <span>Трафик: <span class="text-white/80" data-sub-traffic>...</span></span>
+                        <span>Устройства: <span class="text-white/80" data-sub-hwid>...</span></span>
+                    </div>
+                    ${s.key && s.key !== 'N/A' ? `
+                    <div class="mt-2 flex items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 p-2">
+                        <i data-lucide="link" class="h-3.5 w-3.5 shrink-0 text-white/40" aria-hidden="true"></i>
+                        <a href="${_esc(s.key)}" target="_blank" rel="noopener noreferrer" class="min-w-0 flex-1 truncate font-mono text-[10px] text-sky-300/80 hover:text-sky-200" title="${_esc(s.key)}">${_esc(s.key)}</a>
+                        <button type="button" class="btn-sub-copy-link flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/40 transition-colors hover:text-white" data-copy="${_esc(s.key)}" title="Копировать ссылку">
+                            <i data-lucide="copy" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                        </button>
+                    </div>` : ''}
+                    <div class="mt-2.5 flex flex-wrap gap-2">
+                        <button type="button" class="btn-sub-reset-link inline-flex items-center gap-1.5 rounded-lg border border-amber-400/20 bg-amber-400/[0.07] px-2.5 py-1.5 text-[10px] font-semibold text-amber-200/90 transition-colors hover:bg-amber-400/15" data-key-id="${_esc(s.key_id)}" title="Сгенерировать новую ссылку подписки">
+                            <i data-lucide="refresh-cw" class="h-3.5 w-3.5" aria-hidden="true"></i>Обновить ссылку
+                        </button>
+                        <button type="button" class="btn-sub-reset-hwid inline-flex items-center gap-1.5 rounded-lg border border-rose-400/20 bg-rose-400/[0.07] px-2.5 py-1.5 text-[10px] font-semibold text-rose-200/90 transition-colors hover:bg-rose-400/15" data-key-id="${_esc(s.key_id)}" title="Сбросить все HWID-устройства ключа">
+                            <i data-lucide="smartphone-nfc" class="h-3.5 w-3.5" aria-hidden="true"></i>Сбросить устройства
+                        </button>
+                    </div>
+                </div>`).join('');
+        }
+
+        let payHtml = '<p class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-xs text-white/50">Платежей нет</p>';
+        if (payments.length) {
+            payHtml = payments.map(p => `
+                <div class="flex items-center justify-between gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
+                    <div class="min-w-0">
+                        <p class="truncate text-xs font-medium text-white/80">${_esc(p.type || p.action_label || 'Платёж')}</p>
+                        <p class="font-mono text-[10px] text-white/40">${_esc(p.date || '')}</p>
+                    </div>
+                    <span class="shrink-0 font-mono text-xs font-semibold text-emerald-300">${_formatMoney(p.amount)}</span>
+                </div>`).join('');
+        }
+
+        const referredByHtml = (u.referred_by && u.referred_by.telegram_id)
+            ? `<p class="text-xs text-white/70">Приглашён: <span class="text-white">@${_esc(u.referred_by.username || u.referred_by.telegram_id)}</span></p>`
+            : '';
+
+        body.innerHTML = `
+            <a id="user-profile-link" href="/users?q=" class="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 py-2.5 text-xs font-semibold text-emerald-300 transition duration-150 hover:bg-emerald-400/20"><i data-lucide="external-link" class="h-4 w-4" aria-hidden="true"></i>Перейти в профиль</a>
+            <div class="flex items-center gap-3">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-violet-600 text-lg font-bold text-white">${_esc((displayName || 'U').replace('@', '').charAt(0).toUpperCase())}</div>
+                <div class="min-w-0">
+                    <p class="truncate text-base font-bold text-white">${_esc(displayName)}</p>
+                    <p class="font-mono text-[11px] text-white/50">ID: ${_esc(u.telegram_id)}</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                ${statCard('Баланс', _formatMoney(u.balance), 'text-emerald-300')}
+                ${statCard('Активных', stats.active || 0)}
+                ${statCard('Истёкших', stats.expired || 0)}
+                ${statCard('Потрачено', _formatMoney(u.total_spent), 'text-sky-300')}
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                ${statCard('Всего подписок', stats.total || 0)}
+                ${statCard('Месяцев куплено', u.total_months || 0)}
+                ${statCard('Рефералов', u.referral_count || 0)}
+            </div>
+            <div class="space-y-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-xs text-white/70">
+                <p>Регистрация: <span class="text-white">${_esc(u.registration_date || '—')}</span></p>
+                <p>Триал: <span class="text-white">${u.trial_used ? 'использован' : 'не использован'}</span></p>
+                <p>Реферальный код: <span class="font-mono text-white">${_esc(u.referral_code || '—')}</span></p>
+                ${referredByHtml}
+            </div>
+            <div class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Подписки</p>
+                <div class="space-y-1.5">${subsHtml}</div>
+            </div>
+            <div class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Последние платежи</p>
+                <div class="space-y-1.5">${payHtml}</div>
+            </div>`;
+        refreshSupportIcons(body);
+        bindSubscriptionActions(body);
+    }
+
+    function _getCsrfToken() {
+        if (window.getCsrfToken) return window.getCsrfToken();
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) return meta.getAttribute('content');
+        const input = document.querySelector('#replyForm [name="csrf_token"], [name="csrf_token"]');
+        return input ? input.value : '';
+    }
+
+    function bindSubscriptionActions(root) {
+        if (!root) return;
+        root.querySelectorAll('.btn-sub-copy-link').forEach(button => {
+            button.addEventListener('click', async () => {
+                const value = button.dataset.copy || '';
+                if (!value) return;
+                try {
+                    await navigator.clipboard.writeText(value);
+                    if (window.showToast) showToast('success', 'Ссылка скопирована');
+                } catch (e) {
+                    if (window.showToast) showToast('danger', 'Не удалось скопировать ссылку');
+                }
+            });
+        });
+        root.querySelectorAll('.btn-sub-reset-link').forEach(button => {
+            button.addEventListener('click', async () => {
+                const keyId = button.dataset.keyId;
+                if (!keyId || button.disabled) return;
+                button.disabled = true;
+                try {
+                    const res = await fetch('/users/subscriptions/' + encodeURIComponent(keyId) + '/reset-link', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': _getCsrfToken(), 'Accept': 'application/json' },
+                        credentials: 'same-origin'
+                    });
+                    const result = await res.json();
+                    if (!res.ok || !result.ok) throw new Error(result.error || 'Не удалось обновить ссылку');
+                    if (window.showToast) showToast('success', 'Ссылка подписки обновлена');
+                } catch (e) {
+                    if (window.showToast) showToast('danger', e.message || 'Ошибка обновления ссылки');
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+
+        root.querySelectorAll('.btn-sub-reset-hwid').forEach(button => {
+            button.addEventListener('click', async () => {
+                const keyId = button.dataset.keyId;
+                if (!keyId || button.disabled) return;
+                const run = async () => {
+                    button.disabled = true;
+                    try {
+                        const res = await fetch('/users/subscriptions/' + encodeURIComponent(keyId) + '/reset-hwid', {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': _getCsrfToken(), 'Accept': 'application/json' },
+                            credentials: 'same-origin'
+                        });
+                        const result = await res.json();
+                        if (!res.ok || !result.ok) throw new Error(result.error || 'Не удалось сбросить устройства');
+                        if (window.showToast) showToast('success', result.deleted ? 'Сброшено устройств: ' + result.deleted : 'Устройства не зарегистрированы');
+                        const card = button.closest('[data-sub-key-id]');
+                        const hwidEl = card ? card.querySelector('[data-sub-hwid]') : null;
+                        if (hwidEl) hwidEl.textContent = '0 зарегистрировано';
+                    } catch (e) {
+                        if (window.showToast) showToast('danger', e.message || 'Ошибка сброса устройств');
+                    } finally {
+                        button.disabled = false;
+                    }
+                };
+                if (window.showCustomConfirm) {
+                    const confirmed = await showCustomConfirm('Удалить все зарегистрированные устройства этого ключа? Пользователю потребуется подключить устройства заново.', 'Сброс устройств');
+                    if (!confirmed) return;
+                }
+                run();
+            });
+        });
+    }
+
+    async function loadUserRemnawave(userId) {
+        try {
+            const res = await fetch('/users/' + encodeURIComponent(userId) + '/details.json?remnawave_only=1');
+            const data = await res.json();
+            if (!data || !data.ok) return;
+            (data.subscriptions || []).forEach(sub => {
+                const card = document.querySelector('#userInfoBody [data-sub-key-id="' + sub.key_id + '"]');
+                if (!card) return;
+                const trafficEl = card.querySelector('[data-sub-traffic]');
+                const hwidEl = card.querySelector('[data-sub-hwid]');
+                if (trafficEl) {
+                    trafficEl.textContent = !sub.traffic_available
+                        ? 'нет данных'
+                        : (sub.traffic_unlimited ? _formatTraffic(sub.traffic_used_gb) + ' / безлимит' : _formatTraffic(sub.traffic_used_gb) + ' / ' + _formatTraffic(sub.traffic_limit_gb));
+                }
+                if (hwidEl) {
+                    hwidEl.textContent = !sub.hwid_available
+                        ? 'нет данных'
+                        : (sub.hwid_unlimited ? 'безлимит' : ((sub.hwid_used ?? 0) + ' / ' + sub.hwid_limit));
+                }
+            });
+        } catch (e) {
+            console.debug('Не удалось загрузить данные Remnawave:', e.message);
+        }
+    }
+
+    async function openUserInfoModal(userId) {
+        const body = document.getElementById('userInfoBody');
         const chatUserId = userId || document.querySelector('#chat-panel [data-user-id]')?.dataset.userId || document.querySelector('#chat-panel .font-mono')?.textContent.match(/\d+/)?.[0];
-        if (profileLink && chatUserId) profileLink.href = '/users?q=' + encodeURIComponent(chatUserId);
+
+        if (body) {
+            body.innerHTML = '<div class="flex flex-col items-center justify-center py-16 opacity-30"><div class="mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div><span class="text-[10px] font-bold uppercase tracking-widest text-white/40">Загрузка данных...</span></div>';
+        }
+
         openModal('userInfoModal');
         const content = document.getElementById('userInfoModalContent');
         requestAnimationFrame(() => {
@@ -712,6 +1047,25 @@
             content.classList.add('scale-100', 'opacity-100');
         });
         refreshSupportIcons();
+
+        if (!chatUserId) {
+            if (body) body.innerHTML = '<p class="py-10 text-center text-xs text-white/50">Не удалось определить пользователя</p>';
+            return;
+        }
+        try {
+            const res = await fetch('/users/' + encodeURIComponent(chatUserId) + '/details.json');
+            const data = await res.json();
+            if (data.ok) {
+                renderUserInfo(data);
+                const profileLink = document.getElementById('user-profile-link');
+                if (profileLink) profileLink.href = '/users?q=' + encodeURIComponent(chatUserId);
+                loadUserRemnawave(chatUserId);
+            } else if (body) {
+                body.innerHTML = '<p class="py-10 text-center text-xs text-white/50">Не удалось загрузить данные пользователя</p>';
+            }
+        } catch (e) {
+            if (body) body.innerHTML = '<p class="py-10 text-center text-xs text-white/50">Ошибка загрузки данных</p>';
+        }
     }
 
     function closeUserInfoModal() {

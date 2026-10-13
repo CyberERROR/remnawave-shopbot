@@ -943,6 +943,21 @@ def create_webhook_app(bot_controller_instance):
             "pagination_html": pagination_html
         })
 
+    @flask_app.route('/support/counts.json')
+    @login_required
+    def support_counts_json():
+        try:
+            return jsonify({
+                "ok": True,
+                "all_count": get_all_tickets_count() or 0,
+                "open_count": get_open_tickets_count() or 0,
+                "waiting_count": get_waiting_tickets_count() or 0,
+                "closed_count": get_closed_tickets_count() or 0,
+            })
+        except Exception as e:
+            logger.error(f"Failed to get support counts: {e}")
+            return jsonify({"ok": False, "error": str(e)}), 500
+
     @flask_app.route('/support/open-count.partial')
     @login_required
     def support_open_count_partial():
@@ -2440,10 +2455,22 @@ def create_webhook_app(bot_controller_instance):
                     if not host_for_delete:
                         try:
                             sq = (k.get('squad_uuid') or k.get('squadUuid') or '').strip()
-                            if sq:
-                                squad = rw_repo.get_squad(sq)
-                                if squad and squad.get('host_name'):
-                                    host_for_delete = squad.get('host_name')
+                            key_email = (k.get('key_email') or k.get('email') or '').strip()
+                            for candidate in rw_repo.list_squads_by_uuid(sq):
+                                candidate_host = (candidate.get('host_name') or '').strip()
+                                if not candidate_host:
+                                    continue
+                                try:
+                                    found = asyncio.run(remnawave_api.get_user_by_email(key_email, host_name=candidate_host)) if key_email else None
+                                    if not found and key_email:
+                                        norm_email = remnawave_api._normalize_email_for_remnawave(key_email)
+                                        if norm_email != key_email:
+                                            found = asyncio.run(remnawave_api.get_user_by_email(norm_email, host_name=candidate_host))
+                                except Exception:
+                                    found = None
+                                if found:
+                                    host_for_delete = candidate_host
+                                    break
                         except Exception:
                             pass
                     if host_for_delete:
@@ -2649,6 +2676,7 @@ def create_webhook_app(bot_controller_instance):
         total_pages = 1
         
         open_count = get_open_tickets_count()
+        waiting_count = get_waiting_tickets_count()
         closed_count = get_closed_tickets_count()
         all_count = get_all_tickets_count()
         common_data = get_common_template_data()
@@ -2659,6 +2687,7 @@ def create_webhook_app(bot_controller_instance):
             total_pages=total_pages,
             filter_status=status,
             open_count=open_count,
+            waiting_count=waiting_count,
             closed_count=closed_count,
             all_count=all_count,
             **common_data
@@ -2671,6 +2700,14 @@ def create_webhook_app(bot_controller_instance):
         if not ticket:
             flash('Тикет не найден.', 'danger')
             return redirect(url_for('support_list_page'))
+
+        try:
+            ticket_user = get_user(ticket.get('user_id'))
+            if ticket_user:
+                ticket['username'] = ticket_user.get('username')
+                ticket['first_name'] = ticket_user.get('first_name')
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить данные пользователя для тикета {ticket_id}: {e}")
 
         if request.method == 'POST':
             message = (request.form.get('message') or '').strip()
@@ -2688,8 +2725,8 @@ def create_webhook_app(bot_controller_instance):
                             text = (
                                 f"💬 <b>Ответ от технической поддержки.</b>\n"
                                 f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
-                                f"💌 <b>Ответ на ваше обращение:</b>\n"
-                                f"<blockquote>{message}</blockquote>"
+                                f"💌 <b>Ответ на ваше обращение:</b>\n\n"
+                                f"<b>{message}</b>"
                             )
                             asyncio.run_coroutine_threadsafe(bot.send_message(user_chat_id, text), loop)
                         else:
@@ -2705,8 +2742,8 @@ def create_webhook_app(bot_controller_instance):
                             text = (
                                 f"💬 <b>Ответ технической поддержки:</b>\n"
                                 f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
-                                f"💌 <b>Ответ на ваше обращение:</b>\n"
-                                f"<blockquote>{message}</blockquote>"
+                                f"💌 <b>Ответ на ваше обращение:</b>\n\n"
+                                f"<b>{message}</b>"
                             )
                             asyncio.run_coroutine_threadsafe(
                                 bot.send_message(chat_id=int(forum_chat_id), text=text, message_thread_id=int(thread_id)),
@@ -2934,21 +2971,6 @@ def create_webhook_app(bot_controller_instance):
 
 
         hosts = get_all_hosts()
-        for host in hosts:
-            host['plans'] = get_plans_for_host(host['host_name'])
-            host['device_tiers'] = get_device_tiers(host['host_name'])
-            host['traffic_tiers'] = get_traffic_tiers(host['host_name'])
-
-            try:
-                host['latest_speedtest'] = get_latest_speedtest(host['host_name'])
-            except Exception:
-                host['latest_speedtest'] = None
-
-        try:
-            ssh_targets = get_all_ssh_targets()
-        except Exception:
-            ssh_targets = []
-        
 
         backups = []
         try:
@@ -2968,7 +2990,35 @@ def create_webhook_app(bot_controller_instance):
             backups = []
 
         common_data = get_common_template_data()
-        return render_template('settings.html', hosts=hosts, ssh_targets=ssh_targets, backups=backups, pay_info=pay_info, **common_data)
+        return render_template('settings.html', hosts=hosts, backups=backups, pay_info=pay_info, **common_data)
+
+    @flask_app.route('/tariffs')
+    @login_required
+    def tariff_page():
+        hosts = get_all_hosts()
+        for host in hosts:
+            host['plans'] = get_plans_for_host(host['host_name'])
+            host['device_tiers'] = get_device_tiers(host['host_name'])
+            host['traffic_tiers'] = get_traffic_tiers(host['host_name'])
+            try:
+                host['latest_speedtest'] = get_latest_speedtest(host['host_name'])
+            except Exception:
+                host['latest_speedtest'] = None
+
+        try:
+            ssh_targets = get_all_ssh_targets()
+        except Exception:
+            ssh_targets = []
+
+        common_data = get_common_template_data()
+        return render_template(
+            'tariff.html',
+            hosts=hosts,
+            ssh_targets=ssh_targets,
+            backups=[],
+            pay_info={},
+            **common_data
+        )
 
 
     @flask_app.route('/api/settings/update-pay-info', methods=['POST'])
@@ -3063,6 +3113,9 @@ def create_webhook_app(bot_controller_instance):
             flash('Ошибка при восстановлении БД.', 'danger')
             return redirect(request.referrer or url_for('settings_page', tab='panel'))
 
+    def _host_management_redirect():
+        return url_for('tariff_page')
+
     @flask_app.route('/update-host-subscription', methods=['POST'])
     @login_required
     def update_host_subscription_route():
@@ -3072,7 +3125,7 @@ def create_webhook_app(bot_controller_instance):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                  return jsonify({'ok': False, 'error': 'Не указан хост'}), 400
             flash('Не указан хост для обновления ссылки подписки.', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
         ok = update_host_subscription_url(host_name, sub_url or None)
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -3082,7 +3135,7 @@ def create_webhook_app(bot_controller_instance):
             flash('Ссылка подписки для хоста обновлена.', 'success')
         else:
             flash('Не удалось обновить ссылку подписки для хоста (возможно, хост не найден).', 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/update-host-description', methods=['POST'])
     @login_required
@@ -3093,7 +3146,7 @@ def create_webhook_app(bot_controller_instance):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                  return jsonify({'ok': False, 'error': 'Не указан хост'}), 400
             flash('Не указан хост для обновления описания.', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
         ok = update_host_description(host_name, description or None)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -3103,7 +3156,7 @@ def create_webhook_app(bot_controller_instance):
             flash('Описание для хоста обновлено.', 'success')
         else:
             flash('Не удалось обновить описание для хоста (возможно, хост не найден).', 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/update-host-traffic-settings', methods=['POST'])
     @login_required
@@ -3115,7 +3168,7 @@ def create_webhook_app(bot_controller_instance):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                  return jsonify({'ok': False, 'error': 'Не указан хост'}), 400
             flash('Не указан хост для обновления настроек трафика.', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
             
         ok = update_host_traffic_settings(host_name, strategy)
 
@@ -3126,7 +3179,7 @@ def create_webhook_app(bot_controller_instance):
             flash('Настройки трафика для хоста обновлены.', 'success')
         else:
             flash('Не удалось обновить настройки трафика (возможно, хост не найден).', 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
 
     @flask_app.route('/update-host-url', methods=['POST'])
@@ -3138,14 +3191,14 @@ def create_webhook_app(bot_controller_instance):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                  return jsonify({'ok': False, 'error': 'Не указан хост или URL'}), 400
             flash('Укажите имя хоста и новый URL.', 'warning')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
         ok = update_host_url(host_name, new_url)
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
              return jsonify({'ok': ok, 'message': 'URL хоста обновлён' if ok else 'Не удалось обновить URL'})
 
         flash('URL хоста обновлён.' if ok else 'Не удалось обновить URL хоста.', 'success' if ok else 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/update-host-remnawave', methods=['POST'])
     @login_required
@@ -3158,7 +3211,7 @@ def create_webhook_app(bot_controller_instance):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                  return jsonify({'ok': False, 'error': 'Не указан хост'}), 400
             flash('Не указан хост для обновления Remnawave-настроек.', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
         ok = update_host_remnawave_settings(
             host_name,
             remnawave_base_url=base_url or None,
@@ -3170,7 +3223,7 @@ def create_webhook_app(bot_controller_instance):
              return jsonify({'ok': ok, 'message': 'Remnawave-настройки обновлены' if ok else 'Не удалось обновить Remnawave-настройки'})
 
         flash('Remnawave-настройки обновлены.' if ok else 'Не удалось обновить Remnawave-настройки.', 'success' if ok else 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/update-host-base-devices', methods=['POST'])
     @login_required
@@ -3199,14 +3252,14 @@ def create_webhook_app(bot_controller_instance):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                  return jsonify({'ok': False, 'error': 'Укажите старое и новое имя'}), 400
             flash('Введите старое и новое имя хоста.', 'warning')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
         ok = update_host_name(old_name, new_name)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
              return jsonify({'ok': ok, 'message': 'Имя хоста обновлено' if ok else 'Не удалось переименовать хост'})
 
         flash('Имя хоста обновлено.' if ok else 'Не удалось переименовать хост.', 'success' if ok else 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/update-host-button-style', methods=['POST'])
     @login_required
@@ -3218,7 +3271,7 @@ def create_webhook_app(bot_controller_instance):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'ok': ok})
         flash('Стиль кнопки хоста обновлён.' if ok else 'Ошибка.', 'success' if ok else 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/start-support-bot', methods=['POST'])
     @login_required
@@ -3490,7 +3543,7 @@ def create_webhook_app(bot_controller_instance):
         squad_uuid = (request.form.get('squad_uuid') or '').strip()
         if not name or not base_url or not api_token:
             flash('Укажите название хоста, базовый URL и API токен.', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
 
 
         try:
@@ -3505,7 +3558,7 @@ def create_webhook_app(bot_controller_instance):
         except Exception as e:
             logger.error(f"Не удалось создать хост '{name}': {e}")
             flash(f"Не удалось создать хост '{name}'.", 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
 
 
         try:
@@ -3520,13 +3573,13 @@ def create_webhook_app(bot_controller_instance):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                  return jsonify({'ok': True, 'message': 'Хост создан, но настройки Remnawave не сохранены'}), 200 # Partial success
             flash('Хост создан, но Remnawave-настройки сохранить не удалось.', 'warning')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
              return jsonify({'ok': True, 'message': f"Хост '{name}' успешно добавлен"})
 
         flash(f"Хост '{name}' успешно добавлен.", 'success')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/heleket-webhook', methods=['POST'])
     @csrf.exempt
@@ -3625,7 +3678,7 @@ def create_webhook_app(bot_controller_instance):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
              return jsonify({'ok': True, 'message': f"Хост '{host_name}' удален"})
         flash(f"Хост '{host_name}' и все его тарифы были удалены.", 'success')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/toggle-host-visibility/<host_name>', methods=['POST'])
     @login_required
@@ -3647,7 +3700,7 @@ def create_webhook_app(bot_controller_instance):
             flash(f"Хост '{host_name}' теперь {status_text} в меню бота.", 'success')
         else:
             flash(f"Не удалось изменить видимость хоста '{host_name}'.", 'danger')
-        return redirect(url_for('settings_page', tab='hosts'))
+        return redirect(_host_management_redirect())
 
     @flask_app.route('/add-plan', methods=['POST'])
     @login_required
@@ -3670,13 +3723,13 @@ def create_webhook_app(bot_controller_instance):
                 return jsonify({'ok': True, 'plan': plan})
             
             flash(f"Новый тариф для хоста '{host_name}' добавлен.", 'success')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
         except Exception as e:
             wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             if wants_json:
                 return jsonify({'ok': False, 'error': str(e)}), 400
             flash(f'Ошибка добавления тарифа: {e}', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
 
     @flask_app.route('/delete-plan/<int:plan_id>', methods=['POST'])
     @login_required
@@ -3687,13 +3740,13 @@ def create_webhook_app(bot_controller_instance):
             if wants_json:
                 return jsonify({'ok': True})
             flash("Тариф успешно удален.", 'success')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
         except Exception as e:
             wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             if wants_json:
                 return jsonify({'ok': False, 'error': str(e)}), 400
             flash(f'Ошибка удаления тарифа: {e}', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
 
     @flask_app.route('/update-plan/<int:plan_id>', methods=['POST'])
     @login_required
@@ -3710,7 +3763,7 @@ def create_webhook_app(bot_controller_instance):
                 if wants_json:
                     return jsonify({'ok': False, 'error': 'Название не может быть пустым'}), 400
                 flash('Название тарифа не может быть пустым.', 'danger')
-                return redirect(url_for('settings_page', tab='hosts'))
+                return redirect(_host_management_redirect())
 
             button_style = (request.form.get('button_style') or '').strip() or None
             icon_emoji_id = (request.form.get('icon_emoji_id') or '').strip() or None
@@ -3724,12 +3777,12 @@ def create_webhook_app(bot_controller_instance):
                 if wants_json:
                     return jsonify({'ok': False, 'error': 'Тариф не найден'}), 404
                 flash('Не удалось обновить тариф (возможно, он не найден).', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
         except Exception as e:
             if wants_json:
                 return jsonify({'ok': False, 'error': str(e)}), 400
             flash(f'Ошибка обновления тарифа: {e}', 'danger')
-            return redirect(url_for('settings_page', tab='hosts'))
+            return redirect(_host_management_redirect())
 
     @flask_app.route('/update-host-device-mode', methods=['POST'])
     @login_required
@@ -4491,6 +4544,16 @@ def create_webhook_app(bot_controller_instance):
         except Exception as e:
             logger.error(f"Ошибка удаления изображения {section}: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @flask_app.route('/menu-image/<section>')
+    @login_required
+    def menu_image_preview_route(section):
+        if section not in MENU_IMAGE_SECTIONS:
+            return '', 404
+        current_image = get_setting(MENU_IMAGE_SECTIONS[section])
+        if current_image and os.path.exists(current_image):
+            return send_file(current_image)
+        return '', 404
 
 
 

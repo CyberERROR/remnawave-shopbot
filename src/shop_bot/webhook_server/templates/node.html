@@ -1247,7 +1247,7 @@
 </style>
 
 <div id="schedulerModal" class="modal-overlay" style="z-index: 50;">
-    <div class="modal-content max-w-md rounded-2xl bg-gradient-to-br from-[#0c2218] to-[#091a12] border border-white/[0.08] shadow-2xl shadow-black/50 overflow-hidden backdrop-blur-xl">
+    <div class="modal-content max-w-md rounded-2xl bg-gradient-to-br from-[#0c2218] to-[#091a12] border border-white/[0.08] shadow-2xl shadow-black/50 backdrop-blur-xl">
         <div class="relative px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
             <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/[0.03] to-transparent pointer-events-none"></div>
             <div class="relative flex items-center gap-3.5">
@@ -1289,7 +1289,7 @@
                                 <span class="material-symbols-outlined text-white/30 text-lg">expand_more</span>
                             </div>
                             <div
-                                class="soft-select-menu hidden absolute z-50 w-full bg-[#091a12] border border-white/[0.08] rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto">
+                                class="soft-select-menu hidden absolute z-50 w-full mt-1 max-h-60 overflow-y-auto">
                             </div>
                             <select id="schedulerUnit" class="absolute opacity-0 pointer-events-none">
                                 <option value="minutes">Минут</option>
@@ -1545,7 +1545,7 @@
                         <span>Действия</span>
                         <span class="material-symbols-outlined text-sm">expand_more</span>
                     </button>
-                    <div id="node-details-actions-menu" class="hidden absolute left-0 bottom-full mb-2 w-44 bg-[#10231b]/95 backdrop-blur-xl border border-white/[0.10] rounded-2xl shadow-2xl shadow-black/60 z-50 p-1.5">
+                    <div id="node-details-actions-menu" class="hidden absolute left-0 bottom-full mb-2 w-44 bg-[#0b0f0e]/98 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl z-50 p-1">
                         <button onclick="updateNodeFromDetails(); toggleDetailsActions()" class="w-full px-3 py-2 text-left text-[11px] text-emerald-400/90 hover:text-emerald-300 hover:bg-emerald-500/10 flex items-center gap-2.5 transition-all duration-200 rounded-xl font-semibold">
                             <span class="material-symbols-outlined text-sm">system_update</span>
                             Обновить ноду
@@ -2092,7 +2092,7 @@
                                     class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/15 flex items-center justify-center text-white/30 hover:text-white transition-all duration-200">
                                     <span class="material-symbols-outlined text-base">more_vert</span>
                                 </button>
-                                <div id="host-dropdown-${idx}" class="hidden absolute right-0 bottom-full md:bottom-auto md:top-full mb-2 md:mb-0 md:mt-2 w-48 bg-[#05120c]/98 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/80 z-50 p-1.5">
+                                <div id="host-dropdown-${idx}" class="hidden absolute right-0 bottom-full md:bottom-auto md:top-full mb-2 md:mb-0 md:mt-2 w-48 bg-[#0b0f0e]/98 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl z-50 p-1">
                                     <button onclick="rebootServer('host', '${host.host_name}'); toggleHostMenu(${idx})" 
                                         class="w-full px-3 py-2 text-left text-[11px] text-red-400/90 hover:text-red-300 hover:bg-red-500/10 flex items-center gap-2.5 transition-all duration-200 rounded-xl font-semibold">
                                         <span class="material-symbols-outlined text-sm">restart_alt</span>
@@ -2274,7 +2274,7 @@
                                     class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/15 flex items-center justify-center text-white/30 hover:text-white transition-all duration-200">
                                     <span class="material-symbols-outlined text-base">more_vert</span>
                                 </button>
-                                <div id="target-dropdown-${idx}" class="hidden absolute right-0 bottom-full md:bottom-auto md:top-full mb-2 md:mb-0 md:mt-2 w-48 bg-[#05120c]/98 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/80 z-50 p-1.5">
+                                <div id="target-dropdown-${idx}" class="hidden absolute right-0 bottom-full md:bottom-auto md:top-full mb-2 md:mb-0 md:mt-2 w-48 bg-[#0b0f0e]/98 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl z-50 p-1">
                                     <button onclick="rebootServer('ssh', '${target.target_name}'); toggleTargetMenu(${idx})" 
                                         class="w-full px-3 py-2 text-left text-[11px] text-red-400/90 hover:text-red-300 hover:bg-red-500/10 flex items-center gap-2.5 transition-all duration-200 rounded-xl font-semibold">
                                         <span class="material-symbols-outlined text-sm">restart_alt</span>
@@ -4440,6 +4440,10 @@
             flagEl.textContent = getFlagEmoji(flagEl.dataset.nodeName, flagEl.dataset.nodeDescription);
         });
         renderNodeFlagEmoji();
+
+        if (window.initSoftSelect) {
+            window.initSoftSelect('schedulerUnit', 'Дней');
+        }
 
         document.querySelectorAll('.ssh-update-form').forEach(form => {
             form.addEventListener('submit', async (event) => {

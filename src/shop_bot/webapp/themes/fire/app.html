@@ -653,7 +653,7 @@
          #server-dropdown .fire-dropdown-option .material-icons-round, #key-dropdown .fire-dropdown-option .material-icons-round { color: var(--fire-orange) !important; }
         #purchase-page main, #renew-page main { gap: 11px; padding-top: 3px; }
         #purchase-page main > .px-1, #renew-page main > .px-1 { margin-bottom: 0; }
-        #purchase-page main > .px-1 > div, #renew-page main > .px-1 > div { padding: 13px; border-radius: 17px; background: rgba(255,112,72,.055); border-color: rgba(255,112,72,.16); box-shadow: none; }
+         #purchase-page main > .px-1 > div, #renew-page main > .px-1 > div { padding: 9px; border-radius: 17px; background: rgba(255,112,72,.055); border-color: rgba(255,112,72,.16); box-shadow: none; }
         #purchase-page main > .px-1 .w-10, #renew-page main > .px-1 .w-10 { width: 34px; height: 34px; border-radius: 11px; }
         #purchase-page main > .px-1 h4, #renew-page main > .px-1 h4 { font-size: 10px; letter-spacing: .12em; }
         #purchase-page main > .px-1 [id$="info-block"], #renew-page main > .px-1 [id$="info-block"] { font-size: 10px; line-height: 1.4; }
@@ -668,9 +668,12 @@
          .server-plans-container.fire-plan-grid .fire-plan-duration { min-width: 0; margin: 0; overflow: hidden; color: var(--fire-ink); font-size: 13px; font-weight: 800; letter-spacing: -.035em; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
          .server-plans-container.fire-plan-grid .fire-plan-price-row { position: relative; z-index: 1; display: flex; align-items: baseline; width: 100%; min-width: 0; margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.075); }
          .server-plans-container.fire-plan-grid .fire-plan-price { color: var(--fire-orange-soft); font: 600 21px/1 'IBM Plex Mono', monospace; letter-spacing: -.08em; }
-         .server-plans-container.fire-plan-grid .fire-plan-currency { margin-left: 3px; color: var(--fire-orange); font: 700 10px 'IBM Plex Mono', monospace; }
-         .server-plans-container.fire-plan-grid .fire-plan-action { margin-left: auto; color: var(--fire-muted); font-size: 15px; transition: color .2s ease, transform .2s ease; }
-         .server-plans-container.fire-plan-grid .fire-plan-tile:hover .fire-plan-action { color: var(--fire-orange); transform: translate(1px, -1px); }
+          .server-plans-container.fire-plan-grid .fire-plan-currency { margin-left: 3px; color: var(--fire-orange); font: 700 10px 'IBM Plex Mono', monospace; }
+             .server-plans-container.fire-plan-grid .fire-plan-conditions { display: inline-flex; align-items: center; gap: 7px; min-width: 0; margin-left: auto; padding: 0 6px; color: var(--fire-muted); font: 600 14px 'IBM Plex Mono', monospace; white-space: nowrap; }
+             .server-plans-container.fire-plan-grid .fire-plan-condition { display: inline-flex; align-items: center; gap: 3px; }
+             .server-plans-container.fire-plan-grid .fire-plan-condition + .fire-plan-condition::before { content: '|'; margin-right: 3px; color: var(--fire-muted); }
+             .server-plans-container.fire-plan-grid .fire-plan-condition .material-icons-round { color: var(--fire-orange-soft); font-size: 10px; }
+           .server-plans-container.fire-plan-grid .fire-plan-condition-value { color: var(--fire-ink); }
          .server-plans-container.fire-plan-grid .fire-plan-check { position: absolute; z-index: 2; top: 9px; right: 9px; display: grid; width: 19px; height: 19px; place-items: center; color: #17100d; border-radius: 6px; background: var(--fire-orange); font-size: 12px; opacity: 0; transform: scale(.65) rotate(-12deg); transition: opacity .2s ease, transform .2s ease; }
          #purchase-page .server-plans-container .fire-plan-tile.border-primary, #renew-page .server-plans-container .fire-plan-tile.border-primary, .server-plans-container .fire-plan-tile.selected { border-color: var(--fire-orange) !important; background: linear-gradient(145deg, var(--fire-panel-soft), var(--fire-accent-wash)) !important; box-shadow: inset 0 0 0 1px var(--fire-accent-line), 0 13px 28px rgba(0,0,0,.19); }
          #purchase-page .server-plans-container .fire-plan-tile.border-primary::before, #renew-page .server-plans-container .fire-plan-tile.border-primary::before, .server-plans-container .fire-plan-tile.selected::before, #purchase-page .server-plans-container .fire-plan-tile.border-primary::after, #renew-page .server-plans-container .fire-plan-tile.border-primary::after, .server-plans-container .fire-plan-tile.selected::after { opacity: 1; }
@@ -766,7 +769,7 @@
         <main class="flex-grow flex flex-col gap-4 pt-4 relative z-10">
             <div class="fire-flow-header">
                 <span class="material-icons-round">add_circle</span>
-                <div><h2 class="fire-flow-title">Новая подписка</h2><p class="fire-flow-subtitle">Выберите сервер, срок и количество устройств.</p></div>
+                <div><h2 class="fire-flow-title">Новая подписка</h2><p class="fire-flow-subtitle">Выберите тариф</p></div>
             </div>
             <div class="px-1 mb-2">
                 <div
@@ -802,7 +805,7 @@
                             <span class="material-icons-round text-primary text-sm">public</span>
                         </div>
                         <div class="text-left">
-                            <div class="text-[9px] text-gray-500 uppercase font-bold tracking-wider">Локация сервера
+                            <div class="text-[9px] text-gray-500 uppercase font-bold tracking-wider">Выберите тариф
                             </div>
                             <div id="display-selected-server" class="text-xs font-bold text-white">Нидерланды • NL #1
                             </div>
@@ -815,7 +818,7 @@
                 <!-- Dropdown Menu -->
                 <div id="server-dropdown"
                     class="absolute top-full left-0 right-0 mt-1.5 bg-surface-dark border border-white/10 rounded-xl shadow-2xl overflow-hidden opacity-0 scale-95 pointer-events-none transition-all duration-200 z-[60]">
-                    <div class="fire-dropdown-heading"><span class="material-icons-round">public</span><span>Выберите локацию</span><small>Сервер подключения</small></div>
+                     <div class="fire-dropdown-heading"><span class="material-icons-round">public</span><span>Выберите тариф</span></div>
                     {{ server_dropdown_options }}
                 </div>
             </div>

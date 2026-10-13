@@ -56,14 +56,46 @@ def get_squad(identifier: str) -> dict[str, Any] | None:
             FROM xui_hosts
             WHERE TRIM(host_name) = TRIM(?)
                OR TRIM(host_name) = TRIM(?)
-               OR TRIM(squad_uuid) = TRIM(?)
-               OR TRIM(squad_uuid) = TRIM(?)
             LIMIT 1
             """,
-            (ident, normalized, ident, normalized),
+            (ident, normalized),
         )
         row = cursor.fetchone()
+        if not row:
+            cursor.execute(
+                """
+                SELECT *
+                FROM xui_hosts
+                WHERE TRIM(squad_uuid) = TRIM(?)
+                   OR TRIM(squad_uuid) = TRIM(?)
+                LIMIT 1
+                """,
+                (ident, normalized),
+            )
+            row = cursor.fetchone()
         return dict(row) if row else None
+
+
+def list_squads_by_uuid(squad_uuid: str) -> list[dict[str, Any]]:
+    if not squad_uuid:
+        return []
+    ident = squad_uuid.strip()
+    if not ident:
+        return []
+    normalized = normalize_host_name(ident)
+    with _connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT *
+            FROM xui_hosts
+            WHERE TRIM(squad_uuid) = TRIM(?)
+               OR TRIM(squad_uuid) = TRIM(?)
+            ORDER BY sort_order ASC, host_name ASC
+            """,
+            (ident, normalized),
+        )
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_key_by_id(key_id: int) -> dict | None:

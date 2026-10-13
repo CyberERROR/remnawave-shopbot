@@ -142,8 +142,8 @@
 
 <!-- ===== СЕКЦИЯ: Проверка скорости SSH ===== -->
 <section class="mb-8">
-    <div class="relative z-20 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
-        <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-sky-400/[0.08] blur-3xl"></div>
+    <div class="relative z-20 rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+        <div class="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-sky-400/[0.08] blur-3xl"></div>
         <div class="relative flex flex-col gap-3 border-b border-white/[0.08] p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
             <div class="flex min-w-0 items-center gap-2">
                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="activity" class="h-4 w-4" aria-hidden="true"></i></span>
@@ -330,20 +330,34 @@
         <div class="relative z-10 max-h-[calc(92vh-84px)] space-y-4 overflow-y-auto p-4 sm:p-5">
             <div class="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
                 <div class="flex min-w-[150px] flex-1 flex-col gap-1.5">
-                    <label for="st-metric" class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Метрика</label>
-                    <select id="st-metric" class="w-full rounded-lg border border-white/10 bg-[#0b0f0e] px-3 py-2 text-xs font-medium text-white outline-none transition hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
-                        <option value="download_mbps" selected>Загрузка (Mbps)</option>
-                        <option value="upload_mbps">Отдача (Mbps)</option>
-                        <option value="ping_ms">Пинг (ms)</option>
-                    </select>
+                    <label class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Метрика</label>
+                    <div class="soft-select w-full" data-target="st-metric">
+                        <button type="button" id="st-metric-toggle" class="soft-select-toggle flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white outline-none transition duration-150 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
+                            <span class="soft-select-text">Загрузка (Mbps)</span>
+                            <i data-lucide="chevron-down" class="h-4 w-4 shrink-0 text-white/40" aria-hidden="true"></i>
+                        </button>
+                        <div class="soft-select-menu" id="st-metric-menu"></div>
+                        <select id="st-metric" class="hidden">
+                            <option value="download_mbps" selected>Загрузка (Mbps)</option>
+                            <option value="upload_mbps">Отдача (Mbps)</option>
+                            <option value="ping_ms">Пинг (ms)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="flex min-w-[130px] flex-1 flex-col gap-1.5">
-                    <label for="st-range" class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Диапазон</label>
-                    <select id="st-range" class="w-full rounded-lg border border-white/10 bg-[#0b0f0e] px-3 py-2 text-xs font-medium text-white outline-none transition hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
-                        <option value="24">24 точки</option>
-                        <option value="60" selected>60 точек</option>
-                        <option value="120">120 точек</option>
-                    </select>
+                    <label class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Диапазон</label>
+                    <div class="soft-select w-full" data-target="st-range">
+                        <button type="button" id="st-range-toggle" class="soft-select-toggle flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white outline-none transition duration-150 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
+                            <span class="soft-select-text">60 точек</span>
+                            <i data-lucide="chevron-down" class="h-4 w-4 shrink-0 text-white/40" aria-hidden="true"></i>
+                        </button>
+                        <div class="soft-select-menu" id="st-range-menu"></div>
+                        <select id="st-range" class="hidden">
+                            <option value="24">24 точки</option>
+                            <option value="60" selected>60 точек</option>
+                            <option value="120">120 точек</option>
+                        </select>
+                    </div>
                 </div>
                 <button type="button" id="st-refresh" class="flex items-center justify-center gap-2 rounded-lg border border-sky-400/20 bg-sky-400/10 px-3 py-2 text-xs font-semibold tracking-wide text-sky-300 transition-all duration-150 hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"><i data-lucide="refresh-cw" class="h-4 w-4" aria-hidden="true"></i>Обновить</button>
             </div>
@@ -403,6 +417,9 @@
         window.dashCharts = {};
         window.topChart = null;
         window.detailChart = null;
+
+        window.initSoftSelect?.('st-metric', 'Загрузка (Mbps)');
+        window.initSoftSelect?.('st-range', '60 точек');
 
         // ===== НАСТРОЙКИ: Графики =====
         const getChartColors = () => {

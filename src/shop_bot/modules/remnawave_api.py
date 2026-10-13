@@ -942,17 +942,33 @@ async def get_key_details_from_host(key_data: dict) -> dict | None:
     user_uuid = key_data.get('remnawave_user_uuid') or key_data.get('xui_client_uuid')
     try:
         user_payload = None
-        host_name = key_data.get('host_name')
-        if not host_name:
-
-            sq = key_data.get('squad_uuid') or key_data.get('squadUuid')
-            if sq:
+        host_name = (key_data.get('host_name') or '').strip() or None
+        if host_name:
+            if email:
+                user_payload = await get_user_by_email(email, host_name=host_name)
+            if not user_payload and user_uuid:
+                user_payload = await get_user_by_uuid(user_uuid, host_name=host_name)
+        else:
+            sq = (key_data.get('squad_uuid') or key_data.get('squadUuid') or '').strip()
+            candidates = rw_repo.list_squads_by_uuid(sq)
+            if not candidates and sq:
                 squad = rw_repo.get_squad(sq)
-                host_name = squad.get('host_name') if squad else None
-        if email:
-            user_payload = await get_user_by_email(email, host_name=host_name)
-        if not user_payload and user_uuid:
-            user_payload = await get_user_by_uuid(user_uuid, host_name=host_name)
+                if squad:
+                    candidates = [squad]
+            for candidate in candidates:
+                candidate_host = (candidate.get('host_name') or '').strip() or None
+                if not candidate_host:
+                    continue
+                try:
+                    if email:
+                        user_payload = await get_user_by_email(email, host_name=candidate_host)
+                    if not user_payload and user_uuid:
+                        user_payload = await get_user_by_uuid(user_uuid, host_name=candidate_host)
+                except Exception:
+                    user_payload = None
+                if user_payload:
+                    host_name = candidate_host
+                    break
         if not user_payload:
             logger.warning("Remnawave: не найден пользователь для ключа %s", key_data.get('key_id'))
             return None

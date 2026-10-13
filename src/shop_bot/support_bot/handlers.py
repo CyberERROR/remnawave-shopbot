@@ -443,8 +443,8 @@ def get_support_router() -> Router:
         full_text = (
             f"💬 <b>Ответ от технической поддержки.</b>\n"
             f"📝 <b>ID тикета:</b> <code>#{ticket_id}</code>\n\n"
-            f"💌 <b>Ответ на ваше обращение:</b>\n"
-            f"<blockquote>{html.quote(content)}</blockquote>" 
+            f"💌 <b>Ответ на ваше обращение:</b>\n\n"
+            f"<b>{html.quote(content)}</b>"
         )
         try:
             if message.text:

@@ -138,37 +138,65 @@ def _build_final_prompt(db_prompt, messages, current_draft):
     
     return final_prompt
 
-def _call_gemini_api(api_key, prompt):
+def _build_api_base(base_url):
     """
-    Выполняет запрос к Gemini API.
+    Приводит Base URL к формату OpenAI SDK (без /chat/completions и /models).
     """
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = (base_url or "").strip().rstrip("/")
+    if not url:
+        return "https://generativelanguage.googleapis.com/v1beta/openai"
+    if url.endswith("/chat/completions"):
+        url = url[:-len("/chat/completions")]
+    elif url.endswith("/models"):
+        url = url[:-len("/models")]
+    last_segment = url.rsplit("/", 1)[-1]
+    if last_segment == "openai" or (last_segment.startswith("v") and last_segment[1:].isdigit()):
+        return url
+    return url + "/v1"
+
+def _build_chat_completions_url(base_url):
+    """
+    Формирует endpoint /chat/completions из Base URL.
+    """
+    return _build_api_base(base_url) + "/chat/completions"
+
+def _build_models_url(base_url):
+    """
+    Формирует endpoint /models из Base URL.
+    """
+    return _build_api_base(base_url) + "/models"
+
+def _call_ai_api(api_key, base_url, model, prompt):
+    """
+    Выполняет запрос к OpenAI-совместимому AI API.
+    """
+    url = _build_chat_completions_url(base_url)
     payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }]
+        "model": (model or "").strip() or "gemini-2.5-flash",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
     }
     
     with httpx.Client(timeout=30.0) as client:
-        resp = client.post(url, json=payload)
+        resp = client.post(url, json=payload, headers=headers)
     
     if resp.status_code != 200:
-        logger.error(f"Gemini API Error: {resp.status_code} {resp.text}")
-        raise Exception(f"Gemini API Error: {resp.status_code}")
+        logger.error(f"AI API Error: {resp.status_code} {resp.text}")
+        raise Exception(f"AI API Error: {resp.status_code}")
     
     resp_data = resp.json()
     try:
-        candidates = resp_data.get('candidates', [])
-        if not candidates:
-            raise Exception("No candidates returned from AI")
+        choices = resp_data.get('choices', [])
+        if not choices:
+            raise Exception("No choices returned from AI")
         
-        parts = candidates[0].get('content', {}).get('parts', [])
-        if not parts:
-            raise Exception("No parts in AI response")
-            
-        return parts[0].get('text', '')
+        return choices[0].get('message', {}).get('content', '') or ''
     except Exception as e:
-        logger.error(f"Error parsing Gemini response: {e}")
+        logger.error(f"Error parsing AI response: {e}")
         raise Exception("Failed to parse AI response")
 
 def register_gemini_routes(app, login_required):
@@ -185,6 +213,8 @@ def register_gemini_routes(app, login_required):
                      return jsonify({'ok': False, 'error': 'No data provided'}), 400
                 
                 new_key = data.get('key')
+                new_base_url = data.get('base_url')
+                new_model = data.get('model')
                 new_prompt = data.get('prompt')
                 support_enabled = data.get('support_enabled')
                 schedule_enabled = data.get('schedule_enabled')
@@ -200,6 +230,10 @@ def register_gemini_routes(app, login_required):
 
                 if new_key is not None:
                     update_setting('key_gemini', new_key)
+                if new_base_url is not None:
+                    update_setting('gemini_base_url', new_base_url)
+                if new_model is not None:
+                    update_setting('gemini_model', new_model)
                 if new_prompt is not None:
                     update_other_setting('sg_promt', new_prompt)
                 if support_enabled is not None:
@@ -218,6 +252,8 @@ def register_gemini_routes(app, login_required):
                 return jsonify({
                     'ok': True,
                     'key': key,
+                    'base_url': get_setting('gemini_base_url') or '',
+                    'model': get_setting('gemini_model') or '',
                     'prompt': prompt,
                     'support_enabled': get_setting('support_enabled') != 'false',
                     'schedule_enabled': get_setting('support_schedule_enabled') == 'true',
@@ -245,6 +281,9 @@ def register_gemini_routes(app, login_required):
             if not api_key:
                  return jsonify({'ok': False, 'error': 'API Key not configured'}), 400
             
+            base_url = get_setting('gemini_base_url') or ''
+            model = get_setting('gemini_model') or ''
+            
             # Получаем сообщения тикета
             from shop_bot.data_manager.database import get_ticket_messages
             messages = get_ticket_messages(data['ticket_id'])
@@ -260,9 +299,44 @@ def register_gemini_routes(app, login_required):
             )
             
             # Делаем запрос
-            generated_text = _call_gemini_api(api_key, final_prompt)
+            generated_text = _call_ai_api(api_key, base_url, model, final_prompt)
             return jsonify({'ok': True, 'response': generated_text})
 
         except Exception as e:
             logger.error(f"Error generating Gemini response: {e}")
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
+    @app.route('/admin/gemini/models', methods=['POST'], endpoint='gemini_models')
+    @login_required
+    def fetch_gemini_models():
+        try:
+            data = request.get_json(silent=True) or {}
+            api_key = (data.get('key') or '').strip() or get_setting('key_gemini')
+            if not api_key:
+                return jsonify({'ok': False, 'error': 'API Key not configured'}), 400
+
+            base_url = data.get('base_url')
+            if base_url is None:
+                base_url = get_setting('gemini_base_url') or ''
+
+            url = _build_models_url(base_url)
+            headers = {"Authorization": f"Bearer {api_key}"}
+
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.get(url, headers=headers)
+
+            if resp.status_code != 200:
+                logger.error(f"AI Models API Error: {resp.status_code} {resp.text}")
+                return jsonify({'ok': False, 'error': f'AI API Error: {resp.status_code}'}), 502
+
+            resp_data = resp.json()
+            models = []
+            for item in resp_data.get('data') or []:
+                model_id = item.get('id') if isinstance(item, dict) else None
+                if model_id:
+                    models.append(model_id)
+            return jsonify({'ok': True, 'models': models})
+
+        except Exception as e:
+            logger.error(f"Error fetching AI models: {e}")
             return jsonify({'ok': False, 'error': str(e)}), 500

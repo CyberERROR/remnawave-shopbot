@@ -22,8 +22,8 @@
     </div>
 </header>
 
-<section class="keys-create-shell relative mb-5 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
-    <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-emerald-500/[0.07] blur-3xl"></div>
+<section class="keys-create-shell relative mb-5 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
+    <div class="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-emerald-500/[0.07] blur-3xl"></div>
     <form action="{{ url_for('create_key_ajax_route') }}" method="post" id="create-key-form" autocomplete="off" class="relative ajax-form" data-success-msg="Ключ создан">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input type="hidden" name="mode" id="create_mode" value="personal" />
@@ -53,13 +53,13 @@
                 <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Сервер</label>
                 <div class="soft-select min-w-0" data-target="host_name">
                     <button type="button" class="soft-select-toggle relative w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-left text-xs text-white outline-none transition hover:border-white/20 focus:ring-1 focus:ring-emerald-500/20" id="host_name_toggle"><i data-lucide="server" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><span class="ml-1 text-white/70">Выберите хост...</span></button>
-                    <div class="soft-select-menu rounded-xl border-white/10 bg-[#0b0f0e] backdrop-blur-xl shadow-2xl" id="host_name_menu"></div>
+                    <div class="soft-select-menu" id="host_name_menu"></div>
                     <select id="host_name" name="host_name" required style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;"><option value="" disabled selected>Выберите хост...</option>{% for h in hosts %}<option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}" data-traffic-strategy="{{ h.default_traffic_strategy or 'NO_RESET' }}" data-traffic-limit-gb="{% if h.default_traffic_limit_bytes is not none %}{{ (h.default_traffic_limit_bytes / 1024 / 1024 / 1024)|round(2) }}{% else %}0{% endif %}">{{ h.host_name }}</option>{% endfor %}</select>
                 </div>
             </div>
             <div class="create-key-field relative min-w-0 sm:col-span-1 lg:col-span-4">
                 <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Тариф</label>
-                <div class="flex gap-2"><div class="soft-select min-w-0 flex-1" data-target="plan_select"><button type="button" class="soft-select-toggle relative w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-left text-xs text-white outline-none transition hover:border-white/20 focus:ring-1 focus:ring-emerald-500/20" id="plan_select_toggle"><i data-lucide="calendar-days" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><span class="ml-1">—</span></button><div class="soft-select-menu rounded-xl border-white/10 bg-[#0b0f0e] backdrop-blur-xl shadow-2xl" id="plan_select_menu"></div><select id="plan_select" name="plan_id" class="hidden"><option value="">— Не выбран —</option></select></div><div class="hidden shrink-0" id="plan_price_wrapper"><span id="plan_price" class="flex h-full items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-300">0₽</span></div></div>
+                <div class="flex gap-2"><div class="soft-select min-w-0 flex-1" data-target="plan_select"><button type="button" class="soft-select-toggle relative w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-left text-xs text-white outline-none transition hover:border-white/20 focus:ring-1 focus:ring-emerald-500/20" id="plan_select_toggle"><i data-lucide="calendar-days" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><span class="ml-1">—</span></button><div class="soft-select-menu" id="plan_select_menu"></div><select id="plan_select" name="plan_id" class="hidden"><option value="">— Не выбран —</option></select></div><div class="hidden shrink-0" id="plan_price_wrapper"><span id="plan_price" class="flex h-full items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-300">0₽</span></div></div>
             </div>
             <div class="create-key-field relative sm:col-span-1 lg:col-span-2">
                 <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Дней</label>

@@ -906,6 +906,21 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
 
             is_last_odd = (plan_idx == plan_count - 1) and (plan_count % 2 == 1)
             span_class = " col-span-2" if is_last_odd else ""
+            device_limit = int(plan.get('hwid_limit') or 0)
+            traffic_limit = int(plan.get('traffic_limit_gb') or 0)
+            plan_conditions = ""
+            if device_limit > 0 or traffic_limit > 0:
+                device_value = str(device_limit) if device_limit > 0 else "∞"
+                device_condition = f'<span class="fire-plan-condition"><span class="fire-plan-condition-value">{device_value}</span><span class="material-icons-round" aria-label="устройств">smartphone</span></span>'
+                if traffic_limit > 100000:
+                    traffic_value = "∞ ГБ"
+                elif traffic_limit > 1000:
+                    traffic_tb = round(traffic_limit / 1000, 2)
+                    traffic_value = f"{traffic_tb:g} ТБ"
+                else:
+                    traffic_value = f"{traffic_limit} ГБ" if traffic_limit > 0 else "∞ ГБ"
+                traffic_condition = f'<span class="fire-plan-condition"><span class="fire-plan-condition-value">{traffic_value}</span><span class="material-icons-round" aria-label="трафик">data_usage</span></span>'
+                plan_conditions = f'<span class="fire-plan-conditions">{device_condition}{traffic_condition}</span>'
 
             html += f"""
             <button
@@ -921,7 +936,7 @@ def _build_plans_grid_html(host_name: str, user_id: int | None, container_id: st
                 <div class="fire-plan-price-row">
                     <span class="plan-price fire-plan-price">{final_price}</span>
                     <span class="fire-plan-currency">₽</span>
-                    <span class="fire-plan-action material-icons-round">arrow_outward</span>
+                    {plan_conditions}
                 </div>
             </button>
             """
@@ -937,7 +952,7 @@ def _get_servers_and_plans_html(user_id: int | None = None):
         hosts = []
         
     if not hosts:
-        return "", '<div class="col-span-2 text-center text-xs text-gray-500 py-4 glass-card border border-white/5 rounded-xl">Нет доступных серверов</div>'
+        return "", '<div class="col-span-2 text-center text-xs text-gray-500 py-4 glass-card border border-white/5 rounded-xl">Нет доступных тарифов</div>'
         
     server_options_html = '<div class="p-1 flex flex-col gap-0.5">'
     plans_html = ""
@@ -1854,7 +1869,6 @@ async def api_create_payment(req: CreatePaymentRequest):
         if tier_price_per_month > 0:
             final_price += tier_price_per_month * month_factor
 
-        traffic_price_per_month = 0.0
         if req.traffic_tier_id:
             from shop_bot.data_manager.database import get_traffic_tier_by_id
             ttier = get_traffic_tier_by_id(req.traffic_tier_id)
