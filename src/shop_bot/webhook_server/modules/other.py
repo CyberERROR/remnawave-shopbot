@@ -1421,16 +1421,20 @@ def register_other_routes(flask_app, login_required, get_common_template_data):
     
     def get_log_source_config(source: str):
         source = (source or 'bot').strip().lower()
+        package_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        root_dir = os.path.dirname(package_dir)
         if source == 'webapp':
+            base_files = ['logs/webapp.log', 'webapp.log']
             return {
                 'source': 'webapp',
                 'display_name': 'Webapp',
-                'log_files': ['logs/webapp.log', 'webapp.log'],
+                'log_files': [p for f in base_files for p in (f, os.path.join(package_dir, f), os.path.join(root_dir, f))],
             }
+        base_files = ['logs/bot.log', 'bot.log']
         return {
             'source': 'bot',
             'display_name': 'Бот',
-            'log_files': ['logs/bot.log', 'bot.log'],
+            'log_files': [p for f in base_files for p in (f, os.path.join(package_dir, f), os.path.join(root_dir, f))],
         }
 
     # ===== СТРИМИНГ ЛОГОВ БОТА =====

@@ -2079,15 +2079,20 @@
                                         const json = await res.json();
                                         if (json.table_html) {
                                             target.innerHTML = json.table_html;
+                                            window.refreshUiIcons?.(target);
                                             // Если есть пагинация рядом - обновляем и её
                                             const pagId = target.id.replace('tbody', 'pagination').replace('list', 'pagination');
                                             const pagEl = document.getElementById(pagId);
-                                            if (pagEl && json.pagination_html) pagEl.innerHTML = json.pagination_html;
+                                            if (pagEl && json.pagination_html) {
+                                                pagEl.innerHTML = json.pagination_html;
+                                                window.refreshUiIcons?.(pagEl);
+                                            }
                                         }
                                     } else {
                                         const html = await res.text();
                                         if (isLoginPage(html, res.url)) { handleSessionExpiry(); return; }
                                         target.innerHTML = html;
+                                        window.refreshUiIcons?.(target);
                                     }
                                 }
                             }

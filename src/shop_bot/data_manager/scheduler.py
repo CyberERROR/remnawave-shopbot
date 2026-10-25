@@ -35,6 +35,8 @@ _last_speedtests_run_at: datetime | None = None
 _last_backup_run_at: datetime | None = None
 _last_resource_collect_at: datetime | None = None
 _last_resource_alert_at: dict[tuple[str, str, str], datetime] = {}
+_last_memory_diagnostics_at: datetime | None = None
+_last_fsm_cleanup_at: datetime | None = None
 
 def format_time_left(hours: int) -> str:
     if hours >= 24:
@@ -469,6 +471,61 @@ async def sync_keys_with_panels():
         "Scheduler: Синхронизация с Remnawave API завершена. Затронуто записей: %s.",
         total_affected_records,
     )
+
+
+def _cleanup_fsm_storage(storage) -> int:
+    removed = 0
+    try:
+        records = getattr(storage, 'storage', None)
+        if not isinstance(records, dict):
+            return 0
+        for key in list(records.keys()):
+            record = records.get(key)
+            if record is not None and getattr(record, 'state', None) is None and not getattr(record, 'data', None):
+                del records[key]
+                removed += 1
+    except Exception:
+        pass
+    return removed
+
+
+async def _maybe_cleanup_fsm(bot_controller: BotController):
+    global _last_fsm_cleanup_at
+    now = get_msk_time()
+    if _last_fsm_cleanup_at and (now - _last_fsm_cleanup_at).total_seconds() < 600:
+        return
+    _last_fsm_cleanup_at = now
+    removed_total = 0
+    try:
+        dispatcher = getattr(bot_controller, '_dp', None)
+        if dispatcher is not None:
+            removed_total += _cleanup_fsm_storage(dispatcher.fsm.storage)
+    except Exception:
+        pass
+    try:
+        from shop_bot.webhook_server.app import _support_bot_controller
+        dispatcher = getattr(_support_bot_controller, '_dp', None)
+        if dispatcher is not None:
+            removed_total += _cleanup_fsm_storage(dispatcher.fsm.storage)
+    except Exception:
+        pass
+    if removed_total > 0:
+        logger.debug(f"Scheduler: Очищено пустых FSM-записей: {removed_total}.")
+
+
+async def _maybe_log_memory_diagnostics():
+    global _last_memory_diagnostics_at
+    now = get_msk_time()
+    if _last_memory_diagnostics_at and (now - _last_memory_diagnostics_at).total_seconds() < 3600:
+        return
+    _last_memory_diagnostics_at = now
+    try:
+        diagnostics = await asyncio.to_thread(resource_monitor.get_process_memory_diagnostics)
+        logger.info(f"Scheduler: Диагностика памяти: {json.dumps(diagnostics, ensure_ascii=False)}")
+    except Exception:
+        logger.debug("Scheduler: Ошибка диагностики памяти", exc_info=True)
+
+
 async def periodic_subscription_check(bot_controller: BotController):
     logger.info("Scheduler: Планировщик фоновых задач запущен.")
     await asyncio.sleep(10)
@@ -489,6 +546,9 @@ async def periodic_subscription_check(bot_controller: BotController):
 
             bot = bot_controller.get_bot_instance() if bot_controller.get_status().get("is_running") else None
             await _maybe_collect_resource_metrics(bot)
+
+            await _maybe_cleanup_fsm(bot_controller)
+            await _maybe_log_memory_diagnostics()
 
             if bot_controller.get_status().get("is_running"):
                 bot = bot_controller.get_bot_instance()

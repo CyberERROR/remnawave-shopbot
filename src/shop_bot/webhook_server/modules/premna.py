@@ -201,9 +201,12 @@ async def _load_statistics() -> dict[str, Any]:
 
 def _get_statistics() -> tuple[dict[str, Any] | None, str | None]:
     try:
-        return asyncio.run(_load_statistics()), None
+        return asyncio.run(asyncio.wait_for(_load_statistics(), timeout=20.0)), None
+    except asyncio.TimeoutError:
+        return None, 'Превышено время ожидания ответа от Remnawave. Повторите попытку позже.'
     except Exception as error:
-        return None, str(error)
+        message = str(error).strip()
+        return None, message or f'Не удалось получить статистику Remnawave: {error.__class__.__name__}.'
 
 
 def register_premna_routes(app, login_required, get_common_template_data):

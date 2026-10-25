@@ -520,14 +520,20 @@ def create_traffic_tiers_keyboard(tiers: list[dict], host_name: str, plan_id: in
 
 
 def create_subscription_addons_keyboard(key_id: int, show_devices: bool, show_traffic: bool) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    if show_devices:
-        builder.button(text="📱 Докупить устройства", callback_data=f"addon_devices_menu_{key_id}")
-    if show_traffic:
-        builder.button(text="📊 Докупить трафик", callback_data=f"addon_traffic_menu_{key_id}")
-    builder.button(text="⬅️ Назад к ключу", callback_data=f"show_key_{key_id}")
-    builder.adjust(1)
-    return builder.as_markup()
+    hidden_button_ids = set()
+    if not show_devices:
+        hidden_button_ids.add("addon_devices")
+    if not show_traffic:
+        hidden_button_ids.add("addon_traffic")
+
+    configured_keyboard = create_dynamic_keyboard(
+        "subscription_addons_menu",
+        key_id=key_id,
+        hidden_button_ids=hidden_button_ids,
+    )
+    keyboard_rows = [list(row) for row in configured_keyboard.inline_keyboard]
+    keyboard_rows.append([InlineKeyboardButton(text="⬅️ Назад к ключу", callback_data=f"show_key_{key_id}")])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
 
 
 def create_addon_confirm_keyboard(key_id: int, addon_type: str) -> InlineKeyboardMarkup:
@@ -1034,9 +1040,10 @@ def create_admin_months_pick_keyboard(action: str = "gift") -> InlineKeyboardMar
     return builder.as_markup()
 
 
-def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_available: bool = False, is_admin: bool = False, balance: float = 0.0, key_id: int = None, connection_string: str = None) -> InlineKeyboardMarkup:
+def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_available: bool = False, is_admin: bool = False, balance: float = 0.0, key_id: int = None, connection_string: str = None, hidden_button_ids: set[str] | None = None) -> InlineKeyboardMarkup:
     """Create a keyboard based on database configuration"""
     try:
+        hidden_button_ids = hidden_button_ids or set()
         button_configs = get_button_configs(menu_type)
 
         
@@ -1053,6 +1060,8 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 return create_support_menu_keyboard()
             elif menu_type == "key_info_menu" and key_id is not None:
                 return create_key_info_keyboard(key_id, connection_string)
+            elif menu_type == "subscription_addons_menu":
+                return InlineKeyboardMarkup(inline_keyboard=[])
             else:
                 return create_back_to_menu_keyboard()
 
@@ -1077,6 +1086,8 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
                 callback_data = cfg.get('callback_data')
                 url = cfg.get('url')
                 button_id = cfg.get('button_id', '')
+                if button_id in hidden_button_ids:
+                    continue
                 btn_color = cfg.get('button_color') or None
                 btn_emoji_id = cfg.get('emoji_id') or None
 
@@ -1148,6 +1159,8 @@ def create_dynamic_keyboard(menu_type: str, user_keys: list = None, trial_availa
             return create_main_menu_keyboard(user_keys or [], trial_available, is_admin, balance)
         elif menu_type == "key_info_menu" and key_id is not None:
              return create_key_info_keyboard(key_id, connection_string)
+        elif menu_type == "subscription_addons_menu":
+            return InlineKeyboardMarkup(inline_keyboard=[])
         else:
             return create_back_to_menu_keyboard()
 
@@ -1169,7 +1182,27 @@ def create_dynamic_support_menu_keyboard() -> InlineKeyboardMarkup:
 
 def create_dynamic_key_info_keyboard(key_id: int, connection_string: str | None = None) -> InlineKeyboardMarkup:
     """Create key info keyboard using dynamic configuration"""
-    return create_dynamic_keyboard("key_info_menu", key_id=key_id, connection_string=connection_string)
+    from shop_bot.data_manager import remnawave_repository as rw_repo
+
+    hidden_button_ids = {'subscription_addons'}
+    try:
+        key = rw_repo.get_key_by_id(key_id)
+        host_name = key.get('host_name') if key else None
+        if host_name:
+            host = rw_repo.get_host(host_name) or {}
+            show_devices = host.get('device_mode') == 'tiers' and bool(rw_repo.get_device_tiers(host_name))
+            show_traffic = host.get('traffic_mode') == 'tiers' and bool(rw_repo.get_traffic_tiers(host_name))
+            if show_devices or show_traffic:
+                hidden_button_ids.clear()
+    except Exception as e:
+        logger.error(f"Error resolving subscription addons for key {key_id}: {e}")
+
+    return create_dynamic_keyboard(
+        "key_info_menu",
+        key_id=key_id,
+        connection_string=connection_string,
+        hidden_button_ids=hidden_button_ids,
+    )
 
 def create_back_to_profile_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()

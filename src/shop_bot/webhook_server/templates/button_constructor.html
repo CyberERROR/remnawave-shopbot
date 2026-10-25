@@ -402,6 +402,7 @@
                             <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70">Текст</th>
                             <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70">Callback</th>
                             <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70">URL</th>
+                            <th class="border-b border-primary/20 px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-primary/70"><span class="sr-only">Добавить в текущее меню</span></th>
                         </tr>
                     </thead>
                     <tbody id="help-table-body" class="divide-y divide-white/5">
@@ -741,6 +742,8 @@
         { m: 'admin_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' },
         { m: 'key_info_menu', id: 'connect', t: '📲 Подключиться', c: '', u: '{connection_string}' },
         { m: 'key_info_menu', id: 'subscription_addons', t: '➕ Допы подписки', c: 'subscription_addons_{key_id}', u: '' },
+        { m: 'subscription_addons_menu', id: 'addon_devices', t: '📱 Докупить устройства', c: 'addon_devices_menu_{key_id}', u: '' },
+        { m: 'subscription_addons_menu', id: 'addon_traffic', t: '📊 Докупить трафик', c: 'addon_traffic_menu_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'extend', t: '➕ Продлить ключ', c: 'extend_key_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'key_devices', t: '📱 Устройства', c: 'key_devices_{key_id}', u: '' },
         { m: 'key_info_menu', id: 'qr', t: '📱 QR-код', c: 'show_qr_{key_id}', u: '' },
@@ -787,8 +790,9 @@
         const searchInput = document.getElementById('help-search');
         if (!tbody || !searchInput) return;
 
-        function render(filter = '') {
+        function render(filter = '', highlightId = '') {
             const q = filter.toLowerCase();
+            const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             tbody.innerHTML = AVAILABLE_BUTTONS_HELP
                 .filter(b => {
                     const menuName = MENU_NAME_MAP[b.m] || b.m;
@@ -799,18 +803,77 @@
                         menuName.toLowerCase().includes(q);
                 })
                 .map(b => `
-                    <tr class="transition-colors leading-tight hover:bg-white/[0.03]">
+                    <tr ${b.id === highlightId ? 'data-added="1"' : ''} class="transition-colors leading-tight hover:bg-white/[0.03]${b.id === highlightId ? ' bg-emerald-400/[0.08]' : ''}">
                         <td class="px-2 py-1 text-[10px] font-medium text-white/40 whitespace-nowrap">${MENU_NAME_MAP[b.m] || b.m}</td>
                         <td class="px-2 py-1 text-[10px] font-bold font-mono text-primary/80">${b.id}</td>
                         <td class="px-2 py-1 text-[11px] font-medium text-white">${b.t}</td>
                         <td class="px-2 py-1 text-[10px] font-mono text-amber-300/70 break-all max-w-[120px]">${b.c || '-'}</td>
                         <td class="px-2 py-1 text-[10px] font-mono text-sky-300/70 break-all max-w-[120px]">${b.u || '-'}</td>
+                        <td class="px-2 py-1 text-right">
+                            <button type="button" class="help-row-add inline-flex items-center gap-1 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-1 text-[10px] font-medium text-emerald-300 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-40" data-menu="${esc(b.m)}" data-id="${esc(b.id)}" data-text="${esc(b.t)}" data-callback="${esc(b.c)}" data-url="${esc(b.u)}" title="Добавить в текущее меню">
+                                <i data-lucide="plus" class="h-3 w-3" aria-hidden="true"></i>
+                                Add
+                            </button>
+                        </td>
                     </tr>
                 `).join('');
+
+            const addedRow = tbody.querySelector('tr[data-added="1"]');
+            if (addedRow) addedRow.scrollIntoView({ block: 'nearest' });
+            if (tbody.querySelector('i[data-lucide]')) refreshLucideIcons();
         }
 
         searchInput.addEventListener('input', (e) => render(e.target.value));
+
+        tbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('.help-row-add');
+            if (!btn || btn.disabled) return;
+            addHelpButtonToMenu(btn);
+        });
+
+        helpRenderFn = render;
         render();
+    }
+
+    async function addHelpButtonToMenu(btn) {
+        const menuSelect = document.getElementById('menu-type-select');
+        if (!menuSelect || !menuSelect.value) { showToast('warning', 'Выберите тип меню'); return; }
+
+        const menuType = menuSelect.value;
+        const buttonId = btn.dataset.id;
+        if (btn.dataset.menu === menuType) { showToast('warning', 'Эта кнопка уже есть в текущем меню'); return; }
+
+        btn.disabled = true;
+        try {
+            const resp = await fetch('/api/button-configs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({
+                    menu_type: menuType,
+                    button_id: buttonId,
+                    text: btn.dataset.text,
+                    callback_data: btn.dataset.callback || null,
+                    url: btn.dataset.url || null,
+                    row_position: 0,
+                    column_position: 0,
+                    button_width: 1
+                })
+            });
+            const result = await resp.json();
+            if (result.success) {
+                showToast('success', `«${btn.dataset.text}» добавлена в ${MENU_NAME_MAP[menuType] || menuType}`);
+                buttonConstructor.currentMenuType = menuType;
+                buttonConstructor.selectedButton = null;
+                await buttonConstructor.loadButtons();
+                if (typeof helpRenderFn === 'function') helpRenderFn();
+            } else {
+                showToast('danger', 'Ошибка: ' + result.error);
+                btn.disabled = false;
+            }
+        } catch (err) {
+            showToast('danger', 'Ошибка сети');
+            btn.disabled = false;
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -872,6 +935,7 @@
                     this.currentMenuType = e.target.value;
                     this.selectedButton = null;
                     this.loadButtons();
+                    if (typeof helpRenderFn === 'function') helpRenderFn();
                 });
             }
 
@@ -1015,6 +1079,11 @@
             refreshLucideIcons();
         }
 
+        isProtectedButton(btn) {
+            return this.currentMenuType === 'subscription_addons_menu' &&
+                ['addon_devices', 'addon_traffic'].includes(btn.button_id);
+        }
+
         createButtonElement(btn) {
             const div = document.createElement('div');
             div.className = 'button-item';
@@ -1026,6 +1095,11 @@
 
             const colorBadge = btn.button_color ? `<span class="inline-block w-3 h-3 rounded-full mr-1 pointer-events-none" style="background:${this.getColorHex(btn.button_color)}"></span>` : '';
             const emojiTag = btn.emoji_id ? `<span class="text-[9px] text-amber-300/70 pointer-events-none">✨ emoji</span>` : '';
+            const deleteAction = this.isProtectedButton(btn) ? '' : `
+                    <button type="button" class="text-red-300/70 hover:text-red-300 hover:bg-red-400/[0.08]" onclick="buttonConstructor.deleteButton(${btn.id})" title="Удалить">
+                        <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+                    </button>
+                `;
 
             div.innerHTML = `
             <div class="button-text pointer-events-none mb-1">${colorBadge}${btn.text || btn.button_id}</div>
@@ -1038,9 +1112,7 @@
                 <button type="button" class="text-white/70 hover:text-white hover:bg-white/[0.08]" onclick="buttonConstructor.editButton(${btn.id})" title="Редактировать">
                     <i data-lucide="edit-3" class="h-3.5 w-3.5"></i>
                 </button>
-                <button type="button" class="text-red-300/70 hover:text-red-300 hover:bg-red-400/[0.08]" onclick="buttonConstructor.deleteButton(${btn.id})" title="Удалить">
-                    <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
-                </button>
+                ${deleteAction}
             </div>
         `;
 
@@ -1243,7 +1315,7 @@
             });
 
             this.toggleActionFields(btn.url ? 'url' : 'callback');
-            document.getElementById('delete-button-btn').classList.remove('hidden');
+            document.getElementById('delete-button-btn').classList.toggle('hidden', this.isProtectedButton(btn));
         }
 
         toggleActionFields(type) {
@@ -1344,6 +1416,8 @@
         async deleteButton(buttonId) {
             const id = buttonId || (this.selectedButton ? this.selectedButton.id : null);
             if (!id) return;
+            const targetButton = this.buttons.find(button => Number(button.id) === Number(id));
+            if (targetButton && this.isProtectedButton(targetButton)) return;
             if (!confirm('Удалить эту кнопку?')) return;
 
             try {

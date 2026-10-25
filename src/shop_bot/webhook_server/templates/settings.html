@@ -303,19 +303,19 @@
                                         class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
                                 </div>
                             </div>
-                            <div>
-                                <label class="mb-1.5 flex items-center gap-1 text-xs font-medium text-white/60">
-                                    UUID
-                                    <span class="group relative inline-flex items-center">
-                                        <i data-lucide="info" class="h-3.5 w-3.5 cursor-help text-white/30 transition-colors duration-150 group-hover:text-white/60" aria-hidden="true"></i>
-                                        <span class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#0b0f0e] p-2.5 text-[11px] font-normal text-white/60 opacity-0 shadow-2xl transition-opacity duration-150 group-hover:opacity-100">
-                                            Укажите UUID из <span class="font-semibold text-emerald-300">внутренних сквадов</span> панели <span class="font-semibold text-emerald-300">Remnawave</span>.
-                                        </span>
-                                    </span>
-                                </label>
-                                <input type="text" name="trial_internal_squad_uuid" value="{{ settings.trial_internal_squad_uuid or '' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs text-white placeholder:text-white/20 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
+                             <div>
+                                 <label class="mb-1.5 flex items-center gap-1 text-xs font-medium text-white/60">
+                                     UUID
+                                     <span class="group relative inline-flex items-center">
+                                         <i data-lucide="info" class="h-3.5 w-3.5 cursor-help text-white/30 transition-colors duration-150 group-hover:text-white/60" aria-hidden="true"></i>
+                                         <span class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#0b0f0e] p-2.5 text-[11px] font-normal text-white/60 opacity-0 shadow-2xl transition-opacity duration-150 group-hover:opacity-100">
+                                             Укажите UUID из <span class="font-semibold text-emerald-300">внешних сквадов</span> панели <span class="font-semibold text-emerald-300">Remnawave</span>.
+                                         </span>
+                                     </span>
+                                 </label>
+                                 <input type="text" name="trial_external_squad_uuid" value="{{ settings.trial_external_squad_uuid or '' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                     class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs text-white placeholder:text-white/20 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                             </div>
                         </div>
 
                         <div>

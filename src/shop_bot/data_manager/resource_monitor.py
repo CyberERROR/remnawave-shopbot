@@ -529,3 +529,48 @@ def get_remote_metrics_for_target(target_name: str) -> Dict[str, Any]:
             ssh.close()
         except Exception:
             pass
+
+
+def get_process_memory_diagnostics() -> Dict[str, Any]:
+    data: Dict[str, Any] = {"rss_mb": None, "threads": None, "caches": {}}
+    try:
+        if psutil is not None:
+            process = psutil.Process(os.getpid())
+            data["rss_mb"] = round(process.memory_info().rss / 1048576, 1)
+            data["threads"] = process.num_threads()
+    except Exception:
+        pass
+    try:
+        from shop_bot.webhook_server.app import _telegram_avatar_cache
+        avatar_bytes = 0
+        for value in list(_telegram_avatar_cache.values()):
+            try:
+                if len(value) > 1 and value[1]:
+                    avatar_bytes += len(value[1])
+            except Exception:
+                continue
+        data["caches"]["avatars"] = {"count": len(_telegram_avatar_cache), "bytes": avatar_bytes}
+    except Exception:
+        pass
+    try:
+        from shop_bot.webapp.handlers import TEMP_AUTH_TOKENS, PASSWORD_RESET_TOKENS
+        data["caches"]["auth_tokens"] = len(TEMP_AUTH_TOKENS)
+        data["caches"]["reset_tokens"] = len(PASSWORD_RESET_TOKENS)
+    except Exception:
+        pass
+    try:
+        from shop_bot.webapp.handlers import TEMP_AUTH_TOKEN_CREATED
+        data["caches"]["auth_tokens_created"] = len(TEMP_AUTH_TOKEN_CREATED)
+    except Exception:
+        pass
+    try:
+        from shop_bot.data_manager.scheduler import notified_users
+        data["caches"]["notified_users"] = len(notified_users)
+    except Exception:
+        pass
+    try:
+        from shop_bot.webhook_server.modules.node import ssh_sessions
+        data["caches"]["ssh_sessions"] = len(ssh_sessions)
+    except Exception:
+        pass
+    return data

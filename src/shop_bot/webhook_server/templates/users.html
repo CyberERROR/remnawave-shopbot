@@ -437,7 +437,7 @@
                     <div class="flex flex-col gap-4 h-full">
                         <!-- Profile Block -->
                         <div
-                            class="border border-white/[0.08] rounded-xl bg-white/[0.03] p-4 sm:p-5 relative overflow-hidden">
+                            class="border border-white/[0.08] rounded-xl bg-white/[0.03] p-3 sm:p-3.5 relative overflow-hidden">
                             <div class="relative z-10 flex items-start gap-3">
                                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-400/20 bg-sky-400/[0.08] text-sky-300">
                                     <i data-lucide="user-round" class="h-4 w-4" aria-hidden="true"></i>
@@ -445,30 +445,28 @@
                                 <div class="flex-1 min-w-0 pt-1">
                                     <div class="flex items-center gap-2 min-w-0">
                                         <h4 class="truncate text-base font-bold leading-tight tracking-tight text-white select-all"
-                                            id="udm-username"></h4>
-                                        <input id="udm-username-input"
+                                            id="udm-profile-name"></h4>
+                                        <input id="udm-profile-name-input"
                                             class="hidden min-w-0 w-full bg-black/30 border border-sky-300/30 rounded-lg px-2 py-1 text-lg font-bold text-white focus:outline-none focus:ring-1 focus:ring-sky-300/40"
-                                            type="text" maxlength="64" autocomplete="off" />
-                                        <button id="udm-username-edit" type="button"
-                                            class="w-8 h-8 shrink-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white/50 hover:text-sky-300 transition-all flex items-center justify-center"
-                                            title="Изменить имя пользователя">
-                                            <i id="udm-username-edit-icon" data-lucide="edit" class="h-4 w-4" aria-hidden="true"></i>
+                                            type="text" maxlength="64" autocomplete="off" placeholder="Введите имя и фамилию" />
+                                        <button id="udm-profile-name-edit" type="button"
+                                            class="w-7 h-7 shrink-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white/50 hover:text-sky-300 transition-all flex items-center justify-center"
+                                            title="Изменить имя и фамилию">
+                                            <i id="udm-profile-name-edit-icon" data-lucide="edit" class="h-3.5 w-3.5" aria-hidden="true"></i>
                                         </button>
                                         <span id="udm-pinned-badge"
-                                            class="hidden flex h-8 w-8 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
-                                            <i data-lucide="pin" class="h-4 w-4" aria-hidden="true"></i>
+                                            class="hidden flex h-7 w-7 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                                            <i data-lucide="pin" class="h-3.5 w-3.5" aria-hidden="true"></i>
                                         </span>
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-x-2.5 gap-y-2 mt-2.5">
+                                    <div class="flex flex-wrap items-center gap-2 mt-2">
                                         <span
-                                            class="rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-2 py-0.5 font-mono text-xs text-sky-300 select-all"
+                                            class="rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-2 py-0.5 font-mono text-[11px] text-sky-300 select-all"
                                             id="udm-telegram-id"></span>
-                                        <div class="flex items-center gap-2">
-                                            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.03] text-white/40 text-[10px] uppercase font-bold tracking-wider"
-                                                title="Дата регистрации">
-                                                <i data-lucide="calendar" class="h-3 w-3 text-white/30" aria-hidden="true"></i>
-                                                <span id="udm-registration" class="font-mono pt-px"></span>
-                                            </div>
+                                        <div class="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-white/[0.03] text-white/40 text-[10px] uppercase font-bold tracking-wider"
+                                            title="Дата регистрации">
+                                            <i data-lucide="calendar" class="h-3 w-3 text-white/30" aria-hidden="true"></i>
+                                            <span id="udm-registration" class="font-mono pt-px"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -478,44 +476,44 @@
                             <div class="udm-overview-grid grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <!-- Balance -->
                                 <div
-                                    class="udm-balance-card relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 flex flex-col justify-between h-full min-h-[120px] hover:border-white/20 transition duration-150">
+                                    class="udm-balance-card relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 flex flex-col justify-between h-full min-h-[120px] hover:border-white/20 transition duration-150">
                                     <div class="relative z-10 flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/[0.08] text-emerald-300">
-                                                <i data-lucide="wallet" class="h-5 w-5" aria-hidden="true"></i>
+                                            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-400/[0.08] text-emerald-300">
+                                                <i data-lucide="wallet" class="h-4 w-4" aria-hidden="true"></i>
                                             </div>
                                             <div>
                                                 <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">Баланс</div>
-                                                <div class="text-[10px] text-white/40 mt-0.5">Текущий счет</div>
+                                                <div class="text-[9px] text-white/40 mt-0.5">Текущий счет</div>
                                             </div>
                                         </div>
-                                        <button id="udm-balance-edit"
-                                            class="w-8 h-8 shrink-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white/60 hover:text-emerald-300 transition-all flex items-center justify-center"
-                                            type="button" title="Изменить баланс вручную">
-                                            <i id="udm-balance-edit-icon" data-lucide="edit" class="h-4 w-4" aria-hidden="true"></i>
-                                        </button>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <button id="udm-balance-reset"
+                                                class="w-7 h-7 rounded-lg bg-rose-400/[0.08] hover:bg-rose-400/20 border border-rose-400/20 text-rose-400 transition-all flex items-center justify-center"
+                                                type="button" title="Обнулить баланс до 0.00 ₽">
+                                                <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                            </button>
+                                            <button id="udm-balance-edit"
+                                                class="w-7 h-7 shrink-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white/60 hover:text-emerald-300 transition-all flex items-center justify-center"
+                                                type="button" title="Изменить баланс вручную">
+                                                <i id="udm-balance-edit-icon" data-lucide="pencil" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="relative z-10 mt-3">
+                                    <div class="relative z-10 mt-2.5">
                                         <div class="text-2xl font-semibold text-white tracking-tight tabular-nums" id="udm-balance">0.00 ₽</div>
                                         <input id="udm-balance-input"
                                             class="hidden w-full bg-black/30 border border-emerald-300/30 rounded-xl px-3 py-2 text-2xl font-semibold text-white tracking-tight focus:outline-none focus:ring-1 focus:ring-emerald-300/40"
                                             type="text" inputmode="decimal" />
-                                        <div class="flex items-center gap-2 mt-2">
-                                            <button id="udm-balance-reset"
-                                                class="w-6 h-6 rounded-md bg-rose-400/[0.08] hover:bg-rose-400/20 border border-rose-400/20 text-rose-400 transition-all flex items-center justify-center"
-                                                type="button" title="Обнулить баланс до 0.00 ₽">
-                                                <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
 
                                 <!-- Spent & Months -->
-                                    <div class="udm-mini-stats flex gap-3">
+                                    <div class="udm-mini-stats flex gap-2.5">
                                         <div
-                                            class="udm-mini-stat border border-white/[0.08] rounded-xl p-3 flex-1 flex items-center gap-3 bg-white/[0.03] transition duration-150 hover:border-white/20">
+                                            class="udm-mini-stat border border-white/[0.08] rounded-xl p-2.5 flex-1 flex items-center gap-2.5 bg-white/[0.03] transition duration-150 hover:border-white/20">
                                             <div
-                                                class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                                class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
                                                 <i data-lucide="credit-card" class="h-4 w-4" aria-hidden="true"></i>
                                             </div>
                                             <div>
@@ -524,10 +522,10 @@
                                             </div>
                                         </div>
                                         <div
-                                            class="udm-mini-stat border border-white/[0.08] rounded-xl p-3 flex-1 flex items-center gap-3 bg-white/[0.03] transition duration-150 hover:border-white/20">
+                                            class="udm-mini-stat border border-white/[0.08] rounded-xl p-2.5 flex-1 flex items-center gap-2.5 bg-white/[0.03] transition duration-150 hover:border-white/20">
                                             <div
-                                                class="flex h-7 w-7 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
-                                                <i data-lucide="calendar" class="h-5 w-5" aria-hidden="true"></i>
+                                                class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                                                <i data-lucide="calendar" class="h-4 w-4" aria-hidden="true"></i>
                                             </div>
                                             <div>
                                                 <div class="text-sm font-semibold text-white tabular-nums" id="udm-total-months">0</div>
@@ -539,16 +537,16 @@
 
                             <!-- Details Block (Reg & Trial) -->
                         <div
-                            class="border border-white/[0.08] rounded-xl bg-white/[0.03] p-4 sm:p-5 space-y-4 flex-1 flex flex-col justify-center relative overflow-hidden">
+                            class="border border-white/[0.08] rounded-xl bg-white/[0.03] p-3 sm:p-3.5 space-y-3 flex-1 flex flex-col justify-center relative overflow-hidden">
                             <div class="relative z-10 flex items-center justify-between group">
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2.5">
                                     <div
                                         class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300">
-                                        <i data-lucide="history" class="h-5 w-5" aria-hidden="true"></i>
+                                        <i data-lucide="history" class="h-4 w-4" aria-hidden="true"></i>
                                     </div>
                                     <div>
                                         <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">Пробный период</div>
-                                        <div class="text-[10px] text-white/40 mt-0.5" id="udm-trial-label"></div>
+                                        <div class="text-[9px] text-white/40 mt-0.5" id="udm-trial-label"></div>
                                     </div>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
@@ -562,7 +560,7 @@
 
 
                                 <!-- INDIVIDUAL SETTINGS BLOCK -->
-                            <div class="border-t border-white/[0.06] pt-3 mt-1">
+                            <div class="border-t border-white/[0.06] pt-2.5">
                                 <div class="flex items-center justify-between">
                                     <span
                                         class="text-[10px] uppercase font-semibold text-white/40 tracking-wider">Индивидуальные
@@ -576,8 +574,8 @@
                                 </div>
 
                                 <div id="udm-seller-settings"
-                                    class="hidden mt-3 space-y-3 bg-white/5 p-3 rounded-xl border border-white/10">
-                                    <div class="grid grid-cols-3 gap-3">
+                                    class="hidden mt-2.5 space-y-2.5 bg-white/5 p-2.5 rounded-xl border border-white/10">
+                                    <div class="grid grid-cols-3 gap-2.5">
                                         <div>
                                             <label
                                                 class="flex items-center text-[9px] uppercase font-bold text-white/30 mb-1">
@@ -641,52 +639,59 @@
 
                     <!-- RIGHT COLUMN: Referral System -->
 <div
-                        class="udm-referrals-card border border-white/[0.08] bg-white/[0.03] rounded-xl p-4 sm:p-5 flex flex-col h-full min-h-[260px] relative overflow-hidden">
-                        <div class="flex items-center gap-3 mb-4 relative z-10">
-                            <div
-                                class="flex h-7 w-7 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300">
-                                <i data-lucide="users-round" class="h-4 w-4" aria-hidden="true"></i>
+                        class="udm-referrals-card border border-white/[0.08] bg-white/[0.03] rounded-xl p-3 sm:p-3.5 flex flex-col h-full min-h-[260px] relative overflow-hidden">
+                        <div class="flex items-center justify-between gap-2 mb-3 relative z-10">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <div
+                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300">
+                                    <i data-lucide="users-round" class="h-4 w-4" aria-hidden="true"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-bold tracking-tight text-white">Рефералы</h4>
+                                    <p class="text-white/40 text-[9px] mt-0.5">Статистика приглашений</p>
+                                </div>
                             </div>
-                            <div>
-                                <h4 class="text-sm font-bold tracking-tight text-white">Рефералы</h4>
-                                <p class="text-white/40 text-xs mt-0.5">Статистика приглашений</p>
-                            </div>
+                            <span
+                                class="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-bold shrink-0"
+                                id="udm-ref-count-badge">
+                                <span id="udm-ref-count">0</span> / <span id="udm-refs-total">0</span>
+                            </span>
                         </div>
 
-                        <div class="space-y-2 flex-1 flex flex-col relative z-10">
+                        <div class="space-y-2 flex-1 flex flex-col relative z-10 min-h-0">
                             <!-- Ref Info Cards Compact -->
                             <div class="flex gap-2">
-                                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl px-3 py-2 hover:bg-white/5 transition-colors cursor-pointer group flex h-10 items-center justify-between"
+                                <div class="flex-1 bg-black/20 border border-white/5 rounded-lg px-2.5 py-1.5 hover:bg-white/5 transition-colors cursor-pointer group flex h-9 items-center justify-between min-w-0"
                                     onclick="copyToClipboard(document.getElementById('udm-ref-code').innerText, this)">
                                     <div
-                                        class="text-[8px] font-bold text-white/40 uppercase tracking-widest group-hover:text-purple-400 transition-colors">
+                                        class="text-[8px] font-bold text-white/40 uppercase tracking-widest group-hover:text-purple-400 transition-colors shrink-0">
                                         ваш Код</div>
-                                    <div class="text-[11px] font-bold text-white font-mono flex items-center gap-1.5">
-                                        <span id="udm-ref-code"></span>
+                                    <div class="text-[11px] font-bold text-white font-mono flex items-center gap-1.5 min-w-0">
+                                        <span id="udm-ref-code" class="truncate"></span>
                                         <span
-                                            class="material-symbols-outlined text-[10px] opacity-0 group-hover:opacity-50">content_copy</span>
+                                            class="material-symbols-outlined text-[10px] opacity-0 group-hover:opacity-50 shrink-0">content_copy</span>
                                     </div>
                                 </div>
                                 <div
-                                    class="flex-1 bg-black/20 border border-white/5 rounded-xl px-3 py-2 flex h-10 items-center justify-between overflow-hidden">
+                                    class="flex-1 bg-black/20 border border-white/5 rounded-lg px-2.5 py-1.5 flex h-9 items-center justify-between overflow-hidden min-w-0">
                                     <div
                                         class="text-[8px] font-bold text-white/40 uppercase tracking-widest flex-shrink-0 mr-2">
                                         Пригласил</div>
-                                    <div class="text-[11px] font-bold text-white truncate text-purple-300 text-right"
+                                    <div class="text-[11px] font-bold text-white truncate text-purple-300 text-right min-w-0"
                                         id="udm-referred-by"></div>
                                 </div>
                             </div>
 
                             <!-- Ref List Section -->
                             <div
-                                class="flex-1 bg-black/20 border border-white/5 rounded-2xl p-3 flex flex-col relative overflow-hidden">
-                                <div class="flex items-center justify-between mb-3 flex-shrink-0">
-                                    <div class="flex items-center gap-3">
+                                class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2.5 flex flex-col relative overflow-hidden min-h-0">
+                                <div class="flex items-center justify-between mb-2 flex-shrink-0 gap-2">
+                                    <div class="flex items-center gap-2 min-w-0">
                                         <span
-                                            class="text-[10px] font-bold text-white/40 uppercase tracking-widest">Список
+                                            class="text-[10px] font-bold text-white/40 uppercase tracking-widest truncate">Список
                                             приглашенных</span>
                                         <label
-                                            class="relative inline-flex items-center cursor-pointer scale-75 origin-left"
+                                            class="relative inline-flex items-center cursor-pointer scale-75 origin-left shrink-0"
                                             title="Показывать тех, кто потратил > 0₽, первыми">
                                             <input type="checkbox" id="udm-ref-filter-spent" class="sr-only peer">
                                             <div
@@ -696,26 +701,21 @@
                                                 class="ml-2 text-[9px] font-bold text-white/30 uppercase tracking-widest peer-checked:text-primary transition-colors">Активные</span>
                                         </label>
                                     </div>
-                                    <span
-                                        class="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-bold"
-                                        id="udm-ref-count-badge">
-                                        <span id="udm-ref-count">0</span> / <span id="udm-refs-total">0</span>
-                                    </span>
                                 </div>
 
                                 <button id="udm-detach-referrals" type="button"
-                                    class="mb-3 w-full py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 hover:text-red-200 transition-all flex items-center justify-center gap-2">
+                                    class="mb-2 w-full py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-[10px] font-bold uppercase tracking-widest hover:bg-red-500/20 hover:text-red-200 transition-all flex items-center justify-center gap-2">
                                     <span class="material-symbols-outlined text-sm">link_off</span>
                                     Отвязать рефералов
                                 </button>
 
-                                <div class="custom-scroll pr-1 -mr-1 overflow-y-auto h-[200px]">
+                                <div class="custom-scroll pr-1 -mr-1 overflow-y-auto flex-1 min-h-[140px] max-h-[240px]">
                                     <ul id="udm-referrals-list" class="space-y-2 pb-2"></ul>
                                 </div>
 
                                 <div>
                                     <button id="udm-refs-load-more"
-                                        class="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-2 hidden">
+                                        class="w-full py-2 rounded-lg bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-2 hidden">
                                         <span class="material-symbols-outlined text-sm">expand_circle_down</span>
                                         Загрузить больше
                                     </button>
@@ -1470,13 +1470,11 @@
         background: rgba(255, 255, 255, 0.03);
         border-color: rgba(255, 255, 255, 0.08);
         box-shadow: none;
-        padding: 9px 11px;
-        margin-bottom: 5px;
     }
 
     #userDetailsModal .udm-subscription-card:hover {
         border-color: rgba(255, 255, 255, 0.16);
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.045);
     }
 
     #userDetailsModal .udm-subscription-card.udm-subscription-card-alt {
@@ -1485,29 +1483,213 @@
     }
 
     #userDetailsModal .udm-subscription-card.udm-subscription-card-alt:hover {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.045);
         border-color: rgba(255, 255, 255, 0.16);
     }
 
-    #userDetailsModal .udm-sub-status-dot {
-        width: 8px;
-        height: 8px;
-        flex: 0 0 auto;
-        border-radius: 50%;
-        background: #13ec80;
-        box-shadow: 0 0 12px rgba(19, 236, 128, 0.45);
+    #userDetailsModal .udm-sub-status-rail {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        background: rgba(19, 236, 128, 0.55);
     }
 
-    #userDetailsModal .udm-sub-status-dot.is-expired {
-        background: #f87171;
-        box-shadow: 0 0 12px rgba(248, 113, 113, 0.35);
+    #userDetailsModal .udm-sub-status-rail.is-expired {
+        background: rgba(248, 113, 113, 0.5);
+    }
+
+    #userDetailsModal .udm-subscription-heading {
+        padding-bottom: 5px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.075);
+    }
+
+    #userDetailsModal .udm-sub-quotas {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 7px;
+        margin-top: 5px;
+    }
+
+    #userDetailsModal .udm-sub-quota {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 9px;
+        background: rgba(0, 0, 0, 0.16);
+        padding: 5px 8px;
+    }
+
+    #userDetailsModal .udm-sub-quota-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+        flex: 1 1 auto;
+    }
+
+    #userDetailsModal .udm-sub-quota-label {
+        color: rgba(255, 255, 255, 0.38);
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    #userDetailsModal .udm-sub-quota-sub {
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.35;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    #userDetailsModal .udm-sub-quota-sub-dim {
+        color: rgba(255, 255, 255, 0.4);
+        font-weight: 500;
+    }
+
+    #userDetailsModal .udm-sub-quota-value {
+        flex: 0 0 auto;
+        min-width: 34px;
+        color: #13ec80;
+        font-size: 19px;
+        font-weight: 800;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+    }
+
+    #userDetailsModal .udm-sub-quota-value small {
+        font-size: 10px;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.45);
+        margin-left: 1px;
+    }
+
+    #userDetailsModal .udm-sub-quota-hwid .udm-sub-quota-sub {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    #userDetailsModal .udm-sub-quota-hwid .udm-sub-quota-sub strong {
+        line-height: 1.2;
+    }
+
+    #userDetailsModal .udm-sub-quota-hwid .btn-reset-subscription-hwid {
+        width: 18px;
+        height: 18px;
+        margin-left: 2px;
+    }
+
+    #userDetailsModal .udm-sub-quota-hwid .btn-reset-subscription-hwid .material-symbols-outlined {
+        font-size: 12px;
+        line-height: 1;
+    }
+
+    #userDetailsModal .udm-sub-quota-days.is-warning .udm-sub-quota-value {
+        color: #fbbf24;
+    }
+
+    #userDetailsModal .udm-subscription-card .udm-sub-quota-days.is-expired .udm-sub-quota-value {
+        color: #f87171;
+    }
+
+    #userDetailsModal .udm-sub-quota-ring {
+        position: relative;
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+    }
+
+    #userDetailsModal .udm-sub-quota-ring svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    #userDetailsModal .udm-sub-quota-ring .ring-track,
+    #userDetailsModal .udm-sub-quota-ring .ring-value {
+        fill: none;
+        stroke-width: 3.5;
+    }
+
+    #userDetailsModal .udm-sub-quota-ring .ring-track {
+        stroke: rgba(255, 255, 255, 0.09);
+    }
+
+    #userDetailsModal .udm-sub-quota-ring .ring-value {
+        stroke: #22d3ee;
+        stroke-linecap: round;
+        stroke-dasharray: 97.4;
+        transition: stroke-dashoffset 300ms ease;
+    }
+
+    #userDetailsModal .udm-sub-quota-ring.is-expired .ring-value,
+    #userDetailsModal .udm-sub-quota-ring .ring-value.is-danger {
+        stroke: #f87171;
+    }
+
+    #userDetailsModal .udm-sub-quota-percent {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 9px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    #userDetailsModal .udm-sub-quota-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(174, 196, 183, 0.8);
+    }
+
+    #userDetailsModal .udm-sub-quota-icon .material-symbols-outlined {
+        font-size: 17px;
     }
 
     #userDetailsModal .udm-sub-meta-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 4px;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 3px 6px;
         margin-bottom: 6px;
+    }
+
+    #userDetailsModal .udm-sub-meta-click {
+        cursor: pointer;
+        border-radius: 4px;
+        transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+    }
+
+    #userDetailsModal .udm-sub-meta-click:hover {
+        border-left-color: rgba(19, 236, 128, 0.55);
+        background: rgba(19, 236, 128, 0.05);
+    }
+
+    #userDetailsModal .udm-sub-meta-click:hover span {
+        color: rgba(19, 236, 128, 0.8);
+    }
+
+    #userDetailsModal .udm-sub-meta-click:hover span .material-symbols-outlined {
+        color: rgba(19, 236, 128, 0.8);
     }
 
     #userDetailsModal .udm-sub-meta {
@@ -1516,7 +1698,7 @@
         border-left: 2px solid rgba(255, 255, 255, 0.1);
         border-radius: 0;
         background: transparent;
-        padding: 2px 6px;
+        padding: 1px 5px;
     }
 
     #userDetailsModal .udm-sub-meta span {
@@ -1547,31 +1729,24 @@
         white-space: nowrap;
     }
 
-    #userDetailsModal .udm-sub-meta-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+    #userDetailsModal .udm-subscription-card .udm-sub-link-row button {
+        width: 26px;
+        height: 26px;
     }
 
-    #userDetailsModal .udm-traffic-panel {
-        background: rgba(0, 0, 0, 0.16);
-        border-color: rgba(255, 255, 255, 0.055);
-        margin-bottom: 6px;
-        padding: 7px 9px;
-    }
-
-    #userDetailsModal .udm-sub-link-row {
-        background: rgba(0, 0, 0, 0.2);
-        margin-bottom: 5px;
-        min-height: 32px;
-        padding: 2px 6px;
-    }
-
-    #userDetailsModal .udm-subscription-card > div:first-child {
-        margin-bottom: 6px;
-    }
-
-    #userDetailsModal .udm-subscription-heading {
-        padding-bottom: 6px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.075);
+    #userDetailsModal .udm-sub-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.04);
+        padding: 1px 6px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1.4;
+        white-space: nowrap;
     }
 
     #userDetailsModal .udm-subscription-card-alt .udm-subscription-heading {
@@ -1580,25 +1755,6 @@
 
     #userDetailsModal .udm-subscription-card-alt .udm-sub-status-dot:not(.is-expired) {
         box-shadow: 0 0 8px rgba(19, 236, 128, 0.32);
-    }
-
-    #userDetailsModal .udm-subscription-card .udm-traffic-panel > div:first-child {
-        margin-bottom: 3px;
-    }
-
-    #userDetailsModal .udm-subscription-card .udm-traffic-panel .mt-2\.5 {
-        margin-top: 5px;
-    }
-
-    #userDetailsModal .udm-subscription-card .udm-sub-link-row button {
-        width: 26px;
-        height: 26px;
-    }
-
-    #userDetailsModal .udm-subscription-card .udm-sub-link-row .btn-user-reset-subscription-link {
-        width: auto;
-        padding-left: 8px;
-        padding-right: 8px;
     }
 
     #resetSubscriptionLinkModal .reset-subscription-confirm {
@@ -1738,8 +1894,9 @@
             grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
         }
 
-        #userDetailsModal .udm-sub-meta-grid {
+        #userDetailsModal .udm-sub-quotas {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 5px;
         }
 
         #userDetailsModal .udm-sub-link-row {
@@ -1760,64 +1917,27 @@
         }
 
         #userDetailsModal .udm-sub-link-row > button:last-child {
-            flex: 1;
-            justify-content: center;
+            width: 30px;
+            height: 30px;
         }
 
-        #userDetailsModal .udm-subscription-card {
-            padding: 8px;
-            border-radius: 12px;
+        #userDetailsModal .udm-sub-body {
+            padding: 9px;
         }
 
         #userDetailsModal .udm-subscription-heading {
             align-items: flex-start;
         }
 
-        #userDetailsModal .udm-sub-badges {
+        #userDetailsModal .udm-sub-toolbar {
             width: 100%;
-            padding-left: 17px;
-        }
-
-        #userDetailsModal .udm-sub-meta {
-            padding: 2px 6px;
-        }
-
-        #userDetailsModal .udm-sub-footer {
-            align-items: flex-start;
-        }
-
-        #userDetailsModal .udm-sub-identifiers {
-            width: 100%;
-        }
-
-        #userDetailsModal .udm-subscription-card > div:first-child {
-            margin-bottom: 6px;
+            margin-left: 17px;
+            justify-content: flex-end;
         }
 
         #userDetailsModal .udm-sub-meta-grid {
-            gap: 5px;
-            margin-bottom: 6px;
-        }
-
-        #userDetailsModal .udm-sub-meta {
-            padding: 5px 7px;
-        }
-
-        #userDetailsModal .udm-sub-meta span {
-            font-size: 8px;
-        }
-
-        #userDetailsModal .udm-sub-meta strong {
-            font-size: 10px;
-        }
-
-        #userDetailsModal .udm-traffic-panel {
-            margin-bottom: 6px;
-            padding: 7px 8px;
-        }
-
-        #userDetailsModal .udm-sub-link-row {
-            margin-bottom: 5px;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 4px 0;
         }
 
         #userDetailsModal .udm-tab-btn {
@@ -2117,6 +2237,7 @@
                 const resp = await fetch(src, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
                 if (resp.ok) {
                     body.innerHTML = await resp.text();
+                    window.refreshUiIcons?.(body);
                     body.setAttribute('data-loaded', '1');
                 }
             } catch (_) { }
@@ -2264,7 +2385,11 @@
             editButton.classList.toggle('hover:text-primary', !isEditing);
             editButton.classList.toggle('border-white/10', !isEditing);
             editButton.classList.toggle('bg-white/5', !isEditing);
-            editIcon.textContent = isEditing ? 'check' : 'edit';
+            if (editIcon) {
+                editIcon.setAttribute('data-lucide', isEditing ? 'check' : 'pencil');
+                window.lucide?.createIcons({ root: editButton, attrs: { 'stroke-width': 1.75 } });
+            }
+            editButton.dataset.editing = isEditing ? 'true' : 'false';
 
             if (isEditing) {
                 balanceInput.value = parseBalanceValue(balanceDisplay.textContent).toFixed(2);
@@ -2275,17 +2400,17 @@
             }
         }
 
-        function setUsernameEditMode(isEditing) {
-            const usernameDisplay = document.getElementById('udm-username');
-            const usernameInput = document.getElementById('udm-username-input');
-            const editButton = document.getElementById('udm-username-edit');
-            const editIcon = document.getElementById('udm-username-edit-icon');
+        function setProfileNameEditMode(isEditing) {
+            const profileNameDisplay = document.getElementById('udm-profile-name');
+            const profileNameInput = document.getElementById('udm-profile-name-input');
+            const editButton = document.getElementById('udm-profile-name-edit');
+            const editIcon = document.getElementById('udm-profile-name-edit-icon');
 
-            if (!usernameDisplay || !usernameInput || !editButton) return;
+            if (!profileNameDisplay || !profileNameInput || !editButton) return;
 
-            usernameDisplay.classList.toggle('hidden', isEditing);
-            usernameInput.classList.toggle('hidden', !isEditing);
-            editButton.title = isEditing ? 'Сохранить имя пользователя' : 'Изменить имя пользователя';
+            profileNameDisplay.classList.toggle('hidden', isEditing);
+            profileNameInput.classList.toggle('hidden', !isEditing);
+            editButton.title = isEditing ? 'Сохранить имя и фамилию' : 'Изменить имя и фамилию';
             editButton.classList.toggle('text-green-400', isEditing);
             editButton.classList.toggle('border-green-500/30', isEditing);
             editButton.classList.toggle('bg-green-500/10', isEditing);
@@ -2300,8 +2425,8 @@
 
             if (isEditing) {
                 setTimeout(() => {
-                    usernameInput.focus();
-                    usernameInput.select();
+                    profileNameInput.focus();
+                    profileNameInput.select();
                 }, 0);
             }
         }
@@ -2313,22 +2438,24 @@
             openModal('userAvatarModal');
         });
 
-        async function saveUsername() {
+        async function saveProfileName() {
             const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
-            const usernameInput = document.getElementById('udm-username-input');
-            if (!uid || !usernameInput) return;
+            const profileNameInput = document.getElementById('udm-profile-name-input');
+            if (!uid || !profileNameInput) return;
 
             const data = await apiRequest(
-                `{{ url_for('update_user_username_route', user_id=0) }}`.replace('/0', `/${uid}`),
+                `{{ url_for('update_user_first_name_route', user_id=0) }}`.replace('/0', `/${uid}`),
                 'POST',
-                { username: usernameInput.value },
-                'Имя пользователя обновлено'
+                { first_name: profileNameInput.value },
+                'Имя и фамилия обновлены'
             );
             if (!data) return;
 
-            usernameInput.value = data.username;
-            document.getElementById('udm-username').textContent = '@' + data.username;
-            setUsernameEditMode(false);
+            const profileNameDisplay = document.getElementById('udm-profile-name');
+            profileNameInput.value = data.first_name;
+            profileNameDisplay.dataset.firstName = data.first_name;
+            profileNameDisplay.textContent = data.first_name;
+            setProfileNameEditMode(false);
 
             const tbody = document.getElementById('users-tbody');
             if (tbody) {
@@ -2337,26 +2464,27 @@
             }
         }
 
-        document.getElementById('udm-username-edit')?.addEventListener('click', () => {
-            const editButton = document.getElementById('udm-username-edit');
+        document.getElementById('udm-profile-name-edit')?.addEventListener('click', () => {
+            const editButton = document.getElementById('udm-profile-name-edit');
             if (editButton?.dataset.editing === 'true') {
-                saveUsername();
+                saveProfileName();
             } else {
-                setUsernameEditMode(true);
+                setProfileNameEditMode(true);
             }
         });
 
-        document.getElementById('udm-username-input')?.addEventListener('keydown', (event) => {
+        document.getElementById('udm-profile-name-input')?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                saveUsername();
+                saveProfileName();
             } else if (event.key === 'Escape') {
-                const usernameDisplay = document.getElementById('udm-username');
-                const usernameInput = document.getElementById('udm-username-input');
-                usernameInput.value = usernameDisplay.textContent.replace(/^@/, '');
-                setUsernameEditMode(false);
+                const profileNameDisplay = document.getElementById('udm-profile-name');
+                const profileNameInput = document.getElementById('udm-profile-name-input');
+                profileNameInput.value = profileNameDisplay.dataset.firstName || '';
+                setProfileNameEditMode(false);
             }
         });
+
 
         async function setUserBalanceAbsolute(uid, targetBalance) {
             const currentBalanceElement = document.getElementById('udm-balance');
@@ -2526,6 +2654,7 @@
                     applyRegistrationDates(tbody);
                     tbody.setAttribute('data-fetch-url', tableUrl);
                     restoreOpenedKeys();
+                    window.refreshUiIcons?.(tbody);
                 }
 
                 if (pagResp && pagResp.ok && pagEl) {
@@ -2533,6 +2662,7 @@
                     if (isLoginPage(html)) { window.location.reload(); return; }
                     pagEl.innerHTML = html;
                     pagEl.setAttribute('data-src', pagUrl);
+                    window.refreshUiIcons?.(pagEl);
                 }
             } catch (err) {
                 console.error('Navigation error:', err);
@@ -2569,15 +2699,15 @@
                     panel.classList.remove('animate-pulse');
                     const percent = panel.querySelector('[data-remote-traffic-percent]');
                     const value = panel.querySelector('[data-remote-traffic-value]');
-                    if (percent) percent.textContent = !sub.traffic_available ? 'Нет данных' : (sub.traffic_unlimited ? 'Без ограничений' : `${Number(sub.traffic_percent || 0)}% использовано`);
-                    if (value) value.textContent = !sub.traffic_available ? '—' : (sub.traffic_unlimited ? `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ∞` : `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ${Number(sub.traffic_limit_gb || 0).toFixed(2)} GB`);
+                    if (percent) percent.textContent = !sub.traffic_available ? '—' : (sub.traffic_unlimited ? '∞' : `${Number(sub.traffic_percent || 0)}%`);
+                    if (value) value.textContent = !sub.traffic_available ? 'нет данных' : (sub.traffic_unlimited ? `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ∞` : `${Number(sub.traffic_used_gb || 0).toFixed(2)} / ${Number(sub.traffic_limit_gb || 0).toFixed(2)} GB`);
                     const remaining = panel.querySelector('[data-remote-traffic-remaining]');
-                    if (remaining) remaining.textContent = !sub.traffic_available ? 'Проверьте соединение с Remnawave' : (sub.traffic_unlimited ? 'Осталось: ∞' : `Осталось: ${Number(sub.traffic_remaining_gb || 0).toFixed(2)} GB`);
-                    const progress = panel.querySelector('.udm-traffic-panel .h-full.rounded-full');
+                    if (remaining) remaining.textContent = !sub.traffic_available ? 'нет соединения' : (sub.traffic_unlimited ? 'без ограничений' : `осталось ${Number(sub.traffic_remaining_gb || 0).toFixed(2)} GB`);
+                    const progress = panel.querySelector('.udm-sub-quota-ring .ring-value');
                     if (progress) {
-                        progress.style.width = `${Math.min(100, Math.max(0, Number(sub.traffic_percent || 0)))}%`;
-                        progress.classList.toggle('bg-red-400', Number(sub.traffic_percent || 0) >= 90);
-                        progress.classList.toggle('bg-cyan-400', Number(sub.traffic_percent || 0) < 90);
+                        const pct = Math.min(100, Math.max(0, Number(sub.traffic_percent || 0)));
+                        progress.style.strokeDashoffset = `${(97.4 - (97.4 * pct) / 100).toFixed(2)}`;
+                        progress.classList.toggle('is-danger', pct >= 90);
                     }
                     const hwid = (panel.closest('.udm-subscription-card') || panel).querySelector('[data-remote-hwid]');
                     if (hwid) hwid.textContent = !sub.hwid_available ? '—' : (sub.hwid_unlimited ? 'Безлимит' : `${Number(sub.hwid_used || 0)} / ${Number(sub.hwid_limit)}`);
@@ -2701,10 +2831,14 @@
                         avatarIcon.classList.remove('hidden');
                         avatar.src = `{{ url_for('user_avatar', user_id=0) }}`.replace('/0/avatar', `/${uid}/avatar`);
                     }
-                    const username = data.user.username || 'N/A';
-                    document.getElementById('udm-username').textContent = '@' + username;
-                    document.getElementById('udm-username-input').value = username;
-                    setUsernameEditMode(false);
+                    const profileName = data.user.first_name || '';
+                    const profileNameDisplay = document.getElementById('udm-profile-name');
+                    profileNameDisplay.textContent = profileName || 'Имя не указано';
+                    profileNameDisplay.dataset.firstName = profileName;
+                    profileNameDisplay.dataset.username = data.user.username || 'N/A';
+                    document.getElementById('udm-profile-name-input').value = profileName;
+                    setProfileNameEditMode(false);
+
                     document.getElementById('udm-registration').textContent = formatRegistrationDate(data.user.registration_date);
                     document.getElementById('udm-total-spent').textContent = (data.user.total_spent || 0).toFixed(2) + ' ₽';
                     document.getElementById('udm-total-months').textContent = (data.user.total_months || 0) + ' мес.';
@@ -2765,6 +2899,32 @@
                         `(Всего: ${data.subs_stats.total}, Активно: ${data.subs_stats.active}, Истекло: ${data.subs_stats.expired})` : '';
                     document.getElementById('udm-tab-count-subs').textContent = String(data.subscriptions?.length || 0);
                     subsList.innerHTML = data.subscriptions?.length ? data.subscriptions.map((sub, index) => {
+                        function pluralForm(number, forms) {
+                            const abs = Math.abs(number) % 100;
+                            const last = abs % 10;
+                            if (abs > 10 && abs < 20) return forms[2];
+                            if (last > 1 && last < 5) return forms[1];
+                            if (last === 1) return forms[0];
+                            return forms[2];
+                        }
+                        function formatRelativeWords(dateStr) {
+                            if (!dateStr) return '';
+                            const target = new Date(dateStr);
+                            if (Number.isNaN(target.getTime())) return '';
+                            const diffMs = Date.now() - target.getTime();
+                            if (diffMs < 0) return '';
+                            const minutes = Math.floor(diffMs / 60000);
+                            const hours = Math.floor(diffMs / 3600000);
+                            const days = Math.floor(diffMs / 86400000);
+                            if (minutes < 1) return 'только что';
+                            if (minutes < 60) return `${minutes} ${pluralForm(minutes, ['минуту', 'минуты', 'минут'])} назад`;
+                            if (hours < 24) return `${hours} ${pluralForm(hours, ['час', 'часа', 'часов'])} назад`;
+                            if (days < 30) return `${days} ${pluralForm(days, ['день', 'дня', 'дней'])} назад`;
+                            const months = Math.floor(days / 30);
+                            if (months < 12) return `${months} ${pluralForm(months, ['месяц', 'месяца', 'месяцев'])} назад`;
+                            const years = Math.floor(days / 365);
+                            return `${years} ${pluralForm(years, ['год', 'года', 'лет'])} назад`;
+                        }
                         function formatDuration(dateStr) {
                             if (!dateStr || sub.is_expired) return '';
                             const d = new Date(dateStr);
@@ -2777,107 +2937,127 @@
                             }
                             return '';
                         }
+                        function formatAgeShort(dateStr) {
+                            if (!dateStr) return '';
+                            const target = new Date(dateStr);
+                            if (Number.isNaN(target.getTime())) return '';
+                            const diffMs = Date.now() - target.getTime();
+                            if (diffMs < 0) return '';
+                            const minutes = Math.floor(diffMs / 60000);
+                            const hours = Math.floor(diffMs / 3600000);
+                            const days = Math.floor(diffMs / 86400000);
+                            const months = Math.floor(days / 30);
+                            const years = Math.floor(days / 365);
+                            if (minutes < 1) return { value: '0', unit: 'м' };
+                            if (minutes < 60) return { value: minutes, unit: 'м' };
+                            if (hours < 24) return { value: hours, unit: 'ч' };
+                            if (days < 30) return { value: days, unit: 'д' };
+                            if (months < 12) return { value: months, unit: 'мес' };
+                            return { value: years, unit: 'г' };
+                        }
                         const daysRemaining = sub.is_expired ? 0 : (sub.expire_date && sub.expire_date !== 'N/A'
                             ? Math.max(0, Math.ceil((new Date(sub.expire_date) - new Date()) / (1000 * 60 * 60 * 24)))
                             : null);
                         const durationText = formatDuration(sub.expire_date);
                         const emailDisp = sub.email ? sub.email.split('@')[0] : 'N/A';
+                        const createdText = formatTransactionDate(sub.created_at);
+                        const createdRelative = formatRelativeWords(sub.created_at);
+                        const createdAgeShort = formatAgeShort(sub.created_at);
 
                         return `
-                    <div class="udm-subscription-card ${index % 2 ? 'udm-subscription-card-alt' : ''} p-3 sm:p-3.5 relative mb-2 border border-white/10 rounded-xl last:mb-0 transition-colors" data-subscription-index="${index}">
-                        <div class="udm-subscription-heading flex items-center justify-between gap-2 flex-wrap mb-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <span class="udm-sub-status-dot ${sub.is_expired ? 'is-expired' : ''}"></span>
-                                <div class="min-w-0">
-                                    <div class="flex items-center gap-2 flex-wrap leading-tight">
-                                        <span class="${sub.is_expired ? 'text-red-300' : 'text-emerald-300'} font-bold text-sm">${sub.is_expired ? 'Подписка истекла' : 'Подписка активна'}</span>
-                                        <span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-semibold text-white/55">${durationText || `ID ${sub.key_id}`}</span>
-                                    </div>
-                                    <p class="mt-0.5 text-[10px] text-white/45">${sub.expire_date && sub.expire_date !== 'N/A' ? `Активна до ${escapeHtml(sub.expire_date)}` : 'Без срока окончания'}</p>
+                    <div class="udm-subscription-card ${index % 2 ? 'udm-subscription-card-alt' : ''} relative mb-2.5 border rounded-xl last:mb-0 transition-colors overflow-hidden" data-subscription-index="${index}">
+                        <div class="udm-sub-status-rail ${sub.is_expired ? 'is-expired' : ''}"></div>
+                        <div class="udm-sub-body p-2.5 sm:p-3">
+                         <div class="udm-subscription-heading flex items-center justify-between gap-2 flex-wrap">
+                             <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                                 <span class="udm-sub-status-dot ${sub.is_expired ? 'is-expired' : ''}"></span>
+                                 <span class="${sub.is_expired ? 'text-red-300' : 'text-emerald-300'} font-bold text-[13px] leading-tight whitespace-nowrap">${sub.is_expired ? 'Подписка истекла' : 'Подписка активна'}</span>
+                                 <span class="udm-sub-tag">ID ${sub.key_id}</span>
+                                 <span class="udm-sub-tag">${escapeHtml(sub.host_name)}</span>
+                                 ${sub.admin_comment ? `<span class="udm-sub-tag max-w-[150px] overflow-hidden text-ellipsis border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-200/80" title="Комментарий администратора">${escapeHtml(sub.admin_comment)}</span>` : ''}
+                                 ${sub.user_comment ? `<span class="udm-sub-tag max-w-[130px] overflow-hidden text-ellipsis border-sky-400/15 bg-sky-400/[0.07] text-sky-200/80" title="Комментарий пользователя">${escapeHtml(sub.user_comment)}</span>` : ''}
+                             </div>
+                            <div class="udm-sub-toolbar flex items-center gap-1 flex-shrink-0">
+                                ${sub.transaction ? `<button type="button" class="udm-transaction-details-button flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-white/50 hover:border-primary/25 hover:bg-primary/10 hover:text-primary transition-all" data-transaction-details aria-label="Детали платежа" title="Детали платежа"><span class="material-symbols-outlined text-[15px]">info</span></button>` : ''}
+                                <button class="btn-user-edit-expiry w-7 h-7 flex items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-all"
+                                        data-key-id="${sub.key_id}" title="Изменить срок">
+                                    <span class="material-symbols-outlined text-[15px]">schedule</span>
+                                </button>
+                                <button class="btn-user-edit-comment w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10 transition-all"
+                                        data-key-id="${sub.key_id}" data-current-comment="${escapeHtml(sub.admin_comment || '')}" title="Комментарий">
+                                    <span class="material-symbols-outlined text-[15px]">comment</span>
+                                </button>
+                                <button class="btn-user-revoke-key w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                                        data-key-id="${sub.key_id}" title="Отозвать">
+                                    <span class="material-symbols-outlined text-[15px]">delete</span>
+                                </button>
+                            </div>
+                        </div>
+
+                         <div class="udm-sub-quotas">
+                            <div class="udm-sub-quota udm-sub-quota-days ${sub.is_expired ? 'is-expired' : (daysRemaining !== null && daysRemaining <= 3 ? 'is-warning' : '')}">
+                                <div class="udm-sub-quota-value" title="${sub.expire_date && sub.expire_date !== 'N/A' ? escapeHtml(sub.expire_date) : 'Без срока'}">${daysRemaining === null ? '∞' : daysRemaining}</div>
+                                <div class="udm-sub-quota-info min-w-0">
+                                    <span class="udm-sub-quota-label">Осталось дней</span>
+                                    <span class="udm-sub-quota-sub truncate">${sub.expire_date && sub.expire_date !== 'N/A' ? `до ${escapeHtml(sub.expire_date)}` : 'без срока'}</span>
                                 </div>
                             </div>
-                            <div class="udm-sub-badges flex items-center gap-1 flex-wrap">
-                                <span class="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-semibold text-white/55">${escapeHtml(sub.host_name)}</span>
-                                ${sub.admin_comment ? `<span class="max-w-[160px] truncate rounded-md border border-emerald-400/15 bg-emerald-400/[0.07] px-2 py-1 text-[9px] text-emerald-200/80" title="Комментарий администратора">${escapeHtml(sub.admin_comment)}</span>` : ''}
-                                ${sub.user_comment ? `<span class="max-w-[130px] truncate rounded-md border border-sky-400/15 bg-sky-400/[0.07] px-2 py-1 text-[9px] text-sky-200/80" title="Комментарий пользователя">${escapeHtml(sub.user_comment)}</span>` : ''}
-                            </div>
-                        </div>
-
-                        <div class="udm-sub-meta-grid mb-2.5">
-                            <div class="udm-sub-meta"><span><i class="material-symbols-outlined">sell</i>Тариф</span><strong>${escapeHtml(sub.plan || '—')}</strong></div>
-                            <div class="udm-sub-meta"><span><i class="material-symbols-outlined">payments</i>Провайдер</span><strong>${escapeHtml(sub.provider || '—')}</strong></div>
-                            <div class="udm-sub-meta"><span><i class="material-symbols-outlined">devices</i>HWID-устройства</span><strong data-remote-hwid>${sub.hwid_available ? (sub.hwid_unlimited ? 'Безлимит' : `${Number(sub.hwid_used || 0)} / ${Number(sub.hwid_limit)}`) : '—'}</strong><button type="button" class="btn-reset-subscription-hwid ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md border border-rose-400/20 bg-rose-400/[0.07] text-rose-300/80 transition-colors hover:bg-rose-400/20 hover:text-rose-200" data-key-id="${sub.key_id}" title="Сбросить все устройства ключа" aria-label="Сбросить все HWID-устройства"><span class="material-symbols-outlined text-sm">delete</span></button></div>
-                            <div class="udm-sub-meta"><span><i class="material-symbols-outlined">event</i>Осталось дней</span><strong class="${daysRemaining !== null && daysRemaining <= 3 ? 'text-amber-300' : ''}">${daysRemaining === null ? 'Без срока' : daysRemaining}</strong></div>
-                        </div>
-
-                        <div class="udm-traffic-panel mb-2 rounded-lg border border-white/[0.07] px-2.5 py-2 ${sub.remote_loading ? 'animate-pulse' : ''}" data-remote-key-id="${sub.key_id}">
-                            <div class="flex items-center justify-between gap-2 mb-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-base text-cyan-300">data_usage</span>
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-white/60">Основной трафик</span>
+                            <div class="udm-sub-quota udm-sub-quota-traffic ${sub.remote_loading ? 'animate-pulse' : ''}" data-remote-key-id="${sub.key_id}">
+                                <div class="udm-sub-quota-ring ${sub.is_expired ? 'is-expired' : ''}">
+                                    <svg viewBox="0 0 36 36" aria-hidden="true">
+                                        <circle class="ring-track" cx="18" cy="18" r="15.5"></circle>
+                                        <circle class="ring-value" cx="18" cy="18" r="15.5" style="stroke-dashoffset: ${97.4 - (97.4 * Math.min(100, Math.max(0, Number(sub.traffic_percent || 0)))) / 100}"></circle>
+                                    </svg>
+                                    <span class="udm-sub-quota-percent" data-remote-traffic-percent>${!sub.traffic_available ? '—' : (sub.traffic_unlimited ? '∞' : `${Number(sub.traffic_percent || 0)}%`)}</span>
                                 </div>
-                                    <span class="text-[10px] font-semibold text-white/45" data-remote-traffic-percent>${!sub.traffic_available ? 'Нет данных' : (sub.traffic_unlimited ? 'Без ограничений' : `${Number(sub.traffic_percent || 0)}% использовано`)}</span>
+                                <div class="udm-sub-quota-info min-w-0">
+                                    <span class="udm-sub-quota-label">Трафик</span>
+                                    <span class="udm-sub-quota-sub truncate" data-remote-traffic-value>${!sub.traffic_available ? 'нет данных' : (sub.traffic_unlimited ? `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ∞` : `${Number(sub.traffic_used_gb || 0).toFixed(2)} / ${Number(sub.traffic_limit_gb || 0).toFixed(2)} GB`)}</span>
+                                    <span class="udm-sub-quota-sub udm-sub-quota-sub-dim truncate" data-remote-traffic-remaining>${!sub.traffic_available ? 'нет соединения' : (sub.traffic_unlimited ? 'без ограничений' : `осталось ${Number(sub.traffic_remaining_gb || 0).toFixed(2)} GB`)}</span>
+                                </div>
                             </div>
-                            <div class="flex items-baseline justify-between gap-2 flex-wrap">
-                                <strong class="text-sm font-bold text-white" data-remote-traffic-value>${!sub.traffic_available ? '—' : (sub.traffic_unlimited ? `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ∞` : `${Number(sub.traffic_used_gb || 0).toFixed(2)} GB / ${Number(sub.traffic_limit_gb || 0).toFixed(2)} GB`)}</strong>
-                                <span class="text-[10px] text-white/45" data-remote-traffic-remaining>${!sub.traffic_available ? 'Проверьте соединение с Remnawave' : (sub.traffic_unlimited ? 'Осталось: ∞' : `Осталось: ${Number(sub.traffic_remaining_gb || 0).toFixed(2)} GB`)}</span>
+                            <div class="udm-sub-quota udm-sub-quota-hwid">
+                                <div class="udm-sub-quota-icon">
+                                    <span class="material-symbols-outlined">devices</span>
+                                </div>
+                                 <div class="udm-sub-quota-info min-w-0">
+                                     <span class="udm-sub-quota-label">HWID-устройства</span>
+                                     <span class="udm-sub-quota-sub"><strong class="truncate" data-remote-hwid>${sub.hwid_available ? (sub.hwid_unlimited ? 'Безлимит' : `${Number(sub.hwid_used || 0)} / ${Number(sub.hwid_limit)}`) : '—'}</strong><button type="button" class="btn-reset-subscription-hwid inline-flex shrink-0 items-center justify-center rounded border border-rose-400/20 bg-rose-400/[0.07] text-rose-300/80 transition-colors hover:bg-rose-400/20 hover:text-rose-200" data-key-id="${sub.key_id}" title="Сбросить все устройства ключа" aria-label="Сбросить все HWID-устройства"><span class="material-symbols-outlined">delete</span></button></span>
+                                 </div>
                             </div>
-                            ${!sub.traffic_available || sub.traffic_unlimited ? '' : `<div class="mt-1.5 h-1 overflow-hidden rounded-full bg-black/40"><div class="h-full rounded-full ${Number(sub.traffic_percent || 0) >= 90 ? 'bg-red-400' : 'bg-cyan-400'}" style="width:${Math.min(100, Math.max(0, Number(sub.traffic_percent || 0)))}%"></div></div>`}
+                            <div class="udm-sub-quota udm-sub-quota-created">
+                                <div class="udm-sub-quota-value" title="${createdText ? escapeHtml(createdText) : '—'}">${createdAgeShort ? `${createdAgeShort.value}<small>${createdAgeShort.unit}</small>` : '—'}</div>
+                                <div class="udm-sub-quota-info min-w-0">
+                                    <span class="udm-sub-quota-label">Куплен</span>
+                                    ${createdText ? `<span class="udm-sub-quota-sub truncate">В ${escapeHtml(createdText)}</span>` : '<span class="udm-sub-quota-sub udm-sub-quota-sub-dim">—</span>'}
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="udm-sub-link-row mb-2 flex items-center gap-1.5 rounded-lg border border-white/[0.07] px-2 py-1.5">
+                        <div class="udm-sub-meta-grid">
+                            <div class="udm-sub-meta udm-sub-meta-click" data-sub-plan="${escapeHtml(sub.plan || '')}" title="Скопировать тариф"><span><i class="material-symbols-outlined">sell</i>Тариф</span><strong class="truncate">${escapeHtml(sub.plan || '—')}</strong></div>
+                            <div class="udm-sub-meta udm-sub-meta-click" data-sub-provider="${escapeHtml(sub.provider || '')}" title="Скопировать провайдера"><span><i class="material-symbols-outlined">payments</i>Провайдер</span><strong class="truncate">${escapeHtml(sub.provider || '—')}</strong></div>
+                            <div class="udm-sub-meta udm-sub-meta-click" data-sub-email="${escapeHtml(sub.email)}" title="Скопировать email"><span><i class="material-symbols-outlined">mail</i>Email</span><strong class="truncate">${escapeHtml(sub.email)}</strong></div>
+                            <div class="udm-sub-meta udm-sub-meta-click" data-sub-username="${escapeHtml(emailDisp)}" title="Скопировать имя пользователя"><span><i class="material-symbols-outlined">person</i>User</span><strong class="truncate">${escapeHtml(emailDisp)}</strong></div>
+                            <div class="udm-sub-meta udm-sub-meta-click" data-sub-uuid="${escapeHtml(sub.remnawave_user_uuid)}" title="Скопировать UUID полностью"><span><i class="material-symbols-outlined">fingerprint</i>UUID</span><strong class="truncate font-mono">${escapeHtml(String(sub.remnawave_user_uuid || '').substring(0, 20))}...</strong></div>
+                        </div>
+
+                        <div class="udm-sub-link-row flex items-center gap-1.5 rounded-lg border border-white/[0.07] px-2 py-1.5">
                             <span class="material-symbols-outlined shrink-0 text-base text-primary/70">link</span>
                             <span class="flex-1 min-w-0 select-all truncate font-mono text-[11px] text-primary/90" title="${escapeHtml(sub.key)}">${escapeHtml(sub.key)}</span>
-                            <button type="button" data-sub-action="copy" data-sub-url="${escapeHtml(sub.key)}" class="flex-shrink-0 w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-primary/15 hover:text-primary text-white/55 flex items-center justify-center transition-all" title="Скопировать ссылку">
-                                <span class="material-symbols-outlined text-sm">content_copy</span>
+                            <button type="button" data-sub-action="copy" data-sub-url="${escapeHtml(sub.key)}" class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/[0.06] hover:bg-primary/15 hover:text-primary text-white/55 flex items-center justify-center transition-all" title="Скопировать ссылку">
+                                <span class="material-symbols-outlined text-[15px]">content_copy</span>
                             </button>
-                            <button type="button" data-sub-action="open" data-sub-url="${escapeHtml(sub.key)}" class="flex-shrink-0 w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-primary/15 hover:text-primary text-white/55 flex items-center justify-center transition-all" title="Открыть ссылку">
-                                <span class="material-symbols-outlined text-sm">open_in_new</span>
+                            <button type="button" data-sub-action="open" data-sub-url="${escapeHtml(sub.key)}" class="flex-shrink-0 w-7 h-7 rounded-lg bg-white/[0.06] hover:bg-primary/15 hover:text-primary text-white/55 flex items-center justify-center transition-all" title="Открыть ссылку">
+                                <span class="material-symbols-outlined text-[15px]">open_in_new</span>
                             </button>
-                            <button type="button" class="btn-user-reset-subscription-link flex-shrink-0 h-8 rounded-lg border border-amber-400/20 bg-amber-400/[0.07] px-2.5 text-[9px] font-bold text-amber-200/80 hover:bg-amber-400/15 transition-all flex items-center gap-1.5" data-key-id="${sub.key_id}" title="Сгенерировать новую ссылку подписки">
-                                <span class="material-symbols-outlined text-sm">autorenew</span><span class="hidden sm:inline">Обновить ссылку</span>
+                            <button type="button" class="btn-user-reset-subscription-link flex-shrink-0 h-7 w-7 rounded-lg border border-amber-400/20 bg-amber-400/[0.07] text-amber-200/80 hover:bg-amber-400/15 transition-all flex items-center justify-center" data-key-id="${sub.key_id}" title="Сгенерировать новую ссылку подписки" aria-label="Обновить ссылку">
+                                <span class="material-symbols-outlined text-[15px]">autorenew</span>
                             </button>
                         </div>
-
-                        <div class="udm-sub-footer flex items-center justify-between gap-2 flex-wrap">
-                             <div class="udm-sub-identifiers flex items-center gap-1 flex-wrap">
-                                <div class="bg-white/5 border border-white/5 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1 uppercase tracking-wide group" 
-                                     data-sub-email="${escapeHtml(sub.email)}" title="Скопировать полный email">
-                                    <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">mail</span>
-                                    <span class="text-white/40">Email:</span> <span class="text-white group-hover:text-primary transition-colors">${escapeHtml(sub.email)}</span>
-                                </div>
-                                <div class="bg-white/5 border border-white/5 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1 uppercase tracking-wide group" 
-                                     data-sub-username="${escapeHtml(emailDisp)}" title="Скопировать имя пользователя">
-                                    <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">person</span>
-                                    <span class="text-white/40">User:</span> <span class="text-white group-hover:text-primary transition-colors">${escapeHtml(emailDisp)}</span>
-                                </div>
-                                <div class="bg-white/5 border border-white/5 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white/70 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1 uppercase tracking-wide group" 
-                                     data-sub-uuid="${escapeHtml(sub.remnawave_user_uuid)}" title="Скопировать UUID">
-                                    <span class="material-symbols-outlined text-[10px] opacity-40 group-hover:text-primary transition-colors">fingerprint</span>
-                                    <span class="text-white/40">UUID:</span> <span class="font-mono text-white group-hover:text-primary transition-colors">${escapeHtml(String(sub.remnawave_user_uuid || '').substring(0, 8))}...</span>
-                                </div>
-                             </div>
-
-                             <!-- Right: Buttons -->
-                              <div class="flex items-center gap-1 flex-shrink-0">
-                                  <button class="btn-user-edit-expiry w-8 h-8 flex items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-all"
-                                          data-key-id="${sub.key_id}" title="Изменить срок">
-                                      <span class="material-symbols-outlined text-sm">schedule</span>
-                                  </button>
-                                  
-                                  <button class="btn-user-edit-comment w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10 transition-all"
-                                          data-key-id="${sub.key_id}" data-current-comment="${escapeHtml(sub.admin_comment || '')}" title="Комментарий">
-                                      <span class="material-symbols-outlined text-sm">comment</span>
-                                  </button>
-
-                                  <button class="btn-user-revoke-key w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all"
-                                          data-key-id="${sub.key_id}" title="Отозвать">
-                                      <span class="material-symbols-outlined text-sm">delete</span>
-                                  </button>
-                             </div>
-                        </div>
-                    </div>
-                `}).join('') : '<div class="p-8 text-center text-white/30 text-sm font-medium border-2 border-dashed border-white/5 rounded-2xl">Нет активных подписок</div>';
+                         </div>
+                     </div>
+                 `}).join('') : '<div class="p-8 text-center text-white/30 text-sm font-medium border-2 border-dashed border-white/5 rounded-2xl">Нет активных подписок</div>';
 
                     loadRemnawaveDetails(uid);
                     document.getElementById('udm-subs-list').querySelectorAll('.btn-user-reset-subscription-link').forEach(button => {
@@ -2926,11 +3106,18 @@
                             } catch (_) { }
                         });
                     });
-                    document.getElementById('udm-subs-list').querySelectorAll('[data-sub-email], [data-sub-username], [data-sub-uuid]').forEach(element => {
-                        element.addEventListener('click', () => {
-                            const value = element.dataset.subEmail || element.dataset.subUsername || element.dataset.subUuid || '';
-                            copyToClipboard(value, element);
-                        });
+                     document.getElementById('udm-subs-list').querySelectorAll('.udm-sub-meta-click').forEach(element => {
+                         element.addEventListener('click', () => {
+                             const value = element.dataset.subUuid || element.dataset.subPlan || element.dataset.subProvider || element.dataset.subEmail || element.dataset.subUsername || '';
+                             copyToClipboard(value, element);
+                         });
+                     });
+                    document.getElementById('udm-subs-list').querySelectorAll('.udm-subscription-card').forEach((card, index) => {
+                        const detailsButton = card.querySelector('[data-transaction-details]');
+                        const subscription = data.subscriptions?.[index];
+                        if (detailsButton && subscription?.transaction) {
+                            transactionDetailsByButton.set(detailsButton, subscription.transaction);
+                        }
                     });
 
                     function formatWithRelative(dateStr) {
@@ -3029,9 +3216,15 @@
                             const result = formatter(item);
                             if (result !== null) fields.push([label, result]);
                         };
+                        const linkValue = (item) => {
+                            const raw = display(item);
+                            if (!raw) return null;
+                            if (!/^https?:\/\//i.test(raw)) return raw;
+                            return { html: `<a href="${escapeHtml(raw)}" target="_blank" rel="noopener noreferrer">${escapeHtml(raw)}</a>` };
+                        };
                         const renderGroup = (title, icon, fields, accent) => {
                             if (!fields.length) return '';
-                            return `<section class="udm-tx-group"><header><span class="material-symbols-outlined">${icon}</span><h4>${title}</h4></header><dl>${fields.map(([label, content]) => `<div class="udm-tx-field"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(content)}</dd></div>`).join('')}</dl></section>`;
+                            return `<section class="udm-tx-group"><header><span class="material-symbols-outlined">${icon}</span><h4>${title}</h4></header><dl>${fields.map(([label, content]) => `<div class="udm-tx-field"><dt>${escapeHtml(label)}</dt><dd>${content && typeof content === 'object' ? content.html : escapeHtml(content)}</dd></div>`).join('')}</dl></section>`;
                         };
 
                         const paymentId = display(tx.payment_id);
@@ -3115,8 +3308,9 @@
                          addField(discountOriginFields, 'Скидка по промокоду', promoCode && discountValue !== null ? `${formatMoney(discountValue)} · ${display(promoCode)}` : null);
                          addField(discountOriginFields, 'Общая экономия', totalDiscount !== null ? formatMoney(totalDiscount) : null);
                         addField(purchaseFields, 'Email клиента', value('customer_email', 'email'));
-                        addField(purchaseFields, 'Хост', value('host_name', 'host'));
-                        addField(purchaseFields, 'ID ключа', value('key_id'));
+                         addField(purchaseFields, 'Хост', value('host_name', 'host'));
+                         addField(purchaseFields, 'ID ключа', value('key_id'));
+                         addField(purchaseFields, 'Ссылка подписки', value('subscription_url', 'subscriptionUrl'), linkValue);
                         addField(balanceFields, 'Изменение', tx.delta !== null && tx.delta !== undefined ? formatMoney(tx.delta, true) : null);
                         addField(balanceFields, 'Баланс до', tx.old_balance !== null && tx.old_balance !== undefined ? formatMoney(tx.old_balance) : null);
                         addField(balanceFields, 'Баланс после', tx.new_balance !== null && tx.new_balance !== undefined ? formatMoney(tx.new_balance) : null);
@@ -3125,7 +3319,8 @@
                         addField(balanceFields, 'ID администратора', tx.admin_id);
                         addField(balanceFields, 'Источник', tx.source_username);
                         addField(balanceFields, 'ID источника', tx.source_user_id);
-                        addField(balanceFields, 'Связанный платёж', tx.source_payment_id);
+                         addField(balanceFields, 'Связанный платёж', tx.source_payment_id);
+                         addField(balanceFields, 'Ссылка подписки', value('subscription_url', 'subscriptionUrl'), linkValue);
 
                         const userFields = [];
                         addField(userFields, 'Пользователь', customerName);
@@ -3269,26 +3464,26 @@
                             } catch (_) { }
 
                             const li = document.createElement('li');
-                            li.className = 'bg-white/5 border border-white/5 rounded-xl px-3 py-2.5 flex justify-between items-center mb-2 hover:bg-white/10 transition-colors group';
+                            li.className = 'bg-white/5 border border-white/5 rounded-lg px-2.5 py-2 flex justify-between items-center gap-2 mb-2 hover:bg-white/10 transition-colors group';
 
                             li.innerHTML = `
-                                <div class="truncate flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px] border border-primary/20">
+                                <div class="truncate flex items-center gap-2.5 min-w-0">
+                                    <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-[9px] border border-primary/20 shrink-0">
                                        RF
                                     </div>
-                                    <div class="flex flex-col truncate">
-                                        <span class="text-white font-bold text-xs tracking-tight group-hover:text-primary transition-colors">@${r.username || 'Без юзернейма'}</span>
-                                        <span class="text-white/40 text-[10px] font-mono">#${r.telegram_id}</span>
+                                    <div class="flex flex-col truncate min-w-0">
+                                        <span class="text-white font-bold text-xs tracking-tight group-hover:text-primary transition-colors truncate">@${r.username || 'Без юзернейма'}</span>
+                                        <span class="text-white/40 text-[9px] font-mono">#${r.telegram_id}</span>
                                     </div>
                                 </div>
-                                <div class="flex flex-col items-end gap-0.5">
+                                <div class="flex flex-col items-end gap-0.5 shrink-0">
                                     <span class="text-white/30 text-[9px] uppercase tracking-wider font-bold">${datePart}</span>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-1.5">
                                          <span class="text-[10px] ${r.total_spent > 0 ? 'text-primary font-bold' : 'text-white/20'} bg-black/20 px-1.5 rounded">${(r.total_spent || 0).toFixed(0)}₽</span>
                                          <a href="{{ url_for('users_page') }}?q=${r.telegram_id}"
-                                           class="w-5 h-5 rounded-md bg-white/5 hover:bg-white/20 text-white/30 hover:text-white flex items-center justify-center transition-all"
+                                           class="w-6 h-6 rounded-md bg-white/5 hover:bg-white/20 text-white/30 hover:text-white flex items-center justify-center transition-all"
                                            title="Перейти к пользователю" target="_blank">
-                                            <span class="material-symbols-outlined text-[10px]">arrow_outward</span>
+                                            <span class="material-symbols-outlined text-[11px]">arrow_outward</span>
                                         </a>
                                     </div>
                                 </div>
@@ -3379,7 +3574,7 @@
             if (!btn) return;
 
             const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
-            const uname = document.getElementById('udm-username')?.textContent?.replace('@', '') || '';
+            const uname = document.getElementById('udm-profile-name')?.dataset.username || 'N/A';
             const balance = document.getElementById('udm-balance')?.textContent || '0.00';
 
             if (!uid) return;

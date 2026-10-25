@@ -2175,8 +2175,8 @@ def get_user_router() -> Router:
                 attempt += 1
 
             trial_traffic, trial_hwid = int(get_setting("trial_traffic_limit_gb") or 0), int(get_setting("trial_hwid_limit") or 0)
-            trial_internal_squad_uuid = (get_setting("trial_internal_squad_uuid") or "").strip() or None
-            result = await remnawave_api.create_or_update_key_on_host(host_name=host_name, email=candidate_email, days_to_add=int(get_setting("trial_duration_days")), telegram_id=user_id, traffic_limit_gb=trial_traffic if trial_traffic > 0 else None, hwid_limit=trial_hwid if trial_hwid > 0 else None, internal_squad_uuid=trial_internal_squad_uuid)
+            trial_external_squad_uuid = (get_setting("trial_external_squad_uuid") or "").strip() or None
+            result = await remnawave_api.create_or_update_key_on_host(host_name=host_name, email=candidate_email, days_to_add=int(get_setting("trial_duration_days")), telegram_id=user_id, traffic_limit_gb=trial_traffic if trial_traffic > 0 else None, hwid_limit=trial_hwid if trial_hwid > 0 else None, external_squad_uuid=trial_external_squad_uuid)
             
             if not result:
                 await smart_edit_message(message, "❌ <b>Ошибка сервера</b>\nНе удалось сгенерировать конфигурацию. Попробуйте выбрать другой сервер.")

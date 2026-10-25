@@ -292,7 +292,7 @@
         if (!dateStr) return '';
         const parts = dateStr.match(/(\d{4})[-/](\d{2})[-/](\d{2})\s+(\d{2}):(\d{2})/);
         if (!parts) return dateStr;
-        const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5]) - 3 * 3600000);
+        const date = new Date(Date.UTC(parts[1], parts[2] - 1, parts[3], parts[4], parts[5]));
         const now = new Date();
         const diffMs = now - date;
         const diffMin = Math.floor(diffMs / 60000);

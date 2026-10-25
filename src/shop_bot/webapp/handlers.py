@@ -33,6 +33,7 @@ from shop_bot.data_manager.database import get_seller_user, get_device_tiers, ge
 from shop_bot.modules import remnawave_api
 from shop_bot.config import get_purchase_success_text
 import re
+import time
 from decimal import Decimal
 import logging
 from urllib.parse import urlencode
@@ -56,6 +57,8 @@ def normalize_key_comment(comment: str, *, allow_empty: bool = False) -> str:
 
 # In-memory storage for temporary auth tokens: {token: user_id}
 TEMP_AUTH_TOKENS = {}
+TEMP_AUTH_TOKEN_CREATED = {}
+TEMP_AUTH_TOKEN_TTL_SECONDS = 600
 # ===== Utility Functions =====
 def get_transaction_comment(user_data: dict, action_type: str, value: any, host_name: str = None) -> str:
     from shop_bot.bot.handlers import get_transaction_comment as bot_get_comment
@@ -247,6 +250,7 @@ def _process_template_placeholders(html: str, user_id: int, webapp_settings: dic
         "{{ webapp_icon }}": context_data.get("webapp_icon", ""),
         "{{ logo_hidden }}": "hidden" if not context_data.get("webapp_logo") else "",
         "{{ fire_logo_fallback }}": "" if context_data.get("webapp_logo") else '<span class="material-icons-round">local_fire_department</span>',
+        "{{ prime_logo_fallback }}": "" if context_data.get("webapp_logo") else '<span class="material-icons-round">waves</span>',
         "{{ user_id }}": str(user_id),
         "{{ tg_fullscreen_class }}": "tg-fullscreen" if webapp_settings.get("tg_fullscreen") else "",
         "{{ subscriptions_json }}": json.dumps(context_data.get("subscriptions", []), ensure_ascii=False).replace("</", "<\\/"),
@@ -1380,6 +1384,19 @@ class PasswordResetVerifyRequest(BaseModel):
 # Stores dict: { "email@bot.local": {"code": "123456", "expires": float_timestamp} }
 PASSWORD_RESET_TOKENS = {}
 
+def _cleanup_expired_memory_tokens():
+    now = time.time()
+    expired_tokens = [token for token, created_at in list(TEMP_AUTH_TOKEN_CREATED.items()) if now - created_at > TEMP_AUTH_TOKEN_TTL_SECONDS]
+    for token in expired_tokens:
+        TEMP_AUTH_TOKENS.pop(token, None)
+        TEMP_AUTH_TOKEN_CREATED.pop(token, None)
+    orphan_tokens = [token for token in list(TEMP_AUTH_TOKEN_CREATED.keys()) if token not in TEMP_AUTH_TOKENS]
+    for token in orphan_tokens:
+        TEMP_AUTH_TOKEN_CREATED.pop(token, None)
+    expired_emails = [email for email, token_data in list(PASSWORD_RESET_TOKENS.items()) if now > float(token_data.get("expires") or 0)]
+    for email in expired_emails:
+        PASSWORD_RESET_TOKENS.pop(email, None)
+
 class SyncTgRequest(BaseModel):
     token: str
     init_data: str
@@ -1451,8 +1468,10 @@ def validate_telegram_data(init_data: str, bot_token: str) -> dict | None:
 
 @app.get("/api/auth/request-token")
 async def api_request_auth_token():
+    _cleanup_expired_memory_tokens()
     token = str(uuid.uuid4())[:36]
     TEMP_AUTH_TOKENS[token] = None
+    TEMP_AUTH_TOKEN_CREATED[token] = time.time()
     bot_username = get_setting("telegram_bot_username")
     auth_url = f"tg://resolve?domain={bot_username}&start=auth_{token}"
     return {"ok": True, "token": token, "auth_url": auth_url}
@@ -1463,6 +1482,7 @@ async def api_check_auth_token(token: str):
     # 1. Check in memory (waiting for bot confirmation)
     if token in TEMP_AUTH_TOKENS and TEMP_AUTH_TOKENS[token] is not None:
         user_id = TEMP_AUTH_TOKENS.pop(token)
+        TEMP_AUTH_TOKEN_CREATED.pop(token, None)
         
         # Check existing token first
         existing_token = database.get_auth_token_by_user_id(user_id)
@@ -1607,6 +1627,7 @@ async def api_email_login(req: EmailAuthRequest):
 @app.post("/api/auth/email/reset/request")
 async def api_email_reset_request(req: PasswordResetRequest):
     from shop_bot.data_manager import database
+    _cleanup_expired_memory_tokens()
     user = database.get_user_by_email(req.email)
     if not user:
         return {"ok": False, "error": "Email не найден"}

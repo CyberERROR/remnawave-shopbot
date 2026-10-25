@@ -43,7 +43,6 @@
 <section id="tab-broadcast" class="tab-content space-y-4">
     <div class="space-y-4">
         <header class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
-            <div class="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-sky-400/[0.08]"></div>
             <div class="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-center gap-3">
                     <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/10 text-sky-300">
@@ -56,16 +55,16 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-1.5 text-xs font-medium text-emerald-300"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>Готово к отправке</span>
-                    <button type="button" onclick="document.getElementById('broadcast-form').scrollIntoView({behavior: 'smooth', block: 'start'})" class="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white"><i data-lucide="arrow-down-to-line" class="h-4 w-4" aria-hidden="true"></i>К редактору</button>
+                    <button type="button" onclick="document.getElementById('broadcast-form').scrollIntoView({behavior: 'smooth', block: 'start'})" class="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition duration-150"><i data-lucide="arrow-down-to-line" class="h-4 w-4" aria-hidden="true"></i>К редактору</button>
                 </div>
             </div>
         </header>
 
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <div class="group relative flex h-[84px] items-center gap-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150 hover:-translate-y-0.5 hover:border-white/20"><div class="pointer-events-none absolute right-0 top-0 h-16 w-16 rounded-full bg-sky-400/[0.08]"></div><div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300"><i data-lucide="users" class="h-4 w-4" aria-hidden="true"></i></div><div class="relative min-w-0"><p class="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/50">Всего пользователей</p><p class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-white/40" id="stat-total">-</p></div></div>
-            <div class="group relative flex h-[84px] items-center gap-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150 hover:-translate-y-0.5 hover:border-white/20"><div class="pointer-events-none absolute right-0 top-0 h-16 w-16 rounded-full bg-emerald-400/[0.08]"></div><div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300"><i data-lucide="key-round" class="h-4 w-4" aria-hidden="true"></i></div><div class="relative min-w-0"><p class="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/50">С активными ключами</p><p class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-white/40" id="stat-with-keys">-</p></div></div>
-            <div class="group relative flex h-[84px] items-center gap-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150 hover:-translate-y-0.5 hover:border-white/20"><div class="pointer-events-none absolute right-0 top-0 h-16 w-16 rounded-full bg-amber-400/[0.08]"></div><div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300"><i data-lucide="timer-off" class="h-4 w-4" aria-hidden="true"></i></div><div class="relative min-w-0"><p class="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/50">С истекшими ключами</p><p class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-white/40" id="stat-expired-keys">-</p></div></div>
-            <div class="group relative flex h-[84px] items-center gap-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150 hover:-translate-y-0.5 hover:border-white/20"><div class="pointer-events-none absolute right-0 top-0 h-16 w-16 rounded-full bg-violet-400/[0.08]"></div><div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-400/10 text-violet-300"><i data-lucide="sparkles" class="h-4 w-4" aria-hidden="true"></i></div><div class="relative min-w-0"><p class="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/50">Не использовали триал</p><p class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-white/40" id="stat-no-trial">-</p></div></div>
+            <div class="group relative flex h-[84px] items-center gap-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150"><div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300"><i data-lucide="users" class="h-4 w-4" aria-hidden="true"></i></div><div class="relative min-w-0"><p class="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/50">Всего пользователей</p><p class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-white/40" id="stat-total">-</p></div></div>
+            <div class="group relative flex h-[84px] items-center gap-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150"><div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300"><i data-lucide="key-round" class="h-4 w-4" aria-hidden="true"></i></div><div class="relative min-w-0"><p class="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/50">С активными ключами</p><p class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-white/40" id="stat-with-keys">-</p></div></div>
+            <div class="group relative flex h-[84px] items-center gap-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150"><div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300"><i data-lucide="timer-off" class="h-4 w-4" aria-hidden="true"></i></div><div class="relative min-w-0"><p class="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/50">С истекшими ключами</p><p class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-white/40" id="stat-expired-keys">-</p></div></div>
+            <div class="group relative flex h-[84px] items-center gap-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 transition duration-150"><div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-400/10 text-violet-300"><i data-lucide="sparkles" class="h-4 w-4" aria-hidden="true"></i></div><div class="relative min-w-0"><p class="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/50">Не использовали триал</p><p class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-white/40" id="stat-no-trial">-</p></div></div>
         </div>
 
         <div class="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1.5">
@@ -83,20 +82,28 @@
 
                 <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                     {% for res in [
-                    {'l': 'Отправлено', 'id': 'result-sent', 'icon': 'circle-check', 'color': 'emerald'},
-                    {'l': 'Заблокировали бота', 'id': 'result-blocked-bot', 'icon': 'ban', 'color': 'amber'},
-                    {'l': 'Деактивированы в TG', 'id': 'result-deactivated', 'icon': 'user-round-x', 'color': 'amber'},
-                    {'l': 'Добавлено в ЧС', 'id': 'result-added-to-banned', 'icon': 'list-plus', 'color': 'neutral'},
-                    {'l': 'Снято с ЧС', 'id': 'result-removed-from-banned', 'icon': 'list-minus', 'color': 'emerald'},
-                    {'l': 'Всего в ЧС', 'id': 'stat-banned-count', 'icon': 'shield-alert', 'color': 'neutral'}
+                    {'l': 'Отправлено', 'id': 'result-sent', 'icon': 'circle-check', 'color': 'emerald', 'tip': 'Количество пользователей, которым сообщение было успешно отправлено'},
+                    {'l': 'Заблокировали бота', 'id': 'result-blocked-bot', 'icon': 'ban', 'color': 'amber', 'tip': 'Пользователи, заблокировавшие бота во время рассылки'},
+                    {'l': 'Деактивированы в TG', 'id': 'result-deactivated', 'icon': 'user-round-x', 'color': 'amber', 'tip': 'Аккаунты, удалённые или деактивированные в Telegram'},
+                    {'l': 'Добавлено в ЧС', 'id': 'result-added-to-banned', 'icon': 'list-plus', 'color': 'neutral', 'tip': 'Пользователи, автоматически добавленные в чёрный список при рассылке'},
+                    {'l': 'Снято с ЧС', 'id': 'result-removed-from-banned', 'icon': 'list-minus', 'color': 'emerald', 'tip': 'Пользователи, убранные из чёрного списка при рассылке'},
+                    {'l': 'Всего в ЧС', 'id': 'stat-banned-count', 'icon': 'shield-alert', 'color': 'neutral', 'tip': 'Общее количество пользователей в чёрном списке'}
                     ] %}
                     <div class="relative flex min-w-0 flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
                         <div class="flex items-center gap-2">
                             <i data-lucide="{{ res.icon }}" class="h-4 w-4 shrink-0 {% if res.color == 'emerald' %}text-emerald-300{% elif res.color == 'amber' %}text-amber-300{% else %}text-white/40{% endif %}" aria-hidden="true"></i>
                             <p class="min-w-0 text-[9px] font-semibold uppercase tracking-wider text-white/50">{{ res.l }}</p>
+                            <div class="group relative flex items-center">
+                                <span
+                                    class="material-symbols-outlined text-white/30 text-xs cursor-help hover:text-white/70 transition-colors">info</span>
+                                <div
+                                    class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2 bg-[#0a1812] border border-white/[0.08] rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[10px] text-white/70">
+                                    {{ res.tip }}
+                                </div>
+                            </div>
                             {% if res.id == 'stat-banned-count' %}
                             <button type="button" id="btn-delete-banned-users" title="Удалить всех из БД"
-                                class="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-white/40 transition duration-150 hover:bg-red-400/10 hover:text-red-300">
+                                class="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-white/40 transition duration-150">
                                 <i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i>
                             </button>
                             {% endif %}
@@ -109,25 +116,21 @@
         </div>
 
         <div
-            class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1.5 transition duration-150 hover:border-white/20">
-            <div
-                class="pointer-events-none absolute right-0 top-0 h-32 w-32 rounded-full bg-emerald-400/[0.04]">
-            </div>
-
+            class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1.5 transition duration-150">
             <div class="p-4 sm:p-5 relative z-10">
                 <form id="broadcast-form">
                     <div class="mb-8 group/textarea">
                         <div class="flex flex-col gap-2 mb-2 px-1">
                             <div class="flex items-center justify-between gap-3">
                                 <label class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Текст сообщения</label>
-                                <button type="button" id="btn-preview" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white"><i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>Проверить текст</button>
+                                <button type="button" id="btn-preview" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition duration-150"><i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>Проверить текст</button>
                             </div>
                             <div class="flex w-full items-center gap-2 overflow-hidden">
                                 <div id="broadcast-themes-container" class="flex min-w-0 flex-1 sm:flex-none items-center gap-1.5 overflow-x-auto no-scrollbar sm:max-w-[52vw] lg:max-w-[42vw]">
 
                                 </div>
                                 <button type="button" onclick="openModal('newMessageModal')"
-                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150"
                                     title="Сохранить как шаблон">
                                     <i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i>
                                 </button>
@@ -144,34 +147,34 @@
                             <span
                                 class="text-[9px] text-white/30 font-bold uppercase tracking-widest mr-2">Форматирование:</span>
                             <button type="button" onclick="insertTag('b')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 transition duration-150 hover:bg-white/[0.06] hover:text-white"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 transition duration-150"
                                 title="Жирный">B</button>
                             <button type="button" onclick="insertTag('i')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs italic font-bold text-white/70 transition duration-150 hover:bg-white/[0.06] hover:text-white"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs italic font-bold text-white/70 transition duration-150"
                                 title="Курсив">I</button>
                             <button type="button" onclick="insertTag('u')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 underline transition duration-150 hover:bg-white/[0.06] hover:text-white"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 underline transition duration-150"
                                 title="Подчеркнутый">U</button>
                             <button type="button" onclick="insertTag('s')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 line-through transition duration-150 hover:bg-white/[0.06] hover:text-white"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 line-through transition duration-150"
                                 title="Зачеркнутый">S</button>
                             <button type="button" onclick="insertTag('tg-spoiler')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 transition duration-150 hover:bg-white/[0.06] hover:text-white"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 transition duration-150"
                                 title="Спойлер">Spoiler</button>
                             <button type="button" onclick="insertTag('a')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 transition duration-150 hover:bg-white/[0.06] hover:text-white flex items-center gap-1"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-bold text-white/70 transition duration-150 flex items-center gap-1"
                                 title="Ссылка"><i data-lucide="link" class="h-4 w-4" aria-hidden="true"></i></button>
                             <button type="button" onclick="insertTag('code')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150 hover:bg-white/[0.06] hover:text-white"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150"
                                 title="Моноширинный">Code</button>
                             <button type="button" onclick="insertTag('pre')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150 hover:bg-white/[0.06] hover:text-white"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150"
                                 title="Блок кода">Pre</button>
                             <button type="button" onclick="insertTag('blockquote')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150 hover:bg-white/[0.06] hover:text-white"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150"
                                 title="Цитата">Quote</button>
                             <button type="button" onclick="insertTag('tg-emoji')"
-                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150 hover:bg-white/[0.06] hover:text-white flex items-center gap-1"
+                                class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150 flex items-center gap-1"
 title="Premium Emoji"><i data-lucide="smile-plus"
                                      class="h-4 w-4" aria-hidden="true"></i></button>
                         </div>
@@ -186,7 +189,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                             <div class="flex flex-col gap-4 h-full">
                                 <input type="file" id="media-input" accept="image/*,video/*,.gif" class="hidden" />
                             <button type="button" id="btn-upload-media"
-                                    class="w-full h-full min-h-[120px] border border-dashed border-white/[0.12] rounded-xl p-4 sm:p-5 hover:border-white/20 transition duration-150 group/upload text-center flex flex-col items-center justify-center">
+                                    class="w-full h-full min-h-[120px] border border-dashed border-white/[0.12] rounded-xl p-4 sm:p-5 transition duration-150 group/upload text-center flex flex-col items-center justify-center">
                                     <div
                                         class="w-12 h-12 rounded-full bg-white/[0.03] flex items-center justify-center mb-3 transition-all">
 <i data-lucide="cloud-upload"
@@ -203,7 +206,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                                     <video id="media-preview-video" controls
                                         class="w-full h-48 bg-black hidden"></video>
                                     <button type="button" id="btn-remove-media"
-                                        class="absolute top-3 right-3 w-8 h-8 rounded-xl bg-black/60 text-white hover:text-red-500 flex items-center justify-center transition-all  border border-white/[0.08]">
+                                        class="absolute top-3 right-3 w-8 h-8 rounded-xl bg-black/60 text-white flex items-center justify-center transition-all  border border-white/[0.08]">
 <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -217,15 +220,15 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                                 <div class="flex items-center gap-1.5 bg-black/30 border border-white/[0.08] rounded-xl p-1" id="keyboard-columns-switch" title="Количество кнопок в строке">
                                     <i data-lucide="columns-3" class="h-4 w-4 px-0.5 text-white/30" aria-hidden="true"></i>
                                     <button type="button" data-columns="1" aria-label="Одна кнопка в ряд" title="1 кнопка в ряд"
-                                        class="keyboard-columns-btn active flex h-7 w-8 items-center justify-center rounded-md bg-white/[0.08] text-white/80 transition duration-150 hover:bg-white/[0.12] hover:text-white">
+                                        class="keyboard-columns-btn active flex h-7 w-8 items-center justify-center rounded-md bg-white/[0.08] text-white/80 transition duration-150">
                                         <i data-lucide="rows-3" class="h-4 w-4" aria-hidden="true"></i>
                                     </button>
                                     <button type="button" data-columns="2" aria-label="Две кнопки в ряд" title="2 кнопки в ряд"
-                                        class="keyboard-columns-btn flex h-7 w-8 items-center justify-center rounded-md text-white/50 transition duration-150 hover:bg-white/[0.08] hover:text-white">
+                                        class="keyboard-columns-btn flex h-7 w-8 items-center justify-center rounded-md text-white/50 transition duration-150">
                                         <i data-lucide="columns-2" class="h-4 w-4" aria-hidden="true"></i>
                                     </button>
                                     <button type="button" data-columns="3" aria-label="Три кнопки в ряд" title="3 кнопки в ряд"
-                                        class="keyboard-columns-btn flex h-7 w-8 items-center justify-center rounded-md text-white/50 transition duration-150 hover:bg-white/[0.08] hover:text-white">
+                                        class="keyboard-columns-btn flex h-7 w-8 items-center justify-center rounded-md text-white/50 transition duration-150">
                                         <i data-lucide="layout-grid" class="h-4 w-4" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -234,12 +237,12 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                                 class="space-y-2 mb-3 flex-1 overflow-y-auto max-h-[320px] pr-1 custom-scrollbar"></div>
                             <div class="mt-auto flex flex-col gap-2 sm:flex-row">
                                 <button type="button" id="btn-add-button"
-                                    class="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-white/70 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white">
+                                    class="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-white/70 transition duration-150">
                                     <i data-lucide="link" class="h-4 w-4" aria-hidden="true"></i>
                                     URL КНОПКА
                                 </button>
                                 <button type="button" id="btn-add-promo-button"
-                                    class="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-300 transition duration-150 hover:bg-emerald-400/10">
+                                    class="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-300 transition duration-150">
                                     <i data-lucide="ticket-percent" class="h-4 w-4" aria-hidden="true"></i>
                                     PROMO CALLBACK
                                 </button>
@@ -267,7 +270,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                             </div>
                         </label>
                         <button type="button" id="btn-clear-banned"
-                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.04] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-amber-300 transition duration-150 hover:border-amber-400/40 hover:bg-amber-400/[0.08]">
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.04] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-amber-300 transition duration-150">
                             <i data-lucide="broom" class="h-4 w-4" aria-hidden="true"></i>
                             Очистить список ЧС
                         </button>
@@ -280,7 +283,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                                 class="block text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Аудитория
                                 рассылки</label>
                             <button type="button" id="btn-telegram-preview"
-                                class="shrink-0 inline-flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white">
+                                class="shrink-0 inline-flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition duration-150">
                                 <i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>
                                 Предпросмотр
                             </button>
@@ -308,7 +311,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                                 <input type="radio" name="mode" value="{{ mode.v }}" {{ 'checked' if mode.checked
                                     else '' }} class="peer sr-only" />
                                     <div
-                                        class="h-full flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 transition duration-150 peer-checked:border-emerald-400/40 peer-checked:bg-emerald-400/[0.04] hover:border-white/20 sm:gap-4 sm:p-4">
+                                        class="h-full flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 transition duration-150 peer-checked:border-emerald-400/40 peer-checked:bg-emerald-400/[0.04] sm:gap-4 sm:p-4">
                                     <div
                                         class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.03] text-white/40 sm:h-10 sm:w-10">
                                         <i data-lucide="{{ {'groups': 'users', 'vpn_key': 'key-round', 'timer_off': 'timer-off', 'new_releases': 'sparkles', 'history_toggle_off': 'history', 'alternate_email': 'at-sign', 'person_off': 'user-round-x', 'bug_report': 'bug'}[mode.i] }}" class="h-4 w-4" aria-hidden="true"></i>
@@ -345,7 +348,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                             <label class="relative cursor-pointer group">
                                 <input type="radio" name="mode" value="expiring_keys" class="peer sr-only" />
                                     <div
-                                        class="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 transition duration-150 peer-checked:border-emerald-400/40 peer-checked:bg-emerald-400/[0.04] hover:border-white/20 sm:gap-4 sm:p-4">
+                                        class="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 transition duration-150 peer-checked:border-emerald-400/40 peer-checked:bg-emerald-400/[0.04] sm:gap-4 sm:p-4">
                                     <div
                                         class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.03] text-white/40 sm:h-10 sm:w-10">
                                         <i data-lucide="calendar-clock" class="h-5 w-5" aria-hidden="true"></i>
@@ -371,7 +374,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                                     <input type="radio" name="expiring_days" value="{{ day }}" {{ 'checked' if day==3
                                         else '' }} class="peer sr-only" />
                                     <div
-                                        class="flex h-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] transition duration-150 peer-checked:border-emerald-400/40 peer-checked:bg-emerald-400/[0.06] peer-checked:text-emerald-300 hover:border-white/20 sm:h-14">
+                                        class="flex h-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] transition duration-150 peer-checked:border-emerald-400/40 peer-checked:bg-emerald-400/[0.06] peer-checked:text-emerald-300 sm:h-14">
                                         <span id="expiring-label-{{ day }}"
                                             class="text-xs font-semibold text-white/70 transition-colors">{{
                                             day }} {{ 'день' if day == 1 else 'дня' if day < 5 else 'дней' }} <span
@@ -385,9 +388,9 @@ title="Premium Emoji"><i data-lucide="smile-plus"
 
 
                     <button type="submit" id="btn-send"
-                        class="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-6 text-sm font-semibold tracking-wide text-emerald-300 transition duration-150 hover:bg-emerald-400/20 active:scale-[0.99] group">
+                        class="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-6 text-sm font-semibold tracking-wide text-emerald-300 transition duration-150 active:scale-[0.99]">
                          <i data-lucide="send"
-                             class="h-5 w-5 group-hover:rotate-12 transition-transform" aria-hidden="true"></i>
+                             class="h-5 w-5" aria-hidden="true"></i>
                         <span>Запустить рассылку</span>
                     </button>
                 </form>
@@ -410,15 +413,17 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                                 style="width: 0%"></div>
                         </div>
 
-                        <div class="grid grid-cols-3 gap-3">
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                             {% for stat in [
-                            {'l': 'Отправлено', 'id': 'broadcast-progress-sent'},
-                            {'l': 'Ошибок', 'id': 'broadcast-progress-failed'},
-                            {'l': 'Пропущено', 'id': 'broadcast-progress-skipped'}
+                            {'l': 'Отправлено', 'id': 'broadcast-progress-sent', 'color': 'emerald'},
+                            {'l': 'Ошибок', 'id': 'broadcast-progress-failed', 'color': 'red'},
+                            {'l': 'Пропущено', 'id': 'broadcast-progress-skipped', 'color': 'amber'},
+                            {'l': 'Добавлено в ЧС', 'id': 'broadcast-progress-added-banned', 'color': 'neutral'},
+                            {'l': 'Снято с ЧС', 'id': 'broadcast-progress-removed-banned', 'color': 'emerald'}
                             ] %}
                             <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] px-1 py-3 text-center">
                                 <p class="mb-1 text-[9px] font-semibold uppercase tracking-wider text-white/40">{{ stat.l }}</p>
-                                <p class="font-mono text-base font-semibold tabular-nums {% if stat.id == 'broadcast-progress-sent' %}text-emerald-300{% elif stat.id == 'broadcast-progress-failed' %}text-red-300{% else %}text-amber-300{% endif %}" id="{{ stat.id }}">0</p>
+                                <p class="font-mono text-base font-semibold tabular-nums {% if stat.color == 'emerald' %}text-emerald-300{% elif stat.color == 'red' %}text-red-300{% elif stat.color == 'amber' %}text-amber-300{% else %}text-white/70{% endif %}" id="{{ stat.id }}">0</p>
                             </div>
                             {% endfor %}
                         </div>
@@ -1860,7 +1865,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                 </div>
             </div>
             <button type="button" onclick="closeModal('telegramPreviewModal')"
-                class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white">
+                class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition duration-150">
                 <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
             </button>
         </div>
@@ -2986,7 +2991,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                 let colorDotsHtml = '';
                 colorOptions.forEach(c => {
                     const isActive = (btn.color || '') === c.value;
-                    const ring = isActive ? 'ring-2 ring-primary ring-offset-1 ring-offset-black/80 scale-110' : 'hover:scale-110 opacity-60 hover:opacity-100';
+                    const ring = isActive ? 'ring-2 ring-primary ring-offset-1 ring-offset-black/80 scale-110' : 'opacity-60';
                     colorDotsHtml += `<button type="button" class="w-5 h-5 rounded-full ${c.bg} border ${c.border} transition-all duration-150 ${ring}" title="${c.title}" data-color-idx="${idx}" data-color-value="${c.value}"></button>`;
                 });
 
@@ -2997,7 +3002,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                             ${btn.type === 'promo' ? 'Callback' : 'URL'}
                         </div>
                         ${inputField}
-                        <button type="button" class="px-2.5 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors shrink-0" data-remove="${idx}">
+                        <button type="button" class="px-2.5 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 transition-colors shrink-0" data-remove="${idx}">
                             <span class="material-symbols-outlined text-base">delete</span>
                         </button>
                     </div>
@@ -3333,6 +3338,16 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                 if (data.ok && data.task_id) {
 
                     document.getElementById('broadcast-progress-container').classList.remove('hidden');
+                    const progressTitleStart = document.querySelector('#broadcast-progress-container h4');
+                    if (progressTitleStart) {
+                        progressTitleStart.textContent = 'Выполняется рассылка...';
+                        progressTitleStart.previousElementSibling.classList.add('animate-pulse');
+                    }
+                    document.getElementById('broadcast-progress-sent').textContent = 0;
+                    document.getElementById('broadcast-progress-failed').textContent = 0;
+                    document.getElementById('broadcast-progress-skipped').textContent = 0;
+                    document.getElementById('broadcast-progress-added-banned').textContent = 0;
+                    document.getElementById('broadcast-progress-removed-banned').textContent = 0;
 
                     const pollStatus = async (taskId) => {
                         try {
@@ -3349,6 +3364,8 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                             document.getElementById('broadcast-progress-sent').textContent = progress.sent || 0;
                             document.getElementById('broadcast-progress-failed').textContent = progress.failed || 0;
                             document.getElementById('broadcast-progress-skipped').textContent = progress.skipped || 0;
+                            document.getElementById('broadcast-progress-added-banned').textContent = progress.added_to_banned || 0;
+                            document.getElementById('broadcast-progress-removed-banned').textContent = progress.removed_from_banned || 0;
 
                             if (progress.status === 'completed') {
                                 setTimeout(() => {
@@ -3361,8 +3378,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                                     btn.disabled = false;
                                     btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
 
-                                    window.showToast('success',
-                                        `Рассылка завершена! Отправлено: ${progress.sent}, Добавлено в ЧС: ${progress.added_to_banned || 0}, Снято с ЧС: ${progress.removed_from_banned || 0}`);
+                                    window.showToast('success', 'Рассылка завершена! Полная статистика — в блоке прогресса ниже');
 
                                     loadStats();
                                     document.getElementById('broadcast-text').value = '';
@@ -3393,9 +3409,23 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                     window.showToast('info', `Запущена рассылка для ${data.total_users} пользователей`);
                 } else if (data.ok && data.results) {
 
+                    document.getElementById('broadcast-progress-container').classList.remove('hidden');
+                    const progressTitleSync = document.querySelector('#broadcast-progress-container h4');
+                    if (progressTitleSync) {
+                        progressTitleSync.textContent = 'Рассылка завершена';
+                        progressTitleSync.previousElementSibling.classList.remove('animate-pulse');
+                    }
+                    document.getElementById('broadcast-progress-bar').style.width = '100%';
+                    document.getElementById('broadcast-progress-percent').textContent = '100%';
+                    document.getElementById('broadcast-progress-sent').textContent = data.results.sent || 0;
+                    document.getElementById('broadcast-progress-failed').textContent = data.results.failed || 0;
+                    document.getElementById('broadcast-progress-skipped').textContent = data.results.skipped || 0;
+                    document.getElementById('broadcast-progress-added-banned').textContent = data.results.added_to_banned || 0;
+                    document.getElementById('broadcast-progress-removed-banned').textContent = data.results.removed_from_banned || 0;
+
                     btn.disabled = false;
                     btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Отправить рассылку';
-                    window.showToast('success', `Рассылка завершена! Отправлено: ${data.results.sent}, Добавлено в ЧС: ${data.results.added_to_banned || 0}`);
+                    window.showToast('success', 'Рассылка завершена! Полная статистика — в блоке прогресса ниже');
                     loadStats();
                     document.getElementById('broadcast-text').value = '';
                     buttons = [];
@@ -5150,11 +5180,11 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                     container.innerHTML = '';
                     Object.entries(data.themes).forEach(([title, content]) => {
                         const wrapper = document.createElement('div');
-                        wrapper.className = 'shrink-0 flex items-center bg-white/[0.03] border border-white/[0.08] rounded-lg overflow-hidden transition-all hover:border-primary/30 group/theme';
+                        wrapper.className = 'shrink-0 flex items-center bg-white/[0.03] border border-white/[0.08] rounded-lg overflow-hidden transition-all';
 
                         const mainBtn = document.createElement('button');
                         mainBtn.type = 'button';
-                        mainBtn.className = 'max-w-28 sm:max-w-36 truncate text-[9px] text-white/60 hover:text-white px-2.5 py-1.5 font-bold uppercase tracking-widest border-r border-white/[0.06] hover:bg-white/[0.03] transition-all';
+                        mainBtn.className = 'max-w-28 sm:max-w-36 truncate text-[9px] text-white/60 px-2.5 py-1.5 font-bold uppercase tracking-widest border-r border-white/[0.06] transition-all';
                         mainBtn.textContent = title;
                         mainBtn.onclick = () => {
                             const textarea = document.getElementById('broadcast-text');
@@ -5167,7 +5197,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
 
                         const editBtn = document.createElement('button');
                         editBtn.type = 'button';
-                        editBtn.className = 'px-1.5 py-1.5 text-white/20 hover:text-primary hover:bg-primary/10 transition-all flex items-center justify-center border-r border-white/[0.06]';
+                        editBtn.className = 'px-1.5 py-1.5 text-white/20 transition-all flex items-center justify-center border-r border-white/[0.06]';
                         editBtn.innerHTML = '<span class="material-symbols-outlined text-xs">edit</span>';
                         editBtn.onclick = (e) => {
                             e.stopPropagation();
@@ -5178,7 +5208,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
 
                         const delBtn = document.createElement('button');
                         delBtn.type = 'button';
-                        delBtn.className = 'px-1.5 py-1.5 text-white/20 hover:text-red-500 hover:bg-red-500/10 transition-all flex items-center justify-center';
+                        delBtn.className = 'px-1.5 py-1.5 text-white/20 transition-all flex items-center justify-center';
                         delBtn.innerHTML = '<span class="material-symbols-outlined text-xs">delete</span>';
                         delBtn.onclick = async (e) => {
                             e.stopPropagation();
@@ -5296,7 +5326,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
 
 <div id="linkModal" class="modal-overlay fixed inset-0 z-[100] items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-5">
     <div class="modal-content w-full max-w-lg rounded-2xl border border-white/[0.08] bg-[#09090b] p-5 sm:p-6">
-        <div class="mb-5 flex items-center justify-between"><div class="flex items-center gap-3"><div class="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-sky-300"><i data-lucide="link" class="h-4 w-4" aria-hidden="true"></i></div><h3 class="text-base font-semibold tracking-tight text-white">Вставить ссылку</h3></div><button type="button" onclick="closeModal('linkModal')" class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white" aria-label="Закрыть окно"><i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i></button></div>
+        <div class="mb-5 flex items-center justify-between"><div class="flex items-center gap-3"><div class="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-sky-300"><i data-lucide="link" class="h-4 w-4" aria-hidden="true"></i></div><h3 class="text-base font-semibold tracking-tight text-white">Вставить ссылку</h3></div><button type="button" onclick="closeModal('linkModal')" class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition duration-150" aria-label="Закрыть окно"><i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i></button></div>
         <div class="mb-6">
             <label class="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">URL адрес</label>
             <input type="text" id="link-url-input" placeholder="https://example.com"
@@ -5304,16 +5334,16 @@ title="Premium Emoji"><i data-lucide="smile-plus"
         </div>
         <div class="flex gap-3 justify-end">
             <button type="button" onclick="closeModal('linkModal')"
-                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/[0.03] transition-all">Отмена</button>
+                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 transition-all">Отмена</button>
             <button type="button" id="btn-insert-link"
-                class="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition duration-150 hover:bg-emerald-400/20">Вставить</button>
+                class="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition duration-150">Вставить</button>
         </div>
     </div>
 </div>
 
 <div id="emojiModal" class="modal-overlay fixed inset-0 z-[100] items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-5">
     <div class="modal-content w-full max-w-lg rounded-2xl border border-white/[0.08] bg-[#09090b] p-5 sm:p-6">
-        <div class="mb-5 flex items-center justify-between"><div class="flex items-center gap-3"><div class="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-sky-300"><i data-lucide="smile-plus" class="h-4 w-4" aria-hidden="true"></i></div><h3 class="text-base font-semibold tracking-tight text-white">Вставить Premium Emoji</h3></div><button type="button" onclick="closeModal('emojiModal')" class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white" aria-label="Закрыть окно"><i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i></button></div>
+        <div class="mb-5 flex items-center justify-between"><div class="flex items-center gap-3"><div class="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-sky-300"><i data-lucide="smile-plus" class="h-4 w-4" aria-hidden="true"></i></div><h3 class="text-base font-semibold tracking-tight text-white">Вставить Premium Emoji</h3></div><button type="button" onclick="closeModal('emojiModal')" class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition duration-150" aria-label="Закрыть окно"><i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i></button></div>
         <div class="mb-6">
             <label class="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">ID Emoji</label>
             <input type="text" id="emoji-id-input" placeholder="Например: 5368324170671202286"
@@ -5321,9 +5351,9 @@ title="Premium Emoji"><i data-lucide="smile-plus"
         </div>
         <div class="flex gap-3 justify-end">
             <button type="button" onclick="closeModal('emojiModal')"
-                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/[0.03] transition-all">Отмена</button>
+                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 transition-all">Отмена</button>
             <button type="button" id="btn-insert-emoji"
-                class="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition duration-150 hover:bg-emerald-400/20">Вставить</button>
+                class="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition duration-150">Вставить</button>
         </div>
     </div>
 </div>
@@ -5332,7 +5362,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
     <div class="modal-content w-full max-w-lg rounded-2xl border border-white/[0.08] bg-[#09090b] p-5 sm:p-6">
         <div class="mb-6 flex items-center justify-between">
             <div class="flex items-center gap-3"><div class="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-sky-300"><i data-lucide="file-plus-2" class="h-4 w-4" aria-hidden="true"></i></div><h3 class="text-base font-semibold tracking-tight text-white">Новый шаблон</h3></div>
-            <button type="button" onclick="closeModal('newMessageModal')" class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white">
+            <button type="button" onclick="closeModal('newMessageModal')" class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/50 transition duration-150">
                 <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
             </button>
         </div>
@@ -5350,9 +5380,9 @@ title="Premium Emoji"><i data-lucide="smile-plus"
         </div>
         <div class="flex gap-3 justify-end mt-6">
             <button type="button" onclick="closeModal('newMessageModal')"
-                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/[0.03] transition-all">Отмена</button>
+                class="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 transition-all">Отмена</button>
             <button type="button" id="btn-save-theme"
-                class="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition duration-150 hover:bg-emerald-400/20">Сохранить</button>
+                class="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition duration-150">Сохранить</button>
         </div>
     </div>
 </div>

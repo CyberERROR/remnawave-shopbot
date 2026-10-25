@@ -207,7 +207,7 @@ async def _request(
             logger.error("Remnawave API: исчерпаны попытки подключения: %s", last_exception)
             raise RemnawaveAPIError(f"Connection failed after {max_retries} attempts: {last_exception}")
 
-    if 'response' not in locals():
+    if response.status_code >= 400 and response.status_code not in expected_status:
         try:
             detail = response.json()
         except json.JSONDecodeError:
@@ -286,12 +286,12 @@ async def _request_for_host(
             logger.error("Remnawave[%s] API: исчерпаны попытки подключения: %s", host_name, last_exception)
             raise RemnawaveAPIError(f"Connection failed after {max_retries} attempts: {last_exception}")
 
-    if 'response' not in locals():
+    if response.status_code >= 400 and response.status_code not in expected_status:
         try:
             detail = response.json()
         except json.JSONDecodeError:
             detail = response.text
-        logger.warning("Remnawave API %s %s завершился ошибкой: %s", method, path, detail)
+        logger.warning("Remnawave[%s] API %s %s завершился ошибкой: %s", host_name, method, path, detail)
         raise RemnawaveAPIError(f"Remnawave API request failed: {response.status_code} {detail}")
 
     return response
@@ -816,13 +816,12 @@ async def create_or_update_key_on_host(
     tag: str | None = None,
     telegram_id: int | str | None = None,
     force_expiry: bool = False,
-    hwid_limit: int | None = None,  # Added
-    traffic_limit_gb: int | None = None,  # Added
-    external_squad_uuid: str | None = None,  # Added for seller
-    internal_squad_uuid: str | None = None,
+    hwid_limit: int | None = None,
+    traffic_limit_gb: int | None = None,
+    traffic_limit_strategy: str | None = None,
+    external_squad_uuid: str | None = None,
 ) -> dict | None:
     """Legacy совместимость: создаёт/обновляет пользователя Remnawave и возвращает данные по ключу."""
-    
     # -------------------------------------------------------------------------
     # FIX: Принудительная нормализация email перед любыми действиями.
     # Это предотвращает ошибки вида "Invalid email" (400) для email типа ".__.@bot.local".
@@ -839,7 +838,7 @@ async def create_or_update_key_on_host(
         if not squad:
             logger.error("Remnawave: не найден сквад/хост '%s'", host_name)
             return None
-        squad_uuid = (internal_squad_uuid or squad.get('squad_uuid') or '').strip()
+        squad_uuid = (squad.get('squad_uuid') or '').strip()
         if not squad_uuid:
             logger.error("Remnawave: сквад '%s' не имеет squad_uuid", host_name)
             return None
@@ -884,7 +883,7 @@ async def create_or_update_key_on_host(
                 target_dt = now_msk + timedelta(days=days)
 
         # Default traffic strategy from host
-        traffic_limit_strategy = squad.get('default_traffic_strategy') or 'NO_RESET'
+        traffic_limit_strategy = traffic_limit_strategy or squad.get('default_traffic_strategy') or 'NO_RESET'
 
         # Resolve traffic limit:
         # 1. if traffic_limit_gb is passed (from plan), convert to bytes

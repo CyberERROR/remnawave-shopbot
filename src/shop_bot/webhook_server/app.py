@@ -12,6 +12,8 @@ import html as html_escape
 import base64
 import time
 import uuid
+import threading
+from collections import OrderedDict
 from hmac import compare_digest
 from datetime import datetime, timezone, timedelta
 from functools import wraps
@@ -74,7 +76,7 @@ from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
     delete_button_config, reorder_button_configs, DB_FILE,
     add_seller_user, get_seller_user, delete_seller_user, update_user_username,
-    get_admin_stats
+    update_user_first_name, get_admin_stats, sanitize_person_name
 )
 from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id, update_host_button_style
 import sqlite3
@@ -88,7 +90,29 @@ from .modules import security
 
 _bot_controller = None
 _support_bot_controller = SupportBotController()
-_telegram_avatar_cache = {}
+_telegram_avatar_cache = OrderedDict()
+_telegram_avatar_cache_lock = threading.Lock()
+_TELEGRAM_AVATAR_CACHE_MAX_ENTRIES = 100
+
+def _avatar_cache_get(user_id: int):
+    now = time.time()
+    with _telegram_avatar_cache_lock:
+        cached = _telegram_avatar_cache.get(user_id)
+        if cached and cached[0] > now:
+            _telegram_avatar_cache.move_to_end(user_id)
+            return cached
+        _telegram_avatar_cache.pop(user_id, None)
+    return None
+
+def _avatar_cache_put(user_id: int, expiry_ts: float, image_data, content_type):
+    with _telegram_avatar_cache_lock:
+        now = time.time()
+        for key in [k for k, v in _telegram_avatar_cache.items() if v[0] <= now]:
+            _telegram_avatar_cache.pop(key, None)
+        _telegram_avatar_cache[user_id] = (expiry_ts, image_data, content_type)
+        _telegram_avatar_cache.move_to_end(user_id)
+        while len(_telegram_avatar_cache) > _TELEGRAM_AVATAR_CACHE_MAX_ENTRIES:
+            _telegram_avatar_cache.popitem(last=False)
 
 ALL_SETTINGS_KEYS = [
     "panel_login", "panel_password", "about_text", "terms_url", "privacy_url",
@@ -96,7 +120,7 @@ ALL_SETTINGS_KEYS = [
     "telegram_bot_username", "admin_telegram_id", "yookassa_shop_id",
     "yookassa_secret_key", "sbp_enabled", "receipt_email", "cryptobot_token",
     "heleket_merchant_id", "heleket_api_key", "domain", "referral_percentage",
-    "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "trial_host_id", "trial_internal_squad_uuid", "trial_traffic_limit_gb", "trial_hwid_limit", "enable_referrals", "minimum_withdrawal",
+    "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "trial_host_id", "trial_external_squad_uuid", "trial_traffic_limit_gb", "trial_hwid_limit", "enable_referrals", "minimum_withdrawal",
 
     "enable_fixed_referral_bonus", "fixed_referral_bonus_amount",
 
@@ -1019,8 +1043,8 @@ def create_webhook_app(bot_controller_instance):
     @login_required
     def user_avatar(user_id: int):
         now = time.time()
-        cached = _telegram_avatar_cache.get(user_id)
-        if cached and cached[0] > now:
+        cached = _avatar_cache_get(user_id)
+        if cached:
             if cached[1] is None:
                 return '', 204
             response = make_response(cached[1])
@@ -1030,7 +1054,7 @@ def create_webhook_app(bot_controller_instance):
 
         token = (get_setting('telegram_bot_token') or '').strip()
         if not token:
-            _telegram_avatar_cache[user_id] = (now + 300, None, None)
+            _avatar_cache_put(user_id, now + 300, None, None)
             return '', 204
 
         try:
@@ -1040,7 +1064,7 @@ def create_webhook_app(bot_controller_instance):
                 photos_result = json.loads(api_response.read().decode('utf-8'))
             photos = photos_result.get('result', {}).get('photos', []) if photos_result.get('ok') else []
             if not photos or not photos[0]:
-                _telegram_avatar_cache[user_id] = (now + 3600, None, None)
+                _avatar_cache_put(user_id, now + 3600, None, None)
                 return '', 204
 
             file_id = photos[0][-1].get('file_id')
@@ -1050,7 +1074,7 @@ def create_webhook_app(bot_controller_instance):
                 file_result = json.loads(api_response.read().decode('utf-8'))
             file_path = file_result.get('result', {}).get('file_path') if file_result.get('ok') else None
             if not file_path:
-                _telegram_avatar_cache[user_id] = (now + 300, None, None)
+                _avatar_cache_put(user_id, now + 300, None, None)
                 return '', 204
 
             image_url = f'https://api.telegram.org/file/bot{token}/{file_path}'
@@ -1058,14 +1082,14 @@ def create_webhook_app(bot_controller_instance):
             with urllib.request.urlopen(image_request, timeout=8) as image_response:
                 image_data = image_response.read(2_000_000)
                 content_type = image_response.headers.get_content_type() or 'image/jpeg'
-            _telegram_avatar_cache[user_id] = (now + 3600, image_data, content_type)
+            _avatar_cache_put(user_id, now + 3600, image_data, content_type)
             response = make_response(image_data)
             response.headers['Content-Type'] = content_type
             response.headers['Cache-Control'] = 'private, max-age=3600'
             return response
         except Exception as error:
             logger.warning('Не удалось получить аватар Telegram для пользователя %s: %s', user_id, error)
-            _telegram_avatar_cache[user_id] = (now + 300, None, None)
+            _avatar_cache_put(user_id, now + 300, None, None)
             return '', 204
 
 
@@ -1477,6 +1501,12 @@ def create_webhook_app(bot_controller_instance):
             except Exception as e:
                 logger.error(f"Failed to get history for user {user_id}: {e}")
             
+            key_transaction_map = {}
+            for history_item in payment_history + balance_history:
+                history_key_id = history_item.get('key_id')
+                if history_key_id is not None:
+                    key_transaction_map.setdefault(str(history_key_id), history_item)
+
             subscriptions = []
             subs_stats = {
                 "total": 0,
@@ -1486,6 +1516,14 @@ def create_webhook_app(bot_controller_instance):
             try:
                 keys = get_keys_for_user(user_id) or []
                 subs_stats["total"] = len(keys)
+                key_url_map = {}
+                for key_item in keys:
+                    key_url = key_item.get('subscription_url') or key_item.get('access_url')
+                    if key_url:
+                        key_url_map[str(key_item.get('key_id'))] = key_url
+                for history_item in payment_history + balance_history:
+                    if not history_item.get('subscription_url') and history_item.get('key_id') is not None:
+                        history_item['subscription_url'] = key_url_map.get(str(history_item.get('key_id')))
                 now = get_msk_time().replace(tzinfo=None)
                 payment_by_key = {}
                 try:
@@ -1592,6 +1630,8 @@ def create_webhook_app(bot_controller_instance):
                     subscriptions.append({
                         "key_id": key.get('key_id'),
                         "key": key.get('subscription_url') or key.get('access_url') or 'N/A',
+                        "created_at": key.get('created_at') or key.get('created_date'),
+                        "transaction": key_transaction_map.get(str(key.get('key_id'))),
                         "host_name": key.get('host_name') or 'N/A',
                         "status_text": status_text,
                         "expire_date": expire_date_fmt,
@@ -1624,6 +1664,7 @@ def create_webhook_app(bot_controller_instance):
                 "user": {
                     "telegram_id": user.get('telegram_id'),
                     "username": user.get('username'),
+                    "first_name": user.get('first_name'),
                     "registration_date": user.get('registration_date'),
                     "balance": float(user.get('balance') or 0),
                     "total_spent": float(user.get('total_spent') or 0),
@@ -1741,6 +1782,26 @@ def create_webhook_app(bot_controller_instance):
 
         logger.info("User %s username updated by %s", user_id, session.get('panel_login') or 'panel')
         return jsonify({"ok": True, "username": username, "message": "Имя пользователя обновлено."})
+
+    @flask_app.route('/users/<int:user_id>/first-name', methods=['POST'])
+    @login_required
+    def update_user_first_name_route(user_id: int):
+        raw_name = (request.form.get('first_name') or '').strip()
+        first_name = sanitize_person_name(raw_name)
+
+        if not first_name:
+            return jsonify({"ok": False, "message": "Введите имя и фамилию буквами."}), 400
+        if not get_user(user_id):
+            return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+        if not update_user_first_name(user_id, first_name):
+            return jsonify({"ok": False, "message": "Не удалось обновить имя и фамилию."}), 500
+
+        logger.info("User %s profile name updated by %s", user_id, session.get('panel_login') or 'panel')
+        message = "Имя и фамилия обновлены."
+        if raw_name != first_name:
+            message = "Имя и фамилия обновлены. Недопустимые символы удалены."
+        return jsonify({"ok": True, "first_name": first_name, "message": message})
 
     @flask_app.route('/users/<int:user_id>/trial/toggle', methods=['POST'])
     @login_required
@@ -2131,7 +2192,29 @@ def create_webhook_app(bot_controller_instance):
                 base_local = f"gift_{clean_username}"
             else:
                 base_local = f"gift-{uuid.uuid4().hex[:8]}"
-            
+
+            gift_hwid_raw = (request.form.get('gift_hwid_limit') or '').strip()
+            if gift_hwid_raw:
+                try:
+                    gift_hwid = int(gift_hwid_raw)
+                    if gift_hwid > 0:
+                        hwid_limit = gift_hwid
+                except Exception:
+                    pass
+            gift_traffic_raw = (request.form.get('gift_traffic_gb') or '').strip()
+            if gift_traffic_raw:
+                try:
+                    gift_traffic = float(gift_traffic_raw.replace(',', '.'))
+                    if gift_traffic > 0:
+                        traffic_limit_gb = gift_traffic
+                except Exception:
+                    pass
+            gift_strategy_raw = (request.form.get('gift_traffic_strategy') or '').strip().upper()
+            if gift_strategy_raw in {'NO_RESET', 'DAY', 'WEEK', 'MONTH'}:
+                gift_traffic_strategy = gift_strategy_raw
+            else:
+                gift_traffic_strategy = None
+
             attempt = 0
             while True:
                 candidate_email = f"{base_local if attempt == 0 else base_local + '-' + str(attempt)}@{domain}"
@@ -2148,6 +2231,7 @@ def create_webhook_app(bot_controller_instance):
                     tag='GIFT',
                     hwid_limit=hwid_limit,
                     traffic_limit_gb=traffic_limit_gb,
+                    traffic_limit_strategy=gift_traffic_strategy,
                     telegram_id=user_id if user_id else None,
                 ))
             except Exception as e:

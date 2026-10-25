@@ -3,6 +3,7 @@ import threading
 from logging.handlers import RotatingFileHandler
 import os
 import asyncio
+import gc
 import signal
 import re
 try:
@@ -203,6 +204,9 @@ def main():
 
         asyncio.create_task(delayed_auto_start())
 
+        gc.collect()
+        gc.freeze()
+        logger.info("Объекты старта заморожены (gc.freeze).")
 
         try:
             while True:

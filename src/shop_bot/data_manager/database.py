@@ -4,9 +4,15 @@ import logging
 from pathlib import Path
 import json
 import re
+import unicodedata
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+PROTECTED_BUTTON_CONFIGS = {
+    ("subscription_addons_menu", "addon_devices"),
+    ("subscription_addons_menu", "addon_traffic"),
+}
 
 
 import os
@@ -1400,6 +1406,9 @@ def _ensure_default_button_configs(cursor: sqlite3.Cursor) -> None:
         """
     )
 
+    ensure_button("subscription_addons_menu", "addon_devices", "📱 Докупить устройства", "addon_devices_menu_{key_id}", 0, 0, 0, 1)
+    ensure_button("subscription_addons_menu", "addon_traffic", "📊 Докупить трафик", "addon_traffic_menu_{key_id}", 1, 0, 1, 1)
+
 
 # ==========================================
 
@@ -2050,7 +2059,7 @@ def add_traffic_tier(host_name: str, traffic_gb: int, price: float) -> int | Non
     return r.lastrowid if r else None
 
 def update_traffic_tier(tier_id: int, traffic_gb: int, price: float) -> bool:
-    r = _exec("UPDATE traffic_tiers SET traffic_gb=?, price=? WHERE tier_id=?", (tier_id, traffic_gb, price))
+    r = _exec("UPDATE traffic_tiers SET traffic_gb=?, price=? WHERE tier_id=?", (traffic_gb, price, tier_id))
     return r is not None and r.rowcount > 0
 
 def delete_traffic_tier(tier_id: int) -> bool:
@@ -2683,7 +2692,7 @@ def get_button_configs(menu_type: str, include_inactive: bool = False) -> list[d
         
     rows = _fetch_list(query, (menu_type,), f"Не удалось получить конфиг кнопок для {menu_type}")
     
-    if not rows and menu_type in ("main_menu", "admin_menu", "profile_menu", "support_menu", "key_info_menu"):
+    if not rows and menu_type in ("main_menu", "admin_menu", "profile_menu", "support_menu", "key_info_menu", "subscription_addons_menu"):
         try:
             count = _get_count_stat("SELECT COUNT(*) as c FROM button_configs")
             if count == 0:
@@ -2719,6 +2728,10 @@ def create_button_config(menu_type: str, button_id: str, text: str, callback_dat
                         url: str = None, row_position: int = 0, column_position: int = 0, 
                         button_width: int = 1, metadata: str = None, 
                         button_color: str = None, emoji_id: str = None) -> bool:
+    if (menu_type, button_id) in PROTECTED_BUTTON_CONFIGS:
+        logging.warning(f"Создание защищённой кнопки запрещено: {menu_type}/{button_id}")
+        return False
+
     cursor = _exec(
         """
         INSERT OR REPLACE INTO button_configs 
@@ -2855,6 +2868,11 @@ def update_existing_my_keys_button():
 
 # ===== DELETE_BUTTON_CONFIG =====
 def delete_button_config(button_id: int) -> bool:
+    button = _fetch_row("SELECT menu_type, button_id FROM button_configs WHERE id = ?", (button_id,), f"Не удалось получить конфиг кнопки {button_id}")
+    if button and (button["menu_type"], button["button_id"]) in PROTECTED_BUTTON_CONFIGS:
+        logging.warning(f"Удаление защищённой кнопки запрещено: {button['menu_type']}/{button['button_id']}")
+        return False
+
     cursor = _exec("DELETE FROM button_configs WHERE id = ?", (button_id,), f"Не удалось удалить конфиг кнопки {button_id}")
     if cursor: logging.info(f"Конфиг кнопки {button_id} удалён"); return True
     return False
@@ -2924,6 +2942,7 @@ def update_host_button_style(host_name: str, button_style: str = None, icon_emoj
 
 
 def register_user_if_not_exists(telegram_id: int, username: str | None, referrer_id, first_name: str | None = None, phone_number: str | None = None):
+    first_name = sanitize_person_name(first_name)
     row = _fetch_row("SELECT referred_by, phone_number FROM users WHERE telegram_id = ?", (telegram_id,), "")
     
     if not row:
@@ -3082,14 +3101,64 @@ def update_user_app_theme(telegram_id: int, app_theme: str) -> bool:
 
 
 # ===== UPDATE_USER_USERNAME =====
-def update_user_username(telegram_id: int, username: str) -> bool:
+def update_user_profile_field(telegram_id: int, field: str, value: str) -> bool:
+    updates = {
+        "username": ("username = ?, username_manually_set = 1", f"Не удалось обновить имя пользователя {telegram_id}"),
+        "first_name": ("first_name = ?", f"Не удалось обновить имя и фамилию пользователя {telegram_id}"),
+    }
+    update = updates.get(field)
+    if not update:
+        return False
     cursor = _exec(
-        "UPDATE users SET username = ?, username_manually_set = 1 WHERE telegram_id = ?",
-        (username, telegram_id),
-        f"Не удалось обновить имя пользователя {telegram_id}"
+        f"UPDATE users SET {update[0]} WHERE telegram_id = ?",
+        (value, telegram_id),
+        update[1],
     )
     return cursor is not None and cursor.rowcount > 0
+
+
+def update_user_username(telegram_id: int, username: str) -> bool:
+    return update_user_profile_field(telegram_id, "username", username)
+
+
+def update_user_first_name(telegram_id: int, first_name: str) -> bool:
+    return update_user_profile_field(telegram_id, "first_name", first_name)
 # ================================
+
+
+# ===== SANITIZE_PERSON_NAME =====
+ALLOWED_NAME_SCRIPTS = (
+    "LATIN", "CYRILLIC", "GREEK", "ARMENIAN", "HEBREW", "ARABIC",
+    "DEVANAGARI", "BENGALI", "GURMUKHI", "GUJARATI", "ORIYA", "TAMIL",
+    "TELUGU", "KANNADA", "MALAYALAM", "SINHALA", "THAI", "LAO", "GEORGIAN",
+    "HANGUL", "ETHIOPIC", "KHMER", "MYANMAR", "HIRAGANA", "KATAKANA",
+    "CJK", "IDEOGRAPH", "COMBINING",
+)
+
+
+def sanitize_person_name(value: str | None, max_length: int = 64) -> str | None:
+    if value is None:
+        return None
+    kept = []
+    for char in str(value):
+        if char.isspace():
+            kept.append(" ")
+            continue
+        category = unicodedata.category(char)
+        if not (category.startswith("L") or category.startswith("M") or category == "Nd"):
+            continue
+        try:
+            char_name = unicodedata.name(char)
+        except ValueError:
+            continue
+        if not char_name.startswith(ALLOWED_NAME_SCRIPTS):
+            continue
+        kept.append(char)
+    cleaned = re.sub(r"\s+", " ", "".join(kept)).strip()
+    if not cleaned:
+        return None
+    return cleaned[:max_length].strip()
+# ===============================
 
 
 # ===== GET_USER_BY_EMAIL =====

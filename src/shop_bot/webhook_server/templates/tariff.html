@@ -1048,11 +1048,19 @@
                     if (card) card.remove();
                 } else if (data.plan) {
                     const plan = data.plan;
-                    const hostName = formData.get('host_name') || '';
+                    const hostName = formData.get('host_name') || form.closest('.host-card')?.getAttribute('data-host-name') || '';
                     const cardHtml = renderPlanCard(plan, csrfToken, hostName);
 
                     if (isUpdate) {
-                        window.location.reload();
+                        const currentCard = form.closest('.plan-card');
+                        const cardContainer = document.createElement('div');
+                        cardContainer.innerHTML = cardHtml.trim();
+                        const updatedCard = cardContainer.firstElementChild;
+                        if (currentCard && updatedCard) {
+                            currentCard.replaceWith(updatedCard);
+                            window.refreshUiIcons?.(updatedCard);
+                            window.applyTariffFilters();
+                        }
                         return;
                     } else {
                         const gridId = 'plans-grid-' + hostName;
@@ -1206,14 +1214,55 @@
         const gb = parseInt(gbInput.value);
         const price = parseFloat(priceInput.value);
         if (isNaN(gb) || gb < 1) { showToast('danger', 'Укажите пакет трафика в ГБ'); return; }
-        if (isNaN(price) || price < 0) { showToast('danger', 'Укажите корректную цену'); return; }
+        if (!Number.isFinite(price) || price < 0) { showToast('danger', 'Укажите корректную цену'); return; }
         const fd = new FormData();
         fd.append('host_name', hostName);
         fd.append('traffic_gb', gb);
         fd.append('price', price);
         const r = await sendRequest('/add-traffic-tier', 'POST', fd);
-        if (r.ok) { showToast('success', 'Пакет трафика добавлен'); location.reload(); }
-        else { showToast('danger', r.error || 'Ошибка добавления'); }
+        const tierId = Number(r.tier_id);
+        if (r.ok && Number.isInteger(tierId) && tierId > 0) {
+            const list = document.getElementById('traffic-tiers-list-' + hostName);
+            if (list) appendTrafficTier(list, hostName, tierId, gb, price);
+            gbInput.value = '';
+            priceInput.value = '';
+            showToast('success', 'Пакет трафика добавлен');
+        } else {
+            showToast('danger', r.error || 'Ошибка добавления');
+        }
+    }
+
+    function appendTrafficTier(list, hostName, tierId, gb, price) {
+        const roundedPrice = Math.round(price);
+        list.insertAdjacentHTML('beforeend', `
+            <div class="group flex cursor-pointer items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 transition duration-150" id="traffic-tier-display-${tierId}">
+                <span class="font-mono text-xs font-semibold tabular-nums text-emerald-300" id="traffic-tier-display-gb-${tierId}">+${gb} ГБ</span>
+                <span class="text-[10px] text-white/30">—</span>
+                <span class="font-mono text-xs font-semibold tabular-nums text-white" id="traffic-tier-display-price-${tierId}">${roundedPrice}₽/мес</span>
+                <i data-lucide="pencil" class="ml-1 h-3 w-3 text-white/30 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true"></i>
+                <button type="button" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md border border-red-400/20 bg-red-400/[0.06] text-red-300 transition duration-150 hover:bg-red-400/[0.12]" data-tier-delete>
+                    <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div id="traffic-tier-edit-${tierId}" class="hidden items-center gap-2 rounded-lg border border-emerald-400/30 bg-black/30 px-3 py-1.5">
+                <span class="text-[10px] text-white/40">+</span>
+                <input type="number" id="traffic-tier-input-gb-${tierId}" value="${gb}" min="1" class="w-12 border-b border-emerald-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-emerald-300 outline-none focus:border-emerald-300" />
+                <span class="text-[10px] text-white/30">ГБ —</span>
+                <input type="number" id="traffic-tier-input-price-${tierId}" value="${roundedPrice}" min="0" class="w-12 border-b border-emerald-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-white outline-none focus:border-emerald-300" />
+                <span class="whitespace-nowrap text-[10px] text-white/40">₽/мес</span>
+                <button type="button" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md text-emerald-300 transition-colors hover:bg-emerald-400/10" data-tier-save>
+                    <i data-lucide="check" class="h-3 w-3" aria-hidden="true"></i>
+                </button>
+            </div>`);
+        const display = document.getElementById('traffic-tier-display-' + tierId);
+        const edit = document.getElementById('traffic-tier-edit-' + tierId);
+        display?.addEventListener('click', () => editTrafficTier(tierId));
+        display?.querySelector('[data-tier-delete]')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            deleteTrafficTier(tierId, hostName);
+        });
+        edit?.querySelector('[data-tier-save]')?.addEventListener('click', () => saveTrafficTier(tierId));
+        window.refreshUiIcons?.(list);
     }
 
     function editTrafficTier(tierId) {
@@ -1336,21 +1385,52 @@
         const priceEl = document.getElementById('tier-price-' + hostName);
         const count = parseInt(countEl?.value);
         const price = parseFloat(priceEl?.value);
-        if (!count || count < 2 || isNaN(price) || price < 0) { showToast('danger', 'Укажите корректные значения'); return; }
+        if (!count || count < 2 || !Number.isFinite(price) || price < 0) { showToast('danger', 'Укажите корректные значения'); return; }
         const fd = new FormData();
         fd.append('host_name', hostName);
         fd.append('device_count', count);
         fd.append('price', price);
         const r = await sendRequest('/add-device-tier', 'POST', fd);
-        if (r.ok && r.tier_id) {
+        const tierId = Number(r.tier_id);
+        if (r.ok && Number.isInteger(tierId) && tierId > 0) {
             const list = document.getElementById('device-tiers-list-' + hostName);
-            if (list) {
-                window.location.reload();
-            }
+            if (list) appendDeviceTier(list, hostName, tierId, count, price);
             if (countEl) countEl.value = '';
             if (priceEl) priceEl.value = '';
             showToast('success', 'Тир добавлен');
         } else showToast('danger', r.error || 'Ошибка');
+    }
+
+    function appendDeviceTier(list, hostName, tierId, count, price) {
+        const roundedPrice = Math.round(price);
+        list.insertAdjacentHTML('beforeend', `
+            <div class="group flex cursor-pointer items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 transition duration-150" id="tier-display-${tierId}">
+                <span class="font-mono text-xs font-semibold tabular-nums text-sky-300" id="tier-display-count-${tierId}">${count} устр.</span>
+                <span class="text-[10px] text-white/30">—</span>
+                <span class="font-mono text-xs font-semibold tabular-nums text-white" id="tier-display-price-${tierId}">${roundedPrice}₽/шт</span>
+                <i data-lucide="pencil" class="ml-1 h-3 w-3 text-white/30 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true"></i>
+                <button type="button" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md border border-red-400/20 bg-red-400/[0.06] text-red-300 transition duration-150 hover:bg-red-400/[0.12]" data-tier-delete>
+                    <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div id="tier-edit-${tierId}" class="hidden items-center gap-2 rounded-lg border border-sky-400/30 bg-black/30 px-3 py-1.5">
+                <input type="number" id="tier-input-count-${tierId}" value="${count}" min="2" class="w-10 border-b border-sky-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-sky-300 outline-none focus:border-sky-300" />
+                <span class="text-[10px] text-white/30">—</span>
+                <input type="number" id="tier-input-price-${tierId}" value="${roundedPrice}" min="0" class="w-10 border-b border-sky-400/30 bg-transparent px-1 text-center font-mono text-xs font-semibold text-white outline-none focus:border-sky-300" />
+                <span class="whitespace-nowrap text-[10px] text-white/40">₽/шт</span>
+                <button type="button" class="ml-1 flex h-5 w-5 items-center justify-center rounded-md text-emerald-300 transition-colors hover:bg-emerald-400/10" data-tier-save>
+                    <i data-lucide="check" class="h-3 w-3" aria-hidden="true"></i>
+                </button>
+            </div>`);
+        const display = document.getElementById('tier-display-' + tierId);
+        const edit = document.getElementById('tier-edit-' + tierId);
+        display?.addEventListener('click', () => editExtraTier(tierId));
+        display?.querySelector('[data-tier-delete]')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            deleteDeviceTier(tierId, hostName);
+        });
+        edit?.querySelector('[data-tier-save]')?.addEventListener('click', () => saveExtraTier(tierId));
+        window.refreshUiIcons?.(list);
     }
 
     async function deleteDeviceTier(tierId, hostName) {

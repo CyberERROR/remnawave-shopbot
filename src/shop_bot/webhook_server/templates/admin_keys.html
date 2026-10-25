@@ -69,6 +69,22 @@
                 <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Дата истечения <span id="expiry_days_label" class="ml-1 text-[10px] font-normal lowercase text-white/50"></span></label>
                 <div class="flex flex-wrap items-center gap-2 rounded-xl border border-white/[0.08] bg-black/30 p-1 sm:flex-nowrap"><div class="relative min-w-[140px] flex-1"><i data-lucide="calendar-days" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><input id="expiry_date" name="expiry_date" type="text" placeholder="Укажите дату" class="w-full rounded-lg border-0 bg-transparent py-1.5 pl-9 pr-2 text-xs text-white placeholder:text-white/30 focus:ring-0" /></div><div class="flex items-center gap-1 overflow-x-auto px-1 py-1">{% for preset in [30, 90, 180, 365] %}<button type="button" data-preset="{{ preset }}" class="whitespace-nowrap rounded-lg border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-[10px] font-medium text-white/60 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white">+{{ preset }}</button>{% endfor %}</div></div>
             </div>
+            <div class="create-key-field mode-section mode-gift relative sm:col-span-2 lg:col-span-4">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Лимит устройств</label>
+                <div class="relative"><i data-lucide="monitor-smartphone" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><input id="gift_hwid_limit" name="gift_hwid_limit" type="number" min="1" step="1" placeholder="Из тарифа" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 font-mono text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20" /></div>
+            </div>
+            <div class="create-key-field mode-section mode-gift relative sm:col-span-2 lg:col-span-4">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Лимит трафика, ГБ</label>
+                <div class="relative"><i data-lucide="gauge" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><input id="gift_traffic_gb" name="gift_traffic_gb" type="number" min="0" step="0.01" placeholder="Из тарифа" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 font-mono text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20" /></div>
+            </div>
+            <div class="create-key-field mode-section mode-gift relative sm:col-span-2 lg:col-span-4">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Сброс трафика</label>
+                <div class="soft-select min-w-0" data-target="gift_traffic_strategy">
+                    <button type="button" class="soft-select-toggle relative w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-left text-xs text-white outline-none transition hover:border-white/20 focus:ring-1 focus:ring-emerald-500/20" id="gift_traffic_strategy_toggle"><i data-lucide="rotate-ccw" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><span class="soft-select-text ml-1">Из тарифа</span></button>
+                    <div class="soft-select-menu" id="gift_traffic_strategy_menu"></div>
+                    <select id="gift_traffic_strategy" name="gift_traffic_strategy" class="hidden"><option value="">Из тарифа</option><option value="NO_RESET">Никогда</option><option value="DAY">Ежедневно</option><option value="WEEK">Еженедельно</option><option value="MONTH">Ежемесячно</option></select>
+                </div>
+            </div>
             <div class="create-key-field mode-section mode-personal sm:col-span-1 lg:col-span-6" id="comment_container">
                 <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Комментарий</label>
                 <div class="relative"><i data-lucide="message-square" class="absolute left-3 top-3 h-4 w-4 text-white/30" aria-hidden="true"></i><textarea id="comment" name="comment" rows="1" placeholder="Заметка или комментарий к ключу..." class="min-h-[36px] w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"></textarea></div>
@@ -94,8 +110,17 @@
             <a href="{{ url_for('admin_keys_page', filter='general') }}" data-filter-value="general" class="ajax-nav rounded-lg px-3 py-1.5 text-xs font-medium transition-all {% if current_filter == 'general' %}bg-white/10 text-white shadow-sm font-semibold{% else %}text-white/50 hover:bg-white/[0.04] hover:text-white{% endif %}">Общие</a>
             <a href="{{ url_for('admin_keys_page', filter='gift') }}" data-filter-value="gift" class="ajax-nav rounded-lg px-3 py-1.5 text-xs font-medium transition-all {% if current_filter == 'gift' %}bg-white/10 text-white shadow-sm font-semibold{% else %}text-white/50 hover:bg-white/[0.04] hover:text-white{% endif %}">Подарочные</a>
             <a href="{{ url_for('admin_keys_page', filter='trial') }}" data-filter-value="trial" class="ajax-nav rounded-lg px-3 py-1.5 text-xs font-medium transition-all {% if current_filter == 'trial' %}bg-white/10 text-white shadow-sm font-semibold{% else %}text-white/50 hover:bg-white/[0.04] hover:text-white{% endif %}">Триал</a>
-        </div>
-        <form action="{{ url_for('sweep_expired_keys_route') }}" method="post" class="ajax-form shrink-0" data-confirm="Удалить все истёкшие ключи? Это действие необратимо." data-success-msg="Истёкшие ключи удалены">
+            </div>
+            <div id="gift-selected-actions" class="relative hidden shrink-0">
+                <button type="button" id="gift-selected-actions-toggle" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-xs font-medium text-white/70 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:w-auto" aria-haspopup="menu" aria-expanded="false" aria-label="Действия с выбранными подарочными ключами"><i data-lucide="list-checks" class="h-4 w-4" aria-hidden="true"></i><span>Выбранные</span><span id="selected-gift-keys-count" class="rounded-full bg-emerald-400/10 px-1.5 py-0.5 text-[10px] tabular-nums text-emerald-300">0</span><i data-lucide="chevron-down" class="gift-actions-chevron h-3.5 w-3.5 text-white/40 transition-transform duration-150" aria-hidden="true"></i></button>
+                <div id="gift-selected-actions-menu" class="absolute right-0 top-full z-50 mt-2 hidden w-44 rounded-xl border border-white/[0.08] bg-[#0b0f0e]/95 p-1.5 shadow-2xl backdrop-blur-xl" role="menu">
+                    <button type="button" data-gift-action="copy" role="menuitem" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"><i data-lucide="copy" class="h-4 w-4 text-white/40" aria-hidden="true"></i>Скопировать</button>
+                    <button type="button" data-gift-action="comment" role="menuitem" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"><i data-lucide="message-square" class="h-4 w-4 text-white/40" aria-hidden="true"></i>Комментарии</button>
+                    <button type="button" data-gift-action="expiry" role="menuitem" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"><i data-lucide="calendar-plus" class="h-4 w-4 text-white/40" aria-hidden="true"></i>Продлить</button>
+                    <button type="button" data-gift-action="delete" role="menuitem" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-300/70 transition hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60"><i data-lucide="trash-2" class="h-4 w-4 text-red-300/50" aria-hidden="true"></i>Удалить</button>
+                </div>
+            </div>
+        <form action="{{ url_for('sweep_expired_keys_route') }}" method="post" class="ajax-form shrink-0" data-confirm="Удалить все истёкшие ключи? Это действие необратимо." data-success-msg="Истёкшие ключи удалены" data-callback="refreshKeysTable">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-400/[0.06] px-3 py-2.5 text-xs font-medium text-red-300 transition duration-150 hover:border-red-300/40 hover:bg-red-400/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60 sm:w-auto">
                 <i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i>
@@ -115,7 +140,7 @@
         <table class="w-full min-w-[1120px] border-collapse text-left">
             <thead class="sticky top-0 z-10 border-b border-white/[0.06] bg-white/[0.03] backdrop-blur-sm">
                 <tr>
-                    <th class="px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60">Ключ</th>
+                    <th class="px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60"><label id="gift-keys-selection-header" class="gift-keys-selection hidden cursor-pointer items-center gap-2"><input type="checkbox" id="select-all-gift-keys" class="gift-key-select-all h-4 w-4 rounded border-white/20 bg-black/30 text-emerald-400 accent-emerald-400" aria-label="Выбрать все видимые подарочные ключи"><span>Ключ</span></label><span id="gift-keys-selection-header-label" class="gift-keys-selection-label">Ключ</span></th>
                     <th class="px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60">Пользователь</th>
                     <th class="px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60">Сервер</th>
                     <th class="px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-white/60">Email</th>
@@ -253,6 +278,12 @@
     .keys-table-shell #keys-tbody > tr.keys-record-row-alt:hover {
         background: rgba(255, 255, 255, 0.035);
         box-shadow: inset 2px 0 rgba(56, 189, 248, 0.72);
+    }
+
+    .keys-table-shell #keys-tbody > tr.keys-row-new,
+    .keys-table-shell #keys-tbody > tr.keys-row-new:hover {
+        background: rgba(52, 211, 153, 0.08);
+        box-shadow: inset 2px 0 rgba(52, 211, 153, 0.85);
     }
 
     @media (max-width: 767px) {
@@ -440,6 +471,31 @@
             if (pricePreview) pricePreview.textContent = selectedPlan?.value ? `${Number(selectedPlan.dataset.price || 0).toFixed(0)} ₽` : '';
         }
 
+        function applyGiftDefaults() {
+            const planOption = els.plan?.selectedOptions?.[0];
+            const hostOption = els.host?.selectedOptions?.[0];
+            const hwidInput = document.getElementById('gift_hwid_limit');
+            const trafficInput = document.getElementById('gift_traffic_gb');
+            const strategySelect = document.getElementById('gift_traffic_strategy');
+            const planHwid = Number(planOption?.dataset.hwid || 0);
+            const planTraffic = Number(planOption?.dataset.trafficGb || 0);
+            if (hwidInput) {
+                hwidInput.value = planHwid > 0 ? String(planHwid) : '';
+                hwidInput.placeholder = planHwid > 0 ? String(planHwid) : 'Из тарифа';
+            }
+            if (trafficInput) {
+                trafficInput.value = planTraffic > 0 ? String(planTraffic) : '';
+                trafficInput.placeholder = planTraffic > 0 ? String(planTraffic) : 'Из тарифа';
+            }
+            if (strategySelect) {
+                const hostStrategy = hostOption?.dataset.trafficStrategy || 'NO_RESET';
+                const hasOption = Array.from(strategySelect.options).some(o => o.value === hostStrategy);
+                strategySelect.value = hasOption ? hostStrategy : '';
+                strategySelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+
         // ===== ИНИЦИАЛИЗАЦИЯ =====
         const restored = restoreState();
 
@@ -553,6 +609,7 @@
                 // Применяем детали плана (цену, лимиты)
                 updatePlanDetails();
                 updatePlanPreview();
+                applyGiftDefaults();
 
                 // ВАЖНО: Восстановление даты/дней
                 // Логика: Если у нас есть сохраненные custom_days/expiry_date, они имеют приоритет над дефолтом плана
@@ -623,6 +680,7 @@
             els.plan.addEventListener('change', () => {
                 updatePlanDetails();
                 applyPlanDefaults(); // При явном выборе плана пользователем - применяем его дефолты
+                applyGiftDefaults();
                 saveState();
                 updateCreatePreview();
             });
@@ -630,6 +688,7 @@
 
         initSoftSelect('host_name', 'Выберите хост...');
         initSoftSelect('plan_select', '— Не выбран —');
+        initSoftSelect('gift_traffic_strategy', 'Из тарифа');
 
         // 4. Режим (Personal/Gift)
         applyMode(restored.mode || (els.mode ? els.mode.value : 'personal') || 'personal');
@@ -855,8 +914,8 @@
                 try {
                     const fd = new FormData(form);
                     // Специальная логика для формы создания ключа
-                    if (form.id === 'create-key-form' && modeInput) {
-                        fd.set('mode', modeInput.value || 'personal');
+                    if (form.id === 'create-key-form' && els.mode) {
+                        fd.set('mode', els.mode.value || 'personal');
                         await maybeGenEmail(); // Обновляем email перед отправкой если нужно
                     }
 
@@ -865,12 +924,13 @@
 
                     if (data) {
                         const refreshTarget = form.getAttribute('data-refresh-target') || 'keys-tbody';
-                        await refreshContainerById(refreshTarget);
-
-                        // Дополнительные действия после успеха
                         if (form.id === 'create-key-form') {
-                            // Можно очистить форму или обновить email
+                            if (data.key_id) newKeyIds.add(String(data.key_id));
+                            await loadKeysTable();
+                            applyNewKeysHighlight();
                             await maybeGenEmail();
+                        } else {
+                            await refreshContainerById(refreshTarget);
                         }
                     }
                 } finally {
@@ -896,6 +956,10 @@
             }
         });
 
+        // Форма создания ключа: слушатель на самой форме срабатывает раньше глобального
+        // обработчика из base.html (handleGlobalAjax) и не даёт ему перехватить отправку
+        form?.addEventListener('submit', handleAjaxSubmit);
+
         // Удаляем старый обработчик кнопки создания, так как теперь используем событийную модель формы
         // submitBtn?.addEventListener('click', doSubmit);
         form?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
@@ -904,37 +968,206 @@
         // ===== МОДАЛЬНЫЕ ОКНА =====
         // Обработка сохранения комментария и срока действия
         let currentKeyId = null;
+        let massSelectionIds = null;
+
+        // ===== ПОДСВЕТКА НОВЫХ КЛЮЧЕЙ =====
+        const newKeyIds = new Set();
+        const applyNewKeysHighlight = () => {
+            document.querySelectorAll('#keys-tbody tr[data-key-id]').forEach(row => {
+                row.classList.toggle('keys-row-new', newKeyIds.has(String(row.dataset.keyId)));
+            });
+        };
+        // ===== окончание подсветки =====
         document.addEventListener('click', e => {
             const commentBtn = e.target.closest('.btn-edit-comment'), expiryBtn = e.target.closest('.btn-open-expiry');
-            if (commentBtn) { currentKeyId = commentBtn.getAttribute('data-key-id'); document.getElementById('commentInput').value = commentBtn.getAttribute('data-current-comment') || ''; refreshKeysIcons(document.getElementById('commentModal')); openModal('commentModal'); }
-            if (expiryBtn) { currentKeyId = expiryBtn.getAttribute('data-key-id'); document.getElementById('expiryDelta').value = ''; refreshKeysIcons(document.getElementById('expiryModal')); openModal('expiryModal'); }
+            if (commentBtn) { currentKeyId = commentBtn.getAttribute('data-key-id'); massSelectionIds = null; document.getElementById('commentInput').value = commentBtn.getAttribute('data-current-comment') || ''; refreshKeysIcons(document.getElementById('commentModal')); openModal('commentModal'); }
+            if (expiryBtn) { currentKeyId = expiryBtn.getAttribute('data-key-id'); massSelectionIds = null; document.getElementById('expiryDelta').value = ''; refreshKeysIcons(document.getElementById('expiryModal')); openModal('expiryModal'); }
         });
         document.getElementById('commentSaveBtn')?.addEventListener('click', async () => {
+            if (massSelectionIds) {
+                const ids = massSelectionIds;
+                massSelectionIds = null;
+                let done = 0;
+                for (const id of ids) {
+                    if (await apiRequest(`{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0/', `/${id}/`), 'POST', { comment: document.getElementById('commentInput').value }, null)) done++;
+                }
+                closeModal('commentModal');
+                showToast(done === ids.length ? 'success' : 'warning', `Комментарий обновлён: ${done} из ${ids.length}`);
+                await loadKeysTable();
+                return;
+            }
             const url = `{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0/', `/${currentKeyId}/`);
-            if (await apiRequest(url, 'POST', { comment: document.getElementById('commentInput').value }, 'Комментарий сохранён')) { closeModal('commentModal'); refreshContainerById('keys-tbody'); }
+            if (await apiRequest(url, 'POST', { comment: document.getElementById('commentInput').value }, 'Комментарий сохранён')) { closeModal('commentModal'); await loadKeysTable(); }
         });
         document.getElementById('expirySaveBtn')?.addEventListener('click', async () => {
             const delta = document.getElementById('expiryDelta').value; if (!delta) return showToast('warning', 'Введите количество дней');
+            if (massSelectionIds) {
+                const ids = massSelectionIds;
+                massSelectionIds = null;
+                let done = 0;
+                for (const id of ids) {
+                    if (await apiRequest(`{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0/', `/${id}/`), 'POST', { delta_days: delta }, null)) done++;
+                }
+                closeModal('expiryModal');
+                showToast(done === ids.length ? 'success' : 'warning', `Срок обновлён: ${done} из ${ids.length}`);
+                await loadKeysTable();
+                return;
+            }
             const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0/', `/${currentKeyId}/`);
-            if (await apiRequest(url, 'POST', { delta_days: delta }, 'Срок обновлён')) { closeModal('expiryModal'); refreshContainerById('keys-tbody'); }
+            if (await apiRequest(url, 'POST', { delta_days: delta }, 'Срок обновлён')) { closeModal('expiryModal'); await loadKeysTable(); }
         });
         // ===== окончание модальных окон =====
 
+        const giftKeysSelection = (() => {
+            const getCheckboxes = () => Array.from(document.querySelectorAll('.gift-key-select'));
+            const update = () => {
+                const checkboxes = getCheckboxes();
+                const selectedCount = checkboxes.filter(checkbox => checkbox.checked).length;
+                const selectAll = document.getElementById('select-all-gift-keys');
+                const count = document.getElementById('selected-gift-keys-count');
+                const actionsToggle = document.getElementById('gift-selected-actions-toggle');
+                if (count) count.textContent = String(selectedCount);
+                if (actionsToggle) actionsToggle.disabled = selectedCount === 0;
+                if (selectAll) {
+                    selectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+                    selectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+                }
+            };
+            const sync = isGift => {
+                document.querySelectorAll('.gift-keys-selection').forEach(element => {
+                    element.classList.toggle('hidden', !isGift);
+                    element.classList.toggle('inline-flex', isGift);
+                });
+                document.querySelectorAll('.gift-keys-selection-label').forEach(element => {
+                    element.classList.toggle('hidden', isGift);
+                });
+                const actionsWrap = document.getElementById('gift-selected-actions');
+                if (actionsWrap) {
+                    actionsWrap.classList.toggle('hidden', !isGift);
+                    actionsWrap.classList.toggle('inline-flex', isGift);
+                }
+                if (!isGift) {
+                    massSelectionIds = null;
+                    getCheckboxes().forEach(checkbox => { checkbox.checked = false; });
+                    const selectAll = document.getElementById('select-all-gift-keys');
+                    if (selectAll) {
+                        selectAll.checked = false;
+                        selectAll.indeterminate = false;
+                    }
+                }
+                update();
+            };
+            const setAll = value => {
+                getCheckboxes().forEach(checkbox => { checkbox.checked = value; });
+                update();
+            };
+            const copy = async () => {
+                const values = getCheckboxes().filter(checkbox => checkbox.checked && checkbox.dataset.key).map(checkbox => checkbox.dataset.key);
+                if (!values.length) {
+                    if (window.showToast) showToast('warning', 'Выберите хотя бы один ключ');
+                    return;
+                }
+                const text = values.join('\n');
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(text);
+                    } else {
+                        const textArea = document.createElement('textarea');
+                        try {
+                            textArea.value = text;
+                            textArea.style.position = 'fixed';
+                            textArea.style.opacity = '0';
+                            document.body.appendChild(textArea);
+                            textArea.focus();
+                            textArea.select();
+                            if (!document.execCommand('copy')) throw new Error('copy_failed');
+                        } finally {
+                            textArea.remove();
+                        }
+                    }
+                    if (window.showToast) showToast('success', `Скопировано ключей: ${values.length}`);
+                } catch (_) {
+                    if (window.showToast) showToast('danger', 'Ошибка копирования');
+                }
+            };
+            const getSelectedIds = () => getCheckboxes().filter(checkbox => checkbox.checked).map(checkbox => checkbox.closest('tr[data-key-id]')?.dataset.keyId).filter(Boolean).map(String);
+            return { copy, setAll, sync, update, getSelectedIds };
+        })();
+
+        document.addEventListener('change', e => {
+            if (e.target.matches('.gift-key-select-all')) giftKeysSelection.setAll(e.target.checked);
+            if (e.target.matches('.gift-key-select')) giftKeysSelection.update();
+        });
+
+        (() => {
+            const actionsWrap = document.getElementById('gift-selected-actions');
+            const actionsToggle = document.getElementById('gift-selected-actions-toggle');
+            const actionsMenu = document.getElementById('gift-selected-actions-menu');
+            if (!actionsWrap || !actionsToggle || !actionsMenu) return;
+            const isMenuOpen = () => !actionsMenu.classList.contains('hidden');
+            const setMenuOpen = open => {
+                if (open && actionsToggle.disabled) return;
+                actionsMenu.classList.toggle('hidden', !open);
+                actionsToggle.setAttribute('aria-expanded', String(open));
+                actionsToggle.querySelector('.gift-actions-chevron')?.classList.toggle('rotate-180', open);
+            };
+            actionsToggle.addEventListener('click', e => { e.stopPropagation(); setMenuOpen(!isMenuOpen()); });
+            let closeTimer = null;
+            actionsWrap.addEventListener('mouseenter', () => { clearTimeout(closeTimer); setMenuOpen(true); });
+            actionsWrap.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(() => setMenuOpen(false), 200); });
+            document.addEventListener('click', e => { if (!actionsWrap.contains(e.target)) setMenuOpen(false); });
+            actionsMenu.addEventListener('click', e => {
+                const item = e.target.closest('[data-gift-action]');
+                if (!item) return;
+                setMenuOpen(false);
+                const ids = giftKeysSelection.getSelectedIds();
+                if (!ids.length) { showToast('warning', 'Выберите хотя бы один ключ'); return; }
+                if (item.dataset.giftAction === 'copy') { giftKeysSelection.copy(); return; }
+                if (item.dataset.giftAction === 'comment') {
+                    massSelectionIds = ids;
+                    currentKeyId = null;
+                    document.getElementById('commentInput').value = '';
+                    refreshKeysIcons(document.getElementById('commentModal'));
+                    openModal('commentModal');
+                    return;
+                }
+                if (item.dataset.giftAction === 'expiry') {
+                    massSelectionIds = ids;
+                    currentKeyId = null;
+                    document.getElementById('expiryDelta').value = '';
+                    refreshKeysIcons(document.getElementById('expiryModal'));
+                    openModal('expiryModal');
+                    return;
+                }
+                if (item.dataset.giftAction === 'delete') {
+                    showConfirmModal(`Удалить выбранные ключи (${ids.length})? Это действие необратимо.`, async () => {
+                        let done = 0;
+                        for (const id of ids) {
+                            if (await apiRequest(`{{ url_for('delete_key_route', key_id=0) }}`.replace('/0/', `/${id}/`), 'POST', {}, null)) done++;
+                        }
+                        showToast(done ? 'success' : 'danger', done ? `Удалено ключей: ${done}` : 'Не удалось удалить ключи');
+                        await loadKeysTable();
+                    });
+                }
+            });
+        })();
+
         // ===== УПРАВЛЕНИЕ АКТИВАЦИЕЙ ФИЛЬТРОВ =====
-        // Обновление стилей кнопок фильтров
+         // Обновление стилей кнопок фильтров
         function updateFilterActiveState(urlStr) {
             const url = new URL(urlStr, location.origin);
             const currentFilter = url.searchParams.get('filter') || 'general';
-            document.querySelectorAll('#filter_switch [data-filter-value]').forEach(link => {
-                const isActive = link.dataset.filterValue === currentFilter;
-                link.classList.toggle('bg-white/10', isActive);
-                link.classList.toggle('text-white', isActive);
-                link.classList.toggle('shadow-sm', isActive);
-                link.classList.toggle('font-semibold', isActive);
-                link.classList.toggle('text-white/50', !isActive);
-                link.classList.toggle('hover:bg-white/[0.04]', !isActive);
-            });
-            refreshKeysIcons();
+             document.querySelectorAll('#filter_switch [data-filter-value]').forEach(link => {
+                 const isActive = link.dataset.filterValue === currentFilter;
+                 link.classList.toggle('bg-white/10', isActive);
+                 link.classList.toggle('text-white', isActive);
+                 link.classList.toggle('shadow-sm', isActive);
+                 link.classList.toggle('font-semibold', isActive);
+                 link.classList.toggle('text-white/50', !isActive);
+                 link.classList.toggle('hover:bg-white/[0.04]', !isActive);
+             });
+             giftKeysSelection.sync(currentFilter === 'gift');
+             refreshKeysIcons();
         }
 
         // ===== AJAX НАВИГАЦИЯ =====
@@ -952,6 +1185,7 @@
                 if (resp.ok) {
                     tbody.innerHTML = await resp.text();
                     refreshKeysIcons();
+                    applyNewKeysHighlight();
                     updateFilterActiveState(url.toString());
                     updatePagination(url);
                 }
@@ -960,6 +1194,8 @@
                 tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-red-500">Ошибка загрузки</td></tr>';
             }
         };
+
+        window.refreshKeysTable = () => loadKeysTable();
 
         // Обновление пагинации
         const updatePagination = async (currentUrl) => {
@@ -1081,10 +1317,10 @@
             const icon = btn.querySelector('[data-lucide], svg');
             if (icon) {
                 icon.setAttribute('data-lucide', 'check');
-                refreshKeysIcons(btn);
+                window.refreshUiIcons?.(btn);
                 setTimeout(() => {
                     icon.setAttribute('data-lucide', 'copy');
-                    refreshKeysIcons(btn);
+                    window.refreshUiIcons?.(btn);
                 }, 2000);
             }
         };
