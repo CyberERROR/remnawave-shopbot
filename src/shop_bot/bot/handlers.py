@@ -33,6 +33,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from shop_bot.bot import keyboards
 from shop_bot.modules.platega_api import PlategaAPI
 from shop_bot.modules.heleket_api import create_heleket_payment_request
+from shop_bot.modules.yookassa_api import get_active_yookassa_proxy_url, create_yookassa_proxy_connector, describe_proxy_for_log
 from shop_bot.data_manager.remnawave_repository import (
     add_to_balance,
     deduct_from_balance,
@@ -329,12 +330,16 @@ async def create_yookassa_payment_async(payload: dict, idempotence_key: str, sho
             for key in meta_keys
             if key in meta
         }
-    async with aiohttp.ClientSession(timeout=timeout, auth=auth) as session:
+    proxy_url = get_active_yookassa_proxy_url()
+    connector, proxy_arg = create_yookassa_proxy_connector(proxy_url)
+    if proxy_url:
+        logger.info("YooKassa: создание платежа %s через прокси %s", idempotence_key, describe_proxy_for_log(proxy_url))
+    async with aiohttp.ClientSession(timeout=timeout, auth=auth, connector=connector) as session:
         last_error = None
         max_attempts = 4
         for attempt in range(max_attempts):
             try:
-                async with session.post("https://api.yookassa.ru/v3/payments", json=api_payload, headers=headers) as response:
+                async with session.post("https://api.yookassa.ru/v3/payments", json=api_payload, headers=headers, proxy=proxy_arg) as response:
                     raw = await response.text()
                     if response.status >= 400:
                         raise RuntimeError(f"YooKassa HTTP {response.status}: {raw[:500]}")

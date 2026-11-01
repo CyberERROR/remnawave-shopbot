@@ -41,6 +41,7 @@ def get_msk_time():
 # ---------------------------------
 
 from shop_bot.modules import remnawave_api
+from shop_bot.modules import yookassa_api
 from shop_bot.bot import handlers
 from shop_bot.bot import keyboards
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -3133,6 +3134,79 @@ def create_webhook_app(bot_controller_instance):
         
         update_setting('pay_info_comment', json.dumps(pay_info))
         return jsonify({'status': 'success', 'pay_info': pay_info})
+
+
+    @flask_app.route('/api/settings/yookassa-proxy', methods=['POST'])
+    @login_required
+    def yookassa_proxy_api():
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No data provided'}), 400
+
+        action = (data.get('action') or '').strip()
+
+        if action == 'ping':
+            raw = (data.get('raw') or '').strip()
+            if not raw:
+                return jsonify({'status': 'error', 'message': 'Прокси не указан'}), 400
+            saved_scheme = None
+            for proxy in yookassa_api.get_yookassa_proxies():
+                if proxy['raw'] == raw:
+                    saved_scheme = proxy.get('scheme')
+                    break
+            result = yookassa_api.check_yookassa_proxy(raw, forced_scheme=saved_scheme)
+            if result.get('ok') and result.get('scheme'):
+                yookassa_api.apply_detected_proxy_scheme(raw, result['scheme'])
+            return jsonify({'status': 'success', 'result': result})
+
+        proxies = yookassa_api.get_yookassa_proxies()
+
+        if action == 'add':
+            items = data.get('items')
+            if isinstance(items, str):
+                items = [line.strip() for line in items.splitlines()]
+            if not isinstance(items, list) or not [i for i in items if (i or '').strip()]:
+                return jsonify({'status': 'error', 'message': 'Нет прокси для добавления'}), 400
+            scheme_param = (data.get('scheme') or '').strip().lower()
+            forced_scheme = scheme_param if scheme_param in yookassa_api.YOOKASSA_PROXY_SCHEMES else None
+            added = 0
+            invalid = []
+            for raw in items:
+                raw = (raw or '').strip()
+                if not raw:
+                    continue
+                parsed = yookassa_api.parse_proxy(raw, forced_scheme)
+                if parsed is None:
+                    invalid.append(raw)
+                    continue
+                if any(p['raw'] == raw for p in proxies):
+                    continue
+                entry = {'raw': raw, 'enabled': True}
+                if forced_scheme:
+                    entry['scheme'] = parsed['scheme']
+                proxies.append(entry)
+                added += 1
+            yookassa_api.save_yookassa_proxies(proxies)
+            message = f'Добавлено прокси: {added}'
+            if invalid:
+                message += f' · неверный формат: {len(invalid)}'
+            return jsonify({'status': 'success', 'message': message, 'proxies': proxies, 'invalid': invalid})
+
+        index = data.get('index')
+        if not isinstance(index, int) or isinstance(index, bool) or index < 0 or index >= len(proxies):
+            return jsonify({'status': 'error', 'message': 'Прокси не найден'}), 400
+
+        if action == 'toggle':
+            proxies[index]['enabled'] = not proxies[index].get('enabled', True)
+            yookassa_api.save_yookassa_proxies(proxies)
+            return jsonify({'status': 'success', 'message': 'Состояние прокси обновлено', 'proxies': proxies})
+
+        if action == 'delete':
+            proxies.pop(index)
+            yookassa_api.save_yookassa_proxies(proxies)
+            return jsonify({'status': 'success', 'message': 'Прокси удалён', 'proxies': proxies})
+
+        return jsonify({'status': 'error', 'message': f'Invalid action: {action}'}), 400
 
 
 

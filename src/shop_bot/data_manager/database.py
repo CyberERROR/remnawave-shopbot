@@ -514,6 +514,7 @@ def initialize_db():
                 "admin_telegram_ids": None,
                 "yookassa_shop_id": None,
                 "yookassa_secret_key": None,
+                "yookassa_proxies": "[]",
                 "sbp_enabled": "false",
                 "cryptobot_token": None,
                 "heleket_merchant_id": None,

@@ -781,6 +781,48 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="border-t border-white/[0.06] pt-4">
+                            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                        <i data-lucide="globe" class="h-4 w-4" aria-hidden="true"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <span class="block truncate text-xs font-medium text-white">Прокси для API-запросов</span>
+                                        <p class="text-[11px] text-white/40">Платежи в боте и WebApp создаются через активный прокси</p>
+                                    </div>
+                                </div>
+                                <div class="inline-flex shrink-0 items-center gap-1 rounded-xl border border-white/[0.08] bg-black/30 p-1" role="radiogroup" aria-label="Тип добавляемого прокси">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="yk_proxy_scheme" value="auto" class="peer sr-only" checked />
+                                        <span class="block rounded-lg px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/50 transition duration-150 hover:text-white/80 peer-checked:bg-white/10 peer-checked:text-white">Авто</span>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="yk_proxy_scheme" value="http" class="peer sr-only" />
+                                        <span class="block rounded-lg px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/50 transition duration-150 hover:text-white/80 peer-checked:bg-white/10 peer-checked:text-white">HTTP/HTTPS</span>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="yk_proxy_scheme" value="socks5" class="peer sr-only" />
+                                        <span class="block rounded-lg px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/50 transition duration-150 hover:text-white/80 peer-checked:bg-white/10 peer-checked:text-white">SOCKS5</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-2 sm:flex-row">
+                                <textarea id="yk-proxy-input" rows="2" placeholder="login:password@1.2.3.4:1080&#10;1.2.3.4:1080&#10;socks5://login:password@1.2.3.4:1080"
+                                    class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-[11px] leading-relaxed text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"></textarea>
+                                <button type="button" id="yk-proxy-add-btn"
+                                    class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-medium text-emerald-300 transition duration-150 hover:border-emerald-400/30 hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 sm:w-28 sm:self-end">
+                                    <i data-lucide="plus" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Добавить
+                                </button>
+                            </div>
+                            <p class="mt-1.5 text-[10px] leading-relaxed text-white/40">Форматы: <span class="font-mono">login:pass@ip:port</span>, <span class="font-mono">ip:port</span>, <span class="font-mono">ip:port:login:pass</span>, <span class="font-mono">ip:port@login:pass</span>, <span class="font-mono">login:pass:ip:port</span>, <span class="font-mono">socks5://</span>, <span class="font-mono">http://</span>, <span class="font-mono">https://</span>, <span class="font-mono">tg://socks?server=…&port=…&user=…&pass=…</span>. Один прокси на строку.</p>
+                            <div id="yookassa-proxy-list" class="mt-3 space-y-2"></div>
+                            <div id="yookassa-proxy-empty" class="hidden rounded-xl border border-white/[0.06] bg-black/20 p-3 text-center">
+                                <p class="text-[11px] text-white/40">Прокси не добавлены — запросы к YooKassa идут напрямую</p>
+                            </div>
+                        </div>
+
                         <div class="mt-auto rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
                             <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Webhook URL</p>
                             <p class="mt-0.5 truncate font-mono text-[11px] text-emerald-300/80 webhook-display" data-endpoint="/yookassa-webhook"></p>
@@ -1553,7 +1595,7 @@
 {% block scripts %}
 <script>
 
-    document.addEventListener('DOMContentLoaded', () => { initGlobalLogic(); initInteractiveElements(); });
+    document.addEventListener('DOMContentLoaded', () => { initGlobalLogic(); initInteractiveElements(); initYookassaProxies(); });
 
     function initGlobalLogic() {
         const tabs = document.querySelectorAll('.tab-btn'), contents = document.querySelectorAll('.tab-content');
@@ -1854,6 +1896,110 @@
             if (btn.getAttribute('data-processed')) return; btn.setAttribute('data-processed', 'true');
             btn.onclick = () => document.getElementById(btn.dataset.section + '_image_file')?.click();
         });
+    }
+
+    let ykProxies = [];
+
+    function ykEscapeHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function initYookassaProxies() {
+        try { ykProxies = JSON.parse({{ (settings.yookassa_proxies or '[]') | tojson }}) || []; } catch (e) { ykProxies = []; }
+        if (!Array.isArray(ykProxies)) ykProxies = [];
+        renderYookassaProxies();
+
+        const addBtn = document.getElementById('yk-proxy-add-btn');
+        const input = document.getElementById('yk-proxy-input');
+        if (addBtn) {
+            addBtn.onclick = async () => {
+                const lines = (input?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
+                if (!lines.length) { showToast('warning', 'Введите прокси'); return; }
+                const scheme = document.querySelector('input[name="yk_proxy_scheme"]:checked')?.value || 'auto';
+                addBtn.disabled = true;
+                const res = await sendRequest('/api/settings/yookassa-proxy', 'POST', { action: 'add', items: lines, scheme: scheme }, true);
+                addBtn.disabled = false;
+                if (res.status === 'success') {
+                    if (input) input.value = '';
+                    ykProxies = res.proxies || [];
+                    renderYookassaProxies();
+                    showToast('success', res.message || 'Прокси добавлены');
+                    if (res.invalid && res.invalid.length) showToast('danger', 'Неверный формат: ' + res.invalid.map(v => ykEscapeHtml(v)).join(', '));
+                } else showToast('danger', res.message || 'Ошибка');
+            };
+        }
+    }
+
+    function renderYookassaProxies() {
+        const list = document.getElementById('yookassa-proxy-list');
+        const empty = document.getElementById('yookassa-proxy-empty');
+        if (!list || !empty) return;
+        list.innerHTML = '';
+        empty.classList.toggle('hidden', ykProxies.length > 0);
+        ykProxies.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'flex flex-wrap items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2';
+            row.innerHTML = `
+                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                    <input type="checkbox" class="peer sr-only" ${item.enabled ? 'checked' : ''} onchange="toggleYookassaProxy(${index})" aria-label="Включить или выключить прокси" />
+                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                </label>
+                <span class="min-w-0 flex-1 truncate font-mono text-[11px] ${item.enabled ? 'text-white/80' : 'text-white/40'}" title="${ykEscapeHtml(item.raw)}">${ykEscapeHtml(item.raw)}</span>
+                ${item.scheme ? `<span class="shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/40">${ykEscapeHtml(item.scheme)}</span>` : ''}
+                <span id="yk-proxy-status-${index}" class="shrink-0 text-[10px] font-medium text-white/30"></span>
+                <button type="button" onclick="pingYookassaProxy(${index}, this)"
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-white/70 transition duration-150 hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                    <i data-lucide="activity" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                    Пинг
+                </button>
+                <button type="button" onclick="deleteYookassaProxy(${index})"
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-medium text-red-300 transition duration-150 hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60">
+                    <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                    Удалить
+                </button>`;
+            list.appendChild(row);
+        });
+        window.refreshUiIcons?.(list);
+    }
+
+    async function toggleYookassaProxy(index) {
+        const res = await sendRequest('/api/settings/yookassa-proxy', 'POST', { action: 'toggle', index: index }, true);
+        if (res.status === 'success') {
+            ykProxies = res.proxies || [];
+            renderYookassaProxies();
+            showToast('success', res.message || 'Состояние обновлено');
+        } else {
+            showToast('danger', res.message || 'Ошибка');
+            renderYookassaProxies();
+        }
+    }
+
+    async function deleteYookassaProxy(index) {
+        if (!await showCustomConfirm('Удалить прокси?')) return;
+        const res = await sendRequest('/api/settings/yookassa-proxy', 'POST', { action: 'delete', index: index }, true);
+        if (res.status === 'success') {
+            ykProxies = res.proxies || [];
+            renderYookassaProxies();
+            showToast('success', res.message || 'Прокси удалён');
+        } else showToast('danger', res.message || 'Ошибка');
+    }
+
+    async function pingYookassaProxy(index, btn) {
+        const item = ykProxies[index];
+        if (!item) return;
+        const status = document.getElementById('yk-proxy-status-' + index);
+        if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'pointer-events-none'); }
+        if (status) { status.textContent = 'проверка...'; status.className = 'shrink-0 text-[10px] font-medium text-white/40'; }
+        const res = await sendRequest('/api/settings/yookassa-proxy', 'POST', { action: 'ping', raw: item.raw }, true);
+        if (btn) { btn.disabled = false; btn.classList.remove('opacity-50', 'pointer-events-none'); }
+        if (res.status !== 'success' || !res.result) { showToast('danger', res.message || 'Ошибка пинга'); return; }
+        const result = res.result;
+        if (status) {
+            status.textContent = String(result.message || '').slice(0, 48);
+            status.className = 'shrink-0 text-[10px] font-medium ' + (result.ok ? 'text-emerald-300' : 'text-red-300');
+        }
+        if (!result.ok) showToast('danger', String(result.message || 'Прокси недоступен').slice(0, 120));
     }
 
 </script>
