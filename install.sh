@@ -30,9 +30,7 @@ EMAIL=""
 YOOKASSA_PORT=""
 
 show_header() {
-    if [[ -n "${TERM:-}" ]] && [[ -t 1 ]]; then
-        clear || true
-    fi
+    clear
     echo -e "${PURPLE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${PURPLE}${BOLD}           REMNAWAVE SHOPBOT INSTALLER & UPDATER              ${NC}"
     echo -e "${PURPLE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -80,7 +78,6 @@ run_with_spinner() {
     
     if "${cmd[@]}" > "$temp_log" 2>&1; then
         echo -e "${GREEN}${BOLD}OK${NC}"
-        cat "$temp_log"
         rm -f "$temp_log"
         return 0
     else
@@ -128,7 +125,6 @@ run_with_animated_spinner() {
 
     if [ $exit_code -eq 0 ]; then
         echo -e "${GREEN}${BOLD}OK${NC}"
-        cat "$temp_log"
         rm -f "$temp_log"
         return 0
     else
@@ -377,7 +373,7 @@ if [[ -f "$NGINX_CONF" ]]; then
         ensure_services
         
         run_with_animated_spinner "Пересборка контейнеров" \
-            sudo bash -c "docker-compose up -d --build" || {
+            sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
             log_error "Не удалось пересобрать контейнеры"
             exit 1
         }
