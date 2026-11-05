@@ -1886,6 +1886,7 @@
                         }
                     } catch (error) {
                         console.error('Update status polling failed:', error);
+                        if (!updateStatusTimer) updateStatusTimer = setInterval(pollUpdateStatus, 3000);
                     }
                 }
 

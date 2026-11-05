@@ -29,6 +29,7 @@ _UPDATE_STATUS_PREFIX = '/tmp/remnawave-shopbot-update'
 _UPDATE_STATE_KEY = 'remnawave_shopbot_update_state'
 _update_lock = threading.Lock()
 _update_running = False
+_update_poll_thread = None
 
 
 def get_update_state():
@@ -50,13 +51,21 @@ def save_update_state(state):
 
 def _progress_from_log(log_text):
     phases = [
-        ('загрузка', 15, 'Загрузка установщика'),
-        ('обновление системы', 30, 'Подготовка системы'),
-        ('клонирование', 45, 'Загрузка файлов проекта'),
-        ('установка зависимостей', 65, 'Установка зависимостей'),
-        ('docker compose', 82, 'Обновление контейнеров'),
-        ('контейнер запущен', 94, 'Завершение запуска'),
-        ('успешно', 97, 'Завершение обновления')
+        ('режим обновления активен', 12, 'Проверка проекта'),
+        ('обновление файлов', 22, 'Загрузка файлов обновления'),
+        ('обновление зависимостей', 38, 'Обновление зависимостей'),
+        ('системные зависимости в порядке', 32, 'Проверка системных зависимостей'),
+        ('плагин certbot nginx активен', 42, 'Проверка сертификатов'),
+        ('конфигурация nginx', 52, 'Настройка веб-сервера'),
+        ('проверка конфигурации nginx', 58, 'Проверка веб-сервера'),
+        ('пересборка контейнеров', 65, 'Пересборка приложения'),
+        ('создание контейнера', 78, 'Запуск приложения'),
+        ('запуск контейнера', 88, 'Запуск приложения'),
+        ('контейнер запущен', 94, 'Проверка запуска'),
+        ('обновление / восстановление завершено', 97, 'Завершение обновления'),
+        ('установка завершена', 97, 'Завершение обновления'),
+        ('failed', 90, 'Проверка ошибки установщика'),
+        ('ошибка:', 90, 'Проверка ошибки установщика')
     ]
     text = (log_text or '').lower()
     matches = [(progress, label) for marker, progress, label in phases if marker in text]
@@ -183,32 +192,31 @@ def run_ssh_update():
     save_update_state(state)
     with _update_lock:
         _update_running = True
+        _start_update_poller()
     return {'ok': True, 'message': f'Обновление запущено на сервере, PID: {state["pid"]}', 'state': state}
 
 
-def refresh_update_state():
+def _poll_update_once():
     global _update_running
     state = get_update_state()
     if state.get('status') != 'running':
-        return state
-
-    settings = get_saved_ssh_settings()
-    password = rw_repo.get_setting(_UPDATE_SETTINGS['password']) or ''
-    if not settings['configured']:
-        state.update({'status': 'error', 'message': 'Не заданы SSH-данные для отслеживания обновления'})
-        save_update_state(state)
         with _update_lock:
             _update_running = False
         return state
 
+    password = rw_repo.get_setting(_UPDATE_SETTINGS['password']) or ''
     from shop_bot.webhook_server.modules.other import execute_ssh_command
     task_id = state.get('task_id') or ''
     log_file = f'{_UPDATE_STATUS_PREFIX}-{task_id}.log'
     status_file = f'{_UPDATE_STATUS_PREFIX}-{task_id}.status'
     poll_command = f'printf "STATUS:"; if [ -f {shlex.quote(status_file)} ]; then cat {shlex.quote(status_file)}; else echo RUNNING; fi; printf "\\nLOG:\\n"; tail -c 12000 {shlex.quote(log_file)} 2>/dev/null || true'
-    result = execute_ssh_command(state['host'], int(state['port']), state['username'], password, poll_command, timeout=20)
+    result = execute_ssh_command(state['host'], int(state['port']), state['username'], password, poll_command, timeout=10)
+    now = int(time.time())
     if not result.get('ok'):
-        state.update({'message': f'Ожидание ответа сервера: {result.get("error") or "SSH временно недоступен"}', 'updated_at': int(time.time())})
+        state.update({
+            'message': f'Ожидание ответа сервера: {result.get("error") or "SSH временно недоступен"}',
+            'updated_at': now
+        })
         save_update_state(state)
         return state
 
@@ -216,13 +224,12 @@ def refresh_update_state():
     status_text, _, log_text = output.partition('LOG:\n')
     status_value = status_text.replace('STATUS:', '').strip()
     state['log'] = log_text[-12000:]
-    state['updated_at'] = int(time.time())
+    state['updated_at'] = now
     if status_value == 'RUNNING':
-        state['status'] = 'running'
         progress, message = _progress_from_log(state['log'])
-        elapsed = max(0, int(time.time()) - int(state.get('started_at', time.time())))
+        elapsed = max(0, now - int(state.get('started_at', now)))
         activity_progress = min(88, 8 + elapsed // 8 + len(state['log']) // 500)
-        state['progress'] = min(92, max(progress, activity_progress))
+        state['progress'] = min(92, max(progress, activity_progress, int(state.get('progress', 5))))
         state['message'] = message if progress > 8 else 'Установщик выполняется'
     elif status_value == '0':
         state.update({'status': 'completed', 'progress': 100, 'message': 'Обновление успешно завершено'})
@@ -233,6 +240,44 @@ def refresh_update_state():
         with _update_lock:
             _update_running = False
     save_update_state(state)
+    return state
+
+
+def _update_poller():
+    global _update_poll_thread
+    try:
+        while True:
+            try:
+                state = _poll_update_once()
+            except Exception as e:
+                state = get_update_state()
+                if state.get('status') != 'running':
+                    break
+                state.update({'message': f'Ожидание ответа сервера: {e}', 'updated_at': int(time.time())})
+                save_update_state(state)
+            if state.get('status') != 'running':
+                break
+            time.sleep(3)
+    finally:
+        with _update_lock:
+            _update_poll_thread = None
+
+
+def _start_update_poller():
+    global _update_poll_thread
+    if _update_poll_thread and _update_poll_thread.is_alive():
+        return
+    _update_poll_thread = threading.Thread(target=_update_poller, daemon=True)
+    _update_poll_thread.start()
+
+
+def refresh_update_state():
+    global _update_running
+    state = get_update_state()
+    if state.get('status') == 'running':
+        with _update_lock:
+            _update_running = True
+            _start_update_poller()
     return state
 
 def get_releases_url():
@@ -296,16 +341,19 @@ def register_update_routes(flask_app, login_required):
     @flask_app.route('/update/settings', methods=['GET', 'POST'])
     @login_required
     def update_settings_route():
-        if request.method == 'GET':
-            return {'ok': True, **get_saved_ssh_settings()}
-        host = (request.form.get('host') or '').strip()
-        port = (request.form.get('port') or '22').strip()
-        username = (request.form.get('username') or '').strip()
-        password = request.form.get('password') or ''
-        if not password:
-            password = rw_repo.get_setting(_UPDATE_SETTINGS['password']) or ''
-        ok, message = save_ssh_settings(host, port, username, password)
-        return {'ok': ok, 'message': message}, (200 if ok else 400)
+        try:
+            if request.method == 'GET':
+                return {'ok': True, **get_saved_ssh_settings()}
+            host = (request.form.get('host') or '').strip()
+            port = (request.form.get('port') or '22').strip()
+            username = (request.form.get('username') or '').strip()
+            password = request.form.get('password') or ''
+            if not password:
+                password = rw_repo.get_setting(_UPDATE_SETTINGS['password']) or ''
+            ok, message = save_ssh_settings(host, port, username, password)
+            return {'ok': ok, 'message': message}, (200 if ok else 400)
+        except Exception as e:
+            return {'ok': False, 'message': f'Не удалось обработать настройки сервера обновления: {e}'}, 500
 
     @flask_app.route('/update/run', methods=['POST'])
     @login_required
@@ -315,7 +363,10 @@ def register_update_routes(flask_app, login_required):
     @flask_app.route('/update/status', methods=['GET'])
     @login_required
     def update_status_route():
-        return refresh_update_state()
+        try:
+            return refresh_update_state()
+        except Exception as e:
+            return {'status': 'error', 'progress': 0, 'message': f'Не удалось получить состояние обновления: {e}'}, 500
 
     @flask_app.route('/update/releases', methods=['GET'])
     @login_required
