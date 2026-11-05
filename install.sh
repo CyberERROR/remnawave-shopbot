@@ -30,7 +30,9 @@ EMAIL=""
 YOOKASSA_PORT=""
 
 show_header() {
-    clear
+    if [[ -n "${TERM:-}" ]] && [[ -t 1 ]]; then
+        clear || true
+    fi
     echo -e "${PURPLE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${PURPLE}${BOLD}           REMNAWAVE SHOPBOT INSTALLER & UPDATER              ${NC}"
     echo -e "${PURPLE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
