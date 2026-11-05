@@ -119,7 +119,7 @@ ALL_SETTINGS_KEYS = [
     "panel_login", "panel_password", "about_text", "terms_url", "privacy_url",
     "support_user", "support_text", "support_enabled", "support_schedule_enabled", "support_schedule_start", "support_schedule_end", "channel_url", "telegram_bot_token",
     "telegram_bot_username", "admin_telegram_id", "yookassa_shop_id",
-    "yookassa_secret_key", "sbp_enabled", "receipt_email", "cryptobot_token",
+    "yookassa_secret_key", "yookassa_webhook_url", "sbp_enabled", "receipt_email", "cryptobot_token",
     "heleket_merchant_id", "heleket_api_key", "domain", "referral_percentage",
     "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "trial_host_id", "trial_external_squad_uuid", "trial_traffic_limit_gb", "trial_hwid_limit", "enable_referrals", "minimum_withdrawal",
 
@@ -133,6 +133,13 @@ ALL_SETTINGS_KEYS = [
 
     "main_menu_text", "howto_intro_text",
     "howto_android_text", "howto_ios_text", "howto_windows_text", "howto_linux_text",
+
+    "msg_profile_text", "msg_referral_text",
+    "msg_promo_success_text", "msg_promo_select_key_text", "msg_promo_no_keys_text", "msg_promo_invalid_text",
+    "msg_choose_server_text", "msg_choose_payment_text",
+    "msg_keys_list_text",
+    "msg_key_info_text", "msg_purchase_success_text",
+    "msg_choose_plan_text",
 
     "btn_trial_text", "btn_profile_text", "btn_my_keys_text", "btn_buy_key_text", "btn_topup_text",
     "btn_referral_text", "btn_support_text", "btn_about_text", "btn_speed_text", "btn_howto_text",
@@ -161,11 +168,18 @@ ALL_SETTINGS_KEYS = [
     "payment_button_heleket_text", "payment_button_tonconnect_text", "payment_button_stars_text",
     "payment_button_yoomoney_text",
 
+    "payment_button_balance_icon_emoji_id", "payment_button_yookassa_icon_emoji_id", "payment_button_platega_payform_icon_emoji_id",
+    "payment_button_platega_icon_emoji_id", "payment_button_platega_crypto_icon_emoji_id", "payment_button_cryptobot_icon_emoji_id",
+    "payment_button_heleket_icon_emoji_id", "payment_button_tonconnect_icon_emoji_id", "payment_button_stars_icon_emoji_id",
+    "payment_button_yoomoney_icon_emoji_id",
+
     "yoomoney_enabled", "yoomoney_wallet", "yoomoney_secret", "stars_per_rub", "stars_enabled",
 
     "yoomoney_api_token", "yoomoney_client_id", "yoomoney_client_secret", "yoomoney_redirect_uri",
     
     "platega_enabled", "platega_crypto_enabled", "platega_payform_enabled", "platega_merchant_id", "platega_api_key",
+
+    "yookassa_enabled", "cryptobot_enabled", "heleket_enabled", "tonconnect_enabled",
 
     "main_menu_image",
     "skip_email", "enable_wal_mode",
@@ -3017,16 +3031,24 @@ def create_webhook_app(bot_controller_instance):
                 update_setting('panel_password', request.form.get('panel_password'))
 
 
-            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'platega_payform_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'demo_mode_enabled']
-            for checkbox_key in checkbox_keys:
-                values = request.form.getlist(checkbox_key)
-                value = values[-1] if values else 'false'
-                update_setting(checkbox_key, value)
+            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'platega_payform_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'demo_mode_enabled', 'yookassa_enabled', 'cryptobot_enabled', 'heleket_enabled', 'tonconnect_enabled']
+            checkbox_form1_keys = ['sbp_enabled', 'trial_enabled', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'platega_payform_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'demo_mode_enabled', 'yookassa_enabled', 'cryptobot_enabled', 'heleket_enabled', 'tonconnect_enabled']
+            checkbox_form2_keys = ['force_subscription', 'enable_referrals', 'enable_fixed_referral_bonus']
+            if (request.form.get('full_settings_form') or '').strip() == '1':
+                for checkbox_key in checkbox_form1_keys:
+                    if checkbox_key in request.form:
+                        values = request.form.getlist(checkbox_key)
+                        update_setting(checkbox_key, values[-1] if values else 'false')
+            if (request.form.get('full_settings_form2') or '').strip() == '1':
+                for checkbox_key in checkbox_form2_keys:
+                    if checkbox_key in request.form:
+                        values = request.form.getlist(checkbox_key)
+                        update_setting(checkbox_key, values[-1] if values else 'false')
                 
-            as_values = request.form.getlist('auto_start_bot')
-            auto_start_val = as_values[-1] if as_values else '0'
-            update_other_setting('auto_start_bot', auto_start_val)
-
+            if (request.form.get('full_settings_form') or '').strip() == '1':
+                as_values = request.form.getlist('auto_start_bot')
+                auto_start_val = as_values[-1] if as_values else '0'
+                update_other_setting('auto_start_bot', auto_start_val)
 
             for key in ALL_SETTINGS_KEYS:
                 if key in checkbox_keys or key == 'panel_password':
@@ -3035,15 +3057,26 @@ def create_webhook_app(bot_controller_instance):
                     values = request.form.getlist(key)
                     update_setting(key, values[-1] if values else request.form.get(key))
 
-            pay_info = {
-                'id': 1 if request.form.get('pay_info_id') else 0,
-                'username': 1 if request.form.get('pay_info_username') else 0,
-                'first_name': 1 if request.form.get('pay_info_first_name') else 0,
-                'host_name': 1 if request.form.get('pay_info_host_name') else 0,
-            }
-            update_setting('pay_info_comment', json.dumps(pay_info))
+            if (request.form.get('full_settings_form') or '').strip() == '1':
+                pay_info_id_vals = request.form.getlist('pay_info_id')
+                pay_info_username_vals = request.form.getlist('pay_info_username')
+                pay_info_first_name_vals = request.form.getlist('pay_info_first_name')
+                pay_info_host_name_vals = request.form.getlist('pay_info_host_name')
+                pay_info = {
+                    'id': int(pay_info_id_vals[-1]) if pay_info_id_vals else 0,
+                    'username': int(pay_info_username_vals[-1]) if pay_info_username_vals else 0,
+                    'first_name': int(pay_info_first_name_vals[-1]) if pay_info_first_name_vals else 0,
+                    'host_name': int(pay_info_host_name_vals[-1]) if pay_info_host_name_vals else 0,
+                }
+                update_setting('pay_info_comment', json.dumps(pay_info))
 
+            is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            if is_ajax:
+                return jsonify({'ok': True, 'success': True, 'message': 'Настройки сохранены.'})
             flash('Настройки сохранены.', 'success')
+            redirect_to = (request.form.get('redirect_to') or '').strip()
+            if redirect_to == 'button-constructor':
+                return redirect(url_for('button_constructor_page') + '#messages')
             next_hash = (request.form.get('next_hash') or '').strip() or '#panel'
             next_tab = (next_hash[1:] if next_hash.startswith('#') else next_hash) or 'panel'
             return redirect(url_for('settings_page', tab=next_tab))
@@ -4048,18 +4081,35 @@ def create_webhook_app(bot_controller_instance):
     def yookassa_webhook_handler():
         try:
             event_json = request.json
+            logger.info(f"YooKassa вебхук получен: event={event_json.get('event') if event_json else 'None'}, remote_addr={request.remote_addr}")
+            if not event_json:
+                logger.error("YooKassa вебхук: пустое тело запроса или невалидный JSON")
+                return 'Bad Request', 400
             if event_json.get("event") == "payment.succeeded":
                 metadata = event_json.get("object", {}).get("metadata", {})
+                logger.info(f"YooKassa payment.succeeded: metadata_keys={list(metadata.keys()) if metadata else 'EMPTY'}")
                 
                 bot = _bot_controller.get_bot_instance()
                 payment_processor = handlers.process_successful_payment
 
-                if metadata and bot is not None and payment_processor is not None:
-                    loop = current_app.config.get('EVENT_LOOP')
-                    if loop and loop.is_running():
-                        asyncio.run_coroutine_threadsafe(payment_processor(bot, metadata), loop)
-                    else:
-                        logger.error("YooKassa вебхук: цикл событий недоступен!")
+                if not metadata:
+                    logger.error("YooKassa вебхук: metadata пустой в payment.succeeded")
+                    return 'OK', 200
+                if bot is None:
+                    logger.error("YooKassa вебхук: бот не инициализирован (get_bot_instance() returned None)")
+                    return 'OK', 200
+                if payment_processor is None:
+                    logger.error("YooKassa вебхук: process_successful_payment недоступен")
+                    return 'OK', 200
+
+                loop = current_app.config.get('EVENT_LOOP')
+                if loop and loop.is_running():
+                    asyncio.run_coroutine_threadsafe(payment_processor(bot, metadata), loop)
+                    logger.info(f"YooKassa вебхук: обработка платежа запущена для user_id={metadata.get('user_id')}, payment_id={metadata.get('payment_id')}")
+                else:
+                    logger.error(f"YooKassa вебхук: цикл событий недоступен! loop={loop}, is_running={loop.is_running() if loop else 'N/A'}")
+            else:
+                logger.info(f"YooKassa вебхук: событие '{event_json.get('event')}' пропущено (обрабатывается только payment.succeeded)")
             return 'OK', 200
         except Exception as e:
             logger.error(f"Ошибка в обработчике вебхука YooKassa: {e}", exc_info=True)

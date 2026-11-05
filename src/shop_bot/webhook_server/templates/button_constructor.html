@@ -14,6 +14,18 @@
     </div>
 </div>
 
+<div id="constructor-tabs" class="mb-6 flex flex-wrap items-center gap-2">
+    <button type="button" data-tab="buttons" class="constructor-tab-btn flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.08] px-4 py-2 text-xs font-semibold text-white transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60">
+        <i data-lucide="mouse-pointer-click" class="h-4 w-4" aria-hidden="true"></i>
+        Кнопки
+    </button>
+    <button type="button" data-tab="messages" class="constructor-tab-btn flex items-center gap-1.5 rounded-xl border border-transparent px-4 py-2 text-xs font-semibold text-white/50 transition duration-150 hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60">
+        <i data-lucide="message-square-text" class="h-4 w-4" aria-hidden="true"></i>
+        Сообщения
+    </button>
+</div>
+
+<div id="tab-buttons" class="constructor-tab-content">
 <section class="mb-6">
     <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
         <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-violet-400/[0.08] blur-3xl"></div>
@@ -245,7 +257,6 @@
                         </button>
                     </div>
             </form>
-                </form>
             </div>
 
             <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
@@ -276,6 +287,314 @@
         </div>
     </div>
 </section>
+</div>
+
+<div id="tab-messages" class="constructor-tab-content hidden">
+<section class="mb-8">
+    <div class="grid grid-cols-1 items-start gap-3 xl:grid-cols-12">
+        <div class="space-y-3 xl:col-span-7">
+            <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-emerald-400/[0.08] blur-3xl"></div>
+                <div class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300"><i data-lucide="pencil" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Редактор сообщения</h3>
+                            <p class="text-xs text-white/60" id="message-editor-subtitle">Выберите сообщение справа</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="message-editor-form" method="POST" action="{{ url_for('settings_page') }}" class="p-3 sm:p-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="redirect_to" value="button-constructor"/>
+                    <input type="hidden" name="next_hash" value="#messages"/>
+                    <div id="message-editor-placeholder" class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/[0.08] bg-white/[0.02] py-10">
+                        <i data-lucide="mouse-pointer-click" class="h-8 w-8 text-white/20" aria-hidden="true"></i>
+                        <p class="text-xs text-white/40">Выберите сообщение из списка справа</p>
+                    </div>
+                    <div id="message-editor-body" class="hidden">
+                        <div class="mb-3 flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-white/40 shrink-0">Ключ:</span>
+                                <code id="message-key-display" class="truncate rounded-lg border border-white/[0.08] bg-black/50 px-2 py-1 font-mono text-[11px] text-emerald-300"></code>
+                            </div>
+                            <div class="flex shrink-0 items-center gap-1.5">
+                                <button type="button" id="msg-reset-btn" class="flex items-center gap-1.5 rounded-xl border border-amber-400/20 bg-amber-400/[0.08] px-3 py-1.5 text-xs font-semibold text-amber-300 transition-all hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60">
+                                    <i data-lucide="rotate-ccw" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Сброс
+                                </button>
+                                <button type="submit" class="flex items-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-1.5 text-xs font-semibold text-emerald-300 transition-all hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                    <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Сохранить
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-white/[0.08] bg-black/30 overflow-hidden">
+                            <div class="flex flex-wrap items-center gap-1 border-b border-white/[0.06] px-2.5 py-2">
+                                <span class="mr-1 text-[9px] font-bold uppercase tracking-widest text-white/30">Форматирование:</span>
+                                <button type="button" onclick="msgInsertTag('b')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Жирный">B</button>
+                                <button type="button" onclick="msgInsertTag('i')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs italic font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Курсив">I</button>
+                                <button type="button" onclick="msgInsertTag('u')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 underline transition hover:border-white/20 hover:bg-white/[0.06]" title="Подчёркнутый">U</button>
+                                <button type="button" onclick="msgInsertTag('s')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 line-through transition hover:border-white/20 hover:bg-white/[0.06]" title="Зачёркнутый">S</button>
+                                <span class="mx-0.5 h-4 w-px bg-white/[0.08]"></span>
+                                <button type="button" onclick="msgInsertTag('tg-spoiler')" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Спойлер">Spoiler</button>
+                                <button type="button" onclick="msgInsertTag('code')" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 font-mono text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Моноширинный">Code</button>
+                                <button type="button" onclick="msgInsertTag('pre')" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 font-mono text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Блок кода">Pre</button>
+                                <button type="button" onclick="msgInsertTag('blockquote')" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Цитата">Quote</button>
+                                <span class="mx-0.5 h-4 w-px bg-white/[0.08]"></span>
+                                <button type="button" onclick="msgInsertTag('a')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Ссылка"><i data-lucide="link" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+                                <button type="button" onclick="msgInsertTag('tg-emoji')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Premium Emoji"><i data-lucide="smile-plus" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+                            </div>
+                            <textarea id="message-text-input" name="" rows="10" placeholder="Введите текст сообщения..." class="w-full resize-none overflow-hidden border-0 bg-transparent px-3 py-2.5 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none focus:outline-none focus:ring-0"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-amber-400/[0.08] blur-3xl"></div>
+                <div class="relative flex min-h-[52px] items-center gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300"><i data-lucide="braces" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Доступные переменные</h3>
+                            <p class="text-xs text-white/60">Подстановка в текст сообщения</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 sm:p-4">
+                    <div id="variables-container" class="space-y-2">
+                        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                            <p class="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40">Пользователь</p>
+                            <div class="flex flex-col gap-1">
+                                <button type="button" class="var-chip-row" data-var="{username}"><code>{username}</code> <span class="var-desc">— Username пользователя</span></button>
+                                <button type="button" class="var-chip-row" data-var="{user_id}"><code>{user_id}</code> <span class="var-desc">— Telegram ID пользователя</span></button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                            <p class="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40">Финансы</p>
+                            <div class="flex flex-col gap-1">
+                                <button type="button" class="var-chip-row" data-var="{total_spent}"><code>{total_spent}</code> <span class="var-desc">— Сколько потратил пользователь (RUB)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{main_balance}"><code>{main_balance}</code> <span class="var-desc">— Основной баланс пользователя (RUB)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{price}"><code>{price}</code> <span class="var-desc">— Сумма к оплате (₽)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{reward}"><code>{reward}</code> <span class="var-desc">— Сумма начисления по промокоду (₽)</span></button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                            <p class="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40">Подписка и VPN</p>
+                            <div class="flex flex-col gap-1">
+                                <button type="button" class="var-chip-row" data-var="{vpn_status = 🛡 Статус VPN: Активен ✅ or ❌ Неактивен (срок истек)}"><code>{vpn_status = ... or ...}</code> <span class="var-desc">— Статус VPN: слева если активен, справа если неактивен</span></button>
+                                <button type="button" class="var-chip-row" data-var="{action_text = продлен or готов}"><code>{action_text = ... or ...}</code> <span class="var-desc">— Тип покупки: слева при продлении, справа при новой покупке</span></button>
+                                <button type="button" class="var-chip-row" data-var="{keys_state = Есть ключи or Нет ключей}"><code>{keys_state = ... or ...}</code> <span class="var-desc">— Статус ключей: слева если есть, справа если нет</span></button>
+                                <button type="button" class="var-chip-row" data-var="{vpn_remaining = {days_left} д. {hours_left} ч. or -}"><code>{vpn_remaining = ... or ...}</code> <span class="var-desc">— Осталось: слева если активна, справа если нет</span></button>
+                                <button type="button" class="var-chip-row" data-var="{has_partner = Заголовок партнёрки or }"><code>{has_partner = ... or }</code> <span class="var-desc">— Заголовок партнёрки (показывается если есть хоть один параметр)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{has_ref = Текст бонуса +{s_ref}% or }"><code>{has_ref = ... or }</code> <span class="var-desc">— Реферальный бонус (показывается если > 0%)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{has_sale = Текст скидки -{s_sale}% or }"><code>{has_sale = ... or }</code> <span class="var-desc">— Персональная скидка (показывается если > 0%)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{has_squad = Текст сквада ✅ or }"><code>{has_squad = ... or }</code> <span class="var-desc">— Индивидуальный сквад (показывается если задан)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{payment_header}"><code>{payment_header}</code> <span class="var-desc">— Заголовок оплаты (пополнение / допы)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{payment_summary}"><code>{payment_summary}</code> <span class="var-desc">— Итог покупки с деталями</span></button>
+                                <button type="button" class="var-chip-row" data-var="{payment_price}"><code>{payment_price}</code> <span class="var-desc">— Цена к оплате</span></button>
+                                <button type="button" class="var-chip-row" data-var="{payment_promo}"><code>{payment_promo}</code> <span class="var-desc">— Скидка по промокоду</span></button>
+                                <button type="button" class="var-chip-row" data-var="{total_months}"><code>{total_months}</code> <span class="var-desc">— Приобретено месяцев подписки</span></button>
+                                <button type="button" class="var-chip-row" data-var="{days_left}"><code>{days_left}</code> <span class="var-desc">— Осталось дней подписки</span></button>
+                                <button type="button" class="var-chip-row" data-var="{hours_left}"><code>{hours_left}</code> <span class="var-desc">— Осталось часов подписки</span></button>
+                                <button type="button" class="var-chip-row" data-var="{status_icon}"><code>{status_icon}</code> <span class="var-desc">— Иконка статуса ключа (🟢🟡🔴)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{status_text}"><code>{status_text}</code> <span class="var-desc">— Текст статуса (Активен / Не активен)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{remaining_str}"><code>{remaining_str}</code> <span class="var-desc">— Осталось времени (напр. 30д. 5ч.)</span></button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                            <p class="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40">Ключи</p>
+                            <div class="flex flex-col gap-1">
+                                <button type="button" class="var-chip-row" data-var="{key_number}"><code>{key_number}</code> <span class="var-desc">— Номер ключа</span></button>
+                                <button type="button" class="var-chip-row" data-var="{email}"><code>{email}</code> <span class="var-desc">— ID ключа (email)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{email_display}"><code>{email_display}</code> <span class="var-desc">— ID ключа для отображения</span></button>
+                                <button type="button" class="var-chip-row" data-var="{connection_string}"><code>{connection_string}</code> <span class="var-desc">— Ключ подключения (subscription URL)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{created_date}"><code>{created_date}</code> <span class="var-desc">— Дата покупки (ДД.ММ.ГГГГ)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{expiry_date}"><code>{expiry_date}</code> <span class="var-desc">— Дата истечения (ДД.ММ.ГГГГ ЧЧ:ММ)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{expiry_date_str}"><code>{expiry_date_str}</code> <span class="var-desc">— Дата истечения кратко (ДД.ММ ЧЧ:ММ)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{action_text}"><code>{action_text}</code> <span class="var-desc">— Действие: готов / продлен</span></button>
+                                <button type="button" class="var-chip-row" data-var="{traffic_block}"><code>{traffic_block}</code> <span class="var-desc">— Использование трафика (напр. 5.2 / 100 ГБ)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{hwid_block}"><code>{hwid_block}</code> <span class="var-desc">— Лимит устройств (напр. 2 / 5)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{comment_block}"><code>{comment_block}</code> <span class="var-desc">— Комментарий к ключу (HTML блок)</span></button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                            <p class="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40">Реферальная программа</p>
+                            <div class="flex flex-col gap-1">
+                                <button type="button" class="var-chip-row" data-var="{referral_link}"><code>{referral_link}</code> <span class="var-desc">— Реферальная ссылка пользователя</span></button>
+                                <button type="button" class="var-chip-row" data-var="{referral_count}"><code>{referral_count}</code> <span class="var-desc">— Количество приглашённых рефералов</span></button>
+                                <button type="button" class="var-chip-row" data-var="{count}"><code>{count}</code> <span class="var-desc">— Количество приглашённых (в рефералке)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{total_ref_earned}"><code>{total_ref_earned}</code> <span class="var-desc">— Всего заработано на рефералах (RUB)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{balance_total}"><code>{balance_total}</code> <span class="var-desc">— Реферальный баланс (RUB)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{reward_desc}"><code>{reward_desc}</code> <span class="var-desc">— Описание награды (генерируется автоматически)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{referral_discount}"><code>{referral_discount}</code> <span class="var-desc">— Скидка другу на первую покупку (%)</span></button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                            <p class="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40">Промокоды</p>
+                            <div class="flex flex-col gap-1">
+                                <button type="button" class="var-chip-row" data-var="{msg}"><code>{msg}</code> <span class="var-desc">— Текст ошибки промокода</span></button>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                            <p class="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40">Дополнения</p>
+                            <div class="flex flex-col gap-1">
+                                <button type="button" class="var-chip-row" data-var="{current_limit}"><code>{current_limit}</code> <span class="var-desc">— Текущий лимит (устройств или трафика)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{added}"><code>{added}</code> <span class="var-desc">— Докупается (устройств или ГБ)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{target_devices}"><code>{target_devices}</code> <span class="var-desc">— Новый лимит устройств</span></button>
+                                <button type="button" class="var-chip-row" data-var="{used}"><code>{used}</code> <span class="var-desc">— Использовано трафика (ГБ)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{new_limit}"><code>{new_limit}</code> <span class="var-desc">— Новый лимит трафика (ГБ)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{available}"><code>{available}</code> <span class="var-desc">— Будет доступно трафика (ГБ)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{choose_payment}"><code>{choose_payment}</code> <span class="var-desc">— Текст выбора способа оплаты</span></button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-[11px] leading-relaxed text-white/40">
+                        <i data-lucide="info" class="mr-1 inline h-3 w-3 align-text-bottom" aria-hidden="true"></i>
+                        Нажмите на переменную, чтобы вставить её в текст. Переменные заменяются на реальные значения при отправке сообщения пользователю.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-3 xl:col-span-5">
+            <div class="relative rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-sky-400/[0.08] blur-3xl"></div>
+                <div class="relative flex min-h-[52px] items-center gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="mail" class="h-4 w-4" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Сообщения бота</h3>
+                            <p class="text-xs text-white/60">Выберите сообщение для редактирования</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 sm:p-4">
+                    <div id="message-list" class="space-y-2">
+                        {% set message_groups = [
+                            {'group': 'main', 'label': 'Основные', 'icon': 'layout-dashboard', 'items': [
+                                {'key': 'main_menu_text', 'label': 'Главное меню', 'icon': 'home', 'desc': 'Текст главного меню бота'},
+                                {'key': 'about_text', 'label': 'О боте', 'icon': 'info', 'desc': 'Раздел информации о проекте'},
+                                {'key': 'support_text', 'label': 'Поддержка', 'icon': 'life-buoy', 'desc': 'Текст раздела поддержки'}
+                            ]},
+                            {'group': 'profile', 'label': 'Профиль', 'icon': 'user', 'items': [
+                                {'key': 'msg_profile_text', 'label': 'Текст профиля', 'icon': 'user-circle', 'desc': 'Весь текст профиля. Используйте {имя = вариант1 or вариант2} для условных блоков'}
+                            ]},
+                            {'group': 'referral', 'label': 'Реферальная программа', 'icon': 'users', 'items': [
+                                {'key': 'msg_referral_text', 'label': 'Реферальный текст', 'icon': 'share-2', 'desc': 'Полный текст реферальной программы'}
+                            ]},
+                            {'group': 'promo', 'label': 'Промокоды', 'icon': 'gift', 'items': [
+                                {'key': 'msg_promo_success_text', 'label': 'Успешная активация', 'icon': 'circle-check', 'desc': 'Сообщение после активации промокода'},
+                                {'key': 'msg_promo_select_key_text', 'label': 'Выбор ключа', 'icon': 'list', 'desc': 'Предложение выбрать ключ для промокода'},
+                                {'key': 'msg_promo_no_keys_text', 'label': 'Нет подписок', 'icon': 'circle-x', 'desc': 'Сообщение когда нет ключей для промокода'},
+                                {'key': 'msg_promo_invalid_text', 'label': 'Недействителен', 'icon': 'triangle-alert', 'desc': 'Ошибка невалидного промокода'}
+                            ]},
+                            {'group': 'keys', 'label': 'Ключи доступа', 'icon': 'key', 'items': [
+                                {'key': 'msg_keys_list_text', 'label': 'Ключи доступа', 'icon': 'list-checks', 'desc': 'Текст списка ключей. Используйте {keys_state = ... or ...} для вариантов есть ключи / нет ключей'},
+                                {'key': 'msg_key_info_text', 'label': 'Информация о ключе', 'icon': 'file-text', 'desc': 'Детальная информация о конкретном ключе'},
+                                {'key': 'msg_purchase_success_text', 'label': 'Покупка успешна', 'icon': 'party-popper', 'desc': 'Сообщение после покупки. Используйте {action_text = продлен or готов} для типа действия'}
+                            ]},
+                            {'group': 'payment', 'label': 'Оплата и тарифы', 'icon': 'credit-card', 'items': [
+                                {'key': 'msg_choose_plan_text', 'label': 'Выбор тарифа', 'icon': 'package', 'desc': 'Приглашение выбрать тарифный план'},
+                                {'key': 'msg_choose_payment_text', 'label': 'Оплата и допы', 'icon': 'wallet', 'desc': 'Все тексты оплаты в одном месте: меню допов, подтверждения, итог, пополнение'},
+                                {'key': 'msg_choose_server_text', 'label': 'Выбор сервера', 'icon': 'globe', 'desc': 'Приглашение выбрать сервер подключения'}
+                            ]},
+
+                            {'group': 'howto', 'label': 'Инструкции', 'icon': 'book-open', 'items': [
+                                {'key': 'howto_intro_text', 'label': 'Вступление', 'icon': 'book-open', 'desc': 'Вводный текст инструкций'},
+                                {'key': 'howto_android_text', 'label': 'Android', 'icon': 'smartphone', 'desc': 'Подключение на Android'},
+                                {'key': 'howto_ios_text', 'label': 'iOS', 'icon': 'apple', 'desc': 'Подключение на iOS'},
+                                {'key': 'howto_windows_text', 'label': 'Windows', 'icon': 'monitor', 'desc': 'Подключение на Windows'},
+                                {'key': 'howto_linux_text', 'label': 'Linux', 'icon': 'terminal', 'desc': 'Подключение на Linux'}
+                            ]}
+                        ] %}
+                        {% for grp in message_groups %}
+                        <div class="message-group" data-group="{{ grp.group }}">
+                            <button type="button" class="message-group-toggle flex w-full items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-left transition duration-150 hover:border-white/20 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-400/[0.08] text-sky-300"><i data-lucide="{{ grp.icon }}" class="h-4 w-4" aria-hidden="true"></i></span>
+                                <span class="min-w-0 flex-1 text-xs font-semibold text-white">{{ grp.label }}</span>
+                                <span class="message-group-count rounded-full border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-bold text-white/40">{{ grp['items'] | length }}</span>
+                                <i data-lucide="chevron-down" class="message-group-chevron h-4 w-4 shrink-0 text-white/30 transition-transform duration-200" aria-hidden="true"></i>
+                            </button>
+                            <div class="message-group-items mt-1.5 hidden space-y-1.5 pl-2">
+                                {% for mf in grp['items'] %}
+                                <button type="button" class="message-item group relative flex w-full items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 text-left transition duration-150 hover:border-white/20 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60" data-message-key="{{ mf.key }}" data-message-label="{{ mf.label }}">
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-400/[0.08] text-sky-300 transition group-hover:bg-sky-400/[0.15]"><i data-lucide="{{ mf.icon }}" class="h-4 w-4" aria-hidden="true"></i></span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate text-xs font-semibold text-white">{{ mf.label }}</span>
+                                        <span class="block truncate text-[11px] text-white/50">{{ mf.desc }}</span>
+                                    </span>
+                                    <i data-lucide="chevron-right" class="mt-1 h-4 w-4 shrink-0 text-white/30 transition group-hover:text-white/60" aria-hidden="true"></i>
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</div>
+
+<div id="msgLinkModal" class="modal-overlay">
+    <div class="modal-content overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
+        <div class="border-b border-white/[0.08] bg-white/[0.03]">
+            <div class="flex items-center justify-between p-3 sm:p-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                        <i data-lucide="link" class="h-4 w-4" aria-hidden="true"></i>
+                    </div>
+                    <h5 class="text-sm font-semibold tracking-tight text-white">Вставить ссылку</h5>
+                </div>
+                <button onclick="closeModal('msgLinkModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+        <div class="space-y-3 p-3 sm:p-4">
+            <div>
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">URL адрес</label>
+                <input type="text" id="msg-link-url-input" placeholder="https://example.com" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-sky-300/30" />
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeModal('msgLinkModal')" class="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-medium text-white/60 transition hover:border-white/20">Отмена</button>
+                <button type="button" id="msg-btn-insert-link" class="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:border-white/20">Вставить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="msgEmojiModal" class="modal-overlay">
+    <div class="modal-content overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
+        <div class="border-b border-white/[0.08] bg-white/[0.03]">
+            <div class="flex items-center justify-between p-3 sm:p-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300">
+                        <i data-lucide="smile-plus" class="h-4 w-4" aria-hidden="true"></i>
+                    </div>
+                    <h5 class="text-sm font-semibold tracking-tight text-white">Вставить Premium Emoji</h5>
+                </div>
+                <button onclick="closeModal('msgEmojiModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                    <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+        <div class="space-y-3 p-3 sm:p-4">
+            <div>
+                <label class="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-white/60">ID Emoji</label>
+                <input type="text" id="msg-emoji-id-input" placeholder="Например: 5368324170671202286" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs font-medium text-white placeholder:text-white/50 transition-all focus:outline-none focus:ring-1 focus:ring-amber-300/30" />
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeModal('msgEmojiModal')" class="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-medium text-white/60 transition hover:border-white/20">Отмена</button>
+                <button type="button" id="msg-btn-insert-emoji" class="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:border-white/20">Вставить</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="addButtonModal" class="modal-overlay">
     <div class="modal-content overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
@@ -508,6 +827,74 @@
 
     .button-item:hover .button-actions {
         opacity: 1;
+    }
+
+    .var-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.03);
+        font-size: 0.6875rem;
+        font-family: 'Courier New', monospace;
+        color: rgb(110, 231, 183);
+        cursor: pointer;
+        transition: all 150ms;
+    }
+
+    .var-chip:hover {
+        border-color: rgba(110, 231, 183, 0.3);
+        background: rgba(110, 231, 183, 0.08);
+    }
+
+    .var-chip:active {
+        transform: scale(0.96);
+    }
+
+    .var-chip-row {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        width: 100%;
+        padding: 0.3rem 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(255, 255, 255, 0.02);
+        font-size: 0.6875rem;
+        color: rgb(110, 231, 183);
+        cursor: pointer;
+        transition: all 150ms;
+        text-align: left;
+    }
+
+    .var-chip-row:hover {
+        border-color: rgba(110, 231, 183, 0.3);
+        background: rgba(110, 231, 183, 0.06);
+    }
+
+    .var-chip-row:active {
+        transform: scale(0.99);
+    }
+
+    .var-chip-row code {
+        font-family: 'Courier New', monospace;
+        font-size: 0.6875rem;
+        color: rgb(110, 231, 183);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .var-desc {
+        color: rgba(255, 255, 255, 0.45);
+        font-size: 0.6875rem;
+        line-height: 1.3;
+    }
+
+    .message-item.active {
+        border-color: rgb(125, 211, 252);
+        background: rgba(125, 211, 252, 0.08);
+        box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.15);
     }
 
     .sortable-ghost {
@@ -761,6 +1148,7 @@
         { m: 'main_menu', id: 'support', t: '💌 Поддержка', c: 'show_help', u: '' },
         { m: 'main_menu', id: 'topup', t: '💳 Баланс ({balance}₽)', c: 'top_up_start', u: '' },
         { m: 'main_menu', id: 'trial', t: '🎁 Попробовать бесплатно', c: 'get_trial', u: '' },
+        { m: 'main_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' },
         { m: 'profile_menu', id: 'topup', t: '💳 Пополнить баланс', c: 'top_up_start', u: '' },
         { m: 'profile_menu', id: 'referral', t: '🤝 Реферальная программа', c: 'show_referral_program', u: '' },
         { m: 'profile_menu', id: 'howto', t: '🛠 Подключиться', c: 'howto_vless', u: '' },
@@ -876,9 +1264,299 @@
         }
     }
 
+    // ===== Constructor Tabs =====
+    function switchConstructorTab(tabId) {
+        document.querySelectorAll('.constructor-tab-btn').forEach(btn => {
+            const isActive = btn.dataset.tab === tabId;
+            btn.classList.toggle('bg-white/[0.08]', isActive);
+            btn.classList.toggle('text-white', isActive);
+            btn.classList.toggle('border-white/[0.08]', isActive);
+            btn.classList.toggle('text-white/50', !isActive);
+            btn.classList.toggle('border-transparent', !isActive);
+        });
+        document.querySelectorAll('.constructor-tab-content').forEach(content => {
+            content.classList.toggle('hidden', content.id !== 'tab-' + tabId);
+        });
+        history.replaceState(null, '', '#' + tabId);
+        refreshLucideIcons();
+    }
+
+    document.querySelectorAll('.constructor-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchConstructorTab(btn.dataset.tab));
+    });
+
+    // ===== Message Editor =====
+    const _msgDefaults = {
+        "msg_profile_text": "<b>👤 ПРОФИЛЬ:</b> {username} / <b>iD:</b> <code>{user_id}</code>\n\n<b>💎 ПОДПИСКА</b>\n{vpn_status = 🛡 Статус VPN: Активен ✅ or ❌ Неактивен (срок истек)}\n<b>⏳ Осталось:</b> {vpn_remaining = {days_left} д. {hours_left} ч. or -}\n<b>💲 Потрачено всего:</b> {total_spent} RUB\n<b>📅 Приобретено месяцев:</b> {total_months}\n\n<b>💼 ФИНАНСЫ</b>\n<b>💳 Основной баланс:</b> {main_balance} RUB\n<b>🤝 Рефералов:</b> {referral_count}\n<b>💰 Заработано:</b> {total_ref_earned} RUB\n\n{has_partner = <b>👑 ПАРТНЕРСКАЯ ПРОГРАММА</b>\n or }{has_ref = <b>👥 Реферальный бонус:</b> +{s_ref}%\n or }{has_sale = <b>🛍 Персональная скидка:</b> -{s_sale}%\n or }{has_squad = <b>🛰 Индивидуальный Сквад:</b> ✅\n or }",
+        "msg_referral_text": "🌟 <b>Реферальная программа</b>\n\nПриглашайте друзей и получайте бонусы! 💸\n\n💎 <b>Ваша награда:</b>\n• {reward_desc}\n\n🎁 <b>Бонус другу:</b>\n• Скидка <b>{referral_discount}%</b> на первую покупку\n\n📊 <b>Статистика:</b>\n👤 Приглашено: <b>{count}</b>\n💰 Заработано: <b>{balance_total} RUB</b>\n\n🔗 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>",
+        "msg_promo_success_text": "\u2705 <b>\u041f\u0440\u043e\u043c\u043e\u043a\u043e\u0434 \u0430\u043a\u0442\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u043d!</b>\n\u0412\u0430\u043c \u043d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u043e {reward} \u20bd",
+        "msg_promo_select_key_text": "\ud83c\udf81 <b>\u0410\u043a\u0442\u0438\u0432\u0430\u0446\u0438\u044f \u043f\u0440\u043e\u043c\u043e\u043a\u043e\u0434\u0430</b>\n\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0443 (\u043a\u043b\u044e\u0447):",
+        "msg_promo_no_keys_text": "\u274c \u0423 \u0432\u0430\u0441 \u043d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u0445 \u043f\u043e\u0434\u043f\u0438\u0441\u043e\u043a \u0434\u043b\u044f \u043f\u0440\u0438\u043c\u0435\u043d\u0435\u043d\u0438\u044f \u043f\u0440\u043e\u043c\u043e\u043a\u043e\u0434\u0430 \u043d\u0430 \u0434\u043d\u0438.",
+        "msg_promo_invalid_text": "\u274c {msg}",
+        "msg_choose_server_text": "\ud83c\udf0d <b>\u0412\u044b\u0431\u043e\u0440 \u0441\u0435\u0440\u0432\u0435\u0440\u0430</b>\n\n\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u0442\u0440\u0430\u043d\u0443 \u0438 \u043b\u043e\u043a\u0430\u0446\u0438\u044e \u0434\u043b\u044f \u0432\u0430\u0448\u0435\u0439 \u043d\u043e\u0432\u043e\u0439 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0438:",
+        "msg_choose_payment_text": "{is_addons_menu = ➕ <b>Допы подписки</b>\n\nВыберите, что хотите дополнительно докупить: or }{is_confirm_devices = 📑 <b>Подтверждение</b>\n<blockquote>• Сейчас: {current_limit} устройств\n• Докупается: +{added} устройств\n• Станет: {target_devices} устройств\n• До конца подписки: {days_left} дн.</blockquote>\n\n<b>🧾 К оплате: {price}₽</b> or }{is_confirm_traffic = 📑 <b>Подтверждение</b>\n<blockquote>• Текущий лимит: {current_limit} ГБ\n• Использовано: {used} ГБ\n• Докупается: +{added} ГБ\n• Новый лимит: {new_limit} ГБ\n• Будет доступно: {available} ГБ\n• До конца подписки: {days_left} дн.</blockquote>\n\n<b>🧾 К оплате: {price}₽</b> or }{is_purchase = 📑 <b>Итог:</b>\n<blockquote>{summary}</blockquote>\n\n or }{is_topup = ✅ Сумма принята: {topup_amount} RUB\n or }{is_addon_pay = 💳 <b>Оплата дополнения</b>\n\n or }{has_price = <b>🧾 К оплате: {price}₽</b>\n or }{promo_text}\nВыберите удобный способ оплаты:",
+        "msg_keys_list_text": "🔑 <b>Ваши ключи доступа</b>\n\n{keys_state = Ниже представлен список ваших активных и истекших ключей or 🏷 У вас пока нет активных ключей. Приобретите подписку в главном меню, чтобы начать пользоваться.}",
+        "msg_key_info_text": "\ud83d\udd11 <b>\u0418\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f \u043e \u043a\u043b\u044e\u0447\u0435 #{key_number}</b>\n\n\ud83d\udcc5 <b>\u0421\u0440\u043e\u043a\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f:</b>\n{status_icon} <b>\u0421\u0442\u0430\u0442\u0443\u0441:</b> {status_text}\n\u2795 <b>\u041a\u0443\u043f\u043b\u0435\u043d:</b> {created_date}\n\ud83d\udd59 <b>\u0418\u0441\u0442\u0435\u043a\u0430\u0435\u0442:</b> {expiry_date}\n\u23f3 <b>\u041e\u0441\u0442\u0430\u043b\u043e\u0441\u044c:</b> {remaining_str}\n\ud83d\udc8c <b>ID \u043a\u043b\u044e\u0447\u0430:</b> <code>{email}</code>\n\n\ud83d\udcc9 <b>\u0418\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u0435:</b>\n\ud83d\uded0 <b>\u041b\u0438\u043c\u0438\u0442 \u0442\u0440\u0430\u0444\u0438\u043a\u0430:</b> {traffic_block}\n\ud83d\udcf1 <b>\u041b\u0438\u043c\u0438\u0442 \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432:</b> {hwid_block}\n\ud83d\uddfd <b>\u0412\u0430\u0448 \u043a\u043b\u044e\u0447:</b>\n<code>{connection_string}</code>\n\n{comment_block}",
+        "msg_purchase_success_text": "🎉 <b>Ваш ключ #{key_number} {action_text = продлен or готов}!</b>\n\n📅 <b>Сроки действия:</b>\n⏳ <b>Действует до: {expiry_date_str}</b>\n💌 <b>ID ключа:</b> <code>{email_display}</code>\n\n🗽 <b>Ваш ключ:</b>\n<code>{connection_string}</code>",
+
+        "msg_choose_plan_text": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0449\u0438\u0439 \u0442\u0430\u0440\u0438\u0444:",
+    };
+
+    const messageTexts = {
+        {% set message_keys = [
+            'main_menu_text', 'about_text', 'support_text',
+            'msg_profile_text',
+            'msg_referral_text',
+            'msg_promo_success_text', 'msg_promo_select_key_text', 'msg_promo_no_keys_text', 'msg_promo_invalid_text',
+            'msg_keys_list_text', 'msg_key_info_text', 'msg_purchase_success_text',
+            'msg_choose_plan_text', 'msg_choose_payment_text', 'msg_choose_server_text',
+            'howto_intro_text', 'howto_android_text', 'howto_ios_text', 'howto_windows_text', 'howto_linux_text'
+        ] %}
+        {% for mk in message_keys %}
+        {{ mk | tojson }}: {{ (settings.get(mk, '') or '') | tojson }}{{ ',' if not loop.last }}
+        {% endfor %}
+    };
+
+    Object.keys(_msgDefaults).forEach(function(k) {
+        if (!messageTexts[k]) messageTexts[k] = _msgDefaults[k];
+    });
+
+    let activeMessageKey = null;
+
+    function autoResizeTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.max(textarea.scrollHeight, 200) + 'px';
+    }
+
+    function selectMessage(key, label) {
+        activeMessageKey = key;
+        document.querySelectorAll('.message-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.messageKey === key);
+        });
+        document.getElementById('message-editor-placeholder').classList.add('hidden');
+        document.getElementById('message-editor-body').classList.remove('hidden');
+        document.getElementById('message-editor-subtitle').textContent = label;
+        document.getElementById('message-key-display').textContent = key;
+        const textarea = document.getElementById('message-text-input');
+        textarea.name = key;
+        textarea.value = messageTexts[key] || '';
+        autoResizeTextarea(textarea);
+        refreshLucideIcons();
+    }
+
+    document.getElementById('msg-reset-btn').addEventListener('click', function() {
+        if (!activeMessageKey) return;
+        var def = _msgDefaults[activeMessageKey];
+        if (def === undefined) {
+            showToast('warning', 'Для этого сообщения нет значения по умолчанию');
+            return;
+        }
+        var textarea = document.getElementById('message-text-input');
+        textarea.value = def;
+        messageTexts[activeMessageKey] = def;
+        autoResizeTextarea(textarea);
+        showToast('success', 'Текст сброшен к значению по умолчанию');
+    });
+
+    // Auto-resize on input
+    document.getElementById('message-text-input').addEventListener('input', function() {
+        autoResizeTextarea(this);
+    });
+
+    document.querySelectorAll('.message-item').forEach(item => {
+        item.addEventListener('click', () => selectMessage(item.dataset.messageKey, item.dataset.messageLabel));
+    });
+
+    // ===== Message Group Accordion (with localStorage persistence) =====
+    const MSG_GROUP_STORAGE_KEY = 'constructor_msg_groups';
+
+    function loadGroupStates() {
+        try {
+            return JSON.parse(localStorage.getItem(MSG_GROUP_STORAGE_KEY) || '{}');
+        } catch { return {}; }
+    }
+
+    function saveGroupStates(states) {
+        localStorage.setItem(MSG_GROUP_STORAGE_KEY, JSON.stringify(states));
+    }
+
+    function toggleGroup(groupEl, save = true) {
+        const items = groupEl.querySelector('.message-group-items');
+        const chevron = groupEl.querySelector('.message-group-chevron');
+        const groupId = groupEl.dataset.group;
+        const isOpen = !items.classList.contains('hidden');
+
+        if (isOpen) {
+            items.classList.add('hidden');
+            chevron.style.transform = 'rotate(0deg)';
+        } else {
+            items.classList.remove('hidden');
+            chevron.style.transform = 'rotate(180deg)';
+        }
+
+        if (save) {
+            const states = loadGroupStates();
+            states[groupId] = !isOpen;
+            saveGroupStates(states);
+        }
+    }
+
+    // Restore saved states on load
+    (function restoreGroupStates() {
+        const states = loadGroupStates();
+        document.querySelectorAll('.message-group').forEach(groupEl => {
+            const groupId = groupEl.dataset.group;
+            const items = groupEl.querySelector('.message-group-items');
+            const chevron = groupEl.querySelector('.message-group-chevron');
+            // Default: collapsed. Open only if saved as open.
+            if (states[groupId] === true) {
+                items.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            }
+        });
+    })();
+
+    document.querySelectorAll('.message-group-toggle').forEach(btn => {
+        btn.addEventListener('click', () => toggleGroup(btn.closest('.message-group')));
+    });
+
+    // Variable chips: insert into textarea at cursor position
+    function _insertVarIntoTextarea(varText) {
+        const textarea = document.getElementById('message-text-input');
+        if (!textarea || document.getElementById('message-editor-body').classList.contains('hidden')) {
+            showToast('warning', 'Сначала выберите сообщение');
+            return;
+        }
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        textarea.value = text.substring(0, start) + varText + text.substring(end);
+        textarea.selectionStart = textarea.selectionEnd = start + varText.length;
+        autoResizeTextarea(textarea);
+        textarea.focus();
+    }
+
+    document.querySelectorAll('.var-chip, .var-chip-row').forEach(chip => {
+        chip.addEventListener('click', () => {
+            _insertVarIntoTextarea(chip.dataset.var);
+        });
+    });
+
+    // ===== Message Editor Formatting =====
+    window.msgInsertTag = function(tag) {
+        const textarea = document.getElementById('message-text-input');
+        if (!textarea || document.getElementById('message-editor-body').classList.contains('hidden')) {
+            showToast('warning', 'Сначала выберите сообщение');
+            return;
+        }
+
+        if (tag === 'a') {
+            window._msgSelection = { start: textarea.selectionStart, end: textarea.selectionEnd };
+            const linkInput = document.getElementById('msg-link-url-input');
+            if (linkInput) {
+                linkInput.value = 'https://';
+                openModal('msgLinkModal');
+                setTimeout(() => linkInput.focus(), 100);
+            }
+            return;
+        }
+
+        if (tag === 'tg-emoji') {
+            window._msgSelection = { start: textarea.selectionStart, end: textarea.selectionEnd };
+            const emojiInput = document.getElementById('msg-emoji-id-input');
+            if (emojiInput) {
+                emojiInput.value = '';
+                openModal('msgEmojiModal');
+                setTimeout(() => emojiInput.focus(), 100);
+            }
+            return;
+        }
+
+        const startTag = `<${tag}>`;
+        const endTag = `</${tag}>`;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = textarea.value.substring(start, end);
+        textarea.setRangeText(startTag + selected + endTag, start, end, 'select');
+        autoResizeTextarea(textarea);
+        textarea.focus();
+    };
+
+    // Link modal insert
+    document.getElementById('msg-btn-insert-link').addEventListener('click', () => {
+        const url = document.getElementById('msg-link-url-input').value;
+        const textarea = document.getElementById('message-text-input');
+        if (url && textarea && window._msgSelection) {
+            const { start, end } = window._msgSelection;
+            const selected = textarea.value.substring(start, end);
+            textarea.setRangeText(`<a href="${url}">${selected}</a>`, start, end, 'select');
+            autoResizeTextarea(textarea);
+            textarea.focus();
+        }
+        closeModal('msgLinkModal');
+    });
+
+    // Emoji modal insert
+    document.getElementById('msg-btn-insert-emoji').addEventListener('click', () => {
+        const emojiId = document.getElementById('msg-emoji-id-input').value.trim();
+        const textarea = document.getElementById('message-text-input');
+        if (textarea && window._msgSelection) {
+            const { start, end } = window._msgSelection;
+            const selected = textarea.value.substring(start, end);
+            const inner = selected || '🚀';
+            const replacement = emojiId ? `<tg-emoji emoji-id="${emojiId}">${inner}</tg-emoji>` : inner;
+            textarea.setRangeText(replacement, start, end, 'select');
+            autoResizeTextarea(textarea);
+            textarea.focus();
+        }
+        closeModal('msgEmojiModal');
+    });
+
+    // Message form submit: normal POST to /settings (textarea name = setting key)
+    document.getElementById('message-editor-form').addEventListener('submit', function(e) {
+        if (!activeMessageKey) {
+            e.preventDefault();
+            showToast('warning', 'Выберите сообщение');
+            return;
+        }
+        // Update local cache so switching back shows the saved text
+        messageTexts[activeMessageKey] = document.getElementById('message-text-input').value;
+    });
+
+    // Restore tab from hash
+    document.getElementById('message-editor-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var form = this;
+        var formData = new FormData(form);
+        var csrfToken = form.querySelector('input[name="csrf_token"]')?.value || '';
+        var submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+            redirect: 'manual'
+        }).then(function(resp) {
+            if (resp.ok || resp.type === 'opaqueredirect') {
+                showToast('success', 'Сообщение сохранено');
+                if (activeMessageKey) {
+                    messageTexts[activeMessageKey] = document.getElementById('message-text-input').value;
+                }
+            } else {
+                showToast('danger', 'Ошибка сохранения');
+            }
+        }).catch(function() {
+            showToast('danger', 'Ошибка сети');
+        }).finally(function() {
+            if (submitBtn) submitBtn.disabled = false;
+        });
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
         refreshLucideIcons();
         initHelpModal();
+        const hash = window.location.hash.replace('#', '');
+        if (hash === 'messages') switchConstructorTab('messages');
     });
 
     class ButtonConstructor {
@@ -1544,6 +2222,8 @@
                 'admin_keys': '🔑 Управление ключами',
                 'admin_settings': '⚙️ Настройки системы',
                 'back_to_menu': '⬅️ Назад в меню',
+                'nav_back': '⬅️ Назад (на шаг назад)',
+                'back_to_main_menu': '🏠 В главное меню',
                 'support_new_ticket': '📝 Создать новое обращение',
                 'support_my_tickets': '📋 Мои обращения'
             };

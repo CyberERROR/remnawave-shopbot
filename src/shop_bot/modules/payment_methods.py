@@ -22,7 +22,8 @@ def get_available_payment_methods(include_balance: bool = False, balance: float 
             "suffix": suffix,
         })
 
-    yookassa_enabled = bool((get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or ""))
+    yookassa_flag = (get_setting("yookassa_enabled") or "false").strip().lower() == "true"
+    yookassa_enabled = yookassa_flag and bool((get_setting("yookassa_shop_id") or "") and (get_setting("yookassa_secret_key") or ""))
     if yookassa_enabled:
         sbp_enabled = (get_setting("sbp_enabled") or "false").strip().lower() == "true"
         methods.append({
@@ -58,8 +59,10 @@ def get_available_payment_methods(include_balance: bool = False, balance: float 
                 "suffix": "",
             })
 
-    cryptobot_enabled = bool(get_setting("cryptobot_token") or "")
-    heleket_enabled = bool((get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or ""))
+    cryptobot_flag = (get_setting("cryptobot_enabled") or "false").strip().lower() == "true"
+    heleket_flag = (get_setting("heleket_enabled") or "false").strip().lower() == "true"
+    cryptobot_enabled = cryptobot_flag and bool(get_setting("cryptobot_token") or "")
+    heleket_enabled = heleket_flag and bool((get_setting("heleket_merchant_id") or "") and (get_setting("heleket_api_key") or ""))
     if cryptobot_enabled:
         methods.append({
             "method": "cryptobot",
@@ -86,7 +89,8 @@ def get_available_payment_methods(include_balance: bool = False, balance: float 
     for method, enabled_key, purchase_callback, topup_callback, bot_default_label, webapp_default_label, icon in ordered_methods[3:]:
         enabled = False
         if method == "tonconnect":
-            enabled = bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or ""))
+            tonconnect_flag = (get_setting("tonconnect_enabled") or "false").strip().lower() == "true"
+            enabled = tonconnect_flag and bool((get_setting("ton_wallet_address") or "") and (get_setting("tonapi_key") or ""))
         else:
             enabled = (get_setting(enabled_key) or "false").strip().lower() == "true"
         if enabled:

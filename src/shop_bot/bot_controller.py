@@ -110,17 +110,21 @@ class BotController:
 
             yookassa_shop_id = rw_repo.get_setting("yookassa_shop_id")
             yookassa_secret_key = rw_repo.get_setting("yookassa_secret_key")
-            yookassa_enabled = bool(yookassa_shop_id and yookassa_secret_key)
+            yookassa_flag = (rw_repo.get_setting("yookassa_enabled") or 'false').strip().lower() == 'true'
+            yookassa_enabled = yookassa_flag and bool(yookassa_shop_id and yookassa_secret_key)
 
             cryptobot_token = rw_repo.get_setting("cryptobot_token")
-            cryptobot_enabled = bool(cryptobot_token)
+            cryptobot_flag = (rw_repo.get_setting("cryptobot_enabled") or 'false').strip().lower() == 'true'
+            cryptobot_enabled = cryptobot_flag and bool(cryptobot_token)
 
             heleket_shop_id = rw_repo.get_setting("heleket_merchant_id")
             heleket_api_key = rw_repo.get_setting("heleket_api_key")
             ton_wallet_address = rw_repo.get_setting("ton_wallet_address")
             tonapi_key = rw_repo.get_setting("tonapi_key")
-            tonconnect_enabled = bool(ton_wallet_address and tonapi_key)
-            heleket_enabled = bool(heleket_shop_id and heleket_api_key)
+            tonconnect_flag = (rw_repo.get_setting("tonconnect_enabled") or 'false').strip().lower() == 'true'
+            tonconnect_enabled = tonconnect_flag and bool(ton_wallet_address and tonapi_key)
+            heleket_flag = (rw_repo.get_setting("heleket_enabled") or 'false').strip().lower() == 'true'
+            heleket_enabled = heleket_flag and bool(heleket_shop_id and heleket_api_key)
 
             yoomoney_flag = (rw_repo.get_setting("yoomoney_enabled") or 'false').strip().lower() == 'true'
             yoomoney_enabled = bool(yoomoney_flag)

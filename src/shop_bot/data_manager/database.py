@@ -515,6 +515,7 @@ def initialize_db():
                 "yookassa_shop_id": None,
                 "yookassa_secret_key": None,
                 "yookassa_proxies": "[]",
+                "yookassa_webhook_url": None,
                 "sbp_enabled": "false",
                 "cryptobot_token": None,
                 "heleket_merchant_id": None,
@@ -561,6 +562,19 @@ def initialize_db():
                 "howto_windows_text": None,
                 "howto_linux_text": None,
 
+                "msg_profile_text": "<b>👤 ПРОФИЛЬ:</b> {username} / <b>iD:</b> <code>{user_id}</code>\n\n<b>💎 ПОДПИСКА</b>\n{vpn_status = 🛡 Статус VPN: Активен ✅ or ❌ Неактивен (срок истек)}\n<b>⏳ Осталось:</b> {vpn_remaining = {days_left} д. {hours_left} ч. or -}\n<b>💲 Потрачено всего:</b> {total_spent} RUB\n<b>📅 Приобретено месяцев:</b> {total_months}\n\n<b>💼 ФИНАНСЫ</b>\n<b>💳 Основной баланс:</b> {main_balance} RUB\n<b>🤝 Рефералов:</b> {referral_count}\n<b>💰 Заработано:</b> {total_ref_earned} RUB\n\n{has_partner = <b>👑 ПАРТНЕРСКАЯ ПРОГРАММА</b>\n or }{has_ref = <b>👥 Реферальный бонус:</b> +{s_ref}%\n or }{has_sale = <b>🛍 Персональная скидка:</b> -{s_sale}%\n or }{has_squad = <b>🛰 Индивидуальный Сквад:</b> ✅\n or }",
+                "msg_referral_text": "🌟 <b>Реферальная программа</b>\n\nПриглашайте друзей и получайте бонусы! 💸\n\n💎 <b>Ваша награда:</b>\n• {reward_desc}\n\n🎁 <b>Бонус другу:</b>\n• Скидка <b>{referral_discount}%</b> на первую покупку\n\n📊 <b>Статистика:</b>\n👤 Приглашено: <b>{count}</b>\n💰 Заработано: <b>{balance_total} RUB</b>\n\n🔗 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>",
+                "msg_promo_success_text": "✅ <b>Промокод активирован!</b>\nВам начислено {reward} ₽",
+                "msg_promo_select_key_text": "🎁 <b>Активация промокода</b>\nВыберите подписку (ключ):",
+                "msg_promo_no_keys_text": "❌ У вас нет активных подписок для применения промокода на дни.",
+                "msg_promo_invalid_text": "❌ {msg}",
+                "msg_choose_server_text": "🌍 <b>Выбор сервера</b>\n\nВыберите страну и локацию для вашей новой подписки:",
+                "msg_choose_payment_text": "{is_addons_menu = ➕ <b>Допы подписки</b>\n\nВыберите, что хотите дополнительно докупить: or }{is_confirm_devices = 📑 <b>Подтверждение</b>\n<blockquote>• Сейчас: {current_limit} устройств\n• Докупается: +{added} устройств\n• Станет: {target_devices} устройств\n• До конца подписки: {days_left} дн.</blockquote>\n\n<b>🧾 К оплате: {price}₽</b> or }{is_confirm_traffic = 📑 <b>Подтверждение</b>\n<blockquote>• Текущий лимит: {current_limit} ГБ\n• Использовано: {used} ГБ\n• Докупается: +{added} ГБ\n• Новый лимит: {new_limit} ГБ\n• Будет доступно: {available} ГБ\n• До конца подписки: {days_left} дн.</blockquote>\n\n<b>🧾 К оплате: {price}₽</b> or }{is_purchase = 📑 <b>Итог:</b>\n<blockquote>{summary}</blockquote>\n\n or }{is_topup = ✅ Сумма принята: {topup_amount} RUB\n or }{is_addon_pay = 💳 <b>Оплата дополнения</b>\n\n or }{has_price = <b>🧾 К оплате: {price}₽</b>\n or }{promo_text}\nВыберите удобный способ оплаты:",
+                "msg_keys_list_text": "🔑 <b>Ваши ключи доступа</b>\n\n{keys_state = Ниже представлен список ваших активных и истекших ключей or 🏷 У вас пока нет активных ключей. Приобретите подписку в главном меню, чтобы начать пользоваться.}",
+                "msg_key_info_text": "🔑 <b>Информация о ключе #{key_number}</b>\n\n📅 <b>Сроки действия:</b>\n{status_icon} <b>Статус:</b> {status_text}\n➕ <b>Куплен:</b> {created_date}\n🕙 <b>Истекает:</b> {expiry_date}\n⏳ <b>Осталось:</b> {remaining_str}\n💌 <b>ID ключа:</b> <code>{email}</code>\n\n📉 <b>Использование:</b>\n🛰 <b>Лимит трафика:</b> {traffic_block}\n📱 <b>Лимит устройств:</b> {hwid_block}\n🗽 <b>Ваш ключ:</b>\n<code>{connection_string}</code>\n\n{comment_block}",
+                "msg_purchase_success_text": "🎉 <b>Ваш ключ #{key_number} {action_text = продлен or готов}!</b>\n\n📅 <b>Сроки действия:</b>\n⏳ <b>Действует до: {expiry_date_str}</b>\n💌 <b>ID ключа:</b> <code>{email_display}</code>\n\n🗽 <b>Ваш ключ:</b>\n<code>{connection_string}</code>",
+                "msg_choose_plan_text": "Выберите подходящий тариф:",
+
                 "btn_trial_text": None,
                 "btn_profile_text": None,
                 "btn_my_keys_text": None,
@@ -600,6 +614,10 @@ def initialize_db():
 
                 "stars_enabled": "false",
                 "yoomoney_enabled": "false",
+                "yookassa_enabled": "false",
+                "cryptobot_enabled": "false",
+                "heleket_enabled": "false",
+                "tonconnect_enabled": "false",
                 "yoomoney_wallet": None,
                 "yoomoney_secret": None,
 
@@ -642,6 +660,14 @@ def initialize_db():
                 "demo_mode_enabled": "0",
             }
             _ensure_default_values(cursor, "bot_settings", default_settings)
+
+            _msg_defaults = {k: v for k, v in default_settings.items() if k.startswith("msg_") and v is not None}
+            for mk, mv in _msg_defaults.items():
+                try:
+                    cursor.execute("UPDATE bot_settings SET value = ? WHERE key = ? AND (value IS NULL OR value = '')", (mv, mk))
+                except Exception:
+                    pass
+
             conn.commit()
             
 

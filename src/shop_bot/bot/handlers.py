@@ -38,6 +38,7 @@ from shop_bot.data_manager.remnawave_repository import (
     add_to_balance,
     deduct_from_balance,
     get_setting,
+    get_admin_ids,
     get_user,
     register_user_if_not_exists,
     get_next_key_number,
@@ -74,13 +75,14 @@ from shop_bot.data_manager.database import get_seller_user, adjust_user_balance,
 
 from shop_bot.config import (
     get_profile_text,
-    get_vpn_active_text,
-    VPN_INACTIVE_TEXT,
-    VPN_NO_DATA_TEXT,
     get_key_info_text,
-    CHOOSE_PAYMENT_METHOD_MESSAGE,
     get_purchase_success_text,
-    get_msk_time
+    get_msk_time,
+    get_choose_payment_text,
+    _get_choose_plan_message,
+    format_msg_vars,
+    parse_named_conditionals,
+    safe_format,
 )
 from shop_bot.data_manager import remnawave_repository as rw_repo
 from shop_bot.modules import remnawave_api
@@ -95,6 +97,49 @@ logger = logging.getLogger(__name__)
 user_command_times = {}
 user_blocked_until = {}
 user_spam_level = {}
+user_nav_history = {}
+
+
+def nav_push(user_id: int, callback_data: str, max_depth: int = 10):
+    if not callback_data:
+        return
+    stack = user_nav_history.setdefault(user_id, [])
+    if stack and stack[-1] == callback_data:
+        return
+    stack.append(callback_data)
+    if len(stack) > max_depth:
+        del stack[0:len(stack) - max_depth]
+
+
+def nav_pop(user_id: int) -> str | None:
+    stack = user_nav_history.get(user_id)
+    if not stack:
+        return None
+    return stack.pop() if stack else None
+
+
+def nav_peek(user_id: int) -> str | None:
+    stack = user_nav_history.get(user_id)
+    return stack[-1] if stack else None
+
+
+def nav_clear(user_id: int):
+    user_nav_history.pop(user_id, None)
+
+
+def _is_nav_callback(data: str) -> bool:
+    if not data:
+        return False
+    nav_roots = {
+        "back_to_main_menu", "show_main_menu", "show_profile", "manage_keys",
+        "show_about", "howto_vless", "support_menu", "buy_new_key",
+        "show_referral_program", "top_up_start", "admin_menu", "show_help",
+    }
+    if data in nav_roots:
+        return True
+    if data.startswith("show_key_"):
+        return True
+    return False
 
 # ===== УТИЛИТА БЕЗОПАСНАЯ СТРОКА =====
 # Преобразует входное значение в строку, заменяя None на пустую строку
@@ -330,6 +375,9 @@ async def create_yookassa_payment_async(payload: dict, idempotence_key: str, sho
             for key in meta_keys
             if key in meta
         }
+    webhook_url = (get_setting("yookassa_webhook_url") or "").strip()
+    if webhook_url and "notification_url" not in api_payload:
+        api_payload["notification_url"] = webhook_url
     proxy_url = get_active_yookassa_proxy_url()
     connector, proxy_arg = create_yookassa_proxy_connector(proxy_url)
     if proxy_url:
@@ -422,7 +470,7 @@ async def send_instruction_response(callback: types.CallbackQuery, os_type: str,
     try: markup = keyboards.create_howto_vless_keyboard()
     except Exception:
         builder = InlineKeyboardBuilder()
-        builder.button(text="⬅️ Назад", callback_data="howto_vless")
+        builder.button(text=keyboards._setting_button_text("btn_back_to_menu", "⬅️ Назад"), callback_data="howto_vless", **keyboards._setting_button_extra("btn_back_to_menu"))
         markup = builder.as_markup()
     
     await smart_edit_message(callback.message, instruction_text, markup, photo_path)
@@ -533,13 +581,76 @@ async def smart_edit_message(message: types.Message, text: str, reply_markup=Non
         except TelegramBadRequest: return await message.answer(text, reply_markup=reply_markup)
 # ===== Конец функции smart_edit_message =====
 
+def _get_formatted_setting(key, default, user_id):
+    text = get_setting(key) or default
+    return format_msg_vars(text, **_build_user_vars(user_id))
+
+def _build_user_vars(user_id):
+    vars_dict = {}
+    try:
+        u = get_user(user_id) or {}
+        vars_dict['username'] = u.get('username', '') or ''
+        vars_dict['user_id'] = str(user_id)
+        vars_dict['first_name'] = u.get('first_name', '') or ''
+    except Exception:
+        vars_dict['username'] = ''
+        vars_dict['user_id'] = str(user_id)
+        vars_dict['first_name'] = ''
+    try:
+        vars_dict['main_balance'] = f"{get_balance(user_id):.0f}"
+    except Exception:
+        vars_dict['main_balance'] = '0'
+    try:
+        keys = get_user_keys(user_id) or []
+        vars_dict['key_count'] = str(len(keys))
+    except Exception:
+        vars_dict['key_count'] = '0'
+    try:
+        from shop_bot.data_manager.database import get_referral_count as _grc, get_referral_balance_all as _grba
+        vars_dict['referral_count'] = str(_grc(user_id))
+        vars_dict['count'] = vars_dict['referral_count']
+        vars_dict['balance_total'] = f"{float(_grba(user_id)):.2f}"
+        vars_dict['total_ref_earned'] = vars_dict['balance_total']
+    except Exception:
+        vars_dict['referral_count'] = '0'
+        vars_dict['count'] = '0'
+        vars_dict['balance_total'] = '0.00'
+        vars_dict['total_ref_earned'] = '0.00'
+    try:
+        bot_username = TELEGRAM_BOT_USERNAME
+        if not bot_username:
+            pass
+        vars_dict['referral_link'] = f"https://t.me/{bot_username}?start=ref_{user_id}" if bot_username else ''
+    except Exception:
+        vars_dict['referral_link'] = ''
+    try:
+        reward_type = (get_setting("referral_reward_type") or "percent_purchase").strip()
+        if reward_type == "percent_purchase":
+            percent = get_setting("referral_percentage") or "10"
+            vars_dict['reward_desc'] = f"Вы получаете <b>{percent}%</b> от каждой покупки ваших друзей."
+        elif reward_type == "fixed_purchase":
+            amount = get_setting("fixed_referral_bonus_amount") or "50"
+            vars_dict['reward_desc'] = f"Вы получаете <b>{amount}</b> RUB с каждой покупки ваших друзей."
+        elif reward_type == "fixed_start_referrer":
+            amount = get_setting("referral_on_start_referrer_amount") or "20"
+            vars_dict['reward_desc'] = f"Вы получаете <b>{amount}</b> RUB за каждого приглашенного друга."
+        else:
+            vars_dict['reward_desc'] = "Условия программы уточняйте у администрации."
+    except Exception:
+        vars_dict['reward_desc'] = ''
+    try:
+        vars_dict['referral_discount'] = get_setting("referral_discount") or "0"
+    except Exception:
+        vars_dict['referral_discount'] = '0'
+    return vars_dict
+
 # ===== ОТОБРАЖЕНИЕ ГЛАВНОГО МЕНЮ =====
 # Отправляет или редактирует сообщение, показывая пользователю главное меню бота
 async def show_main_menu(message: types.Message, edit_message: bool = False):
     user_id = message.chat.id
     user_db_data, user_keys = get_user(user_id), get_user_keys(user_id)
     trial_available, is_admin_flag = not (user_db_data and user_db_data.get('trial_used')), is_admin(user_id)
-    text = get_setting("main_menu_text") or "🏠 <b>Главное меню</b>\n\nВыберите действие:"
+    text = format_msg_vars(get_setting("main_menu_text") or "🏠 <b>Главное меню</b>\n\nВыберите действие:", **_build_user_vars(user_id))
     main_menu_image = get_setting("main_menu_image")
     photo_path = main_menu_image if (main_menu_image and os.path.exists(main_menu_image)) else None
     try: balance = get_balance(user_id)
@@ -695,6 +806,7 @@ def get_user_router() -> Router:
         # Если пользователя не было, обновляем user_data после регистрации
         if not user_data:
             user_data = get_user(user_id)
+            await notify_admins_of_new_user(bot, user_id, username, first_name, referrer_id)
 
         if command.args and command.args.startswith('auth_'):
             try:
@@ -743,7 +855,9 @@ def get_user_router() -> Router:
                     if adjust_user_balance(user_id, float(reward)):
                         redeem_universal_promo(code, user_id)
                         logger.info(f"Промокод: Пользователь {user_id} активировал балансовый промокод {code} на {reward} RUB")
-                        await message.answer(f"✅ <b>Промокод активирован!</b>\nВам начислено {reward} ₽", reply_markup=InlineKeyboardBuilder().button(text="В профиль", callback_data="show_profile").as_markup())
+                        _promo_success_tpl = get_setting("msg_promo_success_text") or "✅ <b>Промокод активирован!</b>\nВам начислено {reward} ₽"
+                        _promo_success_msg = safe_format(_promo_success_tpl, reward=reward)
+                        await message.answer(_promo_success_msg, reply_markup=InlineKeyboardBuilder().button(text="В профиль", callback_data="show_profile").as_markup())
                 else:
                     keys = get_user_keys(user_id)
                     if keys:
@@ -752,13 +866,15 @@ def get_user_router() -> Router:
                             await _apply_uni_promo(message, user_id, keys[0]['key_id'], code, promo)
                         else:
                             kb = keyboards.create_uni_promo_keys_keyboard(keys, code)
-                            await message.answer("🎁 <b>Активация промокода</b>\nВыберите подписку (ключ):", reply_markup=kb)
+                            await message.answer(get_setting("msg_promo_select_key_text") or "🎁 <b>Активация промокода</b>\nВыберите подписку (ключ):", reply_markup=kb)
                     else:
                         kb_buy = InlineKeyboardBuilder().button(text="🛒 Купить", callback_data="buy_new_key").as_markup()
-                        await message.answer("❌ У вас нет активных подписок для применения промокода на дни.", reply_markup=kb_buy)
+                        await message.answer(get_setting("msg_promo_no_keys_text") or "❌ У вас нет активных подписок для применения промокода на дни.", reply_markup=kb_buy)
             else:
+                _promo_invalid_tpl = get_setting("msg_promo_invalid_text") or "❌ {msg}"
                 msg = err_map.get(err_msg, err_msg) if err_msg else "Данный промокод недействителен."
-                await message.answer(f"❌ {msg}")
+                _promo_invalid_msg = safe_format(_promo_invalid_tpl, msg=msg)
+                await message.answer(_promo_invalid_msg)
 
         try: reward_type = (get_setting("referral_reward_type") or "percent_purchase").strip()
         except Exception: reward_type = "percent_purchase"
@@ -884,8 +1000,180 @@ def get_user_router() -> Router:
     @registration_required
     async def back_to_main_menu_handler(callback: types.CallbackQuery):
         await callback.answer()
+        nav_clear(callback.from_user.id)
         await show_main_menu(callback.message, edit_message=True)
     # ===== Конец функции back_to_main_menu_handler =====
+
+    # ===== ЕДИНАЯ КНОПКА "НАЗАД" (НА ОДИН ШАГ) =====
+    # Возвращает пользователя на предыдущий экран через стек навигации
+    @user_router.callback_query(F.data == "nav_back")
+    @anti_spam
+    @registration_required
+    async def nav_back_handler(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
+        user_id = callback.from_user.id
+        target = nav_pop(user_id)
+        if not target:
+            await callback.answer()
+            await show_main_menu(callback.message, edit_message=True)
+            return
+        try:
+            await _nav_dispatch(callback, state, bot, target, user_id)
+        except Exception as e:
+            logger.warning(f"nav_back: не удалось перейти на {target}: {e}")
+            nav_clear(user_id)
+            try: await callback.answer()
+            except Exception: pass
+            await show_main_menu(callback.message, edit_message=True)
+    # ===== Конец функции nav_back_handler =====
+
+    async def _nav_dispatch(callback: types.CallbackQuery, state: FSMContext, bot: Bot, target: str, user_id: int):
+        if target == "show_profile":
+            await callback.answer()
+            nav_push(user_id, "back_to_main_menu")
+            await _render_profile(callback)
+        elif target == "manage_keys":
+            await callback.answer()
+            nav_push(user_id, "back_to_main_menu")
+            user_keys = get_user_keys(user_id)
+            keys_list_image = get_setting("keys_list_image")
+            _keys_tpl = _get_formatted_setting("msg_keys_list_text", "🔑 <b>Ваши ключи доступа</b>\n\n{keys_state = Ниже представлен список ваших активных и истекших ключей or 🏷 У вас пока нет активных ключей. Приобретите подписку в главном меню, чтобы начать пользоваться.}", user_id)
+            text = parse_named_conditionals(_keys_tpl, {'keys_state': bool(user_keys)})
+            await smart_edit_message(callback.message, text, keyboards.create_keys_management_keyboard(user_keys), keys_list_image)
+        elif target == "show_about":
+            await callback.answer()
+            nav_push(user_id, "back_to_main_menu")
+            about_text = _get_formatted_setting("about_text", "ℹ️ Информация о проекте еще не заполнена в настройках.", user_id)
+            terms_url, privacy_url, channel_url = get_setting("terms_url"), get_setting("privacy_url"), get_setting("channel_url")
+            about_image = get_setting("about_image")
+            await smart_edit_message(callback.message, about_text, keyboards.create_about_keyboard(channel_url, terms_url, privacy_url), about_image)
+        elif target == "howto_vless":
+            await callback.answer()
+            nav_push(user_id, "back_to_main_menu")
+            msg = _get_formatted_setting("howto_intro_text", "📖 <b>Инструкции по подключению</b>\n\nВыберите вашу операционную систему для получения подробного руководства:", user_id)
+            await smart_edit_message(callback.message, msg, keyboards.create_howto_vless_keyboard(), get_setting("howto_image"))
+        elif target == "support_menu":
+            await callback.answer()
+            nav_push(user_id, "back_to_main_menu")
+            await _show_support_selection(callback.message)
+        elif target == "show_referral_program":
+            await callback.answer()
+            nav_push(user_id, "show_profile")
+            await _render_referral(callback)
+        elif target == "top_up_start":
+            await callback.answer()
+            nav_push(user_id, "show_profile")
+            topup_amount_image = get_setting("topup_amount_image")
+            msg = await smart_edit_message(callback.message, "💰 <b>Пополнение баланса</b>\n\nВведите сумму пополнения в рублях:\n🔹 Минимум: 10 RUB\n🔹 Максимум: 100 000 RUB", keyboards.create_back_to_menu_keyboard(), topup_amount_image)
+            if msg: await state.update_data(topup_prompt_mid=msg.message_id)
+            await state.set_state(TopUpProcess.waiting_for_amount)
+        elif target == "buy_new_key":
+            await callback.answer()
+            nav_push(user_id, "back_to_main_menu")
+            hosts = rw_repo.get_all_hosts(visible_only=True) or []
+            if not hosts:
+                await smart_edit_message(callback.message, "❌ <b>Нет доступных локаций</b>\nВ данный момент все серверы на техническом обслуживании. Попробуйте позже.", keyboards.create_back_to_menu_keyboard())
+                return
+            if len(hosts) == 1:
+                await _show_plans_for_host(callback, hosts[0]['host_name'])
+                return
+            await smart_edit_message(callback.message, _get_formatted_setting("msg_choose_server_text", "🌍 <b>Выбор сервера</b>\n\nВыберите страну и локацию для вашей новой подписки:", user_id), keyboards.create_host_selection_keyboard(hosts, action="new"), get_setting("buy_server_image"))
+        elif target in ("back_to_main_menu", "show_main_menu"):
+            await callback.answer()
+            nav_clear(user_id)
+            await show_main_menu(callback.message, edit_message=True)
+        elif target.startswith("show_key_"):
+            await callback.answer(); await state.clear()
+            try: kid = int(target.split("_")[2])
+            except (IndexError, ValueError): return
+            nav_push(user_id, "manage_keys")
+            await refresh_key_info_internal(bot=bot, chat_id=callback.message.chat.id, message_to_edit=callback.message, key_id=kid, user_id=user_id)
+        elif target.startswith("howto_vless_"):
+            await callback.answer()
+            try: kid = int(target.split("_")[2])
+            except: return
+            nav_push(user_id, f"show_key_{kid}")
+            msg = _get_formatted_setting("howto_intro_text", "📖 <b>Инструкции по подключению</b>\n\nВыберите вашу операционную систему для получения подробного руководства:", user_id)
+            await smart_edit_message(callback.message, msg, keyboards.create_howto_vless_keyboard_key(kid), get_setting("howto_image"))
+        elif target.startswith("key_devices_"):
+            await callback.answer()
+            parts = target.split("_")
+            try:
+                kid = int(parts[2])
+                page = int(parts[3]) if len(parts) > 3 else 0
+            except: return
+            nav_push(user_id, f"show_key_{kid}")
+            await _render_devices_list(callback.message, kid, user_id, page)
+        elif target.startswith("subscription_addons_"):
+            await callback.answer()
+            try: key_id = int(target.rsplit("_", 1)[1])
+            except ValueError: return
+            nav_push(user_id, f"show_key_{key_id}")
+            await _get_addon_key(callback, key_id)
+        elif target == "support_my_tickets":
+            await callback.answer()
+            nav_push(user_id, "support_menu")
+            await _notify_external_support(callback)
+        else:
+            await callback.answer()
+            nav_clear(user_id)
+            await show_main_menu(callback.message, edit_message=True)
+    # ===== Конец функции _nav_dispatch =====
+
+    async def _render_profile(callback: types.CallbackQuery):
+        user_id = callback.from_user.id
+        user_db_data, user_keys = get_user(user_id), get_user_keys(user_id)
+        if not user_db_data:
+            return
+        username = html.bold(user_db_data.get('username', 'Пользователь'))
+        total_spent, total_months = user_db_data.get('total_spent', 0), user_db_data.get('total_months', 0)
+        now = get_msk_time().replace(tzinfo=None)
+        def parse_to_naive_msk(date_str):
+            try:
+                dt = datetime.fromisoformat(date_str)
+                if dt.tzinfo:
+                    dt = dt.astimezone(get_msk_time().tzinfo).replace(tzinfo=None)
+                return dt
+            except:
+                return datetime.min
+        active_keys = [key for key in user_keys if parse_to_naive_msk(key['expiry_date']) > now]
+        if active_keys:
+            latest_key = max(active_keys, key=lambda k: parse_to_naive_msk(k['expiry_date']))
+            latest_expiry_date = parse_to_naive_msk(latest_key['expiry_date'])
+            time_left = latest_expiry_date - now
+            days_left = time_left.days
+            hours_left = time_left.seconds // 3600
+            vpn_active = True
+        else:
+            vpn_active = False
+            days_left = 0
+            hours_left = 0
+        try: main_balance = get_balance(user_id)
+        except Exception: main_balance = 0.0
+        try: referral_count = get_referral_count(user_id)
+        except Exception: referral_count = 0
+        try: total_ref_earned = float(get_referral_balance_all(user_id))
+        except Exception: total_ref_earned = 0.0
+        seller_info_dict = None
+        if user_db_data.get('seller_active'):
+            s_info = get_seller_user(user_id)
+            if s_info:
+                seller_info_dict = {'sale': s_info.get('seller_sale', 0), 'ref': s_info.get('seller_ref', 0), 'squad_uuid': s_info.get('seller_uuid', '0')}
+        final_text = get_profile_text(username, user_id, total_spent, total_months, vpn_active, None, main_balance, referral_count, total_ref_earned, days_left, hours_left, seller_info_dict)
+        profile_image = get_setting("profile_image")
+        await smart_edit_message(callback.message, final_text, keyboards.create_dynamic_profile_keyboard(), profile_image)
+
+    async def _render_referral(callback: types.CallbackQuery):
+        user_id = callback.from_user.id
+        try: count, balance_total = get_referral_count(user_id), float(get_referral_balance_all(user_id))
+        except Exception: count, balance_total = 0, 0.0
+        reward_type = (get_setting("referral_reward_type") or "percent_purchase").strip()
+        bot_username = TELEGRAM_BOT_USERNAME
+        if not bot_username:
+            me = await callback.bot.get_me()
+            bot_username = me.username
+        referral_link = f"https://t.me/{bot_username}?start=ref_{user_id}"
+        await smart_edit_message(callback.message, get_setting("referral_text") or "🤝 <b>Реферальная программа</b>", keyboards.create_referral_keyboard(referral_link), get_setting("referral_image"))
+    # ===== Конец функции _render_referral =====
 
     # ===== ОТОБРАЖЕНИЕ ГЛАВНОГО МЕНЮ (CALLBACK) =====
     # Обрабатывает запрос на показ главного меню через callback-кнопку
@@ -905,6 +1193,7 @@ def get_user_router() -> Router:
     async def profile_handler_callback(callback: types.CallbackQuery):
         await callback.answer()
         user_id = callback.from_user.id
+        nav_push(user_id, "back_to_main_menu")
         user_db_data, user_keys = get_user(user_id), get_user_keys(user_id)
         if not user_db_data:
             await callback.answer("⚠️ Не удалось загрузить данные профиля.", show_alert=True)
@@ -930,14 +1219,13 @@ def get_user_router() -> Router:
             latest_key = max(active_keys, key=lambda k: parse_to_naive_msk(k['expiry_date']))
             latest_expiry_date = parse_to_naive_msk(latest_key['expiry_date'])
             time_left = latest_expiry_date - now
-            vpn_remaining = get_vpn_active_text(time_left.days, time_left.seconds // 3600)
-            vpn_status = "Активен"
-        elif user_keys: 
-            vpn_status = "Неактивен"
-            vpn_remaining = "0 д. 0 ч."
-        else: 
-            vpn_status = "Нет ключей"
-            vpn_remaining = "-"
+            days_left = time_left.days
+            hours_left = time_left.seconds // 3600
+            vpn_active = True
+        else:
+            vpn_active = False
+            days_left = 0
+            hours_left = 0
         
         try: main_balance = get_balance(user_id)
         except Exception: main_balance = 0.0
@@ -960,9 +1248,9 @@ def get_user_router() -> Router:
 
         final_text = get_profile_text(
             username, user_id, total_spent, total_months, 
-            vpn_status, vpn_remaining, 
-            main_balance, referral_count, total_ref_earned, 
-            seller_info_dict
+            vpn_active, None, 
+            main_balance, referral_count, total_ref_earned,
+            days_left, hours_left, seller_info_dict
         )
         profile_image = get_setting("profile_image")
         logger.info(f"Профиль: Пользователь {user_id} просмотрел свой профиль.")
@@ -976,6 +1264,7 @@ def get_user_router() -> Router:
     @registration_required
     async def topup_start_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer()
+        nav_push(callback.from_user.id, "show_profile")
         topup_amount_image = get_setting("topup_amount_image")
         msg = await smart_edit_message(
             callback.message,
@@ -1048,10 +1337,7 @@ def get_user_router() -> Router:
         await state.update_data(topup_amount=float(final_amount))
         
         await edit_prompt(
-            (
-                f"✅ Сумма принята: {final_amount:.2f} RUB\n"
-                "Выберите удобный способ оплаты:"
-            ),
+            get_choose_payment_text(is_topup=True, topup_amount=f"{final_amount:.2f}"),
             keyboards.create_topup_payment_method_keyboard(PAYMENT_METHODS),
             "payment_method_image"
         )
@@ -1828,6 +2114,7 @@ def get_user_router() -> Router:
     async def referral_program_handler(callback: types.CallbackQuery):
         await callback.answer()
         user_id = callback.from_user.id
+        nav_push(user_id, "show_profile")
         if not user_id: return
         
         try: count, balance_total = get_referral_count(user_id), float(get_referral_balance_all(user_id))
@@ -1850,17 +2137,22 @@ def get_user_router() -> Router:
         
         referral_discount = get_setting("referral_discount") or "0"
         
-        final_text = (
+        _referral_tpl = get_setting("msg_referral_text") or (
             "🌟 <b>Реферальная программа</b>\n\n"
             "Приглашайте друзей и получайте бонусы! 💸\n\n"
-            f"💎 <b>Ваша награда:</b>\n"
-            f"• {reward_desc}\n\n"
-            f"🎁 <b>Бонус другу:</b>\n"
-            f"• Скидка <b>{referral_discount}%</b> на первую покупку\n\n"
-            f"📊 <b>Статистика:</b>\n"
-            f"👤 Приглашено: <b>{count}</b>\n"
-            f"💰 Заработано: <b>{balance_total:.2f} RUB</b>\n\n"
-            f"🔗 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>"
+            "💎 <b>Ваша награда:</b>\n"
+            "• {reward_desc}\n\n"
+            "🎁 <b>Бонус другу:</b>\n"
+            "• Скидка <b>{referral_discount}%</b> на первую покупку\n\n"
+            "📊 <b>Статистика:</b>\n"
+            "👤 Приглашено: <b>{count}</b>\n"
+            "💰 Заработано: <b>{balance_total} RUB</b>\n\n"
+            "🔗 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>"
+        )
+        final_text = safe_format(
+            _referral_tpl,
+            reward_desc=reward_desc, referral_discount=referral_discount,
+            count=count, balance_total=f"{balance_total:.2f}", referral_link=referral_link
         )
         referral_image = get_setting("referral_image")
         logger.info(f"Рефералка: Пользователь {user_id} просмотрел реферальную программу.")
@@ -1874,7 +2166,8 @@ def get_user_router() -> Router:
     @registration_required
     async def about_handler(callback: types.CallbackQuery):
         await callback.answer()
-        about_text = get_setting("about_text") or "ℹ️ Информация о проекте еще не заполнена в настройках."
+        nav_push(callback.from_user.id, "back_to_main_menu")
+        about_text = _get_formatted_setting("about_text", "ℹ️ Информация о проекте еще не заполнена в настройках.", callback.from_user.id)
         terms_url, privacy_url, channel_url = get_setting("terms_url"), get_setting("privacy_url"), get_setting("channel_url")
         about_image = get_setting("about_image")
         await smart_edit_message(callback.message, about_text, keyboards.create_about_keyboard(channel_url, terms_url, privacy_url), about_image)
@@ -1937,7 +2230,8 @@ def get_user_router() -> Router:
     # Отображает меню контактов поддержки на основе текущих настроек (бот или прямой контакт)
     async def _show_support_selection(message: types.Message):
         support_bot, support_user = get_setting("support_bot_username"), get_setting("support_user")
-        support_text = get_setting("support_text") or "🆘 <b>Служба поддержки</b>\n\nВозникли вопросы или трудности? Наши специалисты всегда готовы помочь вам!"
+        _sup_uid = message.chat.id if hasattr(message, 'chat') else 0
+        support_text = _get_formatted_setting("support_text", "🆘 <b>Служба поддержки</b>\n\nВозникли вопросы или трудности? Наши специалисты всегда готовы помочь вам!", _sup_uid)
         support_image = get_setting("support_image")
         
         if support_bot: kb = keyboards.create_support_bot_link_keyboard(support_bot)
@@ -1953,6 +2247,7 @@ def get_user_router() -> Router:
     @registration_required
     async def help_handler(callback: types.CallbackQuery):
         await callback.answer()
+        nav_push(callback.from_user.id, "back_to_main_menu")
         await _show_support_selection(callback.message)
 
     @user_router.callback_query(F.data == "support_menu")
@@ -1960,6 +2255,7 @@ def get_user_router() -> Router:
     @registration_required
     async def support_menu_handler(callback: types.CallbackQuery):
         await callback.answer()
+        nav_push(callback.from_user.id, "back_to_main_menu")
         logger.info(f"Поддержка: Пользователь {callback.from_user.id} открыл меню поддержки.")
         await _show_support_selection(callback.message)
     # ===== Конец функций поддержки =====
@@ -1973,7 +2269,7 @@ def get_user_router() -> Router:
         if support_bot_username:
             await smart_edit_message(
                 callback.message,
-                get_setting("support_text") or "Раздел поддержки.",
+                _get_formatted_setting("support_text", "Раздел поддержки.", callback.from_user.id),
                 keyboards.create_support_bot_link_keyboard(support_bot_username)
             )
             return
@@ -2029,6 +2325,7 @@ def get_user_router() -> Router:
     @registration_required
     async def support_my_tickets_handler(callback: types.CallbackQuery):
         await callback.answer()
+        nav_push(callback.from_user.id, "support_menu")
         await _notify_external_support(callback)
 
     @user_router.callback_query(F.data.startswith("support_view_"))
@@ -2098,10 +2395,12 @@ def get_user_router() -> Router:
     async def manage_keys_handler(callback: types.CallbackQuery):
         await callback.answer()
         user_id = callback.from_user.id
+        nav_push(user_id, "back_to_main_menu")
         user_keys = get_user_keys(user_id)
         keys_list_image = get_setting("keys_list_image")
         logger.info(f"Ключи: Пользователь {user_id} просмотрел список своих ключей.")
-        text = "🔑 <b>Ваши ключи доступа</b>\n\nНиже представлен список ваших активных и истекших ключей:" if user_keys else "🏷 <b>У вас пока нет активных ключей.</b>\nПриобретите подписку в главном меню, чтобы начать пользоваться."
+        _keys_tpl = _get_formatted_setting("msg_keys_list_text", "🔑 <b>Ваши ключи доступа</b>\n\n{keys_state = Ниже представлен список ваших активных и истекших ключей or 🏷 У вас пока нет активных ключей. Приобретите подписку в главном меню, чтобы начать пользоваться.}", user_id)
+        text = parse_named_conditionals(_keys_tpl, {'keys_state': bool(user_keys)})
         await smart_edit_message(callback.message, text, keyboards.create_keys_management_keyboard(user_keys), keys_list_image)
     # ===== Конец функции manage_keys_handler =====
 
@@ -2272,6 +2571,7 @@ def get_user_router() -> Router:
         await callback.answer(); await state.clear()
         try: kid = int(callback.data.split("_")[2])
         except (IndexError, ValueError): return
+        nav_push(callback.from_user.id, "manage_keys")
         await refresh_key_info_internal(bot=bot, chat_id=callback.message.chat.id, message_to_edit=callback.message, key_id=kid, user_id=callback.from_user.id)
     # ===== Конец функции show_key_handler =====
 
@@ -2477,6 +2777,7 @@ def get_user_router() -> Router:
             key_id = int(callback.data.rsplit("_", 1)[1])
         except ValueError:
             return
+        nav_push(callback.from_user.id, f"show_key_{key_id}")
         result = await _get_addon_key(callback, key_id)
         if not result:
             return
@@ -2487,7 +2788,7 @@ def get_user_router() -> Router:
         show_traffic = host.get('traffic_mode') == 'tiers' and bool(get_traffic_tiers(key.get('host_name')))
         await smart_edit_message(
             callback.message,
-            "➕ <b>Допы подписки</b>\n\nВыберите, что хотите дополнительно докупить:",
+            get_choose_payment_text(is_addons_menu=True),
             keyboards.create_subscription_addons_keyboard(key_id, show_devices, show_traffic),
         )
 
@@ -2562,7 +2863,8 @@ def get_user_router() -> Router:
         added = int(tier['device_count']) - current_limit
         price = round(float(tier['price']) * added * days_left / 30, 2)
         await state.update_data(addon_type='devices', addon_key_id=key_id, addon_target_devices=int(tier['device_count']), addon_price=price)
-        await smart_edit_message(callback.message, f"📑 <b>Подтверждение</b>\n<blockquote>• Сейчас: {current_limit} устройств\n• Докупается: +{added} устройств\n• Станет: {tier['device_count']} устройств\n• До конца подписки: {days_left} дн.</blockquote>\n\n<b>🧾 К оплате: {price:.2f}₽</b>", keyboards.create_addon_confirm_keyboard(key_id, 'devices'))
+        _addon_dev_msg = get_choose_payment_text(is_confirm_devices=True, current_limit=current_limit, added=added, target_devices=tier['device_count'], days_left=days_left, price=f"{price:.2f}")
+        await smart_edit_message(callback.message, _addon_dev_msg, keyboards.create_addon_confirm_keyboard(key_id, 'devices'))
 
     @user_router.callback_query(F.data.startswith("addon_traffic_select_"))
     @anti_spam
@@ -2588,7 +2890,8 @@ def get_user_router() -> Router:
         added = int(tier['traffic_gb'])
         price = round(float(tier['price']) * days_left / 30, 2)
         await state.update_data(addon_type='traffic', addon_key_id=key_id, addon_traffic_tier_id=tier_id, addon_price=price)
-        await smart_edit_message(callback.message, f"📑 <b>Подтверждение</b>\n<blockquote>• Текущий лимит: {current_limit:.0f} ГБ\n• Использовано: {used:.2f} ГБ\n• Докупается: +{added} ГБ\n• Новый лимит: {current_limit + added:.0f} ГБ\n• Будет доступно: {max(0, current_limit - used) + added:.2f} ГБ\n• До конца подписки: {days_left} дн.</blockquote>\n\n<b>🧾 К оплате: {price:.2f}₽</b>", keyboards.create_addon_confirm_keyboard(key_id, 'traffic'))
+        _addon_tr_msg = get_choose_payment_text(is_confirm_traffic=True, current_limit=f"{current_limit:.0f}", used=f"{used:.2f}", added=added, new_limit=f"{current_limit + added:.0f}", available=f"{max(0, current_limit - used) + added:.2f}", days_left=days_left, price=f"{price:.2f}")
+        await smart_edit_message(callback.message, _addon_tr_msg, keyboards.create_addon_confirm_keyboard(key_id, 'traffic'))
 
     @user_router.callback_query(F.data.startswith("addon_confirm_"))
     @anti_spam
@@ -2612,7 +2915,7 @@ def get_user_router() -> Router:
             kid = int(parts[2])
             page = int(parts[3]) if len(parts) > 3 else 0
         except: return
-
+        nav_push(callback.from_user.id, f"show_key_{kid}")
         await _render_devices_list(callback.message, kid, callback.from_user.id, page)
 
     @user_router.callback_query(F.data.startswith("del_dev_"))
@@ -2666,7 +2969,8 @@ def get_user_router() -> Router:
         await callback.answer()
         try: kid = int(callback.data.split("_")[2])
         except: return
-        msg = get_setting("howto_intro_text") or "📖 <b>Инструкции по подключению</b>\n\nВыберите вашу операционную систему для получения подробного руководства:"
+        nav_push(callback.from_user.id, f"show_key_{kid}")
+        msg = _get_formatted_setting("howto_intro_text", "📖 <b>Инструкции по подключению</b>\n\nВыберите вашу операционную систему для получения подробного руководства:", callback.from_user.id)
         await smart_edit_message(callback.message, msg, keyboards.create_howto_vless_keyboard_key(kid), get_setting("howto_image"))
 
     @user_router.callback_query(F.data == "howto_vless")
@@ -2674,7 +2978,8 @@ def get_user_router() -> Router:
     @registration_required
     async def show_instruction_handler(callback: types.CallbackQuery):
         await callback.answer()
-        msg = get_setting("howto_intro_text") or "📖 <b>Инструкции по подключению</b>\n\nВыберите вашу операционную систему для получения подробного руководства:"
+        nav_push(callback.from_user.id, "back_to_main_menu")
+        msg = _get_formatted_setting("howto_intro_text", "📖 <b>Инструкции по подключению</b>\n\nВыберите вашу операционную систему для получения подробного руководства:", callback.from_user.id)
         await smart_edit_message(callback.message, msg, keyboards.create_howto_vless_keyboard(), get_setting("howto_image"))
 
     @user_router.callback_query(F.data.in_(["howto_android", "howto_ios", "howto_windows", "howto_linux"]))
@@ -2693,6 +2998,7 @@ def get_user_router() -> Router:
     @registration_required
     async def buy_new_key_handler(callback: types.CallbackQuery):
         await callback.answer()
+        nav_push(callback.from_user.id, "back_to_main_menu")
         hosts = rw_repo.get_all_hosts(visible_only=True) or []
         if not hosts: return await smart_edit_message(callback.message, "❌ <b>Нет доступных локаций</b>\nВ данный момент все серверы на техническом обслуживании. Попробуйте позже.", keyboards.create_back_to_menu_keyboard())
         
@@ -2700,7 +3006,7 @@ def get_user_router() -> Router:
             await callback.answer("⏳ Загрузка тарифов...")
             return await _show_plans_for_host(callback, hosts[0]['host_name'])
 
-        await smart_edit_message(callback.message, "🌍 <b>Выбор сервера</b>\n\nВыберите страну и локацию для вашей новой подписки:", keyboards.create_host_selection_keyboard(hosts, action="new"), get_setting("buy_server_image"))
+        await smart_edit_message(callback.message, _get_formatted_setting("msg_choose_server_text", "🌍 <b>Выбор сервера</b>\n\nВыберите страну и локацию для вашей новой подписки:", callback.from_user.id), keyboards.create_host_selection_keyboard(hosts, action="new"), get_setting("buy_server_image"))
         logger.info(f"Покупка: Пользователь {callback.from_user.id} открыл выбор сервера для новой подписки.")
     # ===== Конец функции buy_new_key_handler =====
 
@@ -3039,7 +3345,7 @@ def get_user_router() -> Router:
                 return await smart_edit_message(message, "❌ Стоимость дополнения не определена.", keyboards.create_back_to_menu_keyboard())
             await state.update_data(final_price=float(price))
             balance = get_balance(message.chat.id)
-            text = f"💳 <b>Оплата дополнения</b>\n\n<b>🧾 К оплате: {price:.2f}₽</b>\n\n{CHOOSE_PAYMENT_METHOD_MESSAGE}"
+            text = get_choose_payment_text(is_addon_pay=True, has_price=True, price=f"{price:.2f}")
             kb = keyboards.create_payment_method_keyboard(PAYMENT_METHODS, action='addon', key_id=data.get('addon_key_id'), show_balance=(balance >= float(price)), main_balance=balance, price=float(price), promo_applied=False, back_callback=f"subscription_addons_{data.get('addon_key_id')}", balance_only=True)
             await smart_edit_message(message, text, kb, get_setting("payment_method_image"))
             await state.set_state(PaymentProcess.waiting_for_payment_method)
@@ -3101,7 +3407,12 @@ def get_user_router() -> Router:
                 details.append(f"• Трафик: {included_label} (вкл.)")
 
         summary = "\n".join(details)
-        text = f"📑 <b>Итог:</b>\n<blockquote>{summary}</blockquote>\n\n<b>🧾 К оплате: {price:.2f}₽</b>{promo_text}\n{CHOOSE_PAYMENT_METHOD_MESSAGE}"
+        text = get_choose_payment_text(
+            is_purchase=True, has_price=True,
+            summary=summary,
+            price=f"{price:.2f}",
+            promo_text=promo_text if promo_text else ""
+        )
         
         back_cb = "back_to_email_prompt" if get_setting("skip_email") != "1" else (f"select_host_new_{data.get('host_name')}" if data.get('action') == 'new' else "manage_keys")
         kb = keyboards.create_payment_method_keyboard(PAYMENT_METHODS, action=data.get('action'), key_id=data.get('key_id'), show_balance=(balance >= float(price)), main_balance=balance, price=float(price), promo_applied=bool(data.get('promo_code')), back_callback=back_cb)
@@ -3142,10 +3453,7 @@ def get_user_router() -> Router:
             return
         await smart_edit_message(
             callback.message,
-            (
-                f"✅ Сумма принята: {final_amount:.2f} RUB\n"
-                "Выберите удобный способ оплаты:"
-            ),
+            get_choose_payment_text(is_topup=True, topup_amount=f"{final_amount:.2f}"),
             keyboards.create_topup_payment_method_keyboard(PAYMENT_METHODS),
             get_setting("payment_method_image")
         )
@@ -3380,13 +3688,14 @@ def get_user_router() -> Router:
         await callback.answer()
         try: kid = int(callback.data.split("_")[2])
         except: return
+        nav_push(callback.from_user.id, f"show_key_{kid}")
         key = rw_repo.get_key_by_id(kid)
         if not key or key['user_id'] != callback.from_user.id: return await smart_edit_message(callback.message, "❌ Ключ не найден.")
 
         cur = key.get('comment_key')
         txt = f"<b>✏️ Комментарий к ключу #{kid}</b>\n\n" + (f"💬 Текущий: <b>{html.quote(cur)}</b>\n\n" if cur else "") + "Комментарий помогает различать ключи в общем списке. Виден только вам.\n\n💡 <i>Напр.: Телефон, Мама, Ноутбук</i>\n\n👇 <b>Введите новый текст:</b>"
         
-        kb = InlineKeyboardBuilder().button(text="🗑 Удалить", callback_data=f"delete_comment_{kid}").button(text="⬅️ Назад", callback_data=f"show_key_{kid}").adjust(2).as_markup()
+        kb = InlineKeyboardBuilder().button(text="🗑 Удалить", callback_data=f"delete_comment_{kid}").button(text=keyboards._setting_button_text("btn_back_to_menu", "⬅️ Назад"), callback_data=f"show_key_{kid}", **keyboards._setting_button_extra("btn_back_to_menu")).adjust(2).as_markup()
         msg = await smart_edit_message(callback.message, txt, kb, get_setting("key_comments_image"))
         
         await state.update_data(editing_key_id=kid, prompt_message_id=msg.message_id if msg else None, last_callback_query_id=callback.id)
@@ -3433,7 +3742,7 @@ def get_user_router() -> Router:
         data = callback.data
         if data == "promo_uni":
             await state.set_state(PromoUniProcess.waiting_for_promo_code)
-            kb = InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup()
+            kb = keyboards.create_back_to_profile_keyboard()
             msg = await smart_edit_message(callback.message, "🎁 <b>Активация бонусного промокода</b>\n\nВведите ваш универсальный промокод:", reply_markup=kb)
             if msg: await state.update_data(promo_uni_prompt_mid=msg.message_id)
             await callback.answer()
@@ -3454,7 +3763,7 @@ def get_user_router() -> Router:
         
         if not promo or promo.get('promo_type') not in ('universal', 'balance'):
             msg = err_map.get(err_msg, err_msg) if err_msg else "Данный промокод недействителен."
-            await smart_edit_message(callback.message, f"❌ <b>Ошибка</b>\n{msg}", reply_markup=InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+            await smart_edit_message(callback.message, f"❌ <b>Ошибка</b>\n{msg}", reply_markup=keyboards.create_back_to_profile_keyboard())
             return
             
         if promo.get('promo_type') == 'balance':
@@ -3462,14 +3771,14 @@ def get_user_router() -> Router:
             success = adjust_user_balance(uid, float(reward))
             if success:
                 redeem_universal_promo(code, uid)
-                await smart_edit_message(callback.message, f"✅ <b>Баланс пополнен!</b>\nВам начислено {reward} ₽", reply_markup=InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+                await smart_edit_message(callback.message, f"✅ <b>Баланс пополнен!</b>\nВам начислено {reward} ₽", reply_markup=keyboards.create_back_to_profile_keyboard())
             else:
-                await smart_edit_message(callback.message, "❌ <b>Ошибка</b>\nНе удалось пополнить баланс.", reply_markup=InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+                await smart_edit_message(callback.message, "❌ <b>Ошибка</b>\nНе удалось пополнить баланс.", reply_markup=keyboards.create_back_to_profile_keyboard())
             return
             
         keys = get_user_keys(uid)
         if not keys:
-            kb_buy = InlineKeyboardBuilder().button(text="🛒 Купить подписку", callback_data="buy_new_key").button(text="⬅️ Назад", callback_data="show_profile").adjust(1).as_markup()
+            kb_buy = InlineKeyboardBuilder().button(text="🛒 Купить подписку", callback_data="buy_new_key").button(text=keyboards._setting_button_text("btn_back_to_menu", "⬅️ Назад"), callback_data="show_profile", **keyboards._setting_button_extra("btn_back_to_menu")).adjust(1).as_markup()
             await smart_edit_message(callback.message, "❌ У вас нет активных подписок для применения промокода.", reply_markup=kb_buy)
             return
             
@@ -3493,7 +3802,7 @@ def get_user_router() -> Router:
         
         async def _show_result(text, clear_state=False, reply_markup=None):
             if clear_state: await state.clear()
-            kb = reply_markup or InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup()
+            kb = reply_markup or keyboards.create_back_to_profile_keyboard()
             if prompt_mid:
                 try: await bot.edit_message_text(chat_id=chat_id, message_id=prompt_mid, text=text, reply_markup=kb)
                 except: await message.answer(text, reply_markup=kb)
@@ -3519,14 +3828,14 @@ def get_user_router() -> Router:
             success = adjust_user_balance(uid, float(reward))
             if success:
                 redeem_universal_promo(code, uid)
-                await _show_result(f"✅ <b>Баланс успешно пополнен!</b>\nВам начислено {reward} ₽", True, InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+                await _show_result(f"✅ <b>Баланс успешно пополнен!</b>\nВам начислено {reward} ₽", True, keyboards.create_back_to_profile_keyboard())
             else:
                 await _show_result("🎁 <b>Активация бонусного промокода</b>\n\n❌ Произошла ошибка при пополнении баланса.\n\nПопробуйте отправить другой код:", False)
             return
             
         keys = get_user_keys(uid)
         if not keys:
-            kb_buy = InlineKeyboardBuilder().button(text="🛒 Купить подписку", callback_data="buy_new_key").button(text="⬅️ Назад в профиль", callback_data="show_profile").adjust(1).as_markup()
+            kb_buy = InlineKeyboardBuilder().button(text="🛒 Купить подписку", callback_data="buy_new_key").button(text=keyboards._setting_button_text("btn_back_to_menu", "⬅️ Назад"), callback_data="show_profile", **keyboards._setting_button_extra("btn_back_to_menu")).adjust(1).as_markup()
             await _show_result("🎁 <b>Активация бонусного промокода</b>\n\n❌ У вас нет активных подписок.\nПромокод на дни добавляет дни только к существующим подпискам.", True, kb_buy)
             return
             
@@ -3570,13 +3879,13 @@ def get_user_router() -> Router:
                 await smart_edit_message(
                     callback.message,
                     f"✅ <b>Баланс успешно пополнен!</b>\nВам начислено {reward} ₽",
-                    reply_markup=InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup()
+                    reply_markup=keyboards.create_back_to_profile_keyboard()
                 )
             else:
                 await smart_edit_message(
                     callback.message,
                     "🎁 <b>Активация бонусного промокода</b>\n\n❌ Произошла ошибка при пополнении баланса.",
-                    reply_markup=InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup()
+                    reply_markup=keyboards.create_back_to_profile_keyboard()
                 )
             await callback.answer()
             return
@@ -3609,12 +3918,12 @@ def get_user_router() -> Router:
             
             key = rw_repo.get_key_by_id(key_id)
             if not key or key['user_id'] != uid:
-                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ключ не найден.", InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ключ не найден.", keyboards.create_back_to_profile_keyboard())
                 return
                 
             days_to_add = int(promo.get('reward_value') or 0)
             if days_to_add <= 0:
-                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ошибка промокода: количество дней 0.", InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ошибка промокода: количество дней 0.", keyboards.create_back_to_profile_keyboard())
                 return
                 
             host = key.get('host_name')
@@ -3627,24 +3936,24 @@ def get_user_router() -> Router:
                 telegram_id=uid
             )
             if not res:
-                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ошибка на стороне VPN-сервера.", InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ошибка на стороне VPN-сервера.", keyboards.create_back_to_profile_keyboard())
                 return
                 
             if not rw_repo.update_key(key_id, remnawave_user_uuid=res['client_uuid'], expire_at_ms=res['expiry_timestamp_ms']):
-                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ошибка обновления данных ключа локально.", InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ошибка обновления данных ключа локально.", keyboards.create_back_to_profile_keyboard())
                 return
                 
             redeem_res = redeem_universal_promo(code, uid)
             if not redeem_res:
-                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ошибка: Вы уже использовали этот код.", InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+                await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Ошибка: Вы уже использовали этот код.", keyboards.create_back_to_profile_keyboard())
                 return
                 
             success_txt = f"✅ <b>Промокод успешно активирован!</b>\n🎉 Добавлено дней: {days_to_add}\nВаша подписка продлена."
-            await _edit(success_txt, InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+            await _edit(success_txt, keyboards.create_back_to_profile_keyboard())
             
         except Exception as e:
             logger.error(f"Ошибка применения uni промокода {uid}: {e}")
-            await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Произошла ошибка при активации.", InlineKeyboardBuilder().button(text="⬅️ Назад", callback_data="show_profile").as_markup())
+            await _edit("🎁 <b>Активация бонусного промокода</b>\n\n❌ Произошла ошибка при активации.", keyboards.create_back_to_profile_keyboard())
 
     return user_router
 
@@ -3697,6 +4006,42 @@ async def notify_admin_of_purchase(bot: Bot, metadata: dict):
         await bot.send_message(int(aid), txt, parse_mode="HTML")
     except Exception as e: logger.warning(f"Ошибка уведомления админа: {e}")
 # ===== Конец функции notify_admin_of_purchase =====
+
+async def notify_admins_of_new_user(bot: Bot, user_id: int, username: str | None, first_name: str | None, referrer_id: int | None):
+    try:
+        admin_ids = get_admin_ids()
+        if not admin_ids: return
+
+        username_str = f"@{html.quote(username)}" if username else "N/A"
+        txt = (
+            "👤 <b>Новый пользователь</b>\n"
+            f"🆔 ID: <code>{user_id}</code>\n"
+            f"💌 Username: {username_str}"
+        )
+        if first_name:
+            txt += f"\n📃 Имя: {html.quote(first_name)}"
+
+        if referrer_id:
+            ref_display = str(referrer_id)
+            referrer = get_user(referrer_id)
+            if referrer:
+                ref_username = referrer.get('username')
+                ref_first_name = referrer.get('first_name')
+                if ref_username:
+                    ref_display = f"@{html.quote(ref_username)}"
+                elif ref_first_name:
+                    ref_display = f"<a href='tg://user?id={referrer_id}'>{html.quote(ref_first_name)}</a>"
+                else:
+                    ref_display = f"<a href='tg://user?id={referrer_id}'>Профиль</a>"
+            txt += f"\n🤝 Приглашён реферером: {ref_display} / id: <code>{referrer_id}</code>"
+
+        for aid in admin_ids:
+            try:
+                await bot.send_message(int(aid), txt, parse_mode="HTML")
+            except Exception as e:
+                logger.warning(f"Не удалось уведомить админа {aid} о новом пользователе {user_id}: {e}")
+    except Exception as e:
+        logger.warning(f"Ошибка уведомления админов о новом пользователе {user_id}: {e}")
 
 # ===== ФИНАЛЬНАЯ ОБРАБОТКА УСПЕШНОГО ПЛАТЕЖА =====
 # Маршрутизирует выполнение заказа: пополнение баланса, создание нового ключа или продление существующего

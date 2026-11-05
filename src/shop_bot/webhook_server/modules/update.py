@@ -1,7 +1,9 @@
-import json
+﻿import json
 import os
 import requests
 import time
+import subprocess
+
 
 RELEASES_CACHE_TTL = 600
 RELEASES_LIMIT = 1
@@ -120,7 +122,36 @@ def register_update_routes(flask_app, login_required):
     @login_required
     def check_updates_route():
         result = check_for_updates()
+
         return result
+
+    @flask_app.route('/update/apply', methods=['POST'])
+    @login_required
+    def apply_update_route():
+        """Start the official installer in the background after re-checking the release."""
+        try:
+            update_status = check_for_updates()
+            if not update_status.get('update_available'):
+                return {'ok': False, 'error': 'РћР±РЅРѕРІР»РµРЅРёРµ РЅРµРґРѕСЃС‚СѓРїРЅРѕ'}, 409
+
+            # The installer restarts the application, therefore it must not be
+            # awaited by the HTTP request that started it.
+            command = (
+                'cd /root/remnawave-shopbot && '
+                'curl -sSL https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/main/install.sh | bash'
+            )
+            subprocess.Popen(
+                ['bash', '-lc', command],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+                close_fds=True,
+            )
+            return {'ok': True, 'message': 'РћР±РЅРѕРІР»РµРЅРёРµ Р·Р°РїСѓС‰РµРЅРѕ'}
+        except Exception as e:
+            return {'ok': False, 'error': str(e)}, 500
+
 
     @flask_app.route('/update/releases', methods=['GET'])
     @login_required

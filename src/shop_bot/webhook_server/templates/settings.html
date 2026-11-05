@@ -78,6 +78,7 @@
 <form action="{{ url_for('settings_page') }}" method="post" id="settings-form" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <input type="hidden" name="next_hash" id="settings-next-hash" value="panel" />
+    <input type="hidden" name="full_settings_form" value="1" />
 
     <section id="tab-panel" class="tab-content">
         <div class="space-y-4">
@@ -623,6 +624,7 @@
                             <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5 transition duration-150 hover:border-white/20">
                                 <span class="text-xs font-medium text-white/70">ID пользователя</span>
                                 <span class="relative inline-flex shrink-0 items-center">
+                                    <input type="hidden" name="pay_info_id" value="0" />
                                     <input type="checkbox" name="pay_info_id" value="1" data-field="id" {% if pay_info.id==1 %}checked{% endif %} class="peer sr-only pay-info-toggle" />
                                     <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
                                     <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
@@ -631,6 +633,7 @@
                             <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5 transition duration-150 hover:border-white/20">
                                 <span class="text-xs font-medium text-white/70">Username</span>
                                 <span class="relative inline-flex shrink-0 items-center">
+                                    <input type="hidden" name="pay_info_username" value="0" />
                                     <input type="checkbox" name="pay_info_username" value="1" data-field="username" {% if pay_info.username==1 %}checked{% endif %} class="peer sr-only pay-info-toggle" />
                                     <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
                                     <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
@@ -639,6 +642,7 @@
                             <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5 transition duration-150 hover:border-white/20">
                                 <span class="text-xs font-medium text-white/70">Имя</span>
                                 <span class="relative inline-flex shrink-0 items-center">
+                                    <input type="hidden" name="pay_info_first_name" value="0" />
                                     <input type="checkbox" name="pay_info_first_name" value="1" data-field="first_name" {% if pay_info.first_name==1 %}checked{% endif %} class="peer sr-only pay-info-toggle" />
                                     <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
                                     <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
@@ -647,6 +651,7 @@
                             <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5 transition duration-150 hover:border-white/20">
                                 <span class="text-xs font-medium text-white/70">Хост</span>
                                 <span class="relative inline-flex shrink-0 items-center">
+                                    <input type="hidden" name="pay_info_host_name" value="0" />
                                     <input type="checkbox" name="pay_info_host_name" value="1" data-field="host_name" {% if pay_info.host_name==1 %}checked{% endif %} class="peer sr-only pay-info-toggle" />
                                     <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
                                     <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
@@ -677,64 +682,34 @@
 
                     <div class="border-t border-white/[0.06] pt-4">
                         <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Названия кнопок способов оплаты</p>
-                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">Баланс</label>
-                                <input type="text" name="payment_button_balance_text" value="{{ settings.payment_button_balance_text or '' }}" placeholder="💼 Оплатить с баланса"
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+                            {% for pm in [
+                            {'m': 'balance', 'l': 'Баланс', 'p': '💼 Оплатить с баланса'},
+                            {'m': 'yookassa', 'l': 'YooKassa', 'p': '🏦 СБП / Банковская карта'},
+                            {'m': 'platega_payform', 'l': 'Platega Pay-form', 'p': '💳 Platega'},
+                            {'m': 'platega', 'l': 'Platega СБП', 'p': '💳 СБП / Platega'},
+                            {'m': 'platega_crypto', 'l': 'Platega Crypto', 'p': '🪙 Crypto / Platega'},
+                            {'m': 'cryptobot', 'l': 'CryptoBot', 'p': '💎 Криптовалюта'},
+                            {'m': 'heleket', 'l': 'Heleket', 'p': '💎 Криптовалюта'},
+                            {'m': 'tonconnect', 'l': 'TON Connect', 'p': '🪙 TON Connect'},
+                            {'m': 'stars', 'l': 'Telegram Stars', 'p': '⭐ Telegram Stars'},
+                            {'m': 'yoomoney', 'l': 'YooMoney', 'p': '💜 ЮMoney (кошелёк)'}
+                            ] %}
+                            <div class="space-y-2 rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                                <label class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">{{ pm.l }}</label>
+                                <input type="text" name="payment_button_{{ pm.m }}_text" value="{{ settings['payment_button_' ~ pm.m ~ '_text'] or '' }}" placeholder="{{ pm.p }}"
+                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <input type="text" name="payment_button_{{ pm.m }}_icon_emoji_id" value="{{ settings['payment_button_' ~ pm.m ~ '_icon_emoji_id'] or '' }}" placeholder="Emoji ID"
                                     class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
                             </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">YooKassa</label>
-                                <input type="text" name="payment_button_yookassa_text" value="{{ settings.payment_button_yookassa_text or '' }}" placeholder="🏦 СБП / Банковская карта"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">Platega Pay-form</label>
-                                <input type="text" name="payment_button_platega_payform_text" value="{{ settings.payment_button_platega_payform_text or '' }}" placeholder="💳 Platega"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">Platega СБП</label>
-                                <input type="text" name="payment_button_platega_text" value="{{ settings.payment_button_platega_text or '' }}" placeholder="💳 СБП / Platega"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">Platega Crypto</label>
-                                <input type="text" name="payment_button_platega_crypto_text" value="{{ settings.payment_button_platega_crypto_text or '' }}" placeholder="🪙 Crypto / Platega"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">CryptoBot</label>
-                                <input type="text" name="payment_button_cryptobot_text" value="{{ settings.payment_button_cryptobot_text or '' }}" placeholder="💎 Криптовалюта"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">Heleket</label>
-                                <input type="text" name="payment_button_heleket_text" value="{{ settings.payment_button_heleket_text or '' }}" placeholder="💎 Криптовалюта"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">TON Connect</label>
-                                <input type="text" name="payment_button_tonconnect_text" value="{{ settings.payment_button_tonconnect_text or '' }}" placeholder="🪙 TON Connect"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">Telegram Stars</label>
-                                <input type="text" name="payment_button_stars_text" value="{{ settings.payment_button_stars_text or '' }}" placeholder="⭐ Telegram Stars"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-medium text-white/60">YooMoney</label>
-                                <input type="text" name="payment_button_yoomoney_text" value="{{ settings.payment_button_yoomoney_text or '' }}" placeholder="💜 ЮMoney (кошелёк)"
-                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
-                            </div>
+                            {% endfor %}
                         </div>
-                        <p class="mt-2 text-[11px] text-white/40">Оставьте поле пустым, чтобы использовать стандартное название.</p>
+                        <p class="mt-2 text-[11px] text-white/40">Оставьте поле пустым, чтобы использовать стандартное название. Emoji ID — ID премиум-эмодзи для иконки кнопки.</p>
                     </div>
                 </div>
             </section>
 
-            <div class="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
+            <div class="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-2">
                 <section class="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
                     <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-emerald-400/[0.08] blur-3xl"></div>
                     <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
@@ -744,14 +719,25 @@
                             </span>
                             <h3 class="text-sm font-semibold tracking-tight text-white">YooKassa</h3>
                         </div>
-                        <div class="flex shrink-0 items-center gap-2">
-                            <label class="relative inline-flex cursor-pointer items-center">
-                                <input type="hidden" name="sbp_enabled" value="false" />
-                                <input type="checkbox" name="sbp_enabled" value="true" id="sbp_enabled" {% if settings.sbp_enabled=='true' %}checked{% endif %} class="peer sr-only" />
-                                <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
-                                <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
-                            </label>
-                            <span class="text-[11px] font-medium uppercase tracking-wider text-white/50">СБП</span>
+                        <div class="flex shrink-0 items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="yookassa_enabled" value="false" />
+                                    <input type="checkbox" name="yookassa_enabled" value="true" id="yookassa_enabled" {% if settings.yookassa_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[11px] font-medium uppercase tracking-wider text-white/50">ВКЛ</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="sbp_enabled" value="false" />
+                                    <input type="checkbox" name="sbp_enabled" value="true" id="sbp_enabled" {% if settings.sbp_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[11px] font-medium uppercase tracking-wider text-white/50">СБП</span>
+                            </div>
                         </div>
                     </header>
                     <div class="relative flex flex-1 flex-col gap-4 p-3 sm:p-4">
@@ -779,6 +765,16 @@
                                     <input type="password" name="yookassa_secret_key" value="{{ settings.yookassa_secret_key or '' }}"
                                         class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
                                 </div>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Webhook URL (notification_url)</label>
+                                <div class="relative">
+                                    <i data-lucide="link" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="text" name="yookassa_webhook_url" value="{{ settings.yookassa_webhook_url or '' }}"
+                                        placeholder="https://domain.com:8443/yookassa-webhook"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 font-mono text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                                <p class="mt-1 text-[10px] text-white/40">Передаётся в API YooKassa при создании платежа. Если пусто — используется URL из настроек магазина в личном кабинете YooKassa.</p>
                             </div>
                         </div>
                         <div class="border-t border-white/[0.06] pt-4">
@@ -832,11 +828,22 @@
 
                 <section class="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
                     <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-emerald-400/[0.08] blur-3xl"></div>
-                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
-                            <i data-lucide="coins" class="h-4 w-4" aria-hidden="true"></i>
-                        </span>
-                        <h3 class="text-sm font-semibold tracking-tight text-white">Heleket</h3>
+                    <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="coins" class="h-4 w-4" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Heleket</h3>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input type="hidden" name="heleket_enabled" value="false" />
+                                <input type="checkbox" name="heleket_enabled" value="true" id="heleket_enabled" {% if settings.heleket_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                            </label>
+                            <span class="text-[11px] font-medium uppercase tracking-wider text-white/50">ВКЛ</span>
+                        </div>
                     </header>
                     <div class="relative flex flex-1 flex-col gap-4 p-3 sm:p-4">
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -939,11 +946,22 @@
 
                 <section class="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
                     <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-emerald-400/[0.08] blur-3xl"></div>
-                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
-                            <i data-lucide="wallet" class="h-4 w-4" aria-hidden="true"></i>
-                        </span>
-                        <h3 class="text-sm font-semibold tracking-tight text-white">TonConnect</h3>
+                    <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="wallet" class="h-4 w-4" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="text-sm font-semibold tracking-tight text-white">TonConnect</h3>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input type="hidden" name="tonconnect_enabled" value="false" />
+                                <input type="checkbox" name="tonconnect_enabled" value="true" id="tonconnect_enabled" {% if settings.tonconnect_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                            </label>
+                            <span class="text-[11px] font-medium uppercase tracking-wider text-white/50">ВКЛ</span>
+                        </div>
                     </header>
                     <div class="relative flex flex-1 flex-col gap-4 p-3 sm:p-4">
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1005,11 +1023,22 @@
 
                 <section class="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
                     <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-emerald-400/[0.08] blur-3xl"></div>
-                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
-                            <i data-lucide="bitcoin" class="h-4 w-4" aria-hidden="true"></i>
-                        </span>
-                        <h3 class="text-sm font-semibold tracking-tight text-white">CryptoBot</h3>
+                    <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="bitcoin" class="h-4 w-4" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="text-sm font-semibold tracking-tight text-white">CryptoBot</h3>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input type="hidden" name="cryptobot_enabled" value="false" />
+                                <input type="checkbox" name="cryptobot_enabled" value="true" id="cryptobot_enabled" {% if settings.cryptobot_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                            </label>
+                            <span class="text-[11px] font-medium uppercase tracking-wider text-white/50">ВКЛ</span>
+                        </div>
                     </header>
                     <div class="relative flex flex-1 flex-col gap-4 p-3 sm:p-4">
                         <div>
@@ -1132,6 +1161,7 @@
 <form action="{{ url_for('settings_page') }}" method="post" id="settings-form-part2">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <input type="hidden" name="next_hash" id="settings-next-hash-part2" value="referrals" />
+    <input type="hidden" name="full_settings_form2" value="1" />
 
     <section id="tab-referrals" class="tab-content hidden">
         <div class="space-y-4">
@@ -1262,74 +1292,6 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                <section class="relative min-w-0 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
-                    <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-violet-400/[0.08] blur-3xl"></div>
-                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300">
-                            <i data-lucide="pen-line" class="h-4 w-4" aria-hidden="true"></i>
-                        </span>
-                        <h3 class="text-sm font-semibold tracking-tight text-white">Текстовые блоки</h3>
-                    </header>
-                    <div class="relative space-y-4 p-3 sm:p-4">
-                        <div>
-                            <label class="mb-1.5 block text-xs font-medium text-white/60">Текст "О проекте"</label>
-                            <textarea name="about_text" rows="3"
-                                class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings.about_text or '' }}</textarea>
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-xs font-medium text-white/60">Текст в разделе "Поддержка"</label>
-                            <textarea name="support_text" rows="3"
-                                class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings.support_text or '' }}</textarea>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="relative min-w-0 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
-                    <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-violet-400/[0.08] blur-3xl"></div>
-                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300">
-                            <i data-lucide="home" class="h-4 w-4" aria-hidden="true"></i>
-                        </span>
-                        <h3 class="text-sm font-semibold tracking-tight text-white">Главное меню</h3>
-                    </header>
-                    <div class="relative space-y-4 p-3 sm:p-4">
-                        <div>
-                            <label class="mb-1.5 block text-xs font-medium text-white/60">Текст главного меню</label>
-                            <textarea name="main_menu_text" rows="3" placeholder="🏠 <b>Главное меню</b>&#10;&#10;Выберите действие:"
-                                class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings.main_menu_text or '' }}</textarea>
-                        </div>
-                        <div class="border-t border-white/[0.06] pt-4">
-                            <div class="mb-3 flex items-center justify-between gap-2">
-                                <label class="text-xs font-medium text-white/60">Изображение меню</label>
-                                <button type="button" data-copy-text="ГЛАВНОЕ МЕНЮ"
-                                    class="btn-copy-text inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-medium text-white/40 transition duration-150 hover:bg-white/[0.06] hover:text-white">
-                                    <i data-lucide="copy" class="h-3.5 w-3.5" aria-hidden="true"></i>
-                                    Copy Tag
-                                </button>
-                            </div>
-                            <div class="space-y-3">
-                                <input type="text" id="main_menu_image_url" value="{{ settings.main_menu_image or '' }}" readonly
-                                    class="w-full truncate rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 font-mono text-[11px] text-white/40 outline-none" />
-                                <div class="flex gap-2">
-                                    <button type="button" data-section="main_menu"
-                                        class="btn-upload-menu-image inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-2 py-2.5 text-[11px] font-medium text-emerald-300 transition duration-150 hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
-                                        <i data-lucide="upload" class="h-3.5 w-3.5" aria-hidden="true"></i>
-                                        Загрузить
-                                    </button>
-                                    <button type="button" data-section="main_menu"
-                                        class="btn-delete-menu-image inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-2 py-2.5 text-[11px] font-medium text-red-300 transition duration-150 hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60">
-                                        <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
-                                        Удалить
-                                    </button>
-                                </div>
-                                <input type="file" id="main_menu_image_file" accept=".jpg,.jpeg,.png,.gif" class="hidden" data-section="main_menu" />
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
             <section class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
                 <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-violet-400/[0.08] blur-3xl"></div>
                 <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
@@ -1348,6 +1310,7 @@
                     'icon': 'info',
                     'color': 'primary',
                     'media': [
+                    {'id': 'main_menu', 'label': 'Главное меню', 'tag': 'ГЛАВНОЕ МЕНЮ', 'desc': 'Отображается при открытии главного меню бота'},
                     {'id': 'profile', 'label': 'Профиль', 'tag': 'ВАШ ПРОФИЛЬ', 'desc': 'Отображается при нажатии кнопки "👤 Мой профиль"'},
                     {'id': 'support', 'label': 'Поддержка', 'tag': 'ТЕХ ПОДДЕРЖКА', 'desc': 'Отображается при нажатии кнопки "🆘 Поддержка"'},
                     {'id': 'about', 'label': 'О проекте', 'tag': 'О СЕРВИСЕ', 'desc': 'Отображается при нажатии кнопки "ℹ️ О боте"'},
@@ -1516,7 +1479,7 @@
                         {'n': 'btn_howto_text', 'b': 'btn_howto', 'l': 'FAQ', 'p': '❓ Помощь'},
                         {'n': 'btn_speed_text', 'b': 'btn_speed', 'l': 'Скорость', 'p': '⚡ Скорость'},
                         {'n': 'btn_admin_text', 'b': 'btn_admin', 'l': 'Админ', 'p': '⚙️ Админ'},
-                        {'n': 'btn_back_to_menu_text', 'b': 'btn_back_to_menu', 'l': 'Назад', 'p': '⬅️ Назад'}
+                        {'n': 'btn_back_to_menu_text', 'b': 'btn_back_to_menu', 'l': 'Назад в меню', 'p': '⬅️ Назад в меню'}
                         ] %}
                         <div class="space-y-2 rounded-xl border border-white/[0.06] bg-black/20 p-3">
                             <label class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">{{ f.l }}</label>
@@ -1539,32 +1502,6 @@
                 </div>
             </section>
 
-            <section class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
-                <div class="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-violet-400/[0.08] blur-3xl"></div>
-                <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
-                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300">
-                        <i data-lucide="book-open" class="h-4 w-4" aria-hidden="true"></i>
-                    </span>
-                    <h3 class="text-sm font-semibold tracking-tight text-white">Инструкции по подключению</h3>
-                </header>
-                <div class="relative space-y-4 p-3 sm:p-4">
-                    <div>
-                        <label class="mb-1.5 block text-xs font-medium text-white/60">Вступительный текст</label>
-                        <textarea name="howto_intro_text" rows="2" placeholder="..."
-                            class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings.howto_intro_text or '' }}</textarea>
-                    </div>
-                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        {% for f in [{'n': 'howto_android_text', 'l': 'Android'}, {'n': 'howto_ios_text', 'l': 'iOS'},
-                        {'n': 'howto_windows_text', 'l': 'Windows'}, {'n': 'howto_linux_text', 'l': 'Linux'}] %}
-                        <div class="rounded-xl border border-white/[0.06] bg-black/20 p-3">
-                            <label class="mb-1.5 block text-xs font-medium text-white/60">{{ f.l }}</label>
-                            <textarea name="{{ f.n }}" rows="4"
-                                class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings[f.n] or '' }}</textarea>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </section>
         </div>
     </section>
 </form>
@@ -1756,6 +1693,8 @@
                 });
                 formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value);
                 formData.set('next_hash', location.hash.slice(1) || 'panel');
+                formData.set('full_settings_form', '1');
+                formData.set('full_settings_form2', '1');
                 const result = await sendRequest(document.getElementById('settings-form').action, 'POST', formData);
                 if (result.ok) showToast('success', 'Все настройки сохранены'); else showToast('danger', result.error || 'Ошибка сохранения');
             };
