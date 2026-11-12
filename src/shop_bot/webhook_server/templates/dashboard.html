@@ -70,18 +70,16 @@
     data-fetch-url="{{ url_for('dashboard_stats_partial') }}" data-fetch-interval="120000">
     {% set _stats_html %}{% include 'partials/dashboard_stats.html' %}{% endset %}{{ _stats_html|strip_bom }}
 </section>
-<script src="https://unpkg.com/lucide@latest"></script>
 <script>
     (function () {
         const syncDashboardStats = () => {
             const stats = document.getElementById('dash-stats');
             if (!stats) return;
             stats.querySelectorAll('.payment-stat-block').forEach(block => block.classList.toggle('hidden', stats.classList.contains('hide-payments')));
-            window.lucide?.createIcons({ attrs: { 'stroke-width': 1.75 } });
+            window.refreshUiIcons();
         };
         window.syncDashboardStats = syncDashboardStats;
-        if (document.readyState === 'complete') syncDashboardStats();
-        else window.addEventListener('load', syncDashboardStats, { once: true });
+        syncDashboardStats();
     })();
 </script>
 
@@ -509,9 +507,7 @@
             elements: { line: { cubicInterpolationMode: 'monotone', tension: 0.3 }, point: { radius: 0, hoverRadius: 4, hitRadius: 10 } }
         });
 
-        const refreshDashboardIcons = (root = document) => window.refreshUiIcons?.(root);
-        if (document.readyState === 'complete') refreshDashboardIcons();
-        else window.addEventListener('load', () => refreshDashboardIcons(), { once: true });
+        window.refreshUiIcons();
 
         // Слушатель для обновления графиков при смене темы
         const observer = new MutationObserver((mutations) => {
@@ -568,7 +564,7 @@
 
             html += `</div>`;
             el.innerHTML = html;
-            refreshDashboardIcons(el);
+            window.refreshUiIcons(el);
         };
 
         // ===== СИСТЕМА АВТООБНОВЛЕНИЯ РАЗДЕЛОВ =====
@@ -600,7 +596,7 @@
                             // Удалить текстовые узлы (BOM, пробелы) из grid-контейнеров
                             [...el.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); });
                             if (id === 'dash-stats' && typeof window.syncDashboardStats === 'function') window.syncDashboardStats();
-                            if (id === 'dash-transactions' || id === 'dash-trials') refreshDashboardIcons(el);
+                            if (id === 'dash-transactions' || id === 'dash-trials') window.refreshUiIcons(el);
                             el.style.opacity = '1';
                         }, 150);
                     }
@@ -638,7 +634,7 @@
                 const data = await fetchJSON(baseUrl, { page, lazy_load: 1 });
                 if (data && data.html && data.html.trim().length > 0) {
                     cont.innerHTML = data.html;
-                    refreshDashboardIcons(cont);
+                    window.refreshUiIcons(cont);
                     wrapper.style.display = 'block';
                     if (emptyEl) {
                         emptyEl.classList.add('hidden');
@@ -680,7 +676,7 @@
 
             if (data) {
                 cont.innerHTML = data.html;
-                refreshDashboardIcons(cont);
+                window.refreshUiIcons(cont);
                 cont.dataset.fetchUrl = `${url}?page=${page}`;
                 updatePagUI(type, parseInt(data.current_page), parseInt(data.total_pages));
                 history.pushState({}, '', link.href);
@@ -1181,7 +1177,7 @@
                             ${up}
                         </div>
                     `;
-                    window.lucide?.createIcons({ root: latestBox, attrs: { 'stroke-width': 1.75 } });
+                    window.refreshUiIcons(latestBox);
                 } else {
                     latestBox.textContent = 'Нет данных';
                     if (dateEl) dateEl.textContent = '—';

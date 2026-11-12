@@ -407,8 +407,7 @@
 </script>
 <script>
     (function () {
-        const refreshKeysIcons = (root = document) => window.refreshUiIcons?.(root);
-        refreshKeysIcons();
+        window.refreshUiIcons();
         // ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЕЙ =====
         // Загрузка и маппинг пользователей для автодополнения
         const USERS = JSON.parse(document.getElementById('users-data').textContent || '[]');
@@ -504,7 +503,7 @@
 
         function applyMode(mode) {
             if (els.mode) els.mode.value = mode;
-            refreshKeysIcons();
+            window.refreshUiIcons();
             modeSections.forEach(s => s.classList.toggle('hidden', !s.classList.contains(`mode-${mode}`)));
             const modePreview = document.getElementById('create-preview-mode');
             if (modePreview) modePreview.textContent = mode === 'gift' ? 'Подарочный доступ' : 'Персональный доступ';
@@ -908,7 +907,7 @@
                     btn.disabled = true;
                     originalContent = btn.innerHTML;
                     btn.innerHTML = '<i data-lucide="loader-circle" class="h-4 w-4 animate-spin" aria-hidden="true"></i>';
-                    refreshKeysIcons(btn);
+                    window.refreshUiIcons(btn);
                 }
 
                 try {
@@ -980,8 +979,8 @@
         // ===== окончание подсветки =====
         document.addEventListener('click', e => {
             const commentBtn = e.target.closest('.btn-edit-comment'), expiryBtn = e.target.closest('.btn-open-expiry');
-            if (commentBtn) { currentKeyId = commentBtn.getAttribute('data-key-id'); massSelectionIds = null; document.getElementById('commentInput').value = commentBtn.getAttribute('data-current-comment') || ''; refreshKeysIcons(document.getElementById('commentModal')); openModal('commentModal'); }
-            if (expiryBtn) { currentKeyId = expiryBtn.getAttribute('data-key-id'); massSelectionIds = null; document.getElementById('expiryDelta').value = ''; refreshKeysIcons(document.getElementById('expiryModal')); openModal('expiryModal'); }
+            if (commentBtn) { currentKeyId = commentBtn.getAttribute('data-key-id'); massSelectionIds = null; document.getElementById('commentInput').value = commentBtn.getAttribute('data-current-comment') || ''; window.refreshUiIcons(document.getElementById('commentModal')); openModal('commentModal'); }
+            if (expiryBtn) { currentKeyId = expiryBtn.getAttribute('data-key-id'); massSelectionIds = null; document.getElementById('expiryDelta').value = ''; window.refreshUiIcons(document.getElementById('expiryModal')); openModal('expiryModal'); }
         });
         document.getElementById('commentSaveBtn')?.addEventListener('click', async () => {
             if (massSelectionIds) {
@@ -1127,7 +1126,7 @@
                     massSelectionIds = ids;
                     currentKeyId = null;
                     document.getElementById('commentInput').value = '';
-                    refreshKeysIcons(document.getElementById('commentModal'));
+                    window.refreshUiIcons(document.getElementById('commentModal'));
                     openModal('commentModal');
                     return;
                 }
@@ -1135,7 +1134,7 @@
                     massSelectionIds = ids;
                     currentKeyId = null;
                     document.getElementById('expiryDelta').value = '';
-                    refreshKeysIcons(document.getElementById('expiryModal'));
+                    window.refreshUiIcons(document.getElementById('expiryModal'));
                     openModal('expiryModal');
                     return;
                 }
@@ -1167,7 +1166,7 @@
                  link.classList.toggle('hover:bg-white/[0.04]', !isActive);
              });
              giftKeysSelection.sync(currentFilter === 'gift');
-             refreshKeysIcons();
+             window.refreshUiIcons();
         }
 
         // ===== AJAX НАВИГАЦИЯ =====
@@ -1184,7 +1183,7 @@
                 const resp = await fetch(url, { headers: { 'Accept': 'text/html' } });
                 if (resp.ok) {
                     tbody.innerHTML = await resp.text();
-                    refreshKeysIcons();
+                    window.refreshUiIcons();
                     applyNewKeysHighlight();
                     updateFilterActiveState(url.toString());
                     updatePagination(url);
@@ -1208,7 +1207,7 @@
                     const resp = await fetch(pagUrl, { headers: { 'Accept': 'text/html' } });
                     if (resp.ok) {
                         pagEl.innerHTML = await resp.text();
-                        refreshKeysIcons();
+                        window.refreshUiIcons();
                         // Обновляем data-src чтобы он был актуальным (хотя мы все равно перезаписываем params)
                         pagEl.dataset.src = pagUrl.pathname + pagUrl.search;
                     }
@@ -1231,7 +1230,7 @@
             updateFilterActiveState(targetUrl.toString());
             tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center"><div class="flex flex-col items-center justify-center gap-2 text-white/30"><span class="h-3 w-full max-w-sm animate-pulse rounded bg-white/[0.08]"></span><span class="h-3 w-2/3 max-w-xs animate-pulse rounded bg-white/[0.08]"></span></div></td></tr>';
             await loadKeysTable();
-            refreshKeysIcons();
+            window.refreshUiIcons();
         };
 
         document.querySelectorAll('#filter_switch .ajax-nav').forEach(link => {
@@ -1293,7 +1292,7 @@
         }
 
         updateFilterActiveState(location.href);
-        refreshKeysIcons();
+        window.refreshUiIcons();
         loadKeysTable();
 
         // Автообновление

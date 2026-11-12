@@ -122,7 +122,13 @@
                     <div class="mb-8 group/textarea">
                         <div class="flex flex-col gap-2 mb-2 px-1">
                             <div class="flex items-center justify-between gap-3">
-                                <label class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Текст сообщения</label>
+                                <div class="flex items-center gap-3">
+                                    <label for="broadcast-text" class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Текст сообщения</label>
+                                    <label class="flex cursor-pointer items-center gap-2 text-[11px] font-medium normal-case tracking-normal text-white/60" title="Переключить между визуальным редактором и текстом с тегами">
+                                        <input type="checkbox" id="broadcast-preview-toggle" checked class="h-3.5 w-3.5 rounded border-white/20 bg-white/10 text-emerald-400 focus:ring-emerald-300/40" />
+                                        <span>Предпросмотр</span>
+                                    </label>
+                                </div>
                                 <button type="button" id="btn-preview" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition duration-150"><i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>Проверить текст</button>
                             </div>
                             <div class="flex w-full items-center gap-2 overflow-hidden">
@@ -137,13 +143,7 @@
                             </div>
                         </div>
 
-                        <div class="relative">
-                            <textarea id="broadcast-text" rows="6"
-                                class="w-full min-h-[160px] resize-y rounded-xl border border-white/[0.08] bg-black/30 p-4 text-sm text-white placeholder:text-white/20 transition duration-150 focus:border-white/20 focus:outline-none focus:ring-0"
-                                placeholder="Введите ваше сообщение здесь..."></textarea>
-                        </div>
-
-                        <div class="flex flex-wrap items-center gap-2 mt-3 px-2">
+                        <div class="mb-3 flex flex-wrap items-center gap-2 px-2">
                             <span
                                 class="text-[9px] text-white/30 font-bold uppercase tracking-widest mr-2">Форматирование:</span>
                             <button type="button" onclick="insertTag('b')"
@@ -177,6 +177,12 @@
                                 class="h-7 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-xs font-mono font-bold text-white/70 transition duration-150 flex items-center gap-1"
 title="Premium Emoji"><i data-lucide="smile-plus"
                                      class="h-4 w-4" aria-hidden="true"></i></button>
+                        </div>
+                        <div class="relative overflow-hidden rounded-xl border border-white/[0.08] bg-black/30">
+                            <textarea id="broadcast-text" rows="6"
+                                class="hidden min-h-[240px] w-full resize-y border-0 bg-transparent p-4 text-sm text-white placeholder:text-white/20 transition duration-150 focus:outline-none focus:ring-0"
+                                placeholder="Введите ваше сообщение здесь..."></textarea>
+                            <div id="broadcast-visual-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Визуальный редактор сообщения рассылки" data-placeholder="Введите ваше сообщение здесь..." class="max-h-[420px] min-h-[240px] w-full overflow-y-auto whitespace-pre-wrap break-words p-4 text-sm leading-relaxed text-white outline-none focus:outline-none focus:ring-0"></div>
                         </div>
                     </div>
 
@@ -271,7 +277,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                         </label>
                         <button type="button" id="btn-clear-banned"
                             class="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-400/20 bg-amber-400/[0.04] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-amber-300 transition duration-150">
-                            <i data-lucide="broom" class="h-4 w-4" aria-hidden="true"></i>
+                            <i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i>
                             Очистить список ЧС
                         </button>
                     </div>
@@ -1606,7 +1612,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                             </button>
                             <button type="button" id="btn-warp-clean-logs"
                                 class="flex-1 px-4 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 text-sm font-bold transition-colors flex items-center justify-center gap-2">
-<i data-lucide="broom" class="h-4 w-4" aria-hidden="true"></i>
+<i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i>
                                 Очистить логи Wireproxy
                             </button>
                         </div>
@@ -2068,6 +2074,98 @@ title="Premium Emoji"><i data-lucide="smile-plus"
         padding-top: 8px;
     }
 
+    #broadcast-visual-editor:empty::before {
+        content: attr(data-placeholder);
+        color: rgba(255, 255, 255, 0.25);
+        pointer-events: none;
+    }
+
+    #broadcast-visual-editor a {
+        color: #7dd3fc;
+        text-decoration: underline;
+    }
+
+    #broadcast-visual-editor code,
+    #broadcast-visual-editor pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    #broadcast-visual-editor code {
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 1px 4px;
+        color: #bae6fd;
+    }
+
+    #broadcast-visual-editor pre {
+        margin: 6px 0;
+        overflow-x: auto;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.35);
+        padding: 8px;
+        white-space: pre-wrap;
+    }
+
+    #broadcast-visual-editor blockquote {
+        margin: 6px 0;
+        border-left: 3px solid rgba(125, 211, 252, 0.65);
+        padding-left: 9px;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    #broadcast-visual-editor .telegram-visual-spoiler {
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.16);
+        padding: 1px 3px;
+    }
+
+    #broadcast-visual-editor .button-emoji {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        vertical-align: middle;
+        line-height: 1;
+    }
+
+    #broadcast-visual-editor .button-emoji img,
+    #broadcast-visual-editor .button-emoji video,
+    #broadcast-visual-editor .button-emoji svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    #telegram-preview-text .broadcast-preview-link,
+    #telegram-preview-text .broadcast-preview-link {
+        color: #7dd3fc;
+        text-decoration: underline;
+    }
+
+    #telegram-preview-text .broadcast-preview-spoiler,
+    #telegram-preview-text .broadcast-preview-spoiler {
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.16);
+        padding: 1px 3px;
+        filter: blur(4px);
+        cursor: pointer;
+        transition: filter 120ms ease;
+    }
+
+    #telegram-preview-text .broadcast-preview-spoiler:hover,
+    #telegram-preview-text .broadcast-preview-spoiler:focus,
+    #telegram-preview-text .broadcast-preview-spoiler.is-visible {
+        filter: none;
+    }
+
+    #telegram-preview-text .broadcast-preview-emoji,
+    #telegram-preview-text .broadcast-preview-emoji {
+        display: inline-block;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0 3px;
+    }
+
     @media (max-width: 640px) {
         .telegram-chat-header {
             min-height: 58px;
@@ -2110,7 +2208,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        window.lucide?.createIcons({ attrs: { 'stroke-width': 1.75 } });
+        window.refreshUiIcons();
     });
 
     let sshTargetsData = [];
@@ -2824,6 +2922,327 @@ title="Premium Emoji"><i data-lucide="smile-plus"
     let uploadedMediaFilename = null;
     let buttons = [];
     let keyboardColumns = 1;
+    let broadcastVisualMode = true;
+    let broadcastVisualSelection = null;
+    const broadcastVisualTagMap = { STRONG: 'b', EM: 'i', STRIKE: 's', P: 'div', DIV: 'div' };
+    const broadcastVisualAllowedTags = new Set(['B', 'I', 'U', 'S', 'CODE', 'PRE', 'BLOCKQUOTE', 'A', 'STRONG', 'EM', 'STRIKE', 'P', 'DIV']);
+    const broadcastCustomEmojiCache = new Map();
+    const broadcastEmojiScriptPromises = new Map();
+
+    function broadcastLoadEmojiScript(src, globalName) {
+        if (window[globalName]) return Promise.resolve();
+        if (broadcastEmojiScriptPromises.has(src)) return broadcastEmojiScriptPromises.get(src);
+        const promise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+        broadcastEmojiScriptPromises.set(src, promise);
+        return promise;
+    }
+
+    function broadcastFetchCustomEmoji(emojiId) {
+        if (!broadcastCustomEmojiCache.has(emojiId)) {
+            const promise = fetch(`/api/custom-emoji/${encodeURIComponent(emojiId)}/file`, { credentials: 'same-origin' })
+                .then(async response => {
+                    if (!response.ok) return null;
+                    const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+                    if (contentType.includes('image/webp')) {
+                        const blob = await response.blob();
+                        return { kind: 'webp', url: URL.createObjectURL(blob) };
+                    }
+                    if (contentType.includes('video/webm')) {
+                        const blob = await response.blob();
+                        return { kind: 'webm', url: URL.createObjectURL(blob) };
+                    }
+                    if (contentType.includes('gzip')) {
+                        const buffer = await response.arrayBuffer();
+                        await broadcastLoadEmojiScript('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js', 'fflate');
+                        const jsonBytes = window.fflate.gunzipSync(new Uint8Array(buffer));
+                        const json = new TextDecoder().decode(jsonBytes);
+                        await broadcastLoadEmojiScript('https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js', 'lottie');
+                        return { kind: 'tgs', json };
+                    }
+                    return null;
+                })
+                .catch(() => null);
+            broadcastCustomEmojiCache.set(emojiId, promise);
+        }
+        return broadcastCustomEmojiCache.get(emojiId);
+    }
+
+    function broadcastRenderCustomEmoji(target, data) {
+        target.replaceChildren();
+        if (!data) {
+            target.textContent = target.dataset.emojiFallback || '✨';
+            return;
+        }
+        if (data.kind === 'webp') {
+            const image = document.createElement('img');
+            image.src = data.url;
+            image.alt = target.dataset.emojiFallback || '';
+            target.appendChild(image);
+        } else if (data.kind === 'webm') {
+            const video = document.createElement('video');
+            video.src = data.url;
+            video.muted = true;
+            video.autoplay = true;
+            video.loop = true;
+            video.playsInline = true;
+            target.appendChild(video);
+        } else if (data.kind === 'tgs') {
+            window.lottie.loadAnimation({ container: target, renderer: 'svg', loop: true, autoplay: true, animationData: JSON.parse(data.json) });
+        }
+    }
+
+    function broadcastHydrateCustomEmojis(root) {
+        root.querySelectorAll('[data-emoji-id]').forEach(target => {
+            if (target.dataset.emojiLoaded) return;
+            target.dataset.emojiLoaded = '1';
+            const emojiId = target.dataset.emojiId;
+            if (!emojiId) return;
+            broadcastFetchCustomEmoji(emojiId).then(data => {
+                if (target.isConnected) broadcastRenderCustomEmoji(target, data);
+            });
+        });
+    }
+
+    function broadcastEscapeText(value) {
+        return String(value ?? '').replace(/\u200b/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function broadcastEscapeAttribute(value) {
+        return broadcastEscapeText(value).replace(/"/g, '&quot;');
+    }
+
+    function appendBroadcastVisualNode(source, target) {
+        if (source.nodeType === Node.TEXT_NODE) {
+            target.appendChild(document.createTextNode(source.nodeValue || ''));
+            return;
+        }
+        if (source.nodeType !== Node.ELEMENT_NODE) return;
+        if (source.tagName === 'BR') {
+            target.appendChild(document.createElement('br'));
+            return;
+        }
+        if (source.tagName === 'TG-EMOJI') {
+            const emojiId = String(source.getAttribute('emoji-id') || '').replace(/\D/g, '');
+            if (emojiId) {
+                const emoji = document.createElement('span');
+                emoji.className = 'button-emoji';
+                emoji.dataset.emojiId = emojiId;
+                emoji.dataset.emojiFallback = source.textContent || '✨';
+                emoji.contentEditable = 'false';
+                emoji.textContent = emoji.dataset.emojiFallback;
+                target.appendChild(emoji);
+                return;
+            }
+        }
+        if (source.tagName === 'TG-SPOILER' || (source.tagName === 'SPAN' && source.classList.contains('tg-spoiler'))) {
+            const spoiler = document.createElement('span');
+            spoiler.className = 'telegram-visual-spoiler';
+            spoiler.dataset.telegramTag = 'tg-spoiler';
+            target.appendChild(spoiler);
+            source.childNodes.forEach(child => appendBroadcastVisualNode(child, spoiler));
+            return;
+        }
+        let destination = target;
+        if (broadcastVisualAllowedTags.has(source.tagName)) {
+            const element = document.createElement(broadcastVisualTagMap[source.tagName] || source.tagName.toLowerCase());
+            if (source.tagName === 'A') {
+                const href = source.getAttribute('href') || '';
+                if (/^(https?:\/\/|tg:\/\/)/i.test(href)) {
+                    element.href = href;
+                    element.rel = 'noopener noreferrer';
+                }
+            }
+            target.appendChild(element);
+            destination = element;
+        }
+        source.childNodes.forEach(child => appendBroadcastVisualNode(child, destination));
+    }
+
+    function renderBroadcastVisual() {
+        const input = document.getElementById('broadcast-text');
+        const editor = document.getElementById('broadcast-visual-editor');
+        editor.replaceChildren();
+        if (input.value) {
+            const parsed = new DOMParser().parseFromString(input.value, 'text/html');
+            parsed.body.childNodes.forEach(node => appendBroadcastVisualNode(node, editor));
+        }
+        broadcastHydrateCustomEmojis(editor);
+    }
+
+    function serializeBroadcastVisualNode(source) {
+        if (source.nodeType === Node.TEXT_NODE) return broadcastEscapeText(source.nodeValue);
+        if (source.nodeType !== Node.ELEMENT_NODE) return '';
+        if (source.tagName === 'BR') return '\n';
+        if (source.dataset.emojiId) {
+            const emojiId = String(source.dataset.emojiId).replace(/\D/g, '');
+            const fallback = broadcastEscapeText(source.dataset.emojiFallback || '✨');
+            return emojiId ? `<tg-emoji emoji-id="${emojiId}">${fallback}</tg-emoji>` : fallback;
+        }
+        const content = Array.from(source.childNodes).map(serializeBroadcastVisualNode).join('');
+        if (!content) return '';
+        const tag = source.tagName;
+        if (tag === 'B' || tag === 'STRONG') return `<b>${content}</b>`;
+        if (tag === 'I' || tag === 'EM') return `<i>${content}</i>`;
+        if (tag === 'U') return `<u>${content}</u>`;
+        if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL') return `<s>${content}</s>`;
+        if (tag === 'CODE') return `<code>${content}</code>`;
+        if (tag === 'PRE') return `<pre>${content}</pre>`;
+        if (tag === 'BLOCKQUOTE') return `<blockquote>${content}</blockquote>`;
+        if (tag === 'A') {
+            const href = source.getAttribute('href') || '';
+            if (!/^(https?:\/\/|tg:\/\/)/i.test(href)) return content;
+            return `<a href="${broadcastEscapeAttribute(href)}">${content}</a>`;
+        }
+        if (source.dataset.telegramTag === 'tg-spoiler') return `<tg-spoiler>${content}</tg-spoiler>`;
+        if (tag === 'DIV' || tag === 'P') return `${content}\n`;
+        return content;
+    }
+
+    function syncBroadcastRawFromVisual() {
+        const editor = document.getElementById('broadcast-visual-editor');
+        const input = document.getElementById('broadcast-text');
+        input.value = Array.from(editor.childNodes).map(serializeBroadcastVisualNode).join('').replace(/\n$/, '');
+    }
+
+    function setBroadcastEditorMode(visualMode) {
+        if (!visualMode) syncBroadcastRawFromVisual();
+        broadcastVisualMode = Boolean(visualMode);
+        document.getElementById('broadcast-preview-toggle').checked = broadcastVisualMode;
+        document.getElementById('broadcast-text').classList.toggle('hidden', broadcastVisualMode);
+        document.getElementById('broadcast-visual-editor').classList.toggle('hidden', !broadcastVisualMode);
+        if (broadcastVisualMode) renderBroadcastVisual();
+    }
+
+    function getBroadcastVisualRange() {
+        const editor = document.getElementById('broadcast-visual-editor');
+        editor.focus();
+        const selection = window.getSelection();
+        if (selection.rangeCount) {
+            const range = selection.getRangeAt(0);
+            if (editor.contains(range.commonAncestorContainer)) return range;
+        }
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        return range;
+    }
+
+    function setBroadcastVisualRange(range) {
+        const editor = document.getElementById('broadcast-visual-editor');
+        editor.focus();
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
+    function wrapBroadcastVisualRange(range, tag, href = '') {
+        const element = document.createElement(tag === 'tg-spoiler' ? 'span' : tag);
+        if (tag === 'tg-spoiler') {
+            element.dataset.telegramTag = 'tg-spoiler';
+            element.className = 'telegram-visual-spoiler';
+        }
+        if (tag === 'a') element.href = href;
+        const content = range.extractContents();
+        if (content.textContent) element.appendChild(content);
+        else element.textContent = tag === 'a' && href ? href : '\u200b';
+        range.insertNode(element);
+        const selection = window.getSelection();
+        const selectedRange = document.createRange();
+        selectedRange.selectNodeContents(element);
+        selection.removeAllRanges();
+        selection.addRange(selectedRange);
+    }
+
+    function applyBroadcastVisualFormatting(tag) {
+        const editor = document.getElementById('broadcast-visual-editor');
+        editor.focus();
+        document.execCommand('styleWithCSS', false, false);
+        const commands = { b: 'bold', i: 'italic', u: 'underline', s: 'strikeThrough' };
+        if (commands[tag]) {
+            document.execCommand(commands[tag], false, null);
+        } else if (tag === 'pre' || tag === 'blockquote') {
+            document.execCommand('formatBlock', false, tag);
+        } else {
+            wrapBroadcastVisualRange(getBroadcastVisualRange(), tag);
+        }
+        syncBroadcastRawFromVisual();
+    }
+
+    function insertBroadcastVisualLink(url) {
+        if (!broadcastVisualSelection) return;
+        setBroadcastVisualRange(broadcastVisualSelection);
+        wrapBroadcastVisualRange(broadcastVisualSelection, 'a', url);
+        broadcastVisualSelection = null;
+        syncBroadcastRawFromVisual();
+    }
+
+    function insertBroadcastVisualEmoji(emojiId) {
+        if (!broadcastVisualSelection) return;
+        setBroadcastVisualRange(broadcastVisualSelection);
+        const range = broadcastVisualSelection;
+        const fallback = range.toString() || '🚀';
+        range.deleteContents();
+        let insertedNode;
+        if (emojiId) {
+            const emoji = document.createElement('span');
+            emoji.className = 'button-emoji';
+            emoji.dataset.emojiId = emojiId;
+            emoji.dataset.emojiFallback = fallback;
+            emoji.contentEditable = 'false';
+            emoji.textContent = fallback;
+            range.insertNode(emoji);
+            insertedNode = emoji;
+        } else {
+            insertedNode = document.createTextNode(fallback);
+            range.insertNode(insertedNode);
+        }
+        const selection = window.getSelection();
+        const nextRange = document.createRange();
+        nextRange.setStartAfter(insertedNode);
+        nextRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(nextRange);
+        broadcastVisualSelection = null;
+        syncBroadcastRawFromVisual();
+        broadcastHydrateCustomEmojis(document.getElementById('broadcast-visual-editor'));
+    }
+
+    window.broadcastEditor = {
+        get visualMode() { return broadcastVisualMode; },
+        get visualSelection() { return broadcastVisualSelection; },
+        set visualSelection(value) { broadcastVisualSelection = value; },
+        getVisualRange: getBroadcastVisualRange,
+        applyFormatting: applyBroadcastVisualFormatting,
+        insertLink: insertBroadcastVisualLink,
+        insertEmoji: insertBroadcastVisualEmoji,
+        escapeText: broadcastEscapeText,
+        escapeAttribute: broadcastEscapeAttribute
+    };
+
+    document.getElementById('broadcast-preview-toggle').addEventListener('change', event => setBroadcastEditorMode(event.target.checked));
+    document.getElementById('broadcast-text').addEventListener('input', () => {
+        if (broadcastVisualMode) renderBroadcastVisual();
+    });
+    document.getElementById('broadcast-visual-editor').addEventListener('input', syncBroadcastRawFromVisual);
+    document.getElementById('broadcast-visual-editor').addEventListener('paste', event => {
+        event.preventDefault();
+        const text = event.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+        syncBroadcastRawFromVisual();
+    });
+    document.getElementById('broadcast-form').addEventListener('submit', () => {
+        if (broadcastVisualMode) syncBroadcastRawFromVisual();
+    });
+    document.querySelectorAll('#tab-broadcast button[onclick^="insertTag("]').forEach(button => {
+        button.addEventListener('mousedown', event => event.preventDefault());
+    });
+    setBroadcastEditorMode(true);
 
         async function loadStats() {
             try {
@@ -3097,9 +3516,18 @@ title="Premium Emoji"><i data-lucide="smile-plus"
             formatted = formatted.replace(/&lt;s&gt;([\s\S]*?)&lt;\/s&gt;/gi, '<s>$1</s>');
             formatted = formatted.replace(/&lt;(code|pre)&gt;([\s\S]*?)&lt;\/(code|pre)&gt;/gi, '<code class="px-1 rounded bg-black/30 font-mono">$2</code>');
             formatted = formatted.replace(/&lt;blockquote&gt;([\s\S]*?)&lt;\/blockquote&gt;/gi, '<span class="block border-l-2 border-white/30 pl-3 italic">$1</span>');
+            formatted = formatted.replace(/&lt;a\s+href=&quot;((?:https?:\/\/|tg:\/\/)[\s\S]*?)&quot;&gt;([\s\S]*?)&lt;\/a&gt;/gi, '<a href="$1" target="_blank" rel="noopener noreferrer" class="broadcast-preview-link">$2</a>');
+            formatted = formatted.replace(/&lt;tg-spoiler&gt;([\s\S]*?)&lt;\/tg-spoiler&gt;/gi, '<span class="broadcast-preview-spoiler" tabindex="0">$1</span>');
+            formatted = formatted.replace(/&lt;tg-emoji\s+emoji-id=&quot;(\d+)&quot;&gt;([\s\S]*?)&lt;\/tg-emoji&gt;/gi, '<span class="broadcast-preview-emoji">$2</span>');
             return formatted;
         }
 
+        document.querySelectorAll('#telegram-preview-text').forEach(preview => {
+            preview.addEventListener('click', event => {
+                const spoiler = event.target.closest('.broadcast-preview-spoiler');
+                if (spoiler) spoiler.classList.toggle('is-visible');
+            });
+        });
         function renderTelegramPreview() {
             const text = document.getElementById('broadcast-text').value.trim();
             const textElement = document.getElementById('telegram-preview-text');
@@ -3382,6 +3810,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
 
                                     loadStats();
                                     document.getElementById('broadcast-text').value = '';
+                                    renderBroadcastVisual();
                                     buttons = [];
                                     renderButtons();
                                     if (uploadedMediaFilename) {
@@ -3428,6 +3857,7 @@ title="Premium Emoji"><i data-lucide="smile-plus"
                     window.showToast('success', 'Рассылка завершена! Полная статистика — в блоке прогресса ниже');
                     loadStats();
                     document.getElementById('broadcast-text').value = '';
+                    renderBroadcastVisual();
                     buttons = [];
                     renderButtons();
                     if (uploadedMediaFilename) {
@@ -5044,70 +5474,76 @@ title="Premium Emoji"><i data-lucide="smile-plus"
     });
 
     window.insertTag = function (tag) {
+        const editor = window.broadcastEditor;
         const textarea = document.getElementById('broadcast-text');
-        if (!textarea) return;
+        if (!editor || !textarea) return;
 
-        if (tag === 'a') {
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            window._broadcastSelection = { start, end };
-
-            const linkInput = document.getElementById('link-url-input');
-            if (linkInput) {
-                linkInput.value = 'https://';
-                openModal('linkModal');
-                setTimeout(() => linkInput.focus(), 100);
+        if (tag === 'a' || tag === 'tg-emoji') {
+            if (editor.visualMode) {
+                editor.visualSelection = editor.getVisualRange().cloneRange();
+            } else {
+                window._broadcastSelection = { start: textarea.selectionStart, end: textarea.selectionEnd };
+            }
+            if (tag === 'a') {
+                const linkInput = document.getElementById('link-url-input');
+                if (linkInput) {
+                    linkInput.value = 'https://';
+                    openModal('linkModal');
+                    setTimeout(() => linkInput.focus(), 100);
+                }
+            } else {
+                const emojiInput = document.getElementById('emoji-id-input');
+                if (emojiInput) {
+                    emojiInput.value = '';
+                    openModal('emojiModal');
+                    setTimeout(() => emojiInput.focus(), 100);
+                }
             }
             return;
         }
 
-        if (tag === 'tg-emoji') {
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            window._broadcastSelection = { start, end };
-
-            const emojiInput = document.getElementById('emoji-id-input');
-            if (emojiInput) {
-                emojiInput.value = '';
-                openModal('emojiModal');
-                setTimeout(() => emojiInput.focus(), 100);
-            }
+        if (editor.visualMode) {
+            editor.applyFormatting(tag);
             return;
         }
-
-        let startTag = `<${tag}>`;
-        let endTag = `</${tag}>`;
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const text = textarea.value;
-        const selected = text.substring(start, end);
-
-        const replacement = startTag + selected + endTag;
-
-        textarea.setRangeText(replacement, start, end, 'select');
+        const selected = textarea.value.substring(start, end);
+        const openingTag = `<${tag}>`;
+        const closingTag = `</${tag}>`;
+        textarea.setRangeText(`${openingTag}${selected}${closingTag}`, start, end, 'end');
         textarea.focus();
+        textarea.setSelectionRange(start + openingTag.length, start + openingTag.length + selected.length);
     };
 
     document.addEventListener('DOMContentLoaded', () => {
         const insertLinkBtn = document.getElementById('btn-insert-link');
         if (insertLinkBtn) {
             insertLinkBtn.addEventListener('click', () => {
-                const urlInput = document.getElementById('link-url-input');
-                const url = urlInput.value;
-                if (url) {
+                const editor = window.broadcastEditor;
+                const url = document.getElementById('link-url-input').value.trim();
+                if (!/^(https?:\/\/|tg:\/\/)/i.test(url)) {
+                    window.showToast('warning', 'Введите ссылку, начинающуюся с https://, http:// или tg://');
+                    return;
+                }
+                if (!editor) return;
+                if (editor.visualMode) {
+                    editor.insertLink(url);
+                } else {
                     const textarea = document.getElementById('broadcast-text');
                     if (textarea && window._broadcastSelection) {
                         const start = window._broadcastSelection.start;
                         const end = window._broadcastSelection.end;
-                        const text = textarea.value;
-                        const selected = text.substring(start, end);
-
-                        const replacement = `<a href="${url}">` + selected + `</a>`;
-                        textarea.setRangeText(replacement, start, end, 'select');
+                        const selected = textarea.value.substring(start, end);
+                        const openingTag = `<a href="${editor.escapeAttribute(url)}">`;
+                        const inner = selected || editor.escapeText(url);
+                        textarea.setRangeText(`${openingTag}${inner}</a>`, start, end, 'end');
                         textarea.focus();
+                        textarea.setSelectionRange(start + openingTag.length, start + openingTag.length + inner.length);
                     }
                 }
+                window._broadcastSelection = null;
                 closeModal('linkModal');
             });
         }
@@ -5115,20 +5551,31 @@ title="Premium Emoji"><i data-lucide="smile-plus"
         const insertEmojiBtn = document.getElementById('btn-insert-emoji');
         if (insertEmojiBtn) {
             insertEmojiBtn.addEventListener('click', () => {
-                const idInput = document.getElementById('emoji-id-input');
-                const emojiId = idInput.value.trim();
-                const textarea = document.getElementById('broadcast-text');
-                if (textarea && window._broadcastSelection) {
-                    const start = window._broadcastSelection.start;
-                    const end = window._broadcastSelection.end;
-                    const text = textarea.value;
-                    const selected = text.substring(start, end);
-                    const inner = selected || '🚀';
-
-                    const replacement = emojiId ? `<tg-emoji emoji-id="${emojiId}">${inner}</tg-emoji>` : inner;
-                    textarea.setRangeText(replacement, start, end, 'select');
-                    textarea.focus();
+                const editor = window.broadcastEditor;
+                const rawId = document.getElementById('emoji-id-input').value.trim();
+                const emojiId = rawId.replace(/\D/g, '');
+                if (rawId && !emojiId) {
+                    window.showToast('warning', 'ID Premium Emoji должен содержать цифры');
+                    return;
                 }
+                if (!editor) return;
+                if (editor.visualMode) {
+                    editor.insertEmoji(emojiId);
+                } else {
+                    const textarea = document.getElementById('broadcast-text');
+                    if (textarea && window._broadcastSelection) {
+                        const start = window._broadcastSelection.start;
+                        const end = window._broadcastSelection.end;
+                        const selected = textarea.value.substring(start, end);
+                        const inner = selected || '🚀';
+                        const openingTag = emojiId ? `<tg-emoji emoji-id="${emojiId}">` : '';
+                        const closingTag = emojiId ? '</tg-emoji>' : '';
+                        textarea.setRangeText(`${openingTag}${inner}${closingTag}`, start, end, 'end');
+                        textarea.focus();
+                        textarea.setSelectionRange(start + openingTag.length, start + openingTag.length + inner.length);
+                    }
+                }
+                window._broadcastSelection = null;
                 closeModal('emojiModal');
             });
         }

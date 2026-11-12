@@ -429,6 +429,13 @@ def initialize_db():
                     seller_sale REAL DEFAULT 0,
                     seller_ref REAL DEFAULT 0,
                     seller_uuid TEXT DEFAULT '0',
+                    seller_trial_enabled INTEGER DEFAULT 0,
+                    seller_trial_daily_limit INTEGER DEFAULT 0,
+                    seller_trial_duration_hours INTEGER DEFAULT 24,
+                    seller_trial_squad_uuid TEXT DEFAULT '0',
+                    seller_trial_host_name TEXT DEFAULT '',
+                    seller_trial_traffic_gb INTEGER DEFAULT 0,
+                    seller_trial_hwid_limit INTEGER DEFAULT 0,
                     user_id INTEGER UNIQUE
                 )
             ''')
@@ -562,7 +569,7 @@ def initialize_db():
                 "howto_windows_text": None,
                 "howto_linux_text": None,
 
-                "msg_profile_text": "<b>👤 ПРОФИЛЬ:</b> {username} / <b>iD:</b> <code>{user_id}</code>\n\n<b>💎 ПОДПИСКА</b>\n{vpn_status = 🛡 Статус VPN: Активен ✅ or ❌ Неактивен (срок истек)}\n<b>⏳ Осталось:</b> {vpn_remaining = {days_left} д. {hours_left} ч. or -}\n<b>💲 Потрачено всего:</b> {total_spent} RUB\n<b>📅 Приобретено месяцев:</b> {total_months}\n\n<b>💼 ФИНАНСЫ</b>\n<b>💳 Основной баланс:</b> {main_balance} RUB\n<b>🤝 Рефералов:</b> {referral_count}\n<b>💰 Заработано:</b> {total_ref_earned} RUB\n\n{has_partner = <b>👑 ПАРТНЕРСКАЯ ПРОГРАММА</b>\n or }{has_ref = <b>👥 Реферальный бонус:</b> +{s_ref}%\n or }{has_sale = <b>🛍 Персональная скидка:</b> -{s_sale}%\n or }{has_squad = <b>🛰 Индивидуальный Сквад:</b> ✅\n or }",
+                "msg_profile_text": "<b>👤 ПРОФИЛЬ:</b> {username} / <b>iD:</b> <code>{user_id}</code>\n\n<b>💎 ПОДПИСКА</b>\n{vpn_status = 🛡 Статус VPN: Активен ✅ or ❌ Неактивен (срок истек)}\n<b>⏳ Осталось:</b> {vpn_remaining = {days_left} д. {hours_left} ч. or -}\n<b>💲 Потрачено всего:</b> {total_spent} RUB\n<b>📅 Приобретено месяцев:</b> {total_months}\n\n<b>💼 ФИНАНСЫ</b>\n<b>💳 Основной баланс:</b> {main_balance} RUB\n<b>🤝 Рефералов:</b> {referral_count}\n<b>💰 Заработано:</b> {total_ref_earned} RUB\n\n{has_partner = <b>👑 ПАРТНЕРСКАЯ ПРОГРАММА</b>\n or }{has_ref = <b>👥 Реферальный бонус:</b> +{s_ref}%\n or }{has_sale = <b>🛍 Персональная скидка:</b> -{s_sale}%\n or }{has_squad = <b>🛰 Индивидуальный Сквад:</b> ✅\n or }{has_partner_trial = <b>🎁 Тестовые ключи</b>\n<b>Доступно сегодня:</b> {partner_trial_remaining} из {partner_trial_daily_limit}\n or }",
                 "msg_referral_text": "🌟 <b>Реферальная программа</b>\n\nПриглашайте друзей и получайте бонусы! 💸\n\n💎 <b>Ваша награда:</b>\n• {reward_desc}\n\n🎁 <b>Бонус другу:</b>\n• Скидка <b>{referral_discount}%</b> на первую покупку\n\n📊 <b>Статистика:</b>\n👤 Приглашено: <b>{count}</b>\n💰 Заработано: <b>{balance_total} RUB</b>\n\n🔗 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>",
                 "msg_promo_success_text": "✅ <b>Промокод активирован!</b>\nВам начислено {reward} ₽",
                 "msg_promo_select_key_text": "🎁 <b>Активация промокода</b>\nВыберите подписку (ключ):",
@@ -1534,6 +1541,13 @@ def _ensure_seller_users_table(cursor: sqlite3.Cursor) -> None:
             seller_sale REAL DEFAULT 0,
             seller_ref REAL DEFAULT 0,
             seller_uuid TEXT DEFAULT '0',
+            seller_trial_enabled INTEGER DEFAULT 0,
+            seller_trial_daily_limit INTEGER DEFAULT 0,
+            seller_trial_duration_hours INTEGER DEFAULT 24,
+            seller_trial_squad_uuid TEXT DEFAULT '0',
+            seller_trial_host_name TEXT DEFAULT '',
+            seller_trial_traffic_gb INTEGER DEFAULT 0,
+            seller_trial_hwid_limit INTEGER DEFAULT 0,
             user_id INTEGER UNIQUE
         )
     ''')
@@ -1542,12 +1556,29 @@ def _ensure_seller_users_table(cursor: sqlite3.Cursor) -> None:
         "seller_sale": "REAL DEFAULT 0",
         "seller_ref": "REAL DEFAULT 0",
         "seller_uuid": "TEXT DEFAULT '0'",
+        "seller_trial_enabled": "INTEGER DEFAULT 0",
+        "seller_trial_daily_limit": "INTEGER DEFAULT 0",
+        "seller_trial_duration_hours": "INTEGER DEFAULT 24",
+        "seller_trial_squad_uuid": "TEXT DEFAULT '0'",
+        "seller_trial_host_name": "TEXT DEFAULT ''",
+        "seller_trial_traffic_gb": "INTEGER DEFAULT 0",
+        "seller_trial_hwid_limit": "INTEGER DEFAULT 0",
         "user_id": "INTEGER UNIQUE"
     }
     for column, definition in mapping.items():
         _ensure_table_column(cursor, "seller_users", column, definition)
 
     _ensure_unique_index(cursor, "idx_seller_users_user_id", "seller_users", "user_id")
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS seller_trial_key_issues (
+            issue_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            recipient_id INTEGER NOT NULL,
+            key_id INTEGER,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    _ensure_index(cursor, "idx_seller_trial_key_issues_user_date", "seller_trial_key_issues", "user_id, created_at")
 # ====================================
 
 
@@ -1852,13 +1883,45 @@ def update_host_url(host_name: str, new_url: str) -> bool:
 
 
 # ===== ADD_SELLER_USER =====
-def add_seller_user(user_id: int, seller_sale: float = 0, seller_ref: float = 0, seller_uuid: str = "0") -> int | None:
+def add_seller_user(
+    user_id: int,
+    seller_sale: float = 0,
+    seller_ref: float = 0,
+    seller_uuid: str = "0",
+    seller_trial_enabled: int = 0,
+    seller_trial_daily_limit: int = 0,
+    seller_trial_duration_hours: int = 24,
+    seller_trial_squad_uuid: str = "0",
+    seller_trial_host_name: str = "",
+    seller_trial_traffic_gb: int = 0,
+    seller_trial_hwid_limit: int = 0,
+) -> int | None:
     cursor = _exec(
         """
-        INSERT OR REPLACE INTO seller_users (user_id, seller_sale, seller_ref, seller_uuid) 
-        VALUES (?, ?, ?, ?)
+        INSERT INTO seller_users (
+            user_id, seller_sale, seller_ref, seller_uuid,
+            seller_trial_enabled, seller_trial_daily_limit,
+            seller_trial_duration_hours, seller_trial_squad_uuid, seller_trial_host_name,
+            seller_trial_traffic_gb, seller_trial_hwid_limit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            seller_sale = excluded.seller_sale,
+            seller_ref = excluded.seller_ref,
+            seller_uuid = excluded.seller_uuid,
+            seller_trial_enabled = excluded.seller_trial_enabled,
+            seller_trial_daily_limit = excluded.seller_trial_daily_limit,
+            seller_trial_duration_hours = excluded.seller_trial_duration_hours,
+            seller_trial_squad_uuid = excluded.seller_trial_squad_uuid,
+            seller_trial_host_name = excluded.seller_trial_host_name,
+            seller_trial_traffic_gb = excluded.seller_trial_traffic_gb,
+            seller_trial_hwid_limit = excluded.seller_trial_hwid_limit
         """,
-        (user_id, seller_sale, seller_ref, str(seller_uuid)),
+        (
+            user_id, seller_sale, seller_ref, str(seller_uuid),
+            seller_trial_enabled, seller_trial_daily_limit,
+            seller_trial_duration_hours, str(seller_trial_squad_uuid), str(seller_trial_host_name),
+            seller_trial_traffic_gb, seller_trial_hwid_limit
+        ),
         "Не удалось добавить продавца"
     )
     return cursor.lastrowid if cursor else None
@@ -1875,8 +1938,123 @@ def get_seller_user(user_id: int) -> dict | None:
             "seller_sale": 0.0,
             "seller_ref": 0.0,
             "seller_uuid": "0",
+            "seller_trial_enabled": 0,
+            "seller_trial_daily_limit": 0,
+            "seller_trial_duration_hours": 24,
+            "seller_trial_squad_uuid": "0",
+            "seller_trial_host_name": "",
+            "seller_trial_traffic_gb": 0,
+            "seller_trial_hwid_limit": 0,
         }
     return row
+
+
+def _get_seller_trial_config(cursor: sqlite3.Cursor, user_id: int) -> dict | None:
+    cursor.execute(
+        """
+        SELECT s.seller_trial_daily_limit, s.seller_trial_duration_hours,
+               s.seller_trial_squad_uuid, s.seller_trial_host_name,
+               s.seller_trial_traffic_gb, s.seller_trial_hwid_limit
+        FROM seller_users s
+        INNER JOIN users u ON u.telegram_id = s.user_id
+        WHERE s.user_id = ?
+          AND COALESCE(u.seller_active, 0) = 1
+          AND COALESCE(u.is_banned, 0) = 0
+          AND COALESCE(s.seller_trial_enabled, 0) = 1
+        """,
+        (user_id,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+    try:
+        daily_limit = int(row[0] or 0)
+        duration_hours = int(row[1] or 0)
+        traffic_gb = max(0, int(row[4] or 0))
+        hwid_limit = max(0, int(row[5] or 0))
+    except (TypeError, ValueError):
+        return None
+    squad_uuid = str(row[2] or "").strip()
+    host_name = str(row[3] or "").strip()
+    if daily_limit <= 0 or duration_hours <= 0 or not squad_uuid or squad_uuid == "0" or not host_name:
+        return None
+    return {
+        "daily_limit": daily_limit,
+        "duration_hours": duration_hours,
+        "squad_uuid": squad_uuid,
+        "host_name": host_name,
+        "traffic_gb": traffic_gb,
+        "hwid_limit": hwid_limit,
+    }
+
+
+def get_seller_trial_access(user_id: int) -> dict | None:
+    try:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            cursor = conn.cursor()
+            config = _get_seller_trial_config(cursor, user_id)
+            if not config:
+                return None
+            cursor.execute(
+                "SELECT COUNT(*) FROM seller_trial_key_issues WHERE user_id = ? AND date(created_at) = date(?)",
+                (user_id, _now_str()),
+            )
+            issued = int(cursor.fetchone()[0] or 0)
+            return {**config, "issued": issued, "remaining": max(0, config["daily_limit"] - issued)}
+    except sqlite3.Error as e:
+        logging.error("Не удалось получить лимит тестовых ключей партнера %s: %s", user_id, e)
+        return None
+
+
+def reserve_seller_trial_key(user_id: int, recipient_id: int) -> dict:
+    try:
+        with sqlite3.connect(DB_FILE, timeout=30.0) as conn:
+            cursor = conn.cursor()
+            cursor.execute("BEGIN IMMEDIATE")
+            config = _get_seller_trial_config(cursor, user_id)
+            if not config:
+                conn.rollback()
+                return {"ok": False, "reason": "disabled"}
+            cursor.execute(
+                "SELECT COUNT(*) FROM seller_trial_key_issues WHERE user_id = ? AND date(created_at) = date(?)",
+                (user_id, _now_str()),
+            )
+            issued = int(cursor.fetchone()[0] or 0)
+            if issued >= config["daily_limit"]:
+                conn.rollback()
+                return {"ok": False, "reason": "limit", **config, "issued": issued, "remaining": 0}
+            cursor.execute(
+                "INSERT INTO seller_trial_key_issues (user_id, recipient_id, created_at) VALUES (?, ?, ?)",
+                (user_id, recipient_id, _now_str()),
+            )
+            issue_id = cursor.lastrowid
+            conn.commit()
+            return {
+                "ok": True,
+                "issue_id": issue_id,
+                **config,
+                "issued": issued + 1,
+                "remaining": max(0, config["daily_limit"] - issued - 1),
+            }
+    except sqlite3.Error as e:
+        logging.error("Не удалось зарезервировать тестовый ключ партнера %s: %s", user_id, e)
+        return {"ok": False, "reason": "error"}
+
+
+def complete_seller_trial_key_issue(issue_id: int, key_id: int) -> bool:
+    return _exec(
+        "UPDATE seller_trial_key_issues SET key_id = ? WHERE issue_id = ? AND key_id IS NULL",
+        (key_id, issue_id),
+        "Не удалось завершить учет тестового ключа партнера",
+    ) is not None
+
+
+def cancel_seller_trial_key_issue(issue_id: int) -> bool:
+    return _exec(
+        "DELETE FROM seller_trial_key_issues WHERE issue_id = ? AND key_id IS NULL",
+        (issue_id,),
+        "Не удалось отменить резерв тестового ключа партнера",
+    ) is not None
 
 # =======================
 
@@ -3114,6 +3292,22 @@ def get_referral_count(user_id: int) -> int:
 def get_user(telegram_id: int):
     row = _fetch_row("SELECT * FROM users WHERE telegram_id = ?", (telegram_id,), f"Не удалось получить пользователя {telegram_id}")
     return dict(row) if row else None
+
+
+def get_user_by_telegram_identifier(identifier: str) -> dict | None:
+    value = (identifier or "").strip()
+    if not value:
+        return None
+    if value.isdigit():
+        return get_user(int(value))
+    username = value.lstrip("@").strip()
+    if not username:
+        return None
+    return _fetch_row(
+        "SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(?) LIMIT 1",
+        (username,),
+        "Не удалось найти пользователя по username",
+    )
 # ==================
 
 
@@ -3150,6 +3344,15 @@ def update_user_username(telegram_id: int, username: str) -> bool:
 
 def update_user_first_name(telegram_id: int, first_name: str) -> bool:
     return update_user_profile_field(telegram_id, "first_name", first_name)
+
+
+def update_user_telegram_profile(telegram_id: int, username: str | None, first_name: str | None) -> bool:
+    cursor = _exec(
+        "UPDATE users SET username = ?, first_name = ? WHERE telegram_id = ?",
+        (username, first_name, telegram_id),
+        f"Не удалось обновить Telegram-данные пользователя {telegram_id}",
+    )
+    return cursor is not None and cursor.rowcount > 0
 # ================================
 
 

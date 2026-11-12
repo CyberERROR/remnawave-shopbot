@@ -564,11 +564,6 @@ def get_process_memory_diagnostics() -> Dict[str, Any]:
     except Exception:
         pass
     try:
-        from shop_bot.data_manager.scheduler import notified_users
-        data["caches"]["notified_users"] = len(notified_users)
-    except Exception:
-        pass
-    try:
         from shop_bot.webhook_server.modules.node import ssh_sessions
         data["caches"]["ssh_sessions"] = len(ssh_sessions)
     except Exception:

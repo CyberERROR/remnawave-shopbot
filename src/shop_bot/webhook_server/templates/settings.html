@@ -462,6 +462,44 @@
                     </div>
                 </section>
             </div>
+
+            <section class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <div class="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-emerald-400/[0.08] blur-3xl"></div>
+                <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                            <i data-lucide="network" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white">Белый список IP для входа</h3>
+                            <p class="text-xs text-white/60">Страница входа открывается только с разрешённых IP, остальные видят фейковую страницу 502</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                        <input type="hidden" name="stealth_ip_enabled" value="0" />
+                        <input type="checkbox" name="stealth_ip_enabled" value="1" {% if settings.stealth_ip_enabled=='1' %}checked{% endif %} class="peer sr-only" />
+                        <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                        <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                    </label>
+                </header>
+                <div class="relative p-3 sm:p-4">
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-xs font-medium text-white/60">Списки IP (через запятую, поддерживаются CIDR-подсети)</span>
+                        <span class="rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1 font-mono text-[11px] text-emerald-300">Ваш текущий IP: {{ client_ip_preview }}</span>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-emerald-300/80">Белый список</label>
+                            <textarea name="stealth_ip_whitelist" rows="3" placeholder="203.0.113.10, 198.51.100.0/24" class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings.stealth_ip_whitelist or '' }}</textarea>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-red-300/80">Чёрный список</label>
+                            <textarea name="stealth_ip_blacklist" rows="3" placeholder="45.66.77.88, 91.92.0.0/16" class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs text-white placeholder:text-white/30 outline-none transition duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings.stealth_ip_blacklist or '' }}</textarea>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-[11px] leading-relaxed text-white/40">Если белый список задан — страница входа открывается только с его IP. Если белый список пуст — доступ разрешён всем, кроме IP из чёрного списка: они всегда видят фейковую страницу 502. Чёрный список имеет приоритет над белым. Некорректные значения игнорируются.</p>
+                </div>
+            </section>
         </div>
     </section>
 

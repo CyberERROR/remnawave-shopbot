@@ -114,8 +114,9 @@
                 </div>
             </div>
 
-            <form id="bm-form" class="mb-4 flex gap-2 ajax-form" method="post" data-success-msg="Баланс успешно изменён" data-refresh="users-tbody">
+            <form id="bm-form" class="mb-4 flex flex-wrap gap-2 ajax-form" method="post" data-success-msg="Баланс успешно изменён" data-refresh="users-tbody">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="notify_user" value="0" />
                 <div class="relative flex-1">
                     <input class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-sm font-medium text-white placeholder:text-white/30 transition-all focus:outline-none focus:ring-1 focus:ring-emerald-300/30" type="text" inputmode="decimal" name="delta" placeholder="± Сумма (₽)" required />
                 </div>
@@ -131,12 +132,18 @@
                     <ul id="bm-reflist" class="space-y-1 text-xs text-white/70"></ul>
                 </div>
             </div>
+            <div class="mt-4 border-t border-white/[0.08] pt-3">
+                <label class="flex cursor-pointer items-center gap-2 text-xs text-white/60">
+                    <input type="checkbox" id="balance-notify-user" name="notify_user" value="1" form="bm-form" class="h-4 w-4 rounded border-white/20 bg-white/5 text-emerald-400 focus:ring-emerald-400/50" />
+                    <span>Уведомить пользователя?</span>
+                </label>
+            </div>
         </div>
     </div>
 </div>
 
 <div id="messageModal" class="modal-overlay" style="z-index: 1100;">
-    <div class="modal-content overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
+    <div class="modal-content mm-message-modal overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/40">
         <div class="border-b border-white/[0.08] bg-white/[0.03]">
             <div class="flex items-start justify-between gap-3 p-3 sm:p-4">
                 <div class="flex items-start gap-3 min-w-0">
@@ -150,7 +157,7 @@
                         <h5 class="text-sm font-semibold tracking-tight text-white" id="mm-user">Пользователь</h5>
                     </div>
                 </div>
-                <button onclick="closeModal('messageModal')" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                <button type="button" onclick="closeModal('messageModal')" aria-label="Закрыть окно" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
                     <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
                 </button>
             </div>
@@ -158,13 +165,44 @@
         <div class="p-3 sm:p-4">
             <form id="mm-form" method="post" class="ajax-form" data-success-msg="Сообщение отправлено">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <div class="mb-4">
-                    <label class="mb-2 block text-[11px] font-medium uppercase tracking-wider text-white/60">Текст сообщения</label>
-                    <div class="relative">
-                        <textarea class="min-h-[120px] w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 p-3 text-sm text-white placeholder:text-white/30 transition-all focus:outline-none focus:ring-1 focus:ring-sky-300/30" name="message" placeholder="Введите сообщение для пользователя..." required></textarea>
+                <div class="mb-2 flex items-center justify-between gap-2">
+                    <label for="mm-message-input" class="block text-[11px] font-medium uppercase tracking-wider text-white/60">Редактор сообщения</label>
+                    <label class="flex cursor-pointer items-center gap-2 text-[11px] font-medium text-white/60" title="Переключить между визуальным редактором и текстом с тегами">
+                        <input type="checkbox" id="mm-preview-toggle" checked class="h-3.5 w-3.5 rounded border-white/20 bg-white/10 text-emerald-400 focus:ring-emerald-300/40" />
+                        <span>Предпросмотр</span>
+                    </label>
+                </div>
+                <div class="overflow-hidden rounded-xl border border-white/[0.08] bg-black/30">
+                    <div class="flex flex-wrap items-center gap-1 border-b border-white/[0.06] px-2.5 py-2" role="toolbar" aria-label="Форматирование сообщения">
+                        <button type="button" data-mm-tag="b" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Жирный">B</button>
+                        <button type="button" data-mm-tag="i" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold italic text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Курсив">I</button>
+                        <button type="button" data-mm-tag="u" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 underline transition hover:border-white/20 hover:bg-white/[0.06]" title="Подчёркнутый">U</button>
+                        <button type="button" data-mm-tag="s" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 line-through transition hover:border-white/20 hover:bg-white/[0.06]" title="Зачёркнутый">S</button>
+                        <span class="mx-0.5 h-4 w-px bg-white/[0.08]"></span>
+                        <button type="button" data-mm-tag="tg-spoiler" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Спойлер">Spoiler</button>
+                        <button type="button" data-mm-tag="code" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 font-mono text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Моноширинный">Code</button>
+                        <button type="button" data-mm-tag="pre" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 font-mono text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Блок кода">Pre</button>
+                        <button type="button" data-mm-tag="blockquote" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Цитата">Quote</button>
+                        <span class="mx-0.5 h-4 w-px bg-white/[0.08]"></span>
+                        <button type="button" data-mm-insert="a" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Вставить ссылку" aria-label="Вставить ссылку"><i data-lucide="link" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+                        <button type="button" data-mm-insert="tg-emoji" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Вставить Premium Emoji" aria-label="Вставить Premium Emoji"><i data-lucide="smile-plus" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+                    </div>
+                    <div id="mm-insert-panel" class="hidden border-b border-white/[0.06] bg-white/[0.02] p-2.5">
+                        <label id="mm-insert-label" for="mm-insert-value" class="mb-1.5 block text-[10px] font-medium text-white/60"></label>
+                        <div class="flex gap-1.5">
+                            <input id="mm-insert-value" type="text" autocomplete="off" class="min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-sky-300/30" />
+                            <button id="mm-insert-apply" type="button" class="rounded-lg border border-sky-400/20 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-300 transition hover:bg-sky-400/20">Вставить</button>
+                            <button id="mm-insert-cancel" type="button" aria-label="Отменить вставку" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] text-white/50 transition hover:bg-white/[0.06] hover:text-white"><i data-lucide="x" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <textarea id="mm-message-input" class="hidden min-h-[240px] w-full resize-y border-0 bg-transparent p-3 text-sm leading-relaxed text-white placeholder:text-white/30 focus:outline-none focus:ring-0" name="message" rows="10" placeholder="Введите сообщение для пользователя..." required></textarea>
+                    <div id="mm-visual-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Визуальный редактор сообщения" data-placeholder="Введите сообщение для пользователя..." class="min-h-[240px] w-full overflow-y-auto whitespace-pre-wrap break-words p-3 text-sm leading-relaxed text-white outline-none focus:outline-none focus:ring-0"></div>
+                    <div class="flex items-center justify-between border-t border-white/[0.06] px-3 py-1.5 text-[10px] text-white/35">
+                        <span>Форматирование применяется к выделенному тексту</span>
+                        <span id="mm-message-count" class="shrink-0 tabular-nums">0 символов</span>
                     </div>
                 </div>
-                <button class="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-sky-300 transition-all hover:bg-sky-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60" type="submit">
+                <button class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-sky-300 transition-all hover:bg-sky-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60" type="submit">
                     <i data-lucide="send" class="h-4 w-4" aria-hidden="true"></i>
                     Отправить
                 </button>
@@ -215,11 +253,124 @@
                 class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
             <p class="text-white/50 text-sm mt-2">Положительное — продлить, отрицательное — сократить.</p>
         </div>
-        <div class="p-4 border-t border-white/10 flex justify-end gap-2">
+        <div class="p-4 border-t border-white/10 flex flex-wrap items-center justify-end gap-2">
+            <label class="mr-auto flex cursor-pointer items-center gap-2 text-sm text-white/70">
+                <input type="checkbox" id="expiry-notify-user"
+                    class="h-4 w-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary/50" />
+                <span>Уведомить пользователя?</span>
+            </label>
             <button onclick="closeModal('expiryModal')"
                 class="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">Отмена</button>
             <button id="expirySaveBtn"
                 class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold hover:bg-primary/90">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div id="tariffModal" class="modal-overlay" style="z-index: 1150;">
+    <div class="modal-content tariff-change-modal overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0f0e]/95 shadow-2xl shadow-black/50">
+        <div class="flex items-start justify-between gap-3 border-b border-white/[0.08] bg-white/[0.03] p-4">
+            <div class="flex min-w-0 items-start gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/[0.08] text-sky-300">
+                    <span class="material-symbols-outlined text-xl">swap_horiz</span>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold tracking-tight text-white">Смена тарифа</h3>
+                    <p id="tariff-modal-key" class="mt-1 truncate text-[11px] text-white/45">Подписка</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeTariffChangeModal()" aria-label="Закрыть окно смены тарифа" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition hover:bg-white/[0.08] hover:text-white">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        </div>
+        <div class="tariff-change-body min-h-0 overflow-y-auto p-4">
+            <div id="tariff-loading" class="py-12 text-center">
+                <div class="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-sky-300"></div>
+                <p class="mt-3 text-xs text-white/45">Загрузка тарифов и расчёт остатка...</p>
+            </div>
+            <div id="tariff-error" class="hidden rounded-xl border border-red-400/20 bg-red-400/[0.07] p-3 text-xs leading-relaxed text-red-200" role="alert"></div>
+            <div id="tariff-content" class="hidden space-y-4">
+                <section class="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                    <div class="mb-3 flex items-center justify-between gap-2">
+                        <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Текущий тариф</span>
+                        <span id="tariff-current-host" class="rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-2 py-0.5 text-[10px] text-sky-300"></span>
+                    </div>
+                    <h4 id="tariff-current-name" class="text-base font-semibold text-white"></h4>
+                    <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        <div class="rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
+                            <div class="text-[9px] uppercase tracking-wider text-white/35">Стоимость</div>
+                            <div id="tariff-current-price" class="mt-1 text-xs font-semibold text-white"></div>
+                        </div>
+                        <div class="rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
+                            <div class="text-[9px] uppercase tracking-wider text-white/35">Осталось</div>
+                            <div id="tariff-current-days" class="mt-1 text-xs font-semibold text-white"></div>
+                            <div id="tariff-current-timing" class="mt-0.5 text-[10px] text-white/40"></div>
+                        </div>
+                        <div class="rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
+                            <div class="text-[9px] uppercase tracking-wider text-white/35">Остаток стоимости</div>
+                            <div id="tariff-current-value" class="mt-1 text-xs font-semibold text-emerald-300"></div>
+                        </div>
+                    </div>
+                </section>
+                <section>
+                    <div class="mb-2 flex items-center justify-between gap-2">
+                        <h4 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/55">Выберите новый тариф</h4>
+                        <span class="text-[10px] text-white/35">Цены и лимиты из базы</span>
+                    </div>
+                    <div id="tariff-plan-list" class="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2" role="group" aria-label="Доступные тарифы"></div>
+                </section>
+                <section id="tariff-preview" class="hidden rounded-xl border border-sky-400/20 bg-sky-400/[0.045] p-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="text-[10px] uppercase tracking-wider text-white/40">После изменения</div>
+                            <h4 id="tariff-target-name" class="mt-1 truncate text-sm font-semibold text-white"></h4>
+                        </div>
+                        <span id="tariff-direction" class="rounded-lg border px-2 py-1 text-[10px] font-semibold"></span>
+                    </div>
+                    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div class="rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
+                            <div class="text-[9px] uppercase text-white/35">Новый остаток</div>
+                            <div id="tariff-target-days" class="mt-1 text-xs font-semibold text-sky-200"></div>
+                        </div>
+                        <div class="rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
+                            <div class="text-[9px] uppercase text-white/35">Тариф</div>
+                            <div id="tariff-target-price" class="mt-1 text-xs font-semibold text-white"></div>
+                        </div>
+                        <div class="rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
+                            <div class="text-[9px] uppercase text-white/35">Трафик</div>
+                            <div id="tariff-target-traffic" class="mt-1 text-xs font-semibold text-white"></div>
+                        </div>
+                        <div class="rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
+                            <div class="text-[9px] uppercase text-white/35">HWID</div>
+                            <div id="tariff-target-hwid" class="mt-1 text-xs font-semibold text-white"></div>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-2 rounded-lg border border-white/[0.06] bg-black/20 p-3 text-[11px] leading-relaxed">
+                        <div id="tariff-target-timing" class="text-white/70"></div>
+                        <div id="tariff-target-expiry" class="text-white/50"></div>
+                        <div id="tariff-target-squad" class="break-all font-mono text-[10px] text-white/40"></div>
+                        <div id="tariff-formula" class="border-t border-white/[0.06] pt-2 text-white/45"></div>
+                    </div>
+                </section>
+                <div class="flex items-start gap-2 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.045] p-3">
+                    <span class="material-symbols-outlined mt-0.5 text-base text-emerald-300">link</span>
+                    <p class="text-[11px] leading-relaxed text-white/55">Ссылка подписки не изменится. В Remnawave будут обновлены срок, сквад, трафик, стратегия сброса и лимит устройств.</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] bg-black/20 px-4 py-3">
+            <label class="flex cursor-pointer select-none items-center gap-2 text-[11px] font-medium text-white/60 transition hover:text-white">
+                <input type="checkbox" id="tariff-notify-user" class="peer sr-only" />
+                <span class="flex h-4 w-4 items-center justify-center rounded border border-white/20 bg-black/30 text-[11px] font-bold leading-none text-transparent transition peer-checked:border-sky-300 peer-checked:bg-sky-300 peer-checked:text-[#0b0f0e]">✓</span>
+                <span>Уведомить пользователя?</span>
+            </label>
+            <div class="ml-auto flex gap-2">
+                <button type="button" onclick="closeTariffChangeModal()" class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/60 transition hover:bg-white/[0.08] hover:text-white">Отмена</button>
+                <button type="button" id="tariff-apply" disabled class="flex items-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-xs font-semibold text-sky-300 transition hover:bg-sky-400/20 disabled:cursor-not-allowed disabled:opacity-40">
+                    <span class="material-symbols-outlined text-base">swap_horiz</span>
+                    <span>Сменить тариф</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -241,7 +392,11 @@
                 ключ?</p>
             <p class="text-white/40 text-xs uppercase font-bold tracking-widest">⚠️ Действие необратимо</p>
         </div>
-        <div class="p-4 border-t border-white/10 flex justify-end gap-2 bg-black/20">
+        <div class="p-4 border-t border-white/10 flex flex-wrap items-center justify-end gap-2 bg-black/20">
+            <label class="mr-auto flex cursor-pointer items-center gap-2 text-xs text-white/60">
+                <input type="checkbox" id="revoke-notify-user" class="h-4 w-4 rounded border-white/20 bg-white/5 text-red-400 focus:ring-red-400/50" />
+                <span>Уведомить пользователя?</span>
+            </label>
             <button onclick="closeModal('revokeConfirmModal')"
                 class="px-4 py-2 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors text-sm font-bold uppercase tracking-wider">Отмена</button>
             <button id="revokeConfirmBtn"
@@ -367,7 +522,11 @@
             </div>
             <p class="px-1 pt-1 text-[10px] text-white/35">Действие изменяет ссылку только для выбранного ключа.</p>
         </div>
-        <div class="flex justify-end gap-2 border-t border-white/10 bg-black/20 px-5 py-3">
+        <div class="flex flex-wrap items-center justify-end gap-2 border-t border-white/10 bg-black/20 px-5 py-3">
+            <label class="mr-auto flex cursor-pointer items-center gap-2 text-xs text-white/60">
+                <input type="checkbox" id="reset-link-notify-user" class="h-4 w-4 rounded border-white/20 bg-white/5 text-amber-300 focus:ring-amber-300/50" />
+                <span>Уведомить пользователя?</span>
+            </label>
             <button type="button" id="cancel-reset-subscription-link" class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] font-bold text-white/65 hover:bg-white/[0.08] hover:text-white">Отмена</button>
             <button type="button" id="confirm-reset-subscription-link" class="flex items-center gap-1.5 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-[10px] font-bold text-amber-100 hover:bg-amber-300/20">
                 <span class="material-symbols-outlined text-sm">autorenew</span>Создать новую ссылку
@@ -453,6 +612,11 @@
                                             class="w-7 h-7 shrink-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white/50 hover:text-sky-300 transition-all flex items-center justify-center"
                                             title="Изменить имя и фамилию">
                                             <i id="udm-profile-name-edit-icon" data-lucide="edit" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                        </button>
+                                        <button id="udm-profile-telegram-refresh" type="button"
+                                            class="w-7 h-7 shrink-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white/50 hover:text-emerald-300 transition-all flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
+                                            title="Обновить данные из Telegram" aria-label="Обновить данные из Telegram">
+                                            <i id="udm-profile-telegram-refresh-icon" data-lucide="refresh-cw" class="h-3.5 w-3.5" aria-hidden="true"></i>
                                         </button>
                                         <span id="udm-pinned-badge"
                                             class="hidden flex h-7 w-7 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
@@ -627,6 +791,65 @@
                                                  class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-primary/50"
                                                  placeholder="0">
                                          </div>
+                                    </div>
+                                    <div class="border-t border-white/10 pt-2.5 space-y-2.5">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <div class="text-[10px] font-bold uppercase tracking-wider text-white/60">Тестовые ключи партнера</div>
+                                                    <span id="udm-seller-trial-info" class="group relative inline-flex items-center" tabindex="0" aria-label="Справка о тестовых ключах партнера">
+                                                        <span class="material-symbols-outlined text-[11px] text-white/35 cursor-help transition-colors hover:text-primary group-focus-within:text-primary">info</span>
+                                                        <span id="udm-seller-trial-tooltip" class="pointer-events-none absolute bottom-full left-0 z-50 mb-2 w-72 rounded-xl border border-white/10 bg-[#091a12] p-3 text-[10px] font-medium normal-case leading-relaxed tracking-normal text-white/65 opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                                                            <span class="mb-1.5 block font-bold text-white/85">Как пользоваться</span>
+                                                            Партнёр сможет выпускать тестовые ключи себе или дарить их другим пользователям для теста и своих задач.
+                                                            <span class="mt-1.5 block">Откройте «Конструктор кнопок» → «Меню профиля» и добавьте кнопку «🎁 Выпустить тестовый ключ».</span>
+                                                            <span class="mt-1.5 block">Callback Data: <span class="font-mono text-primary">partner_trial_issue</span></span>
+                                                            <span class="mt-1.5 block">Задайте сервер, внешний сквад, дневной лимит, срок, устройства и ГБ. Рекомендуемый срок ключа — не более 24 часов.</span>
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                                <div class="mt-0.5 text-[9px] text-white/35">Выпуск себе или подарок другому пользователю</div>
+                                            </div>
+                                            <label class="relative inline-flex shrink-0 items-center cursor-pointer">
+                                                <input type="checkbox" id="udm-seller-trial-active" class="sr-only peer">
+                                                <div class="w-9 h-5 bg-white/[0.08] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-400"></div>
+                                            </label>
+                                        </div>
+                                        <div id="udm-seller-trial-fields" class="hidden space-y-2.5">
+                                            <div class="grid grid-cols-2 gap-2.5">
+                                                <div>
+                                                    <label class="mb-1 block text-[9px] uppercase font-bold text-white/30">Сервер Remnawave</label>
+                                                    <select id="udm-seller-trial-host-name" class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50">
+                                                        <option value="">Выберите сервер</option>
+                                                        {% for host in trial_hosts or [] %}
+                                                        <option value="{{ host.host_name }}">{{ host.host_name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="mb-1 block text-[9px] uppercase font-bold text-white/30">Внешний сквад UUID</label>
+                                                    <input type="text" id="udm-seller-trial-squad-uuid" class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-primary/50" placeholder="UUID">
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-4 gap-2.5">
+                                                <div>
+                                                    <label class="mb-1 block text-[9px] uppercase font-bold text-white/30">Ключей в день</label>
+                                                    <input type="number" id="udm-seller-trial-daily-limit" min="0" max="10000" step="1" class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50" placeholder="0">
+                                                </div>
+                                                <div>
+                                                    <label class="mb-1 block text-[9px] uppercase font-bold text-white/30">Срок (часы)</label>
+                                                    <input type="number" id="udm-seller-trial-duration-hours" min="1" max="8760" step="1" class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50" placeholder="24">
+                                                </div>
+                                                <div>
+                                                    <label class="mb-1 block text-[9px] uppercase font-bold text-white/30">Устройства</label>
+                                                    <input type="number" id="udm-seller-trial-hwid-limit" min="0" max="1000" step="1" class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50" placeholder="0">
+                                                </div>
+                                                <div>
+                                                    <label class="mb-1 block text-[9px] uppercase font-bold text-white/30">ГБ</label>
+                                                    <input type="number" id="udm-seller-trial-traffic-gb" min="0" max="100000" step="1" class="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50" placeholder="0">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <button id="udm-save-seller-btn"
                                         class="w-full py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-background-dark transition-all mt-1">
@@ -909,6 +1132,88 @@
     </div>
 </div>
 <style>
+    .mm-message-modal {
+        max-width: 960px !important;
+    }
+
+    #mm-visual-editor {
+        max-height: 420px;
+        line-height: 1.55;
+    }
+
+    #mm-visual-editor:empty::before {
+        content: attr(data-placeholder);
+        color: rgba(255, 255, 255, 0.3);
+        pointer-events: none;
+    }
+
+    #mm-visual-editor a {
+        color: #7dd3fc;
+        text-decoration: underline;
+    }
+
+    #mm-visual-editor code,
+    #mm-visual-editor pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    #mm-visual-editor code {
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 1px 4px;
+        color: #bae6fd;
+    }
+
+    #mm-visual-editor pre {
+        margin: 6px 0;
+        overflow-x: auto;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.35);
+        padding: 8px;
+        white-space: pre-wrap;
+    }
+
+    #mm-visual-editor blockquote {
+        margin: 6px 0;
+        border-left: 3px solid rgba(125, 211, 252, 0.65);
+        padding-left: 9px;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    #mm-visual-editor .telegram-visual-spoiler {
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.16);
+        padding: 1px 3px;
+    }
+
+    #mm-visual-editor .button-emoji,
+    #mm-form .button-emoji {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        vertical-align: middle;
+        line-height: 1;
+    }
+
+    #mm-visual-editor .button-emoji img,
+    #mm-visual-editor .button-emoji video,
+    #mm-visual-editor .button-emoji svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    @media (max-width: 640px) {
+        .mm-message-modal {
+            max-height: 94vh;
+        }
+
+        #mm-visual-editor {
+            max-height: 300px;
+        }
+    }
+
     .users-table-shell #users-tbody > tr:not(.keys-row) {
         background: transparent;
         transition: background-color 160ms ease, box-shadow 160ms ease;
@@ -1757,6 +2062,48 @@
         box-shadow: 0 0 8px rgba(19, 236, 128, 0.32);
     }
 
+    #tariffModal {
+        padding: 16px;
+        background: rgba(1, 6, 4, 0.82);
+        backdrop-filter: blur(8px);
+    }
+
+    #tariffModal .tariff-change-modal {
+        display: flex;
+        flex-direction: column;
+        width: min(780px, calc(100vw - 32px));
+        max-width: 780px;
+        max-height: calc(100dvh - 32px);
+    }
+
+    #tariffModal .tariff-plan-option {
+        text-align: left;
+    }
+
+    #tariffModal .tariff-plan-option[aria-pressed="true"] {
+        border-color: rgba(125, 211, 252, 0.55);
+        background: rgba(125, 211, 252, 0.1);
+        box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.12);
+    }
+
+    #tariffModal .tariff-plan-option:focus-visible {
+        outline: 2px solid rgba(125, 211, 252, 0.55);
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 640px) {
+        #tariffModal {
+            padding: 8px;
+            align-items: flex-end;
+        }
+
+        #tariffModal .tariff-change-modal {
+            width: 100%;
+            max-height: calc(100dvh - 16px);
+            border-radius: 20px 20px 12px 12px;
+        }
+    }
+
     #resetSubscriptionLinkModal .reset-subscription-confirm {
         max-width: 460px;
         width: calc(100% - 32px);
@@ -1964,6 +2311,286 @@
 
         const transactionDetailsByButton = new WeakMap();
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[ch]));
+        }
+
+        const tariffChangeState = {
+            keyId: null,
+            userId: null,
+            data: null,
+            selectedPlanId: null,
+            requestId: 0,
+            submitting: false
+        };
+
+        const tariffApplyMarkup = '<span class="material-symbols-outlined text-base">swap_horiz</span><span>Сменить тариф</span>';
+
+        function formatTariffMoney(value) {
+            return `${Number(value || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
+        }
+
+        function formatTariffDecimal(value, maximumFractionDigits = 2) {
+            return Number(value || 0).toLocaleString('ru-RU', { maximumFractionDigits });
+        }
+
+        function formatTariffDuration(milliseconds) {
+            let seconds = Math.max(0, Math.floor(Number(milliseconds || 0) / 1000));
+            if (seconds <= 0) return 'Срок истёк';
+            const days = Math.floor(seconds / 86400);
+            seconds %= 86400;
+            const hours = Math.floor(seconds / 3600);
+            seconds %= 3600;
+            const minutes = Math.floor(seconds / 60);
+            const parts = [];
+            if (days) parts.push(`${days} дн.`);
+            if (hours) parts.push(`${hours} ч.`);
+            if (minutes || !parts.length) parts.push(`${minutes} мин.`);
+            return parts.slice(0, 3).join(' ');
+        }
+
+        function formatTariffDate(milliseconds) {
+            const date = new Date(Number(milliseconds));
+            if (Number.isNaN(date.getTime())) return '—';
+            return date.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatTariffTraffic(plan) {
+            const totalBytes = Number(plan.total_traffic_limit_bytes ?? plan.traffic_limit_bytes ?? 0);
+            if (totalBytes <= 0) return 'Безлимит';
+            const totalGb = Number(plan.total_traffic_limit_gb ?? plan.traffic_limit_gb ?? 0);
+            const purchasedGb = Number(plan.purchased_traffic_gb || 0);
+            const baseText = `${formatTariffDecimal(totalGb)} ГБ`;
+            return purchasedGb > 0 ? `${baseText} (с докупками)` : baseText;
+        }
+
+        function tariffDirectionMeta(type) {
+            if (type === 'upgrade') return { label: 'Повышение', className: 'border-amber-400/20 bg-amber-400/10 text-amber-300' };
+            if (type === 'downgrade') return { label: 'Понижение', className: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300' };
+            return { label: 'Равная цена', className: 'border-sky-400/20 bg-sky-400/10 text-sky-300' };
+        }
+
+        function setTariffError(message = '') {
+            const error = document.getElementById('tariff-error');
+            error.textContent = message;
+            error.classList.toggle('hidden', !message);
+        }
+
+        function getSelectedTariffPlan() {
+            return tariffChangeState.data?.plans?.find(plan => Number(plan.plan_id) === Number(tariffChangeState.selectedPlanId)) || null;
+        }
+
+        function renderTariffCurrent() {
+            const current = tariffChangeState.data?.current;
+            if (!current) return;
+            document.getElementById('tariff-modal-key').textContent = `Подписка #${tariffChangeState.keyId} · ${tariffChangeState.data.key?.email || ''}`;
+            document.getElementById('tariff-current-name').textContent = current.plan_name || '—';
+            document.getElementById('tariff-current-host').textContent = current.host_name || tariffChangeState.data.key?.host_name || '—';
+            document.getElementById('tariff-current-price').textContent = `${formatTariffMoney(current.price)} / ${current.duration_days} дн.`;
+            document.getElementById('tariff-current-days').textContent = `${formatTariffDecimal(current.remaining_days)} дн.`;
+            document.getElementById('tariff-current-timing').textContent = formatTariffDuration(current.remaining_ms);
+            document.getElementById('tariff-current-value').textContent = formatTariffMoney(current.remaining_value_rub);
+        }
+
+        function renderTariffPlans() {
+            const container = document.getElementById('tariff-plan-list');
+            const plans = (tariffChangeState.data?.plans || []).filter(plan => !plan.is_current);
+            if (!plans.length) {
+                container.innerHTML = '<div class="rounded-xl border border-dashed border-white/10 p-6 text-center text-xs text-white/40 sm:col-span-2">Нет других хостов с доступными тарифами</div>';
+                return;
+            }
+            container.innerHTML = plans.map(plan => {
+                const available = plan.available !== false;
+                const selected = Number(plan.plan_id) === Number(tariffChangeState.selectedPlanId);
+                const direction = tariffDirectionMeta(plan.change_type);
+                const disabled = !available || tariffChangeState.submitting;
+                return `
+                    <button type="button" data-tariff-plan="${Number(plan.plan_id)}" aria-pressed="${selected}" ${disabled ? 'disabled' : ''} class="tariff-plan-option rounded-xl border border-white/[0.08] bg-black/20 p-3 transition hover:border-sky-400/30 hover:bg-sky-400/[0.05] disabled:cursor-not-allowed disabled:opacity-45">
+                        <div class="flex items-start justify-between gap-2">
+                            <span class="min-w-0 truncate text-xs font-semibold text-white">${escapeHtml(plan.plan_name || 'Тариф')}</span>
+                            ${available ? `<span class="shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] ${direction.className}">${direction.label}</span>` : ''}
+                        </div>
+                        ${plan.price !== undefined ? `<div class="mt-2 flex items-center justify-between gap-2 text-[11px]"><span class="font-semibold text-white/75">${formatTariffMoney(plan.price)}</span><span class="text-white/45">${Number(plan.hwid_limit || 0) > 0 ? `${Number(plan.hwid_limit)} устр.` : 'Безлимит HWID'}</span></div>` : ''}
+                        ${available ? `<div class="mt-2 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-2 text-[10px]"><span class="text-white/40">Останется</span><strong class="text-sky-200">${formatTariffDecimal(plan.new_remaining_days)} дн.</strong></div><div class="mt-1 flex items-center justify-between gap-2 text-[10px]"><span class="text-white/40">Трафик</span><span class="text-white/65">${formatTariffTraffic(plan)}</span></div>` : `<div class="mt-2 text-[10px] leading-relaxed text-red-300">${escapeHtml(plan.error || 'Тариф недоступен')}</div>`}
+                    </button>`;
+            }).join('');
+        }
+
+        function renderTariffPreview() {
+            const preview = document.getElementById('tariff-preview');
+            const apply = document.getElementById('tariff-apply');
+            const plan = getSelectedTariffPlan();
+            if (!plan || plan.available === false || !tariffChangeState.data?.current) {
+                preview.classList.add('hidden');
+                apply.disabled = true;
+                return;
+            }
+            const current = tariffChangeState.data.current;
+            const direction = tariffDirectionMeta(plan.change_type);
+            preview.classList.remove('hidden');
+            document.getElementById('tariff-target-name').textContent = plan.plan_name || '—';
+            const directionElement = document.getElementById('tariff-direction');
+            directionElement.textContent = direction.label;
+            directionElement.className = `rounded-lg border px-2 py-1 text-[10px] font-semibold ${direction.className}`;
+            document.getElementById('tariff-target-days').textContent = `${formatTariffDecimal(plan.new_remaining_days)} дн.`;
+            document.getElementById('tariff-target-price').textContent = formatTariffMoney(plan.price);
+            document.getElementById('tariff-target-traffic').textContent = formatTariffTraffic(plan);
+            document.getElementById('tariff-target-hwid').textContent = Number(plan.hwid_limit || 0) > 0 ? `${Number(plan.hwid_limit)} устр.` : 'Безлимит';
+            document.getElementById('tariff-target-timing').textContent = Number(plan.new_remaining_ms || 0) > 0
+                ? `Точная длительность: ${formatTariffDuration(plan.new_remaining_ms)}`
+                : 'Оплаченного остатка нет. Текущая дата окончания сохранится без продления.';
+            document.getElementById('tariff-target-expiry').textContent = `Дата окончания: ${formatTariffDate(plan.new_expiry_ms)}`;
+            document.getElementById('tariff-target-squad').textContent = `Squad UUID: ${plan.squad_uuid || '—'}`;
+            document.getElementById('tariff-formula').textContent = `${formatTariffDecimal(current.remaining_days, 4)} дн. × (${formatTariffMoney(current.price)} ÷ ${current.duration_days} дн.) ÷ (${formatTariffMoney(plan.price)} ÷ ${plan.duration_days} дн.) = ${formatTariffDecimal(plan.new_remaining_days, 4)} дн.`;
+            apply.disabled = tariffChangeState.submitting;
+        }
+
+        function closeTariffChangeModal() {
+            tariffChangeState.requestId += 1;
+            closeModal('tariffModal');
+            if (!tariffChangeState.submitting) {
+                tariffChangeState.keyId = null;
+                tariffChangeState.userId = null;
+                tariffChangeState.data = null;
+                tariffChangeState.selectedPlanId = null;
+            }
+        }
+
+        window.closeTariffChangeModal = closeTariffChangeModal;
+
+        async function openTariffChangeModal(keyId) {
+            if (tariffChangeState.submitting) {
+                showToast('warning', 'Дождитесь завершения текущей смены тарифа');
+                return;
+            }
+            const requestId = tariffChangeState.requestId + 1;
+            tariffChangeState.requestId = requestId;
+            tariffChangeState.keyId = String(keyId);
+            tariffChangeState.userId = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id') || null;
+            tariffChangeState.data = null;
+            tariffChangeState.selectedPlanId = null;
+            tariffChangeState.submitting = false;
+            document.getElementById('tariff-loading').classList.remove('hidden');
+            document.getElementById('tariff-content').classList.add('hidden');
+            document.getElementById('tariff-preview').classList.add('hidden');
+            document.getElementById('tariff-plan-list').innerHTML = '';
+            document.getElementById('tariff-modal-key').textContent = `Подписка #${keyId}`;
+            const notifyCheckbox = document.getElementById('tariff-notify-user');
+            if (notifyCheckbox) {
+                notifyCheckbox.checked = false;
+                notifyCheckbox.disabled = false;
+            }
+            const apply = document.getElementById('tariff-apply');
+            apply.disabled = true;
+            apply.innerHTML = tariffApplyMarkup;
+            setTariffError();
+            openModal('tariffModal');
+            try {
+                const url = `{{ url_for('change_key_tariff_route', key_id=0) }}`.replace('/0/tariff', `/${encodeURIComponent(keyId)}/tariff`);
+                const response = await fetch(url, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                });
+                const result = await response.json().catch(() => null);
+                if (requestId !== tariffChangeState.requestId) return;
+                if (!response.ok || !result?.ok) throw new Error(result?.error || `Не удалось загрузить тарифы (HTTP ${response.status})`);
+                tariffChangeState.data = result;
+                renderTariffCurrent();
+                renderTariffPlans();
+                renderTariffPreview();
+                document.getElementById('tariff-loading').classList.add('hidden');
+                document.getElementById('tariff-content').classList.remove('hidden');
+            } catch (error) {
+                if (requestId !== tariffChangeState.requestId) return;
+                document.getElementById('tariff-loading').classList.add('hidden');
+                document.getElementById('tariff-content').classList.add('hidden');
+                setTariffError(error.message || 'Ошибка загрузки тарифов');
+            }
+        }
+
+        document.addEventListener('click', event => {
+            const button = event.target.closest('.btn-user-change-tariff');
+            if (!button) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const keyId = Number(button.dataset.keyId);
+            if (keyId > 0) openTariffChangeModal(keyId);
+        });
+
+        document.getElementById('tariff-plan-list').addEventListener('click', event => {
+            const button = event.target.closest('[data-tariff-plan]');
+            if (!button || button.disabled || tariffChangeState.submitting) return;
+            tariffChangeState.selectedPlanId = Number(button.dataset.tariffPlan);
+            renderTariffPlans();
+            renderTariffPreview();
+            document.querySelector(`[data-tariff-plan="${tariffChangeState.selectedPlanId}"]`)?.focus();
+        });
+
+        document.getElementById('tariff-apply').addEventListener('click', async () => {
+            const plan = getSelectedTariffPlan();
+            if (!plan || plan.available === false || tariffChangeState.submitting) return;
+            const keyId = tariffChangeState.keyId;
+            const userId = tariffChangeState.userId;
+            const operationId = tariffChangeState.requestId;
+            const apply = document.getElementById('tariff-apply');
+            const notifyCheckbox = document.getElementById('tariff-notify-user');
+            const notifyUser = Boolean(notifyCheckbox?.checked);
+            tariffChangeState.submitting = true;
+            setTariffError();
+            apply.disabled = true;
+            if (notifyCheckbox) notifyCheckbox.disabled = true;
+            apply.innerHTML = '<span class="material-symbols-outlined animate-spin text-base">progress_activity</span><span>Применение...</span>';
+            renderTariffPlans();
+            try {
+                const payload = new FormData();
+                payload.append('csrf_token', getCsrfToken());
+                payload.append('plan_id', String(plan.plan_id));
+                payload.append('notify_user', notifyUser ? '1' : '0');
+                const url = `{{ url_for('change_key_tariff_route', key_id=0) }}`.replace('/0/tariff', `/${encodeURIComponent(keyId)}/tariff`);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: payload,
+                    headers: { 'X-CSRFToken': getCsrfToken(), 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                });
+                const result = await response.json().catch(() => null);
+                if (!response.ok || !result?.ok) throw new Error(result?.error || `Не удалось изменить тариф (HTTP ${response.status})`);
+                const successText = `${result.message}. Осталось: ${formatTariffDecimal(result.new_remaining_days)} дн.`;
+                if (notifyUser && !result.notified) {
+                    showToast('warning', `${successText} Уведомление не отправлено`);
+                } else {
+                    showToast('success', notifyUser ? `${successText} Пользователь уведомлён` : successText);
+                }
+                tariffChangeState.submitting = false;
+                closeTariffChangeModal();
+                const currentUserId = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+                if (userId && currentUserId === String(userId)) await fetchUserDetails(userId);
+            } catch (error) {
+                if (operationId === tariffChangeState.requestId) setTariffError(error.message || 'Ошибка смены тарифа');
+                showToast('danger', error.message || 'Ошибка смены тарифа');
+            } finally {
+                tariffChangeState.submitting = false;
+                apply.innerHTML = tariffApplyMarkup;
+                if (notifyCheckbox) notifyCheckbox.disabled = false;
+                if (operationId === tariffChangeState.requestId) {
+                    renderTariffPlans();
+                    renderTariffPreview();
+                }
+            }
+        });
+
         let pendingSubscriptionLinkReset = null;
 
         function closeSubscriptionLinkResetConfirm() {
@@ -1978,6 +2605,7 @@
 
         function openSubscriptionLinkResetConfirm(button, userId) {
             pendingSubscriptionLinkReset = { button, userId };
+            document.getElementById('reset-link-notify-user').checked = false;
             openModal('resetSubscriptionLinkModal');
             document.getElementById('confirm-reset-subscription-link')?.focus();
         }
@@ -2001,10 +2629,13 @@
             this.disabled = true;
             button.disabled = true;
             this.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">progress_activity</span>Создание ссылки…';
+            const payload = new FormData();
+            payload.append('notify_user', document.getElementById('reset-link-notify-user').checked ? '1' : '0');
             try {
                 const response = await fetch(`/users/subscriptions/${encodeURIComponent(keyId)}/reset-link`, {
                     method: 'POST',
                     headers: { 'X-CSRFToken': getCsrfToken(), 'Accept': 'application/json' },
+                    body: payload,
                     credentials: 'same-origin'
                 });
                 const result = await response.json();
@@ -2347,6 +2978,7 @@
                 deltaInput.value = sign;
                 setTimeout(() => { deltaInput.focus(); deltaInput.setSelectionRange(1, 1); }, 100);
             }
+            document.getElementById('balance-notify-user').checked = false;
             openModal('balanceModal');
             if (typeof window.refreshLucideIcons === 'function') {
                 window.refreshLucideIcons();
@@ -2387,7 +3019,7 @@
             editButton.classList.toggle('bg-white/5', !isEditing);
             if (editIcon) {
                 editIcon.setAttribute('data-lucide', isEditing ? 'check' : 'pencil');
-                window.lucide?.createIcons({ root: editButton, attrs: { 'stroke-width': 1.75 } });
+                window.refreshUiIcons(editButton);
             }
             editButton.dataset.editing = isEditing ? 'true' : 'false';
 
@@ -2419,7 +3051,7 @@
             editButton.classList.toggle('bg-white/5', !isEditing);
             if (editIcon) {
                 editIcon.setAttribute('data-lucide', isEditing ? 'check' : 'edit');
-                window.lucide?.createIcons({ root: editButton, attrs: { 'stroke-width': 1.75 } });
+                window.refreshUiIcons(editButton);
             }
             editButton.dataset.editing = isEditing ? 'true' : 'false';
 
@@ -2470,6 +3102,63 @@
                 saveProfileName();
             } else {
                 setProfileNameEditMode(true);
+            }
+        });
+
+        document.getElementById('udm-profile-telegram-refresh')?.addEventListener('click', async () => {
+            const refreshButton = document.getElementById('udm-profile-telegram-refresh');
+            const refreshIcon = document.getElementById('udm-profile-telegram-refresh-icon');
+            const editButton = document.getElementById('udm-profile-name-edit');
+            const uid = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+            if (!uid || refreshButton.disabled) return;
+
+            refreshButton.disabled = true;
+            refreshButton.setAttribute('aria-busy', 'true');
+            refreshIcon?.classList.add('animate-spin');
+            if (editButton) editButton.disabled = true;
+
+            try {
+                const data = await apiRequest(
+                    `{{ url_for('refresh_user_telegram_profile_route', user_id=0) }}`.replace('/0/', `/${encodeURIComponent(uid)}/`),
+                    'POST',
+                    {},
+                    'Данные Telegram обновлены'
+                );
+                if (!data?.user || String(data.user.telegram_id) !== String(uid)) {
+                    showToast('danger', 'Telegram вернул некорректные данные пользователя');
+                    return;
+                }
+
+                if (document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id') === String(uid)) {
+                    const telegramUser = data.user || {};
+                    const profileName = telegramUser.first_name || '';
+                    const profileNameDisplay = document.getElementById('udm-profile-name');
+                    const profileNameInput = document.getElementById('udm-profile-name-input');
+                    profileNameDisplay.textContent = profileName || 'Имя не указано';
+                    profileNameDisplay.dataset.firstName = profileName;
+                    profileNameDisplay.dataset.username = telegramUser.username || 'N/A';
+                    profileNameInput.value = profileName;
+                    setProfileNameEditMode(false);
+                }
+
+                const tbody = document.getElementById('users-tbody');
+                const tableUrl = tbody?.getAttribute('data-fetch-url');
+                if (tbody && tableUrl) {
+                    const params = new URLSearchParams(new URL(tableUrl, location.origin).search);
+                    await updateTableAndPagination(params);
+                    const avatar = tbody.querySelector(`tr[data-uid="${uid}"] .user-avatar`);
+                    if (avatar) {
+                        const avatarUrl = new URL(avatar.getAttribute('src'), location.origin);
+                        avatarUrl.searchParams.set('refresh', Date.now().toString());
+                        avatar.style.display = '';
+                        avatar.src = avatarUrl.toString();
+                    }
+                }
+            } finally {
+                refreshButton.disabled = false;
+                refreshButton.removeAttribute('aria-busy');
+                refreshIcon?.classList.remove('animate-spin');
+                if (editButton) editButton.disabled = false;
             }
         });
 
@@ -2538,11 +3227,440 @@
             openBalanceModalForUser(uid, uname, balance, sign);
         });
 
+        let mmInsertState = null;
+        let mmVisualMode = true;
+        let mmVisualSelection = null;
+        const mmVisualTagMap = { STRONG: 'b', EM: 'i', STRIKE: 's', P: 'div', DIV: 'div' };
+        const mmVisualAllowedTags = new Set(['B', 'I', 'U', 'S', 'CODE', 'PRE', 'BLOCKQUOTE', 'A', 'STRONG', 'EM', 'STRIKE', 'P', 'DIV']);
+        const mmCustomEmojiCache = new Map();
+        const mmEmojiScriptPromises = new Map();
+
+        function mmLoadEmojiScript(src, globalName) {
+            if (window[globalName]) return Promise.resolve();
+            if (mmEmojiScriptPromises.has(src)) return mmEmojiScriptPromises.get(src);
+            const promise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+            mmEmojiScriptPromises.set(src, promise);
+            return promise;
+        }
+
+        function mmFetchCustomEmoji(emojiId) {
+            if (!mmCustomEmojiCache.has(emojiId)) {
+                const promise = fetch(`/api/custom-emoji/${encodeURIComponent(emojiId)}/file`, { credentials: 'same-origin' })
+                    .then(async response => {
+                        if (!response.ok) return null;
+                        const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+                        if (contentType.includes('image/webp')) {
+                            const blob = await response.blob();
+                            return { kind: 'webp', url: URL.createObjectURL(blob) };
+                        }
+                        if (contentType.includes('video/webm')) {
+                            const blob = await response.blob();
+                            return { kind: 'webm', url: URL.createObjectURL(blob) };
+                        }
+                        if (contentType.includes('gzip')) {
+                            const buffer = await response.arrayBuffer();
+                            await mmLoadEmojiScript('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js', 'fflate');
+                            const jsonBytes = window.fflate.gunzipSync(new Uint8Array(buffer));
+                            const json = new TextDecoder().decode(jsonBytes);
+                            await mmLoadEmojiScript('https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js', 'lottie');
+                            return { kind: 'tgs', json };
+                        }
+                        return null;
+                    })
+                    .catch(() => null);
+                mmCustomEmojiCache.set(emojiId, promise);
+            }
+            return mmCustomEmojiCache.get(emojiId);
+        }
+
+        function mmRenderCustomEmoji(target, data) {
+            target.replaceChildren();
+            if (!data) {
+                target.textContent = target.dataset.emojiFallback || '✨';
+                return;
+            }
+            if (data.kind === 'webp') {
+                const image = document.createElement('img');
+                image.src = data.url;
+                image.alt = target.dataset.emojiFallback || '';
+                target.appendChild(image);
+            } else if (data.kind === 'webm') {
+                const video = document.createElement('video');
+                video.src = data.url;
+                video.muted = true;
+                video.autoplay = true;
+                video.loop = true;
+                video.playsInline = true;
+                target.appendChild(video);
+            } else if (data.kind === 'tgs') {
+                window.lottie.loadAnimation({ container: target, renderer: 'svg', loop: true, autoplay: true, animationData: JSON.parse(data.json) });
+            }
+        }
+
+        function mmHydrateCustomEmojis(root) {
+            root.querySelectorAll('[data-emoji-id]').forEach(target => {
+                if (target.dataset.emojiLoaded) return;
+                target.dataset.emojiLoaded = '1';
+                const emojiId = target.dataset.emojiId;
+                if (!emojiId) return;
+                mmFetchCustomEmoji(emojiId).then(data => {
+                    if (target.isConnected) mmRenderCustomEmoji(target, data);
+                });
+            });
+        }
+
+        function mmUpdateCount() {
+            const input = document.getElementById('mm-message-input');
+            const counter = document.getElementById('mm-message-count');
+            if (!input || !counter) return;
+            const length = input.value.length;
+            counter.textContent = `${length} символов`;
+            counter.classList.toggle('text-amber-300', length > 3900);
+        }
+
+        function mmEscapeText(value) {
+            return String(value ?? '').replace(/\u200b/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function mmEscapeAttribute(value) {
+            return mmEscapeText(value).replace(/"/g, '&quot;');
+        }
+
+        function appendMmVisualNode(source, target) {
+            if (source.nodeType === Node.TEXT_NODE) {
+                target.appendChild(document.createTextNode(source.nodeValue || ''));
+                return;
+            }
+            if (source.nodeType !== Node.ELEMENT_NODE) return;
+            if (source.tagName === 'BR') {
+                target.appendChild(document.createElement('br'));
+                return;
+            }
+            if (source.tagName === 'TG-EMOJI') {
+                const emojiId = String(source.getAttribute('emoji-id') || '').replace(/\D/g, '');
+                if (emojiId) {
+                    const emoji = document.createElement('span');
+                    emoji.className = 'button-emoji';
+                    emoji.dataset.emojiId = emojiId;
+                    emoji.dataset.emojiFallback = source.textContent || '✨';
+                    emoji.contentEditable = 'false';
+                    emoji.textContent = emoji.dataset.emojiFallback;
+                    target.appendChild(emoji);
+                    return;
+                }
+            }
+            if (source.tagName === 'TG-SPOILER' || (source.tagName === 'SPAN' && source.classList.contains('tg-spoiler'))) {
+                const spoiler = document.createElement('span');
+                spoiler.className = 'telegram-visual-spoiler';
+                spoiler.dataset.telegramTag = 'tg-spoiler';
+                target.appendChild(spoiler);
+                source.childNodes.forEach(child => appendMmVisualNode(child, spoiler));
+                return;
+            }
+            let destination = target;
+            if (mmVisualAllowedTags.has(source.tagName)) {
+                const element = document.createElement(mmVisualTagMap[source.tagName] || source.tagName.toLowerCase());
+                if (source.tagName === 'A') {
+                    const href = source.getAttribute('href') || '';
+                    if (/^(https?:\/\/|tg:\/\/)/i.test(href)) {
+                        element.href = href;
+                        element.rel = 'noopener noreferrer';
+                    }
+                }
+                target.appendChild(element);
+                destination = element;
+            }
+            source.childNodes.forEach(child => appendMmVisualNode(child, destination));
+        }
+
+        function renderMmVisual() {
+            const input = document.getElementById('mm-message-input');
+            const editor = document.getElementById('mm-visual-editor');
+            editor.replaceChildren();
+            if (input.value) {
+                const parsed = new DOMParser().parseFromString(input.value, 'text/html');
+                parsed.body.childNodes.forEach(node => appendMmVisualNode(node, editor));
+            }
+            mmHydrateCustomEmojis(editor);
+        }
+
+        function serializeMmVisualNode(source) {
+            if (source.nodeType === Node.TEXT_NODE) return mmEscapeText(source.nodeValue);
+            if (source.nodeType !== Node.ELEMENT_NODE) return '';
+            if (source.tagName === 'BR') return '\n';
+            if (source.dataset.emojiId) {
+                const emojiId = String(source.dataset.emojiId).replace(/\D/g, '');
+                const fallback = mmEscapeText(source.dataset.emojiFallback || '✨');
+                return emojiId ? `<tg-emoji emoji-id="${emojiId}">${fallback}</tg-emoji>` : fallback;
+            }
+            const content = Array.from(source.childNodes).map(serializeMmVisualNode).join('');
+            if (!content) return '';
+            const tag = source.tagName;
+            if (tag === 'B' || tag === 'STRONG') return `<b>${content}</b>`;
+            if (tag === 'I' || tag === 'EM') return `<i>${content}</i>`;
+            if (tag === 'U') return `<u>${content}</u>`;
+            if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL') return `<s>${content}</s>`;
+            if (tag === 'CODE') return `<code>${content}</code>`;
+            if (tag === 'PRE') return `<pre>${content}</pre>`;
+            if (tag === 'BLOCKQUOTE') return `<blockquote>${content}</blockquote>`;
+            if (tag === 'A') {
+                const href = source.getAttribute('href') || '';
+                if (!/^(https?:\/\/|tg:\/\/)/i.test(href)) return content;
+                return `<a href="${mmEscapeAttribute(href)}">${content}</a>`;
+            }
+            if (source.dataset.telegramTag === 'tg-spoiler') return `<tg-spoiler>${content}</tg-spoiler>`;
+            if (tag === 'DIV' || tag === 'P') return `${content}\n`;
+            return content;
+        }
+
+        function syncMmRawFromVisual() {
+            const editor = document.getElementById('mm-visual-editor');
+            const input = document.getElementById('mm-message-input');
+            input.value = Array.from(editor.childNodes).map(serializeMmVisualNode).join('').replace(/\n$/, '');
+            mmUpdateCount();
+        }
+
+        function setMmEditorMode(visualMode) {
+            if (!visualMode) syncMmRawFromVisual();
+            mmVisualMode = Boolean(visualMode);
+            document.getElementById('mm-preview-toggle').checked = mmVisualMode;
+            document.getElementById('mm-message-input').classList.toggle('hidden', mmVisualMode);
+            document.getElementById('mm-visual-editor').classList.toggle('hidden', !mmVisualMode);
+            if (mmVisualMode) renderMmVisual();
+            mmUpdateCount();
+        }
+
+        function getMmVisualRange() {
+            const editor = document.getElementById('mm-visual-editor');
+            editor.focus();
+            const selection = window.getSelection();
+            if (selection.rangeCount) {
+                const range = selection.getRangeAt(0);
+                if (editor.contains(range.commonAncestorContainer)) return range;
+            }
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            range.collapse(false);
+            return range;
+        }
+
+        function setMmVisualRange(range) {
+            const editor = document.getElementById('mm-visual-editor');
+            editor.focus();
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        function wrapMmVisualRange(range, tag, href = '') {
+            const element = document.createElement(tag === 'tg-spoiler' ? 'span' : tag);
+            if (tag === 'tg-spoiler') {
+                element.dataset.telegramTag = 'tg-spoiler';
+                element.className = 'telegram-visual-spoiler';
+            }
+            if (tag === 'a') element.href = href;
+            const content = range.extractContents();
+            if (content.textContent) element.appendChild(content);
+            else element.textContent = tag === 'a' && href ? href : '\u200b';
+            range.insertNode(element);
+            const selection = window.getSelection();
+            const selectedRange = document.createRange();
+            selectedRange.selectNodeContents(element);
+            selection.removeAllRanges();
+            selection.addRange(selectedRange);
+        }
+
+        function applyMmVisualFormatting(tag) {
+            const editor = document.getElementById('mm-visual-editor');
+            editor.focus();
+            document.execCommand('styleWithCSS', false, false);
+            const commands = { b: 'bold', i: 'italic', u: 'underline', s: 'strikeThrough' };
+            if (commands[tag]) {
+                document.execCommand(commands[tag], false, null);
+            } else if (tag === 'pre' || tag === 'blockquote') {
+                document.execCommand('formatBlock', false, tag);
+            } else {
+                wrapMmVisualRange(getMmVisualRange(), tag);
+            }
+            syncMmRawFromVisual();
+        }
+
+        function mmInsertTag(tag) {
+            if (tag === 'a' || tag === 'tg-emoji') {
+                mmVisualSelection = mmVisualMode ? getMmVisualRange().cloneRange() : null;
+                return;
+            }
+            if (mmVisualMode) {
+                applyMmVisualFormatting(tag);
+                return;
+            }
+            const input = document.getElementById('mm-message-input');
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const selected = input.value.substring(start, end);
+            const openingTag = `<${tag}>`;
+            const closingTag = `</${tag}>`;
+            input.setRangeText(`${openingTag}${selected}${closingTag}`, start, end, 'end');
+            input.focus();
+            input.setSelectionRange(start + openingTag.length, start + openingTag.length + selected.length);
+            mmUpdateCount();
+        }
+
+        function mmCloseInsertPanel() {
+            document.getElementById('mm-insert-panel')?.classList.add('hidden');
+            mmInsertState = null;
+        }
+
+        function mmOpenInsertPanel(mode) {
+            const input = document.getElementById('mm-message-input');
+            const panel = document.getElementById('mm-insert-panel');
+            const label = document.getElementById('mm-insert-label');
+            const value = document.getElementById('mm-insert-value');
+            if (!input || !panel || !label || !value) return;
+            mmInsertState = { mode, start: input.selectionStart, end: input.selectionEnd };
+            label.textContent = mode === 'a' ? 'Адрес ссылки' : 'ID Premium Emoji (необязательно)';
+            value.value = mode === 'a' ? 'https://' : '';
+            value.placeholder = mode === 'a' ? 'https://example.com' : 'Например, 5368324170671202286';
+            value.inputMode = mode === 'a' ? 'url' : 'numeric';
+            panel.classList.remove('hidden');
+            setTimeout(() => {
+                value.focus();
+                if (mode === 'a') value.setSelectionRange(value.value.length, value.value.length);
+            }, 0);
+        }
+
+        function mmApplyInsert() {
+            const input = document.getElementById('mm-message-input');
+            const value = document.getElementById('mm-insert-value');
+            if (!input || !value || !mmInsertState) return;
+            const mode = mmInsertState.mode;
+            if (mmVisualMode && !mmVisualSelection) {
+                showToast('warning', 'Выделите текст в визуальном редакторе');
+                return;
+            }
+            if (mmVisualMode) setMmVisualRange(mmVisualSelection);
+            const selection = mmInsertState;
+            const selected = mmVisualMode ? mmVisualSelection.toString() : input.value.substring(selection.start, selection.end);
+            if (mode === 'a') {
+                const url = value.value.trim();
+                if (!/^(https?:\/\/|tg:\/\/)/i.test(url)) {
+                    showToast('warning', 'Введите ссылку, начинающуюся с https://, http:// или tg://');
+                    return;
+                }
+                if (mmVisualMode) {
+                    wrapMmVisualRange(mmVisualSelection, 'a', url);
+                } else {
+                    const openingTag = `<a href="${mmEscapeAttribute(url)}">`;
+                    const inner = selected || mmEscapeText(url);
+                    input.setRangeText(`${openingTag}${inner}</a>`, selection.start, selection.end, 'end');
+                    input.focus();
+                    input.setSelectionRange(selection.start + openingTag.length, selection.start + openingTag.length + inner.length);
+                }
+            } else {
+                const rawId = value.value.trim();
+                const emojiId = rawId.replace(/\D/g, '');
+                if (rawId && !emojiId) {
+                    showToast('warning', 'ID Premium Emoji должен содержать цифры');
+                    return;
+                }
+                const fallback = selected || '🚀';
+                if (mmVisualMode) {
+                    mmVisualSelection.deleteContents();
+                    let insertedNode;
+                    if (emojiId) {
+                        const emoji = document.createElement('span');
+                        emoji.className = 'button-emoji';
+                        emoji.dataset.emojiId = emojiId;
+                        emoji.dataset.emojiFallback = fallback;
+                        emoji.contentEditable = 'false';
+                        emoji.textContent = fallback;
+                        mmVisualSelection.insertNode(emoji);
+                        insertedNode = emoji;
+                    } else {
+                        insertedNode = document.createTextNode(fallback);
+                        mmVisualSelection.insertNode(insertedNode);
+                    }
+                    const selectionObject = window.getSelection();
+                    const nextRange = document.createRange();
+                    nextRange.setStartAfter(insertedNode);
+                    nextRange.collapse(true);
+                    selectionObject.removeAllRanges();
+                    selectionObject.addRange(nextRange);
+                } else {
+                    const openingTag = emojiId ? `<tg-emoji emoji-id="${emojiId}">` : '';
+                    const closingTag = emojiId ? '</tg-emoji>' : '';
+                    input.setRangeText(`${openingTag}${fallback}${closingTag}`, selection.start, selection.end, 'end');
+                    input.focus();
+                    input.setSelectionRange(selection.start + openingTag.length, selection.start + openingTag.length + fallback.length);
+                }
+            }
+            mmCloseInsertPanel();
+            mmVisualSelection = null;
+            if (mmVisualMode) {
+                syncMmRawFromVisual();
+                mmHydrateCustomEmojis(document.getElementById('mm-visual-editor'));
+            }
+            mmUpdateCount();
+        }
+
+        function resetMessageComposer() {
+            const input = document.getElementById('mm-message-input');
+            if (input) input.value = '';
+            mmCloseInsertPanel();
+            mmVisualSelection = null;
+            setMmEditorMode(true);
+        }
+
+        document.querySelectorAll('[data-mm-tag]').forEach(button => {
+            button.addEventListener('mousedown', event => event.preventDefault());
+            button.addEventListener('click', () => mmInsertTag(button.dataset.mmTag));
+        });
+        document.querySelectorAll('[data-mm-insert]').forEach(button => {
+            button.addEventListener('mousedown', event => event.preventDefault());
+            button.addEventListener('click', () => {
+                mmInsertTag(button.dataset.mmInsert);
+                mmOpenInsertPanel(button.dataset.mmInsert);
+            });
+        });
+        document.getElementById('mm-preview-toggle')?.addEventListener('change', event => setMmEditorMode(event.target.checked));
+        document.getElementById('mm-message-input')?.addEventListener('input', () => {
+            if (mmVisualMode) renderMmVisual();
+            mmUpdateCount();
+        });
+        document.getElementById('mm-visual-editor')?.addEventListener('input', syncMmRawFromVisual);
+        document.getElementById('mm-visual-editor')?.addEventListener('paste', event => {
+            event.preventDefault();
+            const text = event.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+            syncMmRawFromVisual();
+        });
+        document.getElementById('mm-form')?.addEventListener('submit', () => {
+            if (mmVisualMode) syncMmRawFromVisual();
+        });
+        document.getElementById('mm-insert-apply')?.addEventListener('click', mmApplyInsert);
+        document.getElementById('mm-insert-cancel')?.addEventListener('click', mmCloseInsertPanel);
+        document.getElementById('mm-insert-value')?.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                mmApplyInsert();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                mmCloseInsertPanel();
+            }
+        });
+
         function openMessageModalForUser(uid, uname) {
             document.getElementById('mm-user').textContent = `@${uname} (#${uid})`;
             document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0', `/${uid}`);
-            document.querySelector('#mm-form textarea[name="message"]').value = '';
+            resetMessageComposer();
             openModal('messageModal');
+            setTimeout(() => document.getElementById('mm-visual-editor')?.focus(), 100);
             if (typeof window.refreshLucideIcons === 'function') {
                 window.refreshLucideIcons();
             }
@@ -2743,13 +3861,32 @@
                 if (data && data.ok) {
                     const sellerInfo = data.seller_info || { active: false, settings: {} };
                     const sellerActive = sellerInfo.active;
-                    const sellerSettings = sellerInfo.settings || { seller_sale: 0, seller_ref: 0, seller_uuid: "0" };
+                    const sellerSettings = sellerInfo.settings || {
+                        seller_sale: 0,
+                        seller_ref: 0,
+                        seller_uuid: "0",
+                        seller_trial_enabled: 0,
+                        seller_trial_daily_limit: 0,
+                        seller_trial_duration_hours: 24,
+                        seller_trial_squad_uuid: "0",
+                        seller_trial_host_name: "",
+                        seller_trial_traffic_gb: 0,
+                        seller_trial_hwid_limit: 0
+                    };
 
                     const sellerToggle = document.getElementById('udm-seller-active');
                     const sellerContainer = document.getElementById('udm-seller-settings');
                     const sellerSaleInput = document.getElementById('udm-seller-sale');
                     const sellerRefInput = document.getElementById('udm-seller-ref');
                     const sellerUuidInput = document.getElementById('udm-seller-uuid');
+                    const sellerTrialActiveInput = document.getElementById('udm-seller-trial-active');
+                    const sellerTrialFields = document.getElementById('udm-seller-trial-fields');
+                    const sellerTrialDailyLimitInput = document.getElementById('udm-seller-trial-daily-limit');
+                    const sellerTrialDurationInput = document.getElementById('udm-seller-trial-duration-hours');
+                    const sellerTrialSquadInput = document.getElementById('udm-seller-trial-squad-uuid');
+                    const sellerTrialHostInput = document.getElementById('udm-seller-trial-host-name');
+                    const sellerTrialTrafficInput = document.getElementById('udm-seller-trial-traffic-gb');
+                    const sellerTrialHwidInput = document.getElementById('udm-seller-trial-hwid-limit');
                     const sellerSaveBtn = document.getElementById('udm-save-seller-btn');
 
                     if (sellerToggle) {
@@ -2763,6 +3900,18 @@
                         sellerSaleInput.value = sellerSettings.seller_sale || 0;
                         sellerRefInput.value = sellerSettings.seller_ref || 0;
                         sellerUuidInput.value = sellerSettings.seller_uuid || "0";
+                        sellerTrialActiveInput.checked = Boolean(Number(sellerSettings.seller_trial_enabled || 0));
+                        sellerTrialDailyLimitInput.value = sellerSettings.seller_trial_daily_limit ?? 0;
+                        sellerTrialDurationInput.value = sellerSettings.seller_trial_duration_hours || 24;
+                        sellerTrialSquadInput.value = sellerSettings.seller_trial_squad_uuid || "0";
+                        sellerTrialHostInput.value = sellerSettings.seller_trial_host_name || "";
+                        sellerTrialTrafficInput.value = sellerSettings.seller_trial_traffic_gb ?? 0;
+                        sellerTrialHwidInput.value = sellerSettings.seller_trial_hwid_limit ?? 0;
+                        const updateSellerTrialFieldsVisibility = () => {
+                            sellerTrialFields.classList.toggle('hidden', !sellerTrialActiveInput.checked);
+                        };
+                        updateSellerTrialFieldsVisibility();
+                        sellerTrialActiveInput.onchange = updateSellerTrialFieldsVisibility;
 
                         const saveSellerSettings = async () => {
                             const payload = new FormData();
@@ -2770,6 +3919,13 @@
                             payload.append('seller_sale', sellerSaleInput.value);
                             payload.append('seller_ref', sellerRefInput.value);
                             payload.append('seller_uuid', sellerUuidInput.value);
+                            payload.append('seller_trial_enabled', sellerTrialActiveInput.checked ? 1 : 0);
+                            payload.append('seller_trial_daily_limit', sellerTrialDailyLimitInput.value || 0);
+                            payload.append('seller_trial_duration_hours', sellerTrialDurationInput.value || 24);
+                            payload.append('seller_trial_squad_uuid', sellerTrialSquadInput.value || "0");
+                            payload.append('seller_trial_host_name', sellerTrialHostInput.value);
+                            payload.append('seller_trial_traffic_gb', sellerTrialTrafficInput.value || 0);
+                            payload.append('seller_trial_hwid_limit', sellerTrialHwidInput.value || 0);
 
                             const csrfToken = getCsrfToken();
                             payload.append('csrf_token', csrfToken);
@@ -2979,6 +4135,9 @@
                              </div>
                             <div class="udm-sub-toolbar flex items-center gap-1 flex-shrink-0">
                                 ${sub.transaction ? `<button type="button" class="udm-transaction-details-button flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-white/50 hover:border-primary/25 hover:bg-primary/10 hover:text-primary transition-all" data-transaction-details aria-label="Детали платежа" title="Детали платежа"><span class="material-symbols-outlined text-[15px]">info</span></button>` : ''}
+                                <button type="button" class="btn-user-change-tariff flex h-7 w-7 items-center justify-center rounded-lg border border-sky-400/20 bg-sky-400/10 text-sky-300 transition-all hover:bg-sky-400/20" data-key-id="${sub.key_id}" title="Сменить тариф" aria-label="Сменить тариф">
+                                    <span class="material-symbols-outlined text-[15px]">swap_horiz</span>
+                                </button>
                                 <button class="btn-user-edit-expiry w-7 h-7 flex items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-all"
                                         data-key-id="${sub.key_id}" title="Изменить срок">
                                     <span class="material-symbols-outlined text-[15px]">schedule</span>
@@ -3148,16 +4307,6 @@
                         } catch (e) {
                             return dateStr;
                         }
-                    }
-
-                    function escapeHtml(value) {
-                        return String(value ?? '').replace(/[&<>"']/g, ch => ({
-                            '&': '&amp;',
-                            '<': '&lt;',
-                            '>': '&gt;',
-                            '"': '&quot;',
-                            "'": '&#39;'
-                        }[ch]));
                     }
 
                     function formatMoney(value, signed = false) {
@@ -3594,13 +4743,14 @@
                     deltaInput.value = isAdd ? '+' : '-';
                     setTimeout(() => { deltaInput.focus(); deltaInput.setSelectionRange(1, 1); }, 100);
                 }
+                document.getElementById('balance-notify-user').checked = false;
                 openModal('balanceModal');
             } else if (action === 'issue') {
                 window.location.href = `{{ url_for('admin_keys_page') }}?user_id=${uid}`;
             } else if (action === 'msg') {
                 document.getElementById('mm-user').textContent = `@${uname} (#${uid})`;
                 document.getElementById('mm-form').action = `{{ url_for('send_user_message_route', user_id=0) }}`.replace('/0', `/${uid}`);
-                document.querySelector('#mm-form textarea[name="message"]').value = '';
+                resetMessageComposer();
                 openModal('messageModal');
             } else if (action === 'revoke-all') {
                 revokeAllKeys(uid, uname);
@@ -3794,6 +4944,7 @@
             currentUserDetailsId = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
 
             document.getElementById('expiryDelta').value = '';
+            document.getElementById('expiry-notify-user').checked = false;
             openModal('expiryModal');
         });
 
@@ -3804,6 +4955,7 @@
                 const fd = new FormData();
                 fd.append('csrf_token', '{{ csrf_token() }}');
                 fd.append('delta_days', delta);
+                fd.append('notify_user', document.getElementById('expiry-notify-user').checked ? '1' : '0');
                 const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0', `/${expiryKeyId}`);
                 const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
                 if (resp.ok) {
@@ -3849,6 +5001,7 @@
 
             revokeKeyId = btn.getAttribute('data-key-id');
             currentUserDetailsId = document.getElementById('udm-trial-toggle')?.getAttribute('data-user-id');
+            document.getElementById('revoke-notify-user').checked = false;
             openModal('revokeConfirmModal');
         });
 
@@ -3858,6 +5011,7 @@
             try {
                 const fd = new FormData();
                 fd.append('csrf_token', '{{ csrf_token() }}');
+                fd.append('notify_user', document.getElementById('revoke-notify-user').checked ? '1' : '0');
                 const url = `{{ url_for('delete_key_route', key_id=0) }}`.replace('/0', `/${revokeKeyId}`);
                 const resp = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
                 if (resp.ok) {
@@ -3889,24 +5043,60 @@
         });
     }
 </script>
-<script src="https://unpkg.com/lucide@latest"></script>
 <script>
-    (function() {
-        const initLucide = (root = document) => {
-            if (typeof window.refreshUiIcons === 'function') {
-                window.refreshUiIcons(root);
-                return;
-            }
-            if (typeof lucide !== 'undefined') lucide.createIcons({ root, attrs: { 'stroke-width': 1.75 } });
+    (() => {
+        const trigger = document.getElementById('udm-seller-trial-info');
+        const tooltip = document.getElementById('udm-seller-trial-tooltip');
+        if (!trigger || !tooltip) return;
+        document.body.appendChild(tooltip);
+        Object.assign(tooltip.style, {
+            position: 'fixed',
+            zIndex: '4000',
+            display: 'none',
+            boxSizing: 'border-box',
+            right: 'auto',
+            bottom: 'auto',
+            width: '288px',
+            height: 'auto',
+            maxWidth: 'calc(100vw - 24px)',
+            margin: '0',
+            padding: '12px',
+            background: '#091a12',
+            backgroundClip: 'padding-box',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            boxShadow: '0 20px 45px rgba(0, 0, 0, 0.45)',
+            color: 'rgba(255, 255, 255, 0.75)',
+            fontSize: '10px',
+            lineHeight: '1.6',
+            textAlign: 'left'
+        });
+        const hideTooltip = () => {
+            tooltip.style.display = 'none';
+            tooltip.style.opacity = '0';
         };
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => initLucide());
-        } else {
-            initLucide();
-        }
-
-        window.refreshLucideIcons = initLucide;
+        const showTooltip = () => {
+            tooltip.style.display = 'block';
+            tooltip.style.opacity = '1';
+            const rect = trigger.getBoundingClientRect();
+            const left = Math.max(12, Math.min(rect.left, window.innerWidth - tooltip.offsetWidth - 12));
+            const above = rect.top - tooltip.offsetHeight - 8;
+            const top = above >= 12 ? above : Math.min(rect.bottom + 8, window.innerHeight - tooltip.offsetHeight - 12);
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${Math.max(12, top)}px`;
+        };
+        trigger.addEventListener('mouseenter', showTooltip);
+        trigger.addEventListener('mouseleave', hideTooltip);
+        trigger.addEventListener('focus', showTooltip);
+        trigger.addEventListener('blur', hideTooltip);
+        window.addEventListener('resize', hideTooltip);
+        window.addEventListener('scroll', hideTooltip, true);
+        document.addEventListener('click', event => {
+            if (!trigger.contains(event.target)) hideTooltip();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') hideTooltip();
+        });
     })();
 </script>
 {% endblock %}

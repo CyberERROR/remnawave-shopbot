@@ -307,15 +307,13 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/lucide@latest"></script>
 <script>
-    const refreshSupportIcons = (root = document) => window.lucide?.createIcons({ root, attrs: { 'stroke-width': 1.75 } });
 
     let activeTicketId = null;
     let ticketSearchTimer = null;
 
     document.addEventListener('DOMContentLoaded', () => {
-        refreshSupportIcons();
+        window.refreshUiIcons();
 
         window.loadTicketsList = async () => {
             const ticketsList = document.getElementById('tickets-list');
@@ -328,7 +326,7 @@
                 if (res.ok) {
                     const data = await res.json();
                     ticketsList.innerHTML = data.table_html || '<div class="flex flex-col items-center justify-center py-20 text-white/40"><i data-lucide="inbox" class="mb-2 h-8 w-8 text-white/25"></i><span class="text-xs">Обращений пока нет</span></div>';
-                    refreshSupportIcons(ticketsList);
+                    window.refreshUiIcons(ticketsList);
                     filterTicketCards();
                 }
             } catch (err) {
@@ -358,7 +356,7 @@
                     emptyState.className = 'flex flex-col items-center justify-center gap-2 py-12 text-center text-white/45';
                     emptyState.innerHTML = '<i data-lucide="search-x" class="h-6 w-6" aria-hidden="true"></i><span class="text-xs">Обращений не найдено</span>';
                     ticketsList.appendChild(emptyState);
-                    refreshSupportIcons(emptyState);
+                    window.refreshUiIcons(emptyState);
                 }
                 emptyState.classList.remove('hidden');
             } else if (emptyState) {
@@ -455,7 +453,7 @@
             if (res.ok) {
                 const html = await res.text();
                 chatPanel.innerHTML = html;
-                refreshSupportIcons(chatPanel);
+                window.refreshUiIcons(chatPanel);
                 
                 const form = chatPanel.querySelector('#replyForm');
                 if (form) {
@@ -507,7 +505,7 @@
                 const chatPanel = document.getElementById('chat-panel');
                 if (!chatPanel) return;
                 chatPanel.innerHTML = html;
-                refreshSupportIcons(chatPanel);
+                window.refreshUiIcons(chatPanel);
                 const form = chatPanel.querySelector('#replyForm');
                 if (form) {
                     form.addEventListener('submit', async (e) => {
@@ -528,7 +526,7 @@
                 if (messagesBox) {
                     const wasAtBottom = (messagesBox.scrollHeight - messagesBox.scrollTop <= messagesBox.clientHeight + 100);
                     messagesBox.innerHTML = html;
-                    refreshSupportIcons(messagesBox);
+                    window.refreshUiIcons(messagesBox);
                     if (wasAtBottom) {
                         messagesBox.scrollTop = messagesBox.scrollHeight;
                     }
@@ -585,7 +583,7 @@
         if (icon) {
             icon.setAttribute('data-lucide', 'loader-2');
             icon.classList.add('animate-spin');
-            refreshSupportIcons(btn);
+            window.refreshUiIcons(btn);
         }
 
         try {
@@ -610,7 +608,7 @@
             if (resetIcon) {
                 resetIcon.setAttribute('data-lucide', 'sparkles');
                 resetIcon.classList.remove('animate-spin');
-                refreshSupportIcons(btn);
+                window.refreshUiIcons(btn);
             }
         }
     }
@@ -655,7 +653,7 @@
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         });
-            refreshSupportIcons();
+            window.refreshUiIcons();
     }
 
     function closeGeminiModal() {
@@ -675,7 +673,7 @@
             inp.type = 'password';
             icon.setAttribute('data-lucide', 'eye');
         }
-        refreshSupportIcons();
+        window.refreshUiIcons();
     }
 
     function toggleSupportScheduleFields() {
@@ -759,7 +757,7 @@
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         });
-        refreshSupportIcons();
+        window.refreshUiIcons();
     }
 
     function closeCloseTicketModal() {
@@ -799,7 +797,7 @@
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         });
-        refreshSupportIcons();
+        window.refreshUiIcons();
     }
 
     function closeTemplatesModal() {
@@ -925,7 +923,7 @@
                 <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Последние платежи</p>
                 <div class="space-y-1.5">${payHtml}</div>
             </div>`;
-        refreshSupportIcons(body);
+        window.refreshUiIcons(body);
         bindSubscriptionActions(body);
     }
 
@@ -1046,7 +1044,7 @@
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         });
-        refreshSupportIcons();
+        window.refreshUiIcons();
 
         if (!chatUserId) {
             if (body) body.innerHTML = '<p class="py-10 text-center text-xs text-white/50">Не удалось определить пользователя</p>';
@@ -1076,7 +1074,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        refreshSupportIcons();
+        window.refreshUiIcons();
         
     });
 </script>

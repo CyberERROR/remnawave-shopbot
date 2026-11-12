@@ -32,16 +32,24 @@ _NAMED_COND_RE = re.compile(r'\{(\w+)\s*=\s*((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})
 def parse_named_conditionals(text, conditions):
     if not text or '=' not in text:
         return text
+    empty_marker = '\x00'
     prev = None
     while prev != text:
         prev = text
         def _replace(m):
             name = m.group(1)
             if name in conditions:
-                return m.group(2).strip() if conditions[name] else m.group(3).strip()
+                result = m.group(2).strip() if conditions[name] else m.group(3).strip()
+                return result if result else empty_marker
             return m.group(0)
         text = _NAMED_COND_RE.sub(_replace, text)
-    return text
+    text = re.sub(
+        rf'^[ \t]*{re.escape(empty_marker)}+[ \t]*(?:\r?\n|$)',
+        '',
+        text,
+        flags=re.MULTILINE
+    )
+    return text.replace(empty_marker, '')
 
 def safe_format(text, **kwargs):
     if not text or '{' not in text:
@@ -129,9 +137,10 @@ _PROFILE_TEXT_DEFAULT = (
     "{has_ref = <b>👥 Реферальный бонус:</b> +{s_ref}%\n or }"
     "{has_sale = <b>🛍 Персональная скидка:</b> -{s_sale}%\n or }"
     "{has_squad = <b>🛰 Индивидуальный Сквад:</b> ✅\n or }"
+    "{has_partner_trial = <b>🎁 Тестовые ключи</b>\n<b>Доступно сегодня:</b> {partner_trial_remaining} из {partner_trial_daily_limit}\n or }"
 )
 
-def get_profile_text(username, user_id, total_spent, total_months, vpn_active, vpn_remaining, main_balance, referral_count, total_ref_earned, days_left=0, hours_left=0, seller_info=None):
+def get_profile_text(username, user_id, total_spent, total_months, vpn_active, vpn_remaining, main_balance, referral_count, total_ref_earned, days_left=0, hours_left=0, seller_info=None, seller_trial_info=None):
     tpl = _get_msg_setting("msg_profile_text", _PROFILE_TEXT_DEFAULT)
 
     has_partner = False
@@ -153,10 +162,15 @@ def get_profile_text(username, user_id, total_spent, total_months, vpn_active, v
         if has_sale:
             s_sale = str(s_sale_val)
 
+    has_partner_trial = bool(seller_trial_info)
+    partner_trial_remaining = seller_trial_info.get('remaining', 0) if seller_trial_info else 0
+    partner_trial_daily_limit = seller_trial_info.get('daily_limit', 0) if seller_trial_info else 0
+
     conds = {
         'vpn_status': vpn_active, 'vpn_remaining': vpn_active,
         'has_partner': has_partner, 'has_ref': has_ref,
-        'has_sale': has_sale, 'has_squad': has_squad
+        'has_sale': has_sale, 'has_squad': has_squad,
+        'has_partner_trial': has_partner_trial
     }
     tpl = parse_named_conditionals(tpl, conds)
     text = safe_format(
@@ -166,7 +180,9 @@ def get_profile_text(username, user_id, total_spent, total_months, vpn_active, v
         days_left=days_left, hours_left=hours_left,
         main_balance=f"{main_balance:.0f}", referral_count=referral_count,
         total_ref_earned=f"{total_ref_earned:.2f}",
-        s_ref=s_ref, s_sale=s_sale
+        s_ref=s_ref, s_sale=s_sale,
+        partner_trial_remaining=partner_trial_remaining,
+        partner_trial_daily_limit=partner_trial_daily_limit
     )
     return text
 

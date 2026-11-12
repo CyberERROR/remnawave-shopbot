@@ -4,9 +4,7 @@ import json
 
 from datetime import datetime, timedelta, timezone
 
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram import Bot
-from aiogram.exceptions import TelegramForbiddenError
 
 from shop_bot.bot_controller import BotController
 from shop_bot.data_manager import remnawave_repository as rw_repo
@@ -15,11 +13,8 @@ from shop_bot.data_manager import speedtest_runner
 from shop_bot.data_manager import backup_manager
 
 from shop_bot.modules import remnawave_api
-from shop_bot.bot import keyboards
 
 CHECK_INTERVAL_SECONDS = 300
-NOTIFY_BEFORE_HOURS = {72, 48, 24, 1}
-notified_users = {}
 
 logger = logging.getLogger(__name__)
 
@@ -37,108 +32,6 @@ _last_resource_collect_at: datetime | None = None
 _last_resource_alert_at: dict[tuple[str, str, str], datetime] = {}
 _last_memory_diagnostics_at: datetime | None = None
 _last_fsm_cleanup_at: datetime | None = None
-
-def format_time_left(hours: int) -> str:
-    if hours >= 24:
-        days = hours // 24
-        if days % 10 == 1 and days % 100 != 11:
-            return f"{days} день"
-        elif 2 <= days % 10 <= 4 and (days % 100 < 10 or days % 100 >= 20):
-            return f"{days} дня"
-        else:
-            return f"{days} дней"
-    else:
-        if hours % 10 == 1 and hours % 100 != 11:
-            return f"{hours} час"
-        elif 2 <= hours % 10 <= 4 and (hours % 100 < 10 or hours % 100 >= 20):
-            return f"{hours} часа"
-        else:
-            return f"{hours} часов"
-
-async def send_subscription_notification(bot: Bot, user_id: int, key_id: int, time_left_hours: int, expiry_date: datetime):
-    try:
-        time_text = format_time_left(time_left_hours)
-        expiry_str = expiry_date.strftime('%d.%m.%Y в %H:%M')
-        
-        message = (
-            f"⚠️ **Внимание!** ⚠️\n\n"
-            f"Срок действия вашей подписки истекает через **{time_text}**.\n"
-            f"Дата окончания: **{expiry_str}**\n\n"
-            f"Продлите подписку, чтобы не остаться без доступа к VPN!"
-        )
-        
-        builder = InlineKeyboardBuilder()
-        builder.button(text="🔑 Мои ключи", callback_data="manage_keys")
-        builder.button(text="➕ Продлить ключ", callback_data=f"extend_key_{key_id}")
-        builder.adjust(2)
-        
-        await bot.send_message(chat_id=user_id, text=message, reply_markup=builder.as_markup(), parse_mode='Markdown')
-        logger.debug(f"Scheduler: Отправлено уведомление пользователю {user_id} по ключу {key_id} (осталось {time_left_hours} ч).")
-        return True
-    except TelegramForbiddenError:
-        logger.info("Scheduler: пользователь %s заблокировал бота; уведомление по ключу %s пропущено.", user_id, key_id)
-        return True
-    except Exception as e:
-        logger.error(f"Scheduler: Ошибка отправки уведомления пользователю {user_id}: {e}")
-        return False
-
-def _cleanup_notified_users(all_db_keys: list[dict]):
-    if not notified_users:
-        return
-
-    logger.debug("Scheduler: Очищаю кэш уведомлений...")
-    
-    active_key_ids = {key['key_id'] for key in all_db_keys}
-    
-    users_to_check = list(notified_users.keys())
-    
-    cleaned_users = 0
-    cleaned_keys = 0
-
-    for user_id in users_to_check:
-        keys_to_check = list(notified_users[user_id].keys())
-        for key_id in keys_to_check:
-            if key_id not in active_key_ids:
-                del notified_users[user_id][key_id]
-                cleaned_keys += 1
-        
-        if not notified_users[user_id]:
-            del notified_users[user_id]
-            cleaned_users += 1
-    
-    if cleaned_users > 0 or cleaned_keys > 0:
-        logger.debug(f"Scheduler: Очистка завершена. Удалено записей пользователей: {cleaned_users}, ключей: {cleaned_keys}.")
-
-async def check_expiring_subscriptions(bot: Bot):
-    logger.debug("Scheduler: Проверяю истекающие подписки...")
-    current_time = get_msk_time().replace(tzinfo=None)
-    all_keys = rw_repo.get_all_keys()
-    
-    _cleanup_notified_users(all_keys)
-    
-    for key in all_keys:
-        try:
-            expiry_date = datetime.fromisoformat(key['expiry_date'])
-            time_left = expiry_date - current_time
-
-            if time_left.total_seconds() < 0:
-                continue
-
-            total_hours_left = int(time_left.total_seconds() / 3600)
-            user_id = key['user_id']
-            key_id = key['key_id']
-
-            for hours_mark in NOTIFY_BEFORE_HOURS:
-                if hours_mark - 1 < total_hours_left <= hours_mark:
-                    notified_users.setdefault(user_id, {}).setdefault(key_id, set())
-                    
-                    if hours_mark not in notified_users[user_id][key_id]:
-                        if await send_subscription_notification(bot, user_id, key_id, hours_mark, expiry_date):
-                            notified_users[user_id][key_id].add(hours_mark)
-                    break 
-                    
-        except Exception as e:
-            logger.error(f"Scheduler: Ошибка обработки истечения для ключа {key.get('key_id')}: {e}")
 
 async def sync_keys_with_panels():
     logger.debug("Scheduler: Запускаю синхронизацию с Remnawave API...")
@@ -549,15 +442,6 @@ async def periodic_subscription_check(bot_controller: BotController):
 
             await _maybe_cleanup_fsm(bot_controller)
             await _maybe_log_memory_diagnostics()
-
-            if bot_controller.get_status().get("is_running"):
-                bot = bot_controller.get_bot_instance()
-                if bot:
-                    await check_expiring_subscriptions(bot)
-                else:
-                    logger.warning("Scheduler: Бот помечен как запущенный, но экземпляр недоступен.")
-            else:
-                logger.debug("Scheduler: Бот остановлен, уведомления пользователям пропущены.")
 
         except Exception as e:
             logger.error(f"Scheduler: Необработанная ошибка в основном цикле: {e}", exc_info=True)

@@ -1799,6 +1799,26 @@ def get_admin_router() -> Router:
         except Exception as e:
             logger.error(f"Error toggling stealth login: {e}")
 
+    @admin_router.callback_query(F.data == "admin_toggle_stealth_ip_filter")
+    async def admin_toggle_stealth_ip_filter(callback: types.CallbackQuery):
+        if not is_admin(callback.from_user.id):
+            await callback.answer("У вас нет прав.", show_alert=True)
+            return
+        await callback.answer()
+
+        try:
+            from shop_bot.data_manager.database import update_setting
+            current_val = get_setting("stealth_ip_enabled") or "0"
+            new_val = "0" if current_val == "1" else "1"
+            update_setting("stealth_ip_enabled", new_val)
+
+            await callback.message.edit_text(
+                "👮 <b>Управление администраторами</b>",
+                reply_markup=keyboards.create_admins_menu_keyboard()
+            )
+        except Exception as e:
+            logger.error(f"Error toggling stealth IP filter: {e}")
+
     @admin_router.callback_query(F.data == "admin_admins_menu")
     async def admin_admins_menu_entry(callback: types.CallbackQuery):
         if not is_admin(callback.from_user.id):

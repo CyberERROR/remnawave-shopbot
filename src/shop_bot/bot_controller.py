@@ -14,6 +14,7 @@ from shop_bot.bot.admin_handlers import get_admin_router
 from shop_bot.bot.middlewares import BanMiddleware
 from shop_bot.bot import handlers
 from shop_bot.webhook_server.modules.security import get_security_router
+from shop_bot.webhook_server.modules.notification import get_notification_router
 try:
     from shop_bot.webapp.handlers import app as webapp_app
 except ImportError:
@@ -102,6 +103,7 @@ class BotController:
             self._dp.include_router(user_router)
             self._dp.include_router(admin_router)
             self._dp.include_router(get_security_router())
+            self._dp.include_router(get_notification_router())
             
             try:
                 asyncio.run_coroutine_threadsafe(self._bot.delete_webhook(drop_pending_updates=True), self._loop).result(timeout=5)

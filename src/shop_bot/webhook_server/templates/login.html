@@ -14,7 +14,8 @@
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"
         rel="stylesheet" />
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="{{ url_for('static', filename='js/icons.js') }}"></script>
 
     <script>
         tailwind.config = {
@@ -444,9 +445,7 @@
     </div>
 
     <script>
-        const renderLoginIcons = () => window.lucide?.createIcons({ attrs: { 'stroke-width': 1.75 } });
-        if (document.readyState === 'complete') renderLoginIcons();
-        else window.addEventListener('load', renderLoginIcons, { once: true });
+        window.refreshUiIcons();
 
         function togglePassword() {
             const input = document.getElementById('password');

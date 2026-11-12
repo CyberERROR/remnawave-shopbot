@@ -1,7 +1,7 @@
 from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 import aiohttp
 from shop_bot.data_manager.remnawave_repository import get_setting, get_user_keys, get_msk_time, get_webapp_settings, get_user, get_referral_count, get_all_hosts, list_squads, get_plans_for_host
 import os
@@ -187,6 +187,16 @@ def _build_yoomoney_link(receiver: str, amount_rub: Decimal, label: str, descrip
 
 app = FastAPI()
 
+country_flags_font = os.path.join(os.path.dirname(__file__), "module", "TwemojiCountryFlags.woff2")
+
+@app.get("/module/TwemojiCountryFlags.woff2", include_in_schema=False)
+async def get_country_flags_font():
+    return FileResponse(
+        country_flags_font,
+        media_type="font/woff2",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
 ico_dir = os.path.join(os.path.dirname(__file__), "module", "ico")
 if os.path.exists(ico_dir):
     app.mount("/module/ico", StaticFiles(directory=ico_dir), name="ico")
@@ -254,6 +264,7 @@ def _process_template_placeholders(html: str, user_id: int, webapp_settings: dic
         "{{ user_id }}": str(user_id),
         "{{ tg_fullscreen_class }}": "tg-fullscreen" if webapp_settings.get("tg_fullscreen") else "",
         "{{ subscriptions_json }}": json.dumps(context_data.get("subscriptions", []), ensure_ascii=False).replace("</", "<\\/"),
+        "{{ remnawave_hosts_json }}": json.dumps(context_data.get("remnawave_hosts", []), ensure_ascii=False).replace("</", "<\\/"),
         "{{ user_app_theme }}": context_data.get("user_app_theme", "forest"),
     }
     
@@ -995,6 +1006,92 @@ def _get_servers_and_plans_html(user_id: int | None = None):
     return server_options_html, plans_html
 
 
+_REMNWAVE_HOSTS_CACHE = {"expires": 0.0, "items": []}
+_REMNWAVE_HOSTS_CACHE_LOCK = asyncio.Lock()
+
+
+async def _load_remnawave_hosts(host_name: str | None) -> list[dict] | None:
+    try:
+        return await asyncio.wait_for(remnawave_api.get_hosts(host_name=host_name), timeout=8)
+    except Exception as exc:
+        logger.warning("[WEBAPP] - Не удалось получить хосты Remnawave для %s: %s", host_name or "общей конфигурации", exc)
+        return None
+
+
+async def _get_visible_remnawave_hosts() -> list[dict]:
+    cached = _REMNWAVE_HOSTS_CACHE["items"]
+    if _REMNWAVE_HOSTS_CACHE["expires"] > time.monotonic():
+        return cached
+
+    async with _REMNWAVE_HOSTS_CACHE_LOCK:
+        cached = _REMNWAVE_HOSTS_CACHE["items"]
+        if _REMNWAVE_HOSTS_CACHE["expires"] > time.monotonic():
+            return cached
+
+        global_base_url = (get_setting("remnawave_base_url") or "").strip().rstrip("/")
+        global_token = (get_setting("remnawave_api_token") or "").strip()
+        candidates = [(-1, None, global_base_url, global_token)]
+        for index, squad in enumerate(list_squads() or []):
+            host_name = (squad.get("host_name") or "").strip() or None
+            base_url = (squad.get("remnawave_base_url") or "").strip().rstrip("/")
+            token = (squad.get("remnawave_api_token") or "").strip()
+            if not base_url or not token:
+                base_url = global_base_url
+                token = global_token
+            candidates.append((index, host_name, base_url, token))
+
+        sources = {}
+        for order, host_name, base_url, token in candidates:
+            if not base_url or not token:
+                continue
+            key = (base_url, token)
+            if key not in sources:
+                sources[key] = (order, host_name)
+
+        ordered_sources = sorted(sources.values(), key=lambda source: source[0])
+        results = await asyncio.gather(
+            *(_load_remnawave_hosts(host_name) for _, host_name in ordered_sources),
+            return_exceptions=False,
+        ) if ordered_sources else []
+
+        if not ordered_sources or all(result is None for result in results):
+            return cached
+
+        collected = []
+        seen = set()
+        for panel_index, ((source_order, host_name), hosts) in enumerate(zip(ordered_sources, results)):
+            if hosts is None:
+                continue
+            for host_index, host in enumerate(hosts):
+                if not isinstance(host, dict) or host.get("isHidden") is True or host.get("isDisabled") is True:
+                    continue
+                remark = str(host.get("remark") or "").strip()
+                description = str(host.get("serverDescription") or "").strip()
+                display_name = remark or description or "Локация"
+                identity = str(host.get("uuid") or "").strip() or f"{host_name or source_order}:{display_name}:{host.get('address') or ''}"
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                flag_match = re.search(r"[\U0001F1E6-\U0001F1FF]{2}", display_name) or re.search(r"[\U0001F1E6-\U0001F1FF]{2}", description)
+                flag = flag_match.group(0) if flag_match else ""
+                name = display_name.replace(flag, "").strip(" |-–—·:") if flag and flag in display_name else display_name
+                try:
+                    position = int(host.get("viewPosition") or 0)
+                except (TypeError, ValueError):
+                    position = 0
+                collected.append((position, panel_index, host_index, {
+                    "name": name or display_name,
+                    "description": description if description != display_name else "",
+                    "flag": flag,
+                }))
+
+        collected.sort(key=lambda item: item[:3])
+        items = [item[3] for item in collected]
+        _REMNWAVE_HOSTS_CACHE["items"] = items
+        _REMNWAVE_HOSTS_CACHE["expires"] = time.monotonic() + 60
+        return items
+
+
 def _render_banned_page(webapp_settings: dict):
     title = webapp_settings.get("webapp_title") or get_setting("panel_brand_title") or "VPN"
     logo = webapp_settings.get("webapp_logo") or ""
@@ -1077,6 +1174,102 @@ def _render_banned_page(webapp_settings: dict):
     return HTMLResponse(content=html, status_code=403)
 
 
+async def _apply_live_key_stats(keys: list[dict], now: datetime) -> list:
+    active_keys = []
+    for k in keys:
+        try:
+            exp = datetime.strptime(k['expiry_date'], "%Y-%m-%d %H:%M:%S")
+            if exp > now:
+                active_keys.append(k)
+        except: pass
+
+    if active_keys:
+        try:
+            details_tasks = []
+            for k in active_keys:
+                details_tasks.append(remnawave_api.get_key_details_from_host(k))
+
+            details_results = await asyncio.gather(*details_tasks, return_exceptions=True)
+
+            sub_tasks = []
+            key_details_map = {}
+
+            for k, res in zip(active_keys, details_results):
+                if isinstance(res, Exception) or not res or not res.get('user'):
+                    sub_tasks.append(asyncio.sleep(0, None))
+                    continue
+
+                u = res['user']
+                key_details_map[k['key_id']] = u
+
+                if u.get('trafficLimitBytes') is not None:
+                    k['limit_bytes'] = u.get('trafficLimitBytes')
+                if u.get('hwidDeviceLimit') is not None:
+                    k['limit_ips'] = u.get('hwidDeviceLimit')
+
+                if not k.get('email') and not k.get('key_email'):
+                    api_email = u.get('username') or u.get('email') or ''
+                    if api_email:
+                        k['email'] = api_email
+                        k['key_email'] = api_email
+
+                target_user_id = u.get('id') or k.get('remnawave_user_uuid')
+                host = k.get('host_name')
+
+                if target_user_id:
+                    sub_tasks.append(remnawave_api.get_subscription_info(target_user_id, host_name=host))
+                else:
+                    sub_tasks.append(asyncio.sleep(0, None))
+
+            sub_results = await asyncio.gather(*sub_tasks, return_exceptions=True)
+
+            for k, sub_res in zip(active_keys, sub_results):
+                found_traffic = None
+                if not isinstance(sub_res, Exception) and sub_res and isinstance(sub_res, dict):
+                    for key_name in ['usedTrafficBytes', 'trafficUsed', 'traffic', 'used_traffic']:
+                        val = sub_res.get(key_name)
+                        if val is not None:
+                            found_traffic = val
+                            break
+
+                if found_traffic is not None:
+                    k['used_bytes'] = found_traffic
+
+                if 'used_bytes' not in k:
+                    u = key_details_map.get(k['key_id'])
+                    if u:
+                        for key_name in ['traffic', 'trafficUsed', 'used_traffic']:
+                            if u.get(key_name) is not None:
+                                try: k['used_bytes'] = int(u.get(key_name)); break
+                                except: pass
+
+                        if 'used_bytes' not in k:
+                            uploaded = int(u.get('upload') or 0)
+                            downloaded = int(u.get('download') or 0)
+                            k['used_bytes'] = uploaded + downloaded
+
+                u = key_details_map.get(k['key_id'])
+                target_user_id = None
+                if u:
+                     target_user_id = u.get('id')
+                if not target_user_id:
+                    target_user_id = k.get('remnawave_user_uuid')
+
+                host = k.get('host_name')
+
+                if target_user_id and host:
+                    try:
+                        devs = await remnawave_api.get_connected_devices_count(target_user_id, host_name=host)
+                        if devs and 'total' in devs:
+                            k['used_ips'] = int(devs['total'])
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.error(f"[WEBAPP] - Ошибка получения живой статистики: {e}")
+
+    return active_keys
+
+
 async def _render_main_page(user_id: int):
     webapp_settings = get_webapp_settings()
     
@@ -1088,7 +1281,9 @@ async def _render_main_page(user_id: int):
     user = get_user(user_id)
     if user and user.get('is_banned'):
          return _render_banned_page(webapp_settings)
-         
+
+    hosts_task = asyncio.create_task(_get_visible_remnawave_hosts())
+
     # Можно использовать webapp_domen для проверок или редиректов если нужно
     # current_domain = webapp_settings.get("webapp_domen")
 
@@ -1111,111 +1306,7 @@ async def _render_main_page(user_id: int):
             pass
             
         now = get_msk_time().replace(tzinfo=None)
-        
-        # --- FETCH LIVE DATA ONLY FOR ACTIVE KEYS ---
-        active_keys = []
-        for k in keys:
-            try:
-                exp = datetime.strptime(k['expiry_date'], "%Y-%m-%d %H:%M:%S")
-                if exp > now:
-                    active_keys.append(k)
-            except: pass
-
-        if active_keys:
-            try:
-                # --- 1. Fetch Key Details (User info from Host) ---
-                details_tasks = []
-                for k in active_keys:
-                    details_tasks.append(remnawave_api.get_key_details_from_host(k))
-                
-                details_results = await asyncio.gather(*details_tasks, return_exceptions=True)
-                
-                # --- 2. Fetch Subscription Info (Traffic Stats) using user ID from Details ---
-                sub_tasks = []
-                # Map results to keys to keep order
-                key_details_map = {}
-                
-                for k, res in zip(active_keys, details_results):
-                    if isinstance(res, Exception) or not res or not res.get('user'):
-                        sub_tasks.append(asyncio.sleep(0, None)) # Skip
-                        continue
-                        
-                    u = res['user']
-                    key_details_map[k['key_id']] = u
-                    
-                    # Update limits from user object immediately
-                    if u.get('trafficLimitBytes') is not None:
-                        k['limit_bytes'] = u.get('trafficLimitBytes')
-                    if u.get('hwidDeviceLimit') is not None:
-                        k['limit_ips'] = u.get('hwidDeviceLimit')
-
-                    if not k.get('email') and not k.get('key_email'):
-                        api_email = u.get('username') or u.get('email') or ''
-                        if api_email:
-                            k['email'] = api_email
-                            k['key_email'] = api_email
-                        
-                    # Use the numeric ID returned by Remnawave v3.
-                    target_user_id = u.get('id') or k.get('remnawave_user_uuid')
-                    host = k.get('host_name')
-                    
-                    if target_user_id:
-                        sub_tasks.append(remnawave_api.get_subscription_info(target_user_id, host_name=host))
-                    else:
-                        sub_tasks.append(asyncio.sleep(0, None))
-
-                sub_results = await asyncio.gather(*sub_tasks, return_exceptions=True)
-                
-                # --- 3. Process Subscription Results ---
-                for k, sub_res in zip(active_keys, sub_results):
-                    # Try to find traffic in subscription response
-                    found_traffic = None
-                    if not isinstance(sub_res, Exception) and sub_res and isinstance(sub_res, dict):
-                        # check common keys
-                        for key_name in ['usedTrafficBytes', 'trafficUsed', 'traffic', 'used_traffic']:
-                            val = sub_res.get(key_name)
-                            if val is not None:
-                                found_traffic = val
-                                break
-                    
-                    if found_traffic is not None:
-                        k['used_bytes'] = found_traffic
-                    
-                    # Fallback: check User Details (u)
-                    if 'used_bytes' not in k:
-                        u = key_details_map.get(k['key_id'])
-                        if u:
-                             # Check keys in user object
-                             for key_name in ['traffic', 'trafficUsed', 'used_traffic']:
-                                 if u.get(key_name) is not None:
-                                     try: k['used_bytes'] = int(u.get(key_name)); break
-                                     except: pass
-                             
-                             # Final fallback: sum upload + download
-                             if 'used_bytes' not in k:
-                                 uploaded = int(u.get('upload') or 0)
-                                 downloaded = int(u.get('download') or 0)
-                                 k['used_bytes'] = uploaded + downloaded
-
-                    # HWID Usage
-                    u = key_details_map.get(k['key_id'])
-                    target_user_id = None
-                    if u:
-                         target_user_id = u.get('id')
-                    if not target_user_id:
-                         target_user_id = k.get('remnawave_user_uuid')
-                         
-                    host = k.get('host_name')
-
-                    if target_user_id and host:
-                        try:
-                            devs = await remnawave_api.get_connected_devices_count(target_user_id, host_name=host)
-                            if devs and 'total' in devs:
-                                k['used_ips'] = int(devs['total'])
-                        except Exception:
-                            pass
-            except Exception as e:
-                logger.error(f"[WEBAPP] - Ошибка получения живой статистики для {user_id}: {e}")
+        active_keys = await _apply_live_key_stats(keys, now)
 
         # --- CALCULATE MIN PRICE ---
         min_price_val = 0.0
@@ -1267,6 +1358,7 @@ async def _render_main_page(user_id: int):
         ref_earned = user.get("referral_balance_all") or 0.0
         profile_card = _get_profile_card_html(user, ref_count, len(keys), ref_earned)
     
+    remnawave_hosts = await hosts_task
     p = get_webapp_template_path("app.html", webapp_settings)
     if p is None:
         return HTMLResponse(content="<h1>WebApp theme app.html not found</h1>", status_code=404)
@@ -1285,6 +1377,7 @@ async def _render_main_page(user_id: int):
         "webapp_logo": webapp_settings.get("webapp_logo") or "",
         "webapp_icon": webapp_settings.get("webapp_icon") or "",
         "subscriptions": subscriptions,
+        "remnawave_hosts": remnawave_hosts,
         "user_app_theme": (user or {}).get("app_theme") or "forest",
     }
     
@@ -2613,6 +2706,8 @@ async def api_user_status(user_id: int):
             return {"ok": False, "error": "Access denied"}
             
         keys = get_user_keys(user_id)
+        now = get_msk_time().replace(tzinfo=None)
+        await _apply_live_key_stats(keys, now)
         # Sort keys by key_id descending to get the latest one first
         formatted_keys = []
         if keys:

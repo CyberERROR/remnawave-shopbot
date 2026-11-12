@@ -15,6 +15,7 @@ except Exception:
 
 from shop_bot.webhook_server.app import create_webhook_app, _support_bot_controller
 from shop_bot.data_manager.scheduler import periodic_subscription_check
+from shop_bot.webhook_server.modules.notification import automatic_notification_loop
 from shop_bot.data_manager import remnawave_repository as rw_repo
 from shop_bot.bot_controller import BotController
 
@@ -165,6 +166,7 @@ def main():
         logger.info("Приложение запущено. Бота можно стартовать из веб-панели.")
         
         asyncio.create_task(periodic_subscription_check(bot_controller))
+        asyncio.create_task(automatic_notification_loop(bot_controller))
         async def delayed_auto_start():
             logger.info("Ожидание 2 секунд перед автозапуском...")
             await asyncio.sleep(2)

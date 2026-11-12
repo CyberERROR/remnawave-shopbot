@@ -1,0 +1,596 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления - Панель управления{% endblock %}
+
+{% block content %}
+<header class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div class="space-y-1">
+        <h2 class="flex items-center gap-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Уведомления
+            <span class="rounded-full border border-violet-400/20 bg-violet-400/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-violet-300">Система</span>
+        </h2>
+        <p class="ml-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/50">Гибкие серии автоматических сообщений</p>
+    </div>
+    <button type="button" data-save-all class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300 transition duration-150 hover:bg-emerald-400/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-50">
+        <i data-lucide="save" class="h-4 w-4" aria-hidden="true"></i><span>Сохранить настройки</span>
+    </button>
+</header>
+
+<div class="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <div class="flex min-h-[86px] items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><i data-lucide="workflow" class="h-5 w-5" aria-hidden="true"></i></span>
+        <div><p class="text-[10px] font-semibold uppercase tracking-wider text-white/45">Активных сценариев</p><p id="notification-stat-active" class="mt-1 text-2xl font-semibold tabular-nums text-white">{{ stats.active }}</p></div>
+    </div>
+    <div class="flex min-h-[86px] items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><i data-lucide="send" class="h-5 w-5" aria-hidden="true"></i></span>
+        <div><p class="text-[10px] font-semibold uppercase tracking-wider text-white/45">Отправлено</p><p class="mt-1 text-2xl font-semibold tabular-nums text-white">{{ stats.sent }}</p></div>
+    </div>
+    <div class="flex min-h-[86px] items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300"><i data-lucide="receipt-text" class="h-5 w-5" aria-hidden="true"></i></span>
+        <div><p class="text-[10px] font-semibold uppercase tracking-wider text-white/45">Активных счетов</p><p class="mt-1 text-2xl font-semibold tabular-nums text-white">{{ stats.unpaid }}</p></div>
+    </div>
+    <div class="flex min-h-[86px] items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-400/10 text-rose-300"><i data-lucide="circle-alert" class="h-5 w-5" aria-hidden="true"></i></span>
+        <div><p class="text-[10px] font-semibold uppercase tracking-wider text-white/45">Ошибок доставки</p><p class="mt-1 text-2xl font-semibold tabular-nums text-white">{{ stats.failed }}</p></div>
+    </div>
+    <div class="flex min-h-[86px] items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><i data-lucide="key-round" class="h-5 w-5" aria-hidden="true"></i></span>
+        <div><p class="text-[10px] font-semibold uppercase tracking-wider text-white/45">Заканчиваются</p><p class="mt-1 text-2xl font-semibold tabular-nums text-white">{{ stats.expiring }}</p></div>
+    </div>
+    <button type="button" data-open-main="unresponsive" class="flex min-h-[86px] items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 text-left transition hover:border-violet-400/25 hover:bg-violet-400/[0.04]">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300"><i data-lucide="user-x" class="h-5 w-5" aria-hidden="true"></i></span>
+        <div><p class="text-[10px] font-semibold uppercase tracking-wider text-white/45">Без ответа</p><p class="mt-1 text-2xl font-semibold tabular-nums text-white">{{ stats.unresponsive }}</p></div>
+    </button>
+</div>
+
+<div class="mb-5 overflow-x-auto rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 no-scrollbar">
+    <nav class="flex min-w-max items-center gap-1" aria-label="Разделы центра уведомлений">
+        <button type="button" data-main-tab="catalog" class="main-tab flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-2.5 text-xs font-semibold text-emerald-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"><i data-lucide="bell-ring" class="h-4 w-4" aria-hidden="true"></i>Уведомления</button>
+        <button type="button" data-main-tab="history" class="main-tab flex items-center gap-2 rounded-lg border border-transparent px-4 py-2.5 text-xs font-medium text-white/55 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"><i data-lucide="history" class="h-4 w-4" aria-hidden="true"></i>Журнал отправок</button>
+        <button type="button" data-main-tab="unresponsive" class="main-tab flex items-center gap-2 rounded-lg border border-transparent px-4 py-2.5 text-xs font-medium text-white/55 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"><i data-lucide="user-x" class="h-4 w-4" aria-hidden="true"></i>Без ответа<span class="rounded-full bg-black/20 px-2 py-0.5 text-[10px] tabular-nums">{{ stats.unresponsive }}</span></button>
+    </nav>
+</div>
+
+{% set events = [
+    {
+        'id': 'trial',
+        'title': 'Пробный период',
+        'short': 'Серия после регистрации без активации триала и покупки ключа',
+        'description': 'Повторяется по расписанию, пока пользователь не активирует пробный период, не купит ключ или не закончится общий срок серии.',
+        'icon': 'gift',
+        'color': 'emerald',
+        'button_text': 'Активировать пробный период',
+        'button_action': 'trial',
+        'variables': [
+            {'value': '{first_name}', 'label': 'Имя'},
+            {'value': '{username}', 'label': 'Username'},
+            {'value': '{trial_days}', 'label': 'Дней в триале'},
+            {'value': '{remaining_days}', 'label': 'Дней до остановки'}
+        ]
+    },
+    {
+        'id': 'unpaid',
+        'title': 'Неоплаченный счёт',
+        'short': 'Серия напоминаний, пока счёт активен и не оплачен',
+        'description': 'Повторяется только внутри общего срока жизни счёта. После оплаты или истечения срока отправки и кнопка оплаты блокируются.',
+        'icon': 'receipt-text',
+        'color': 'amber',
+        'button_text': 'Оплатить счёт',
+        'button_action': 'payment',
+        'variables': [
+            {'value': '{first_name}', 'label': 'Имя'},
+            {'value': '{amount}', 'label': 'Сумма'},
+            {'value': '{payment_method}', 'label': 'Шлюз'},
+            {'value': '{plan_name}', 'label': 'Тариф'},
+            {'value': '{host_name}', 'label': 'Сервер'},
+            {'value': '{payment_id}', 'label': 'ID счёта'},
+            {'value': '{remaining_minutes}', 'label': 'Минут до закрытия'}
+        ]
+    },
+    {
+        'id': 'expiry',
+        'title': 'Окончание подписки',
+        'short': 'Предупреждения по каждому ключу до наступления даты окончания',
+        'description': 'Серия рассчитывается от даты окончания ключа. После продления используется новая дата, а после истечения ключа отправки прекращаются.',
+        'icon': 'key-round',
+        'color': 'sky',
+        'button_text': 'Продлить ключ',
+        'button_action': 'extend',
+        'variables': [
+            {'value': '{first_name}', 'label': 'Имя'},
+            {'value': '{key_name}', 'label': 'Ключ'},
+            {'value': '{host_name}', 'label': 'Сервер'},
+            {'value': '{time_left}', 'label': 'Точный остаток'},
+            {'value': '{days_left}', 'label': 'Дней'},
+            {'value': '{hours_left}', 'label': 'Часов'},
+            {'value': '{minutes_left}', 'label': 'Минут'},
+            {'value': '{expiry_date}', 'label': 'Дата окончания'}
+        ]
+    }
+] %}
+
+<section data-main-panel="catalog" class="main-panel space-y-5">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
+        {% for event in events %}
+        <button type="button" data-select-notification="{{ event.id }}" class="notification-choice group relative flex min-h-[124px] flex-col rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 text-left transition duration-150 hover:border-white/[0.16] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50">
+            <div class="mb-2 flex items-start justify-between gap-2">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl {% if event.color == 'emerald' %}bg-emerald-400/10 text-emerald-300{% elif event.color == 'amber' %}bg-amber-400/10 text-amber-300{% else %}bg-sky-400/10 text-sky-300{% endif %}"><i data-lucide="{{ event.icon }}" class="h-5 w-5" aria-hidden="true"></i></span>
+                <span data-choice-status class="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] px-2.5 py-1 text-[10px] text-white/45"><span class="h-1.5 w-1.5 rounded-full bg-white/30"></span>Выключено</span>
+            </div>
+            <h3 class="text-sm font-semibold text-white">{{ event.title }}</h3>
+            <p class="mt-1 text-[11px] leading-relaxed text-white/40">{{ event.short }}</p>
+            <div class="mt-auto flex items-end justify-between gap-2 pt-2">
+                <p data-choice-schedule class="text-[9px] leading-tight text-white/50"></p>
+            </div>
+        </button>
+        {% endfor %}
+        <div class="flex min-h-[124px] items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] p-3 text-center">
+            <div><span class="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.03] text-white/25"><i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i></span><p class="text-xs font-medium text-white/35">Место для новых сценариев</p><p class="mt-1 text-[10px] text-white/25">Карточки не займут верхнее меню</p></div>
+        </div>
+    </div>
+
+    {% for event in events %}
+    {% set item = config[event.id] %}
+    {% set event_schedule = schedule[event.id] %}
+    <section data-event-panel="{{ event.id }}" class="space-y-4 {% if event.id != 'trial' %}hidden{% endif %}">
+        <header class="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-start gap-3">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {% if event.color == 'emerald' %}bg-emerald-400/10 text-emerald-300{% elif event.color == 'amber' %}bg-amber-400/10 text-amber-300{% else %}bg-sky-400/10 text-sky-300{% endif %}"><i data-lucide="{{ event.icon }}" class="h-5 w-5" aria-hidden="true"></i></span>
+                    <div><p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Настройка сценария</p><h3 class="mt-1 text-base font-semibold tracking-tight text-white">{{ event.title }}</h3><p class="mt-1 max-w-3xl text-xs leading-relaxed text-white/50">{{ event.description }}</p></div>
+                </div>
+                <label class="flex shrink-0 cursor-pointer items-center gap-3 rounded-xl border border-white/[0.08] bg-black/20 px-3 py-2.5 select-none">
+                    <span class="text-xs font-medium text-white/65" data-enabled-label>{{ 'Включено' if item.enabled else 'Выключено' }}</span>
+                    <input type="checkbox" data-enabled class="peer sr-only" {% if item.enabled %}checked{% endif %}>
+                    <span class="relative h-6 w-11 rounded-full bg-white/10 transition after:absolute after:left-[3px] after:top-[3px] after:h-[18px] after:w-[18px] after:rounded-full after:bg-white after:transition-transform after:content-[''] peer-checked:bg-emerald-400/40 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/50"></span>
+                </label>
+            </div>
+        </header>
+
+        <div class="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5">
+            <div class="mb-4 flex items-center gap-3"><span class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300"><i data-lucide="calendar-clock" class="h-4 w-4" aria-hidden="true"></i></span><div><h4 class="text-sm font-semibold text-white">Расписание серии</h4><p class="mt-0.5 text-[10px] text-white/40">Начало, повтор и полное прекращение отправок</p></div></div>
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                {% if event.id == 'expiry' %}
+                {% set schedule_fields = [
+                    ('start_before_minutes', 'Первое сообщение', 'За это время до окончания ключа', 'start'),
+                    ('repeat_interval_minutes', 'Повторять каждые', 'Пауза между сообщениями', 'interval'),
+                    ('stop_before_minutes', 'Прекратить отправки', 'За это время до окончания; 0 — в момент окончания', 'duration')
+                ] %}
+            {% else %}
+                {% set schedule_fields = [
+                    ('start_delay_minutes', 'Первое сообщение', 'После регистрации или создания счёта', 'start'),
+                    ('repeat_interval_minutes', 'Повторять каждые', 'Следующее сообщение после предыдущего слота', 'interval'),
+                    ('active_duration_minutes', 'Общий срок серии', 'После этого срока больше не отправляем', 'duration')
+                ] %}
+            {% endif %}
+            {% for field, title, hint, schedule_key in schedule_fields %}
+                {% set part = event_schedule[schedule_key] %}
+                <div data-schedule-field="{{ field }}" class="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                    <label class="mb-1 block text-[11px] font-semibold text-white/70">{{ title }}</label>
+                    <p class="mb-3 text-[10px] text-white/35">{{ hint }}</p>
+                    <div class="grid grid-cols-[minmax(0,1fr)_126px] gap-2">
+                        <input type="number" data-schedule-value min="{{ 0 if field in ['start_delay_minutes', 'stop_before_minutes'] else 0.01 }}" step="any" value="{{ part.value }}" class="min-w-0 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm tabular-nums text-white outline-none focus:border-sky-400/40">
+                        <select data-schedule-unit class="rounded-xl border border-white/[0.08] bg-black/30 px-2.5 py-2.5 text-xs text-white outline-none focus:border-sky-400/40">
+                            <option value="1" {% if part.unit == 'minutes' %}selected{% endif %}>минут</option>
+                            <option value="60" {% if part.unit == 'hours' %}selected{% endif %}>часов</option>
+                            {% if event.id != 'unpaid' %}<option value="1440" {% if part.unit == 'days' %}selected{% endif %}>дней</option><option value="43200" {% if part.unit == 'months' %}selected{% endif %}>месяцев</option>{% endif %}
+                        </select>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-4 flex items-start gap-2 rounded-xl border border-sky-400/10 bg-sky-400/[0.03] p-3 text-[10px] leading-relaxed text-sky-100/45"><i data-lucide="info" class="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true"></i><span>Проверка выполняется каждые 20 секунд. Пропущенные после перезапуска слоты не копятся: отправляется только актуальный. Изменение расписания не отменяет защиту минимального интервала от последней доставки. Месяц в расчётах равен 30 дням.{% if event.id == 'unpaid' %} Общий срок серии должен быть не больше фактического времени жизни счёта у платёжного шлюза.{% endif %}{% if event.id == 'expiry' %} После продления новая серия рассчитывается от новой даты окончания, после истечения ключа отправки невозможны.{% endif %}</span></div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,1fr)]">
+            <div class="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5">
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><label for="{{ event.id }}-text" class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Текст сообщения</label><span class="text-[10px] text-white/35">HTML Telegram</span></div>
+                <div class="mb-3 flex flex-wrap items-center gap-1.5" aria-label="Форматирование сообщения">
+                    <button type="button" data-html-tag="b" class="h-8 min-w-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-xs font-bold text-white/65 transition hover:bg-white/[0.07] hover:text-white" title="Жирный">B</button>
+                    <button type="button" data-html-tag="i" class="h-8 min-w-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-xs italic text-white/65 transition hover:bg-white/[0.07] hover:text-white" title="Курсив">I</button>
+                    <button type="button" data-html-tag="u" class="h-8 min-w-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-xs underline text-white/65 transition hover:bg-white/[0.07] hover:text-white" title="Подчёркивание">U</button>
+                    <button type="button" data-html-tag="s" class="h-8 min-w-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-xs line-through text-white/65 transition hover:bg-white/[0.07] hover:text-white" title="Зачёркивание">S</button>
+                    <button type="button" data-html-tag="a" class="flex h-8 min-w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-white/65 transition hover:bg-white/[0.07] hover:text-white" title="Ссылка"><i data-lucide="link" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+                    <button type="button" data-html-tag="code" class="h-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 font-mono text-[11px] text-white/65 transition hover:bg-white/[0.07] hover:text-white" title="Код">Code</button>
+                    <button type="button" data-html-tag="tg-spoiler" class="h-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-[11px] text-white/65 transition hover:bg-white/[0.07] hover:text-white" title="Спойлер">Spoiler</button>
+                    <button type="button" data-html-tag="blockquote" class="h-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-[11px] text-white/65 transition hover:bg-white/[0.07] hover:text-white" title="Цитата">Quote</button>
+                    <button type="button" data-html-tag="tg-emoji" class="flex h-8 items-center gap-1.5 rounded-lg border border-violet-400/20 bg-violet-400/[0.06] px-2 text-[11px] font-medium text-violet-300 transition hover:bg-violet-400/[0.12]" title="Вставить Premium Emoji"><i data-lucide="smile-plus" class="h-3.5 w-3.5" aria-hidden="true"></i>Premium Emoji</button>
+                </div>
+                <textarea id="{{ event.id }}-text" data-message rows="9" class="min-h-[230px] w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 p-4 font-mono text-sm leading-relaxed text-white placeholder:text-white/25 outline-none transition focus:border-emerald-400/40 focus:ring-1 focus:ring-emerald-400/30" placeholder="Введите текст с HTML-разметкой">{{ item.text }}</textarea>
+                <div class="mt-3 flex flex-wrap items-center gap-2"><span class="mr-1 text-[10px] font-semibold uppercase tracking-wider text-white/35">Переменные:</span>{% for variable in event.variables %}<button type="button" data-variable="{{ variable.value }}" class="rounded-lg border border-sky-400/15 bg-sky-400/[0.05] px-2.5 py-1.5 font-mono text-[10px] text-sky-300 transition hover:bg-sky-400/[0.1]" title="Вставить {{ variable.value }}">{{ variable.label }} <span class="text-white/30">{{ variable.value }}</span></button>{% endfor %}</div>
+            </div>
+
+            <div class="flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5">
+                <div class="mb-4 flex items-center justify-between gap-3"><div><h4 class="text-sm font-semibold text-white">Кнопки сообщения</h4><p class="mt-1 text-[10px] text-white/40">До 8 кнопок, ссылка или готовое действие</p></div><span data-button-count class="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] tabular-nums text-white/45">{{ item.buttons|length }}/8</span></div>
+                <div data-buttons class="mb-3 max-h-[460px] space-y-2 overflow-y-auto pr-1"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" data-add-url class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-white/65 transition hover:bg-white/[0.06] hover:text-white"><i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i>URL кнопка</button>
+                    <button type="button" data-add-action data-default-action="{{ event.button_action }}" data-default-text="{{ event.button_text }}" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.05] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-emerald-400/[0.1]"><i data-lucide="mouse-pointer-click" class="h-4 w-4" aria-hidden="true"></i>Основное действие</button>
+                </div>
+                <div class="mt-4 border-t border-white/[0.06] pt-4"><label for="{{ event.id }}-columns" class="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Кнопок в одном ряду</label><select id="{{ event.id }}-columns" data-columns class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400/40"><option value="1" {% if item.columns == 1 %}selected{% endif %}>1 кнопка</option><option value="2" {% if item.columns == 2 %}selected{% endif %}>2 кнопки</option><option value="3" {% if item.columns == 3 %}selected{% endif %}>3 кнопки</option></select></div>
+                <button type="button" data-preview="{{ event.id }}" class="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/[0.06] px-4 py-2.5 text-xs font-semibold text-sky-300 transition hover:bg-sky-400/[0.12] disabled:cursor-not-allowed disabled:opacity-50 xl:mt-auto"><i data-lucide="send" class="h-4 w-4" aria-hidden="true"></i>Отправить предпросмотр администратору</button>
+                <p class="mt-2 text-center text-[10px] leading-relaxed text-white/35">Предпросмотр не создаёт запись в журнале и не влияет на серию.</p>
+            </div>
+        </div>
+    </section>
+    {% endfor %}
+</section>
+
+<section data-main-panel="history" class="main-panel hidden overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+    <header class="flex items-center gap-3 border-b border-white/[0.08] p-4 sm:p-5"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><i data-lucide="history" class="h-4 w-4" aria-hidden="true"></i></span><div><h3 class="text-sm font-semibold text-white">Журнал отправок</h3><p class="mt-1 text-xs text-white/45">Каждый слот серии записывается отдельно с запланированным и фактическим временем</p></div></header>
+    <div class="overflow-x-auto"><table class="w-full min-w-[1050px] text-left"><thead><tr class="border-b border-white/[0.06] text-[10px] font-semibold uppercase tracking-wider text-white/35"><th class="px-5 py-3">Сценарий</th><th class="px-5 py-3">Пользователь</th><th class="px-5 py-3">Объект</th><th class="px-5 py-3">Статус</th><th class="px-5 py-3">Слот</th><th class="px-5 py-3">Отправлено</th><th class="px-5 py-3">Ошибка</th></tr></thead><tbody>
+        {% for row in recent %}
+        <tr class="border-b border-white/[0.04] text-xs last:border-0">
+            <td class="px-5 py-3 text-white/70">{{ 'Пробный период' if row.event_type == 'trial' else ('Неоплаченный счёт' if row.event_type == 'unpaid' else 'Окончание подписки') }}</td>
+            <td class="px-5 py-3"><span class="text-white">{{ '@' ~ row.username if row.username else row.first_name or 'Пользователь' }}</span><span class="ml-2 font-mono text-[10px] text-white/35">{{ row.user_id }}</span></td>
+            <td class="max-w-[180px] truncate px-5 py-3 font-mono text-[10px] text-white/40" title="{{ row.reference_key or row.target_key }}">{{ row.reference_key or row.target_key }}</td>
+            <td class="px-5 py-3">{% if row.status == 'sent' %}<span class="rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-2 py-1 text-[10px] text-emerald-300">Отправлено</span>{% elif row.status == 'failed' %}<span class="rounded-full border border-rose-400/20 bg-rose-400/[0.06] px-2 py-1 text-[10px] text-rose-300">Ошибка</span>{% elif row.status == 'blocked' %}<span class="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[10px] text-white/45">Бот заблокирован</span>{% else %}<span class="rounded-full border border-amber-400/20 bg-amber-400/[0.06] px-2 py-1 text-[10px] text-amber-300">В процессе</span>{% endif %}</td>
+            <td class="px-5 py-3 whitespace-nowrap font-mono text-[10px] text-white/40">{{ row.scheduled_for|replace('T', ' ')|truncate(19, true, '') if row.scheduled_for else 'Предыдущая версия' }}</td>
+            <td class="px-5 py-3 whitespace-nowrap font-mono text-[10px] text-white/40">{{ (row.sent_at or row.created_at)|replace('T', ' ')|truncate(19, true, '') }}</td>
+            <td class="max-w-[240px] truncate px-5 py-3 text-[10px] text-white/35" title="{{ row.error or '' }}">{{ row.error or '—' }}</td>
+        </tr>
+        {% else %}<tr><td colspan="7" class="px-5 py-12 text-center"><i data-lucide="inbox" class="mx-auto mb-3 h-7 w-7 text-white/20" aria-hidden="true"></i><p class="text-xs text-white/35">Отправок пока не было</p></td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+
+<section data-main-panel="unresponsive" class="main-panel hidden overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+    <header class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] p-4 sm:p-5"><div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300"><i data-lucide="user-x" class="h-4 w-4" aria-hidden="true"></i></span><div><h3 class="text-sm font-semibold text-white">Пользователи без целевого действия</h3><p class="mt-1 text-xs text-white/45">Серия пробного периода завершена по общему сроку, повторные сообщения больше не отправляются</p></div></div><span class="rounded-full border border-violet-400/20 bg-violet-400/[0.06] px-3 py-1 text-xs text-violet-300">Всего: {{ stats.unresponsive }}</span></header>
+    <div class="overflow-x-auto"><table class="w-full min-w-[760px] text-left"><thead><tr class="border-b border-white/[0.06] text-[10px] font-semibold uppercase tracking-wider text-white/35"><th class="px-5 py-3">Пользователь</th><th class="px-5 py-3">Регистрация</th><th class="px-5 py-3">Отправлено сообщений</th><th class="px-5 py-3">Последняя отправка</th><th class="px-5 py-3">Причина остановки</th></tr></thead><tbody>
+        {% for row in unresponsive %}
+        <tr class="border-b border-white/[0.04] text-xs last:border-0"><td class="px-5 py-3"><span class="text-white">{{ '@' ~ row.username if row.username else row.first_name or 'Пользователь' }}</span><span class="ml-2 font-mono text-[10px] text-white/35">{{ row.telegram_id }}</span></td><td class="px-5 py-3 whitespace-nowrap font-mono text-[10px] text-white/40">{{ row.registration_date|replace('T', ' ')|truncate(19, true, '') }}</td><td class="px-5 py-3 tabular-nums text-white/65">{{ row.notifications_count }}</td><td class="px-5 py-3 whitespace-nowrap font-mono text-[10px] text-white/40">{{ row.last_sent_at|replace('T', ' ')|truncate(19, true, '') if row.last_sent_at else '—' }}</td><td class="px-5 py-3"><span class="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] text-white/45">Общий срок истёк</span></td></tr>
+        {% else %}<tr><td colspan="5" class="px-5 py-12 text-center"><i data-lucide="user-check" class="mx-auto mb-3 h-7 w-7 text-white/20" aria-hidden="true"></i><p class="text-xs text-white/35">Пользователей с завершённой серией без ответа нет</p></td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+
+<div id="notification-emoji-modal" class="modal-overlay p-4">
+    <div class="modal-content max-w-md p-5" role="dialog" aria-modal="true" aria-labelledby="notification-emoji-title">
+        <div class="mb-5 flex items-center justify-between"><div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300"><i data-lucide="smile-plus" class="h-4 w-4" aria-hidden="true"></i></span><div><h3 id="notification-emoji-title" class="text-base font-semibold text-white">Premium Emoji</h3><p class="text-[10px] text-white/40">Вставка в текст сообщения</p></div></div><button type="button" onclick="closeModal('notification-emoji-modal')" class="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition hover:bg-white/[0.05] hover:text-white" aria-label="Закрыть"><i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i></button></div>
+        <div class="space-y-4"><div><label for="notification-emoji-id" class="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-white/45">Custom Emoji ID</label><input id="notification-emoji-id" type="text" inputmode="numeric" autocomplete="off" placeholder="Например: 5323156532771569774" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-3 font-mono text-sm text-white outline-none focus:border-violet-400/40"></div><div><label for="notification-emoji-fallback" class="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-white/45">Обычный эмодзи для отображения</label><input id="notification-emoji-fallback" type="text" maxlength="8" value="💎" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-3 text-sm text-white outline-none focus:border-violet-400/40"></div><div class="rounded-xl border border-white/[0.06] bg-black/20 p-3 text-[10px] leading-relaxed text-white/40">Будет вставлен тег <code class="text-violet-300">&lt;tg-emoji emoji-id="ID"&gt;💎&lt;/tg-emoji&gt;</code></div><div class="flex justify-end gap-2 border-t border-white/[0.06] pt-4"><button type="button" onclick="closeModal('notification-emoji-modal')" class="rounded-xl border border-white/[0.08] px-4 py-2 text-xs text-white/60 hover:bg-white/[0.04]">Отмена</button><button type="button" id="notification-emoji-insert" class="rounded-xl border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-400/[0.16]">Вставить</button></div></div>
+    </div>
+</div>
+
+<script>
+window.notificationInitialConfig = {{ config|tojson }};
+window.notificationInsertion = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const mainPanels = [...document.querySelectorAll('[data-main-panel]')];
+    const mainTabs = [...document.querySelectorAll('[data-main-tab]')];
+    const eventPanels = [...document.querySelectorAll('[data-event-panel]')];
+    const choices = [...document.querySelectorAll('[data-select-notification]')];
+    const activeCount = document.getElementById('notification-stat-active');
+    let selectedEvent = 'trial';
+
+    const refreshIcons = root => {
+        if (window.refreshUiIcons) window.refreshUiIcons(root || document.body);
+    };
+
+    const notify = (type, message) => {
+        const holder = document.createElement('span');
+        holder.textContent = String(message || 'Неизвестная ошибка');
+        window.showToast(type, holder.innerHTML);
+    };
+
+    const selectedTabClass = 'main-tab flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-2.5 text-xs font-semibold text-emerald-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50';
+    const regularTabClass = 'main-tab flex items-center gap-2 rounded-lg border border-transparent px-4 py-2.5 text-xs font-medium text-white/55 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50';
+
+    const activateMainTab = name => {
+        mainPanels.forEach(panel => panel.classList.toggle('hidden', panel.dataset.mainPanel !== name));
+        mainTabs.forEach(tab => {
+            const selected = tab.dataset.mainTab === name;
+            tab.className = selected ? selectedTabClass : regularTabClass;
+            tab.setAttribute('aria-current', selected ? 'page' : 'false');
+        });
+        refreshIcons(document.body);
+    };
+
+    const selectNotification = type => {
+        selectedEvent = type;
+        eventPanels.forEach(panel => panel.classList.toggle('hidden', panel.dataset.eventPanel !== type));
+        choices.forEach(choice => {
+            const selected = choice.dataset.selectNotification === type;
+            choice.classList.toggle('border-emerald-400/35', selected);
+            choice.classList.toggle('bg-emerald-400/[0.05]', selected);
+            choice.classList.toggle('border-white/[0.08]', !selected);
+            choice.classList.toggle('bg-white/[0.03]', !selected);
+            choice.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+    };
+
+    mainTabs.forEach(tab => tab.addEventListener('click', () => activateMainTab(tab.dataset.mainTab)));
+    document.querySelectorAll('[data-open-main]').forEach(button => button.addEventListener('click', () => activateMainTab(button.dataset.openMain)));
+    choices.forEach(choice => choice.addEventListener('click', () => selectNotification(choice.dataset.selectNotification)));
+
+    const getPanel = type => document.querySelector(`[data-event-panel="${type}"]`);
+
+    const updateUrlVisibility = row => {
+        const action = row.querySelector('[data-button-action]').value;
+        const urlWrap = row.querySelector('[data-button-url-wrap]');
+        urlWrap.classList.toggle('hidden', action !== 'url');
+        row.querySelector('[data-button-url]').required = action === 'url';
+    };
+
+    const createButtonRow = (type, button = {}) => {
+        const row = document.createElement('article');
+        row.className = 'rounded-xl border border-white/[0.07] bg-black/20 p-3';
+        row.dataset.buttonRow = 'true';
+        row.innerHTML = `
+            <div class="mb-2 flex items-center gap-2"><input type="text" data-button-text maxlength="64" placeholder="Текст кнопки" class="min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white outline-none focus:border-emerald-400/40"><button type="button" data-remove-button class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-rose-400/10 text-rose-300/60 transition hover:bg-rose-400/[0.08] hover:text-rose-300" title="Удалить кнопку" aria-label="Удалить кнопку"><i data-lucide="trash-2" class="h-3.5 w-3.5"></i></button></div>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2"><select data-button-action class="rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-2 text-[11px] text-white outline-none focus:border-emerald-400/40"><option value="url">Произвольная ссылка</option><option value="trial">Активировать пробный период</option>${type === 'unpaid' ? '<option value="payment">Оплатить этот счёт</option>' : ''}<option value="buy">Купить ключ</option>${type === 'expiry' ? '<option value="extend">Продлить этот ключ</option>' : ''}<option value="manage_keys">Мои ключи</option><option value="main_menu">Открыть главное меню</option></select><input type="text" data-button-emoji inputmode="numeric" placeholder="Premium Emoji ID" class="rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-[10px] text-white outline-none focus:border-violet-400/40"></div>
+            <div data-button-url-wrap class="mt-2"><input type="url" data-button-url placeholder="https://example.com" class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-[10px] text-white outline-none focus:border-sky-400/40"></div>`;
+        row.querySelector('[data-button-text]').value = button.text || '';
+        row.querySelector('[data-button-action]').value = button.action || 'url';
+        row.querySelector('[data-button-url]').value = button.url || '';
+        row.querySelector('[data-button-emoji]').value = button.emoji_id || '';
+        row.querySelector('[data-button-action]').addEventListener('change', () => updateUrlVisibility(row));
+        row.querySelector('[data-remove-button]').addEventListener('click', () => {
+            row.remove();
+            updateButtonCount(type);
+        });
+        updateUrlVisibility(row);
+        return row;
+    };
+
+    const updateButtonCount = type => {
+        const panel = getPanel(type);
+        panel.querySelector('[data-button-count]').textContent = `${panel.querySelectorAll('[data-button-row]').length}/8`;
+    };
+
+    const appendButton = (type, button = {}, focusText = false) => {
+        const panel = getPanel(type);
+        const list = panel.querySelector('[data-buttons]');
+        if (list.querySelectorAll('[data-button-row]').length >= 8) {
+            notify('warning', 'Можно добавить не более 8 кнопок');
+            return;
+        }
+        const row = createButtonRow(type, button);
+        list.appendChild(row);
+        updateButtonCount(type);
+        refreshIcons(row);
+        if (focusText) row.querySelector('[data-button-text]').focus();
+    };
+
+    for (const type of ['trial', 'unpaid', 'expiry']) {
+        const panel = getPanel(type);
+        const buttons = window.notificationInitialConfig[type]?.buttons || [];
+        buttons.forEach(button => appendButton(type, button));
+        panel.querySelector('[data-add-url]').addEventListener('click', () => appendButton(type, {action: 'url', text: 'Открыть ссылку'}, true));
+        panel.querySelector('[data-add-action]').addEventListener('click', event => {
+            const trigger = event.currentTarget;
+            appendButton(type, {action: trigger.dataset.defaultAction, text: trigger.dataset.defaultText}, true);
+        });
+    }
+
+    const insertText = (textarea, opening, closing = '') => {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = textarea.value.slice(start, end) || 'Текст';
+        textarea.setRangeText(opening + selected + closing, start, end, 'end');
+        textarea.focus();
+        const contentStart = start + opening.length;
+        textarea.setSelectionRange(contentStart, contentStart + selected.length);
+    };
+
+    document.querySelectorAll('[data-html-tag]').forEach(button => {
+        button.addEventListener('click', () => {
+            const panel = button.closest('[data-event-panel]');
+            const textarea = panel.querySelector('[data-message]');
+            const tag = button.dataset.htmlTag;
+            if (tag === 'tg-emoji') {
+                window.notificationInsertion = {textarea, start: textarea.selectionStart, end: textarea.selectionEnd};
+                window.openModal('notification-emoji-modal');
+                setTimeout(() => document.getElementById('notification-emoji-id').focus(), 50);
+                return;
+            }
+            if (tag === 'a') {
+                insertText(textarea, '<a href="https://example.com">', '</a>');
+                return;
+            }
+            insertText(textarea, `<${tag}>`, `</${tag}>`);
+        });
+    });
+
+    document.querySelectorAll('[data-variable]').forEach(button => {
+        button.addEventListener('click', () => {
+            const textarea = button.closest('[data-event-panel]').querySelector('[data-message]');
+            textarea.setRangeText(button.dataset.variable, textarea.selectionStart, textarea.selectionEnd, 'end');
+            textarea.focus();
+        });
+    });
+
+    document.getElementById('notification-emoji-insert').addEventListener('click', () => {
+        const id = document.getElementById('notification-emoji-id').value.trim();
+        const fallback = document.getElementById('notification-emoji-fallback').value.trim() || '💎';
+        const insertion = window.notificationInsertion;
+        if (!/^\d{1,64}$/.test(id)) {
+            notify('danger', 'Premium Emoji ID должен содержать только цифры');
+            return;
+        }
+        if (!insertion) return;
+        const content = insertion.textarea.value.slice(insertion.start, insertion.end) || fallback;
+        insertion.textarea.setRangeText(`<tg-emoji emoji-id="${id}">${content}</tg-emoji>`, insertion.start, insertion.end, 'end');
+        insertion.textarea.focus();
+        window.closeModal('notification-emoji-modal');
+        document.getElementById('notification-emoji-id').value = '';
+    });
+
+    const readSchedule = (panel, field) => {
+        const group = panel.querySelector(`[data-schedule-field="${field}"]`);
+        const amount = Number(group.querySelector('[data-schedule-value]').value);
+        const multiplier = Number(group.querySelector('[data-schedule-unit]').value);
+        return Number.isFinite(amount) ? Math.round(amount * multiplier) : Number.NaN;
+    };
+
+    const collectConfig = type => {
+        const panel = getPanel(type);
+        const schedule = type === 'expiry' ? {
+            start_before_minutes: readSchedule(panel, 'start_before_minutes'),
+            repeat_interval_minutes: readSchedule(panel, 'repeat_interval_minutes'),
+            stop_before_minutes: readSchedule(panel, 'stop_before_minutes')
+        } : {
+            start_delay_minutes: readSchedule(panel, 'start_delay_minutes'),
+            repeat_interval_minutes: readSchedule(panel, 'repeat_interval_minutes'),
+            active_duration_minutes: readSchedule(panel, 'active_duration_minutes')
+        };
+        return {
+            enabled: panel.querySelector('[data-enabled]').checked,
+            ...schedule,
+            text: panel.querySelector('[data-message]').value.trim(),
+            columns: Number(panel.querySelector('[data-columns]').value),
+            buttons: [...panel.querySelectorAll('[data-button-row]')].map(row => ({
+                text: row.querySelector('[data-button-text]').value.trim(),
+                action: row.querySelector('[data-button-action]').value,
+                url: row.querySelector('[data-button-url]').value.trim(),
+                emoji_id: row.querySelector('[data-button-emoji]').value.trim()
+            }))
+        };
+    };
+
+    const plural = (value, forms) => {
+        const mod100 = value % 100;
+        const mod10 = value % 10;
+        if (mod100 >= 11 && mod100 <= 14) return forms[2];
+        if (mod10 === 1) return forms[0];
+        if (mod10 >= 2 && mod10 <= 4) return forms[1];
+        return forms[2];
+    };
+
+    const formatMinutes = minutes => {
+        if (minutes === 0) return 'сразу';
+        if (minutes % 43200 === 0) {
+            const value = minutes / 43200;
+            return `${value} ${plural(value, ['месяц', 'месяца', 'месяцев'])}`;
+        }
+        if (minutes % 1440 === 0) {
+            const value = minutes / 1440;
+            return `${value} ${plural(value, ['день', 'дня', 'дней'])}`;
+        }
+        if (minutes % 60 === 0) {
+            const value = minutes / 60;
+            return `${value} ${plural(value, ['час', 'часа', 'часов'])}`;
+        }
+        return `${minutes} ${plural(minutes, ['минута', 'минуты', 'минут'])}`;
+    };
+
+    const updateChoiceSummary = type => {
+        const config = collectConfig(type);
+        const choice = document.querySelector(`[data-select-notification="${type}"]`);
+        const summary = type === 'expiry'
+            ? `Старт: за ${formatMinutes(config.start_before_minutes)} до окончания · Повтор: ${formatMinutes(config.repeat_interval_minutes)} · Стоп: ${config.stop_before_minutes === 0 ? 'в момент окончания' : `за ${formatMinutes(config.stop_before_minutes)} до окончания`}`
+            : `Старт: ${formatMinutes(config.start_delay_minutes)} · Повтор: ${formatMinutes(config.repeat_interval_minutes)} · Срок: ${formatMinutes(config.active_duration_minutes)}`;
+        choice.querySelector('[data-choice-schedule]').textContent = summary;
+        const status = choice.querySelector('[data-choice-status]');
+        status.innerHTML = `<span class="h-1.5 w-1.5 rounded-full ${config.enabled ? 'bg-emerald-300' : 'bg-white/30'}"></span>${config.enabled ? 'Включено' : 'Выключено'}`;
+        status.className = config.enabled
+            ? 'inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-2.5 py-1 text-[10px] text-emerald-300'
+            : 'inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] px-2.5 py-1 text-[10px] text-white/45';
+    };
+
+    const updateActiveCount = () => {
+        activeCount.textContent = document.querySelectorAll('[data-enabled]:checked').length;
+    };
+
+    document.querySelectorAll('[data-enabled]').forEach(input => {
+        input.addEventListener('change', () => {
+            const panel = input.closest('[data-event-panel]');
+            const label = input.closest('label').querySelector('[data-enabled-label]');
+            label.textContent = input.checked ? 'Включено' : 'Выключено';
+            label.className = input.checked ? 'text-xs font-medium text-emerald-300' : 'text-xs font-medium text-white/65';
+            updateActiveCount();
+            updateChoiceSummary(panel.dataset.eventPanel);
+        });
+    });
+
+    eventPanels.forEach(panel => {
+        panel.addEventListener('input', () => updateChoiceSummary(panel.dataset.eventPanel));
+        panel.addEventListener('change', () => updateChoiceSummary(panel.dataset.eventPanel));
+    });
+
+    const validateConfig = (config, type) => {
+        if (!config.text) throw new Error('Введите текст сообщения');
+        if (type === 'expiry') {
+            const values = [config.start_before_minutes, config.repeat_interval_minutes, config.stop_before_minutes];
+            if (values.some(value => !Number.isSafeInteger(value))) throw new Error('Проверьте числовые поля расписания');
+            if (config.start_before_minutes < 1 || config.start_before_minutes > 5256000) throw new Error('Начало серии должно быть от 1 минуты до 10 лет до окончания');
+            if (config.stop_before_minutes < 0 || config.stop_before_minutes >= config.start_before_minutes) throw new Error('Остановка должна быть раньше начала серии и не меньше нуля');
+            if (config.repeat_interval_minutes < 1 || config.repeat_interval_minutes > 5256000) throw new Error('Интервал повторения должен быть от 1 минуты до 10 лет');
+        } else {
+            const values = [config.start_delay_minutes, config.repeat_interval_minutes, config.active_duration_minutes];
+            if (values.some(value => !Number.isSafeInteger(value))) throw new Error('Проверьте числовые поля расписания');
+            if (config.start_delay_minutes < 0 || config.start_delay_minutes >= config.active_duration_minutes) throw new Error('Первое сообщение должно быть раньше окончания общего срока');
+            if (config.repeat_interval_minutes < 1) throw new Error('Интервал повторения должен быть не меньше 1 минуты');
+            const maxDuration = type === 'trial' ? 5256000 : 10080;
+            if (config.active_duration_minutes < 1 || config.active_duration_minutes > maxDuration) throw new Error(`Общий срок должен быть от 1 до ${maxDuration} минут`);
+            if (config.repeat_interval_minutes > 5256000) throw new Error('Интервал повторения не может превышать 10 лет');
+        }
+        for (const button of config.buttons) {
+            if (!button.text) throw new Error('Заполните текст каждой кнопки');
+            if (button.action === 'url' && !/^https?:\/\/[^\s]+$/i.test(button.url)) throw new Error(`Укажите корректную ссылку для кнопки «${button.text}»`);
+            if (button.emoji_id && !/^\d{1,64}$/.test(button.emoji_id)) throw new Error(`Проверьте Premium Emoji ID кнопки «${button.text}»`);
+        }
+    };
+
+    const apiRequest = async (url, payload) => {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': window.getCsrfToken()},
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({ok: false, error: 'Сервер вернул некорректный ответ'}));
+        if (!response.ok || !data.ok) throw new Error(data.error || 'Не удалось выполнить запрос');
+        return data;
+    };
+
+    const withBusy = async (button, action) => {
+        if (button.disabled) return;
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        try {
+            await action();
+        } catch (error) {
+            notify('danger', error.message || 'Неизвестная ошибка');
+        } finally {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+        }
+    };
+
+    document.querySelectorAll('[data-save-all]').forEach(button => {
+        button.addEventListener('click', () => {
+            withBusy(button, async () => {
+                const config = {trial: collectConfig('trial'), unpaid: collectConfig('unpaid'), expiry: collectConfig('expiry')};
+                validateConfig(config.trial, 'trial');
+                validateConfig(config.unpaid, 'unpaid');
+                validateConfig(config.expiry, 'expiry');
+                const result = await apiRequest('{{ url_for("notification_settings_save") }}', config);
+                window.notificationInitialConfig = result.config;
+                updateChoiceSummary('trial');
+                updateChoiceSummary('unpaid');
+                updateChoiceSummary('expiry');
+                notify('success', result.message);
+            });
+        });
+    });
+
+    document.querySelectorAll('[data-preview]').forEach(button => {
+        button.addEventListener('click', () => {
+            withBusy(button, async () => {
+                const type = button.dataset.preview;
+                const config = collectConfig(type);
+                validateConfig(config, type);
+                const result = await apiRequest('{{ url_for("notification_preview") }}', {event_type: type, config});
+                notify('success', result.message);
+            });
+        });
+    });
+
+    updateActiveCount();
+    updateChoiceSummary('trial');
+    updateChoiceSummary('unpaid');
+    updateChoiceSummary('expiry');
+    selectNotification(selectedEvent);
+    activateMainTab('catalog');
+    refreshIcons(document.body);
+});
+</script>
+{% endblock %}

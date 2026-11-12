@@ -41,10 +41,12 @@ def get_msk_time():
 # ---------------------------------
 
 from shop_bot.modules import remnawave_api
+from shop_bot.modules import tariff_service
 from shop_bot.modules import yookassa_api
 from shop_bot.bot import handlers
 from shop_bot.bot import keyboards
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramAPIError
 from shop_bot.support_bot_controller import SupportBotController
 from shop_bot.data_manager import speedtest_runner
 from shop_bot.data_manager import resource_monitor
@@ -77,7 +79,7 @@ from shop_bot.data_manager.database import (
     get_button_configs, create_button_config, update_button_config, 
     delete_button_config, reorder_button_configs, DB_FILE,
     add_seller_user, get_seller_user, delete_seller_user, update_user_username,
-    update_user_first_name, get_admin_stats, sanitize_person_name
+    update_user_first_name, update_user_telegram_profile, get_admin_stats, sanitize_person_name
 )
 from shop_bot.data_manager.database import update_host_remnawave_settings, get_plan_by_id, update_host_button_style
 import sqlite3
@@ -86,6 +88,7 @@ from .modules.update import register_update_routes
 from .modules.gemini import register_gemini_routes
 from .modules.node import register_node_routes
 from .modules.premna import register_premna_routes
+from .modules.notification import register_notification_routes
 from .modules import security
 
 
@@ -114,6 +117,11 @@ def _avatar_cache_put(user_id: int, expiry_ts: float, image_data, content_type):
         _telegram_avatar_cache.move_to_end(user_id)
         while len(_telegram_avatar_cache) > _TELEGRAM_AVATAR_CACHE_MAX_ENTRIES:
             _telegram_avatar_cache.popitem(last=False)
+
+
+def _avatar_cache_delete(user_id: int):
+    with _telegram_avatar_cache_lock:
+        _telegram_avatar_cache.pop(user_id, None)
 
 ALL_SETTINGS_KEYS = [
     "panel_login", "panel_password", "about_text", "terms_url", "privacy_url",
@@ -185,7 +193,7 @@ ALL_SETTINGS_KEYS = [
     "skip_email", "enable_wal_mode",
     "key_ready_image",
     "devices_list_image",
-    "stealth_login_enabled", "stealth_login_hotkey", "dashboard_layout",
+    "stealth_login_enabled", "stealth_login_hotkey", "stealth_ip_enabled", "stealth_ip_whitelist", "stealth_ip_blacklist", "dashboard_layout",
 ]
 
 def create_webhook_app(bot_controller_instance):
@@ -256,6 +264,20 @@ def create_webhook_app(bot_controller_instance):
         if hours: parts.append(f"{hours}ч.")
         if minutes or not parts: parts.append(f"{minutes}мин")
         return " ".join(parts)
+
+    def _send_admin_notification(user_id, text, reply_markup=None):
+        if not user_id:
+            return False
+        bot = _bot_controller.get_bot_instance() if _bot_controller else None
+        if not bot:
+            return False
+        message = bot.send_message(chat_id=int(user_id), text=text, reply_markup=reply_markup)
+        loop = current_app.config.get('EVENT_LOOP')
+        if loop and loop.is_running():
+            asyncio.run_coroutine_threadsafe(message, loop)
+        else:
+            asyncio.run(message)
+        return True
 
 
     def _handle_promo_after_payment(metadata: dict) -> None:
@@ -433,16 +455,57 @@ def create_webhook_app(bot_controller_instance):
             return f(*args, **kwargs)
         return decorated_function
 
+    def build_stealth_fake_response(reveal_script=None):
+        html = (
+            '<html>\n<head><title>502 Bad Gateway</title></head>\n<body>\n'
+            '<center><h1>502 Bad Gateway</h1></center>\n'
+            '<hr><center>nginx/1.24.0 (Ubuntu)</center>\n'
+            '</body>\n</html>\n'
+        )
+        if reveal_script:
+            html += reveal_script
+        resp = make_response(html, 502)
+        resp.headers['Content-Type'] = 'text/html; charset=utf-8'
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
+
     @flask_app.route('/login', methods=['GET', 'POST'])
     def login_page():
         real_ip = request.headers.get('X-Forwarded-For')
         ip = request.headers.get('CF-Connecting-IP', real_ip or request.remote_addr)
         ua = request.headers.get('User-Agent', 'Unknown')
 
+        settings = get_all_settings()
+
+        if settings.get('stealth_ip_enabled', '0') == '1':
+            client_ip = security.get_client_ip()
+            blacklist_networks = security.parse_ip_list(settings.get('stealth_ip_blacklist', ''))
+            if security.is_ip_allowed(client_ip, blacklist_networks):
+                bot = _bot_controller.get_bot_instance()
+                loop = current_app.config.get('EVENT_LOOP')
+                admin_id = settings.get("admin_telegram_id")
+                if bot and admin_id:
+                    security.notify_admin(
+                        bot, loop, admin_id,
+                        "🚫 <b>Вход с IP из чёрного списка</b>",
+                        {
+                            'ip': client_ip,
+                            'ua': ua,
+                            'method': request.method,
+                            'msg': '<b>IP из чёрного списка попытался открыть страницу входа. Показана фейковая страница 502.</b>',
+                            'footer': '<blockquote>IP указан в чёрном списке в разделе «Настройки панели» → «Белый список IP для входа».</blockquote>'
+                        }
+                    )
+                return build_stealth_fake_response()
+            whitelist_networks = security.parse_ip_list(settings.get('stealth_ip_whitelist', ''))
+            if whitelist_networks and not security.is_ip_allowed(client_ip, whitelist_networks):
+                return build_stealth_fake_response()
+
         if security.is_blocked(ip, ua):
             return render_template('login.html', **get_common_template_data())
 
-        settings = get_all_settings()
         stealth_enabled = settings.get('stealth_login_enabled', '0') == '1'
         hotkey = settings.get('stealth_login_hotkey')
 
@@ -465,19 +528,10 @@ def create_webhook_app(bot_controller_instance):
             js_cond = '&&'.join(js_parts) if js_parts else 'true'
             csrf_token = generate_csrf()
             
-            stealth_html = (
-                '<html>\n<head><title>502 Bad Gateway</title></head>\n<body>\n'
-                '<center><h1>502 Bad Gateway</h1></center>\n'
-                '<hr><center>nginx/1.24.0 (Ubuntu)</center>\n'
-                '</body>\n</html>\n'
+            reveal_script = (
                 f'<script>history.replaceState(null,"","/");var tc=0,tt;function dL(){{var f=document.createElement("form");f.method="POST";f.action="/login";var i=document.createElement("input");i.type="hidden";i.name="stealth_token";i.value="{new_token}";f.appendChild(i);var c=document.createElement("input");c.type="hidden";c.name="csrf_token";c.value="{csrf_token}";f.appendChild(c);document.body.appendChild(f);f.submit();}}document.onkeydown=function(e){{var k=(e.key||"").toLowerCase();var h="{hk_key}";if(k===h&&{js_cond}){{e.preventDefault();dL();}}}};document.addEventListener("click",function(e){{tc++;clearTimeout(tt);if(tc>=4){{e.preventDefault();dL();}}else{{tt=setTimeout(function(){{tc=0;}},2000);}}}});</script>'
             )
-            resp = make_response(stealth_html, 502)
-            resp.headers['Content-Type'] = 'text/html; charset=utf-8'
-            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-            resp.headers['Pragma'] = 'no-cache'
-            resp.headers['Expires'] = '0'
-            return resp
+            return build_stealth_fake_response(reveal_script)
 
         if request.method == 'POST':
             stealth_token = request.form.get('stealth_token')
@@ -486,7 +540,7 @@ def create_webhook_app(bot_controller_instance):
                     sess_token = session.pop('stealth_token', None)
                     if stealth_token == sess_token and sess_token is not None:
                         return render_template('login.html', stealth_reveal=True, **get_common_template_data())
-                return make_response('<html>\n<head><title>502 Bad Gateway</title></head>\n<body>\n<center><h1>502 Bad Gateway</h1></center>\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\n</body>\n</html>', 502)
+                return build_stealth_fake_response()
 
             username = request.form.get('username')
             password = request.form.get('password')
@@ -1023,7 +1077,7 @@ def create_webhook_app(bot_controller_instance):
         q = (request.args.get('q') or '').strip()
         
         common_data = get_common_template_data()
-        return render_template('users.html', users=[], current_page=page, total_pages=1, q=q, per_page=per_page, **common_data)
+        return render_template('users.html', users=[], current_page=page, total_pages=1, q=q, per_page=per_page, trial_hosts=rw_repo.list_squads(active_only=True), **common_data)
 
 
     @flask_app.route('/users/table.partial')
@@ -1108,6 +1162,64 @@ def create_webhook_app(bot_controller_instance):
             return '', 204
 
 
+    def _custom_emoji_api_get(token: str, method: str, params: dict) -> dict:
+        api_url = f'https://api.telegram.org/bot{token}/{method}?{urllib.parse.urlencode(params)}'
+        api_request = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(api_request, timeout=6) as api_response:
+            return json.loads(api_response.read().decode('utf-8'))
+
+    def _load_custom_emoji(emoji_id: str):
+        cache_key = f'custom-emoji:{emoji_id}'
+        cached = _avatar_cache_get(cache_key)
+        if cached:
+            return cached[1], cached[2]
+        token = (get_setting('telegram_bot_token') or '').strip()
+        if not token:
+            return None, None
+        try:
+            stickers_result = _custom_emoji_api_get(token, 'getCustomEmojiStickers', {'custom_emoji_ids': json.dumps([emoji_id])})
+            stickers = stickers_result.get('result') if stickers_result.get('ok') else None
+            sticker = stickers[0] if stickers else None
+            file_id = sticker.get('file_id') if sticker else None
+            if not file_id:
+                _avatar_cache_put(cache_key, time.time() + 300, None, None)
+                return None, None
+            file_result = _custom_emoji_api_get(token, 'getFile', {'file_id': file_id})
+            file_path = file_result.get('result', {}).get('file_path') if file_result.get('ok') else None
+            if not file_path:
+                _avatar_cache_put(cache_key, time.time() + 300, None, None)
+                return None, None
+            file_url = f'https://api.telegram.org/file/bot{token}/{file_path}'
+            file_request = urllib.request.Request(file_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(file_request, timeout=8) as file_response:
+                emoji_data = file_response.read(5_000_000)
+            if sticker.get('is_animated'):
+                content_type = 'application/gzip'
+            elif sticker.get('is_video'):
+                content_type = 'video/webm'
+            else:
+                content_type = 'image/webp'
+            _avatar_cache_put(cache_key, time.time() + 86400, emoji_data, content_type)
+            return emoji_data, content_type
+        except Exception as error:
+            logger.warning('Не удалось получить custom emoji %s: %s', emoji_id, error)
+            _avatar_cache_put(cache_key, time.time() + 300, None, None)
+            return None, None
+
+    @flask_app.route('/api/custom-emoji/<emoji_id>/file')
+    @login_required
+    def custom_emoji_file(emoji_id: str):
+        if not re.fullmatch(r'\d{1,32}', emoji_id or ''):
+            return '', 400
+        emoji_data, content_type = _load_custom_emoji(emoji_id)
+        if not emoji_data:
+            return '', 404
+        response = make_response(emoji_data)
+        response.headers['Content-Type'] = content_type
+        response.headers['Cache-Control'] = 'private, max-age=86400'
+        return response
+
+
     @flask_app.route('/users/<int:user_id>/keys.partial')
     @login_required
     def user_keys_partial(user_id: int):
@@ -1163,6 +1275,9 @@ def create_webhook_app(bot_controller_instance):
             flash('Некорректная сумма изменения баланса.', 'danger')
             return redirect(url_for('users_page'))
 
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        notify_values = request.form.getlist('notify_user')
+        notify_user = not wants_json if not notify_values else str(notify_values[-1]).lower() in {'1', 'true', 'yes', 'on'}
         old_balance = get_balance(user_id)
         ok = adjust_user_balance(user_id, delta)
         if ok:
@@ -1192,29 +1307,21 @@ def create_webhook_app(bot_controller_instance):
                 logger.warning(f"Не удалось записать историю изменения баланса для {user_id}: {e}")
         message = 'Баланс изменён.' if ok else 'Не удалось изменить баланс.'
         category = 'success' if ok else 'danger'
-        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        if wants_json:
-            return jsonify({"ok": ok, "message": message})
-        flash(message, category)
+        if not wants_json:
+            flash(message, category)
 
-        try:
-            if ok:
-                bot = _bot_controller.get_bot_instance()
-                if bot:
-                    sign = '+' if delta >= 0 else ''
-                    text = f"💳 Ваш баланс был изменён администратором: {sign}{delta:.2f} RUB\nТекущий баланс: {get_balance(user_id):.2f} RUB"
-                    loop = current_app.config.get('EVENT_LOOP')
-                    if loop and loop.is_running():
-                        asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=user_id, text=text), loop)
-                        logger.info(f"Запланирована отправка уведомления о балансе пользователю {user_id}")
-                    else:
-
-                        logger.warning("Цикл событий (EVENT_LOOP) не запущен; использую резервный asyncio.run для уведомления о балансе")
-                        asyncio.run(bot.send_message(chat_id=user_id, text=text))
+        if ok and notify_user:
+            try:
+                sign = '+' if delta >= 0 else ''
+                text = f"💳 Ваш баланс был изменён администратором: {sign}{delta:.2f} RUB\nТекущий баланс: {get_balance(user_id):.2f} RUB"
+                if _send_admin_notification(user_id, text):
+                    logger.info(f"Запланирована отправка уведомления о балансе пользователю {user_id}")
                 else:
                     logger.warning("Экземпляр бота отсутствует; не могу отправить уведомление о балансе")
-        except Exception as e:
-            logger.warning(f"Не удалось отправить уведомление о балансе: {e}")
+            except Exception as e:
+                logger.warning(f"Не удалось отправить уведомление о балансе: {e}")
+        if wants_json:
+            return jsonify({"ok": ok, "message": message})
         return redirect(url_for('users_page'))
 
     @flask_app.route('/users/<int:user_id>/balance/clear-history', methods=['POST'])
@@ -1586,14 +1693,16 @@ def create_webhook_app(bot_controller_instance):
                     
                     status_text = f"Осталось дней: {days_left}" if not is_expired else "ИСТЕК"
                     payment_info = payment_by_key.get(str(key.get('key_id')), {})
-                    plan_name = payment_info.get('plan')
-                    plan_id = payment_info.get('plan_id')
-                    if not plan_name and plan_id:
+                    plan_id = key.get('plan_id') or payment_info.get('plan_id')
+                    plan_name = None
+                    if plan_id:
                         try:
                             plan = get_plan_by_id(int(plan_id))
                             plan_name = plan.get('plan_name') if plan else None
                         except Exception:
                             plan_name = None
+                    if not plan_name:
+                        plan_name = payment_info.get('plan')
 
                     remote_user = None
                     remote_traffic = None
@@ -1656,6 +1765,7 @@ def create_webhook_app(bot_controller_instance):
                         "user_comment": key.get('comment_key') or '',
                         "admin_comment": key.get('description') or key.get('comment') or '',
                         "plan": plan_name or (f"Тариф #{plan_id}" if plan_id else '—'),
+                        "plan_id": int(plan_id) if plan_id is not None and str(plan_id).isdigit() else None,
                         "provider": payment_info.get('provider') or '—',
                         "hwid_used": remote_hwid_used,
                         "hwid_limit": int(hwid_limit) if hwid_limit not in (None, 0, '0') else None,
@@ -1716,6 +1826,7 @@ def create_webhook_app(bot_controller_instance):
     @login_required
     def reset_user_subscription_link(key_id: int):
         try:
+            notify_user = str(request.form.get('notify_user') or '').lower() in {'1', 'true', 'yes', 'on'}
             key = rw_repo.get_key_by_id(key_id)
             if not key:
                 return jsonify({"ok": False, "error": "Подписка не найдена"}), 404
@@ -1751,6 +1862,16 @@ def create_webhook_app(bot_controller_instance):
                 short_uuid=short_uuid,
                 subscription_url=subscription_url,
             )
+            if notify_user and key.get('user_id'):
+                try:
+                    text = (
+                        "🔄 Ссылка вашей подписки обновлена администратором.\n"
+                        "Старая ссылка больше не работает.\n\n"
+                        f"Новая ссылка:\n{subscription_url}"
+                    )
+                    _send_admin_notification(key.get('user_id'), text)
+                except Exception as e:
+                    logger.warning(f"Не удалось отправить новую ссылку подписки пользователю ключа {key_id}: {e}")
             return jsonify({"ok": True, "subscription_url": subscription_url})
         except Exception as e:
             logger.error(f"Failed to reset subscription link for key {key_id}: {e}")
@@ -1776,6 +1897,68 @@ def create_webhook_app(bot_controller_instance):
         except Exception as e:
             logger.error(f"Failed to reset HWID devices for key {key_id}: {e}")
             return jsonify({"ok": False, "error": str(e)}), 500
+
+    @flask_app.route('/users/<int:user_id>/telegram-profile/refresh', methods=['POST'])
+    @login_required
+    def refresh_user_telegram_profile_route(user_id: int):
+        if not get_user(user_id):
+            return jsonify({"ok": False, "error": "Пользователь не найден"}), 404
+
+        bot = _bot_controller.get_bot_instance() if _bot_controller else None
+        if not bot:
+            return jsonify({"ok": False, "error": "Telegram-бот недоступен. Проверьте его запуск и токен"}), 503
+
+        try:
+            request_get_chat = bot.get_chat(chat_id=user_id)
+            loop = current_app.config.get('EVENT_LOOP')
+            if loop and loop.is_running():
+                telegram_user = asyncio.run_coroutine_threadsafe(request_get_chat, loop).result(timeout=12)
+            else:
+                telegram_user = asyncio.run(request_get_chat)
+        except Exception as error:
+            description = str(getattr(error, 'description', '') or '').lower()
+            logger.warning("Не удалось обновить Telegram-профиль пользователя %s: %s", user_id, type(error).__name__)
+            if 'chat not found' in description:
+                message = "Пользователь не найден в Telegram. Убедитесь, что он запускал бота"
+            elif 'unauthorized' in description or 'forbidden' in description or 'bot was blocked' in description:
+                message = "Telegram не предоставил доступ к профилю пользователя"
+            elif 'too many requests' in description:
+                message = "Telegram временно ограничил запросы. Повторите попытку позже"
+            elif isinstance(error, TimeoutError):
+                message = "Telegram не ответил вовремя. Повторите попытку"
+            else:
+                message = "Не удалось получить актуальные данные из Telegram"
+            return jsonify({"ok": False, "error": message}), 502
+
+        if not telegram_user:
+            return jsonify({"ok": False, "error": "Telegram не вернул данные пользователя"}), 502
+
+        full_name = ' '.join(
+            str(value).strip()
+            for value in (
+                telegram_user.get('first_name') if isinstance(telegram_user, dict) else getattr(telegram_user, 'first_name', None),
+                telegram_user.get('last_name') if isinstance(telegram_user, dict) else getattr(telegram_user, 'last_name', None),
+            )
+            if value and str(value).strip()
+        )
+        first_name = sanitize_person_name(full_name)
+        raw_username = telegram_user.get('username') if isinstance(telegram_user, dict) else getattr(telegram_user, 'username', None)
+        username = str(raw_username or '').strip().lstrip('@').strip() or None
+
+        if not update_user_telegram_profile(user_id, username, first_name):
+            return jsonify({"ok": False, "error": "Не удалось сохранить данные пользователя"}), 500
+
+        _avatar_cache_delete(user_id)
+        logger.info("Telegram-профиль пользователя %s обновлён администратором %s", user_id, session.get('panel_login') or 'panel')
+        return jsonify({
+            "ok": True,
+            "user": {
+                "telegram_id": user_id,
+                "username": username,
+                "first_name": first_name,
+            },
+            "message": "Данные Telegram обновлены",
+        })
 
     @flask_app.route('/users/<int:user_id>/username', methods=['POST'])
     @login_required
@@ -2381,11 +2564,40 @@ def create_webhook_app(bot_controller_instance):
     @login_required
     def update_seller_settings_route(user_id: int):
         try:
-            seller_active = int(request.form.get('seller_active', 0))
-            seller_sale = float(request.form.get('seller_sale', 0))
-            seller_ref = float(request.form.get('seller_ref', 0))
+            if not get_user(user_id):
+                return jsonify({"ok": False, "error": "Пользователь не найден"}), 404
+            try:
+                seller_active = 1 if int(request.form.get('seller_active', 0)) == 1 else 0
+                seller_sale = float(request.form.get('seller_sale', 0))
+                seller_ref = float(request.form.get('seller_ref', 0))
+                seller_trial_enabled = 1 if request.form.get('seller_trial_enabled') in ('1', 'true', 'on') else 0
+                seller_trial_daily_limit = int(request.form.get('seller_trial_daily_limit', 0) or 0)
+                seller_trial_duration_hours = int(request.form.get('seller_trial_duration_hours', 24) or 24)
+                seller_trial_traffic_gb = int(request.form.get('seller_trial_traffic_gb', 0) or 0)
+                seller_trial_hwid_limit = int(request.form.get('seller_trial_hwid_limit', 0) or 0)
+            except (TypeError, ValueError):
+                return jsonify({"ok": False, "error": "Проверьте числовые поля партнера"}), 400
             seller_uuid = request.form.get('seller_uuid', '0').strip()
-            
+            seller_trial_squad_uuid = request.form.get('seller_trial_squad_uuid', '0').strip()
+            seller_trial_host_name = request.form.get('seller_trial_host_name', '').strip()
+            if seller_active != 1:
+                seller_trial_enabled = 0
+            if seller_active == 1 and seller_trial_enabled == 1:
+                if not 1 <= seller_trial_daily_limit <= 10000:
+                    return jsonify({"ok": False, "error": "Лимит тестовых ключей: от 1 до 10000 в день"}), 400
+                if not 1 <= seller_trial_duration_hours <= 8760:
+                    return jsonify({"ok": False, "error": "Длительность тестового ключа: от 1 до 8760 часов"}), 400
+                if not 0 <= seller_trial_traffic_gb <= 100000:
+                    return jsonify({"ok": False, "error": "Лимит трафика: от 0 до 100000 ГБ"}), 400
+                if not 0 <= seller_trial_hwid_limit <= 1000:
+                    return jsonify({"ok": False, "error": "Лимит устройств: от 0 до 1000"}), 400
+                try:
+                    seller_trial_squad_uuid = str(uuid.UUID(seller_trial_squad_uuid))
+                except (ValueError, AttributeError):
+                    return jsonify({"ok": False, "error": "Укажите корректный UUID из раздела «Внешние сквады»"}), 400
+                trial_host = rw_repo.get_squad(seller_trial_host_name) if seller_trial_host_name else None
+                if not trial_host or not int(trial_host.get('is_active') or 0):
+                    return jsonify({"ok": False, "error": "Выберите активный сервер Remnawave для тестовых ключей"}), 400
             with sqlite3.connect(DB_FILE) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -2393,12 +2605,24 @@ def create_webhook_app(bot_controller_instance):
                     (seller_active, user_id)
                 )
                 conn.commit()
-            
             if seller_active == 1:
-                add_seller_user(user_id, seller_sale, seller_ref, seller_uuid)
+                saved = add_seller_user(
+                    user_id,
+                    seller_sale,
+                    seller_ref,
+                    seller_uuid,
+                    seller_trial_enabled,
+                    seller_trial_daily_limit,
+                    seller_trial_duration_hours,
+                    seller_trial_squad_uuid,
+                    seller_trial_host_name,
+                    seller_trial_traffic_gb,
+                    seller_trial_hwid_limit,
+                )
+                if saved is None:
+                    return jsonify({"ok": False, "error": "Не удалось сохранить настройки партнера"}), 500
             else:
                 delete_seller_user(user_id)
-            
             return jsonify({"ok": True, "message": "Настройки продавца сохранены"})
         except Exception as e:
             logger.error(f"Failed to update seller settings for {user_id}: {e}")
@@ -2407,7 +2631,8 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/admin/keys/<int:key_id>/delete', methods=['POST'])
     @login_required
     def delete_key_route(key_id: int):
-
+        notify_user = str(request.form.get('notify_user') or '').lower() in {'1', 'true', 'yes', 'on'}
+        key = None
         try:
             key = rw_repo.get_key_by_id(key_id)
             if key:
@@ -2419,13 +2644,75 @@ def create_webhook_app(bot_controller_instance):
             pass
         ok = delete_key_by_id(key_id)
         msg = 'Ключ удалён.' if ok else 'Не удалось удалить ключ.'
-        
+        if ok and notify_user and key and key.get('user_id'):
+            try:
+                _send_admin_notification(key.get('user_id'), "❌ Ваш VPN-ключ был отозван администратором.")
+            except Exception as e:
+                logger.warning(f"Не удалось отправить уведомление об отзыве ключа {key_id}: {e}")
+
         wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         if wants_json:
             return jsonify({"ok": ok, "message": msg})
-            
+
         flash(msg, 'success' if ok else 'danger')
         return redirect(request.referrer or url_for('admin_keys_page'))
+
+    @flask_app.route('/admin/keys/<int:key_id>/tariff', methods=['GET', 'POST'])
+    @login_required
+    def change_key_tariff_route(key_id: int):
+        try:
+            if request.method == 'GET':
+                return jsonify({"ok": True, **tariff_service.get_key_tariff_options(key_id)})
+            json_data = request.get_json(silent=True) or {}
+            try:
+                target_plan_id = int(request.form.get('plan_id') or json_data.get('plan_id'))
+            except (TypeError, ValueError, AttributeError):
+                return jsonify({"ok": False, "error": "Выберите новый тариф"}), 400
+            notify_user = str(request.form.get('notify_user') or json_data.get('notify_user') or '').lower() in {'1', 'true', 'yes', 'on'}
+            result = asyncio.run(tariff_service.change_key_tariff(key_id, target_plan_id))
+            result['notification_requested'] = notify_user
+            result['notified'] = False
+            if notify_user:
+                try:
+                    key = rw_repo.get_key_by_id(key_id)
+                    user_id = int((key or {}).get('user_id') or 0)
+                    bot = _bot_controller.get_bot_instance() if _bot_controller else None
+                    if not key or user_id <= 0 or not bot:
+                        raise RuntimeError("Пользователь или бот недоступен")
+                    expiry_ms = int(result['new_expiry_ms'])
+                    expiry_text = datetime.fromtimestamp(
+                        expiry_ms / 1000,
+                        tz=timezone(timedelta(hours=3), name='MSK'),
+                    ).strftime('%d.%m.%Y %H:%M')
+                    tariff_name = html_escape.escape(str(result.get('plan_name') or key.get('host_name') or ''))
+                    text = (
+                        "🔄 <b>Тариф вашей подписки изменён</b>\n\n"
+                        f"💎 Новый тариф: <b>{tariff_name}</b>\n"
+                        f"📅 Действует до: <b>{expiry_text}</b>\n"
+                        f"⏳ Осталось: <b>{_get_time_remaining_str(expiry_ms)}</b>\n\n"
+                        "🔗 Ссылка подписки осталась прежней."
+                    )
+                    message = bot.send_message(
+                        chat_id=user_id,
+                        text=text,
+                        parse_mode='HTML',
+                        disable_web_page_preview=True,
+                    )
+                    loop = current_app.config.get('EVENT_LOOP')
+                    if loop and loop.is_running():
+                        asyncio.run_coroutine_threadsafe(message, loop).result(timeout=15)
+                    else:
+                        asyncio.run(message)
+                    result['notified'] = True
+                except Exception as notification_error:
+                    logger.warning("Не удалось уведомить пользователя о смене тарифа ключа %s: %s", key_id, notification_error)
+                    result['notification_error'] = "Не удалось отправить уведомление пользователю"
+            return jsonify(result)
+        except tariff_service.TariffChangeError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), exc.status_code
+        except Exception:
+            logger.exception("Не удалось изменить тариф ключа %s", key_id)
+            return jsonify({"ok": False, "error": "Внутренняя ошибка при смене тарифа"}), 500
 
     @flask_app.route('/admin/keys/<int:key_id>/adjust-expiry', methods=['POST'])
     @login_required
@@ -2434,6 +2721,8 @@ def create_webhook_app(bot_controller_instance):
             delta_days = int(request.form.get('delta_days', '0'))
         except Exception:
             return jsonify({"ok": False, "error": "invalid_delta"}), 400
+        notify_value = request.form.get('notify_user')
+        notify_user = True if notify_value is None else str(notify_value).lower() in {'1', 'true', 'yes', 'on'}
         key = rw_repo.get_key_by_id(key_id)
         if not key:
             return jsonify({"ok": False, "error": "not_found"}), 404
@@ -2481,30 +2770,33 @@ def create_webhook_app(bot_controller_instance):
                 return jsonify({"ok": False, "error": "db_update_failed"}), 500
 
 
-            try:
-                user_id = key.get('user_id')
-                new_ms_final = int(result.get('expiry_timestamp_ms'))
-                # Используем МСК для отображения
-                msk_tz = timezone(timedelta(hours=3), name='MSK')
-                new_dt_local = datetime.fromtimestamp(new_ms_final/1000, tz=msk_tz)
-                text = (
-                    "🗓️ <b>Срок действия ключа изменён</b>\n\n"
-                    "<b>Обновленные данные:</b>\n"
-                    f"🛰 Хост: <code>{key.get('host_name')}</code>\n"
-                    f"💌 Email: <code>{key.get('key_email')}</code>\n\n"
-                    f"📅 Истекает: <b>{datetime.fromtimestamp(new_ms_final/1000, tz=timezone(timedelta(hours=3), name='MSK')).strftime('%Y-%m-%d %H:%M')}</b>\n"
-                    f"⏳ Осталось: <b>{_get_time_remaining_str(new_ms_final)}</b>\n"
-                    "👤 Изменено: Администратором\n"
-                )
-                if user_id:
-                    bot = _bot_controller.get_bot_instance()
-                    loop = current_app.config.get('EVENT_LOOP')
-                    if bot and loop and loop.is_running():
-                        asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=user_id, text=text, parse_mode='HTML'), loop)
-                    elif bot:
-                        asyncio.run(bot.send_message(chat_id=user_id, text=text, parse_mode='HTML'))
-            except Exception:
-                pass
+            if notify_user:
+                try:
+                    user_id = key.get('user_id')
+                    new_ms_final = int(result.get('expiry_timestamp_ms'))
+                    msk_tz = timezone(timedelta(hours=3), name='MSK')
+                    host_name = html_escape.escape(str(key.get('host_name') or ''))
+                    key_email = html_escape.escape(str(key.get('key_email') or ''))
+                    delta_text = 'Добавлено' if delta_days >= 0 else 'Списано'
+                    text = (
+                        "<b>🗓️ Срок действия ключа изменён</b>\n\n"
+                        "<b>Обновленные данные:</b>\n"
+                        f"<i>🛰 Хост: {host_name}\n"
+                        f"💌 Email: {key_email}</i>\n\n"
+                        f"<u><b>🧮 {delta_text} {abs(delta_days)} Дней</b></u>\n"
+                        f"📅 Истекает: {datetime.fromtimestamp(new_ms_final / 1000, tz=msk_tz).strftime('%Y-%m-%d %H:%M')}\n"
+                        f"⏳ Осталось: {_get_time_remaining_str(new_ms_final)}\n"
+                        "<i>👑 Изменено: <u>Администратором</u></i>"
+                    )
+                    if user_id:
+                        bot = _bot_controller.get_bot_instance()
+                        loop = current_app.config.get('EVENT_LOOP')
+                        if bot and loop and loop.is_running():
+                            asyncio.run_coroutine_threadsafe(bot.send_message(chat_id=user_id, text=text, parse_mode='HTML'), loop)
+                        elif bot:
+                            asyncio.run(bot.send_message(chat_id=user_id, text=text, parse_mode='HTML'))
+                except Exception:
+                    pass
 
             return jsonify({"ok": True, "new_expiry_ms": int(result.get('expiry_timestamp_ms'))})
         except Exception as e:
@@ -3031,8 +3323,8 @@ def create_webhook_app(bot_controller_instance):
                 update_setting('panel_password', request.form.get('panel_password'))
 
 
-            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'platega_payform_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'demo_mode_enabled', 'yookassa_enabled', 'cryptobot_enabled', 'heleket_enabled', 'tonconnect_enabled']
-            checkbox_form1_keys = ['sbp_enabled', 'trial_enabled', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'platega_payform_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'demo_mode_enabled', 'yookassa_enabled', 'cryptobot_enabled', 'heleket_enabled', 'tonconnect_enabled']
+            checkbox_keys = ['force_subscription', 'sbp_enabled', 'trial_enabled', 'enable_referrals', 'enable_fixed_referral_bonus', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'platega_payform_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'stealth_ip_enabled', 'demo_mode_enabled', 'yookassa_enabled', 'cryptobot_enabled', 'heleket_enabled', 'tonconnect_enabled']
+            checkbox_form1_keys = ['sbp_enabled', 'trial_enabled', 'stars_enabled', 'yoomoney_enabled', 'monitoring_enabled', 'platega_enabled', 'platega_crypto_enabled', 'platega_payform_enabled', 'skip_email', 'enable_wal_mode', 'stealth_login_enabled', 'stealth_ip_enabled', 'demo_mode_enabled', 'yookassa_enabled', 'cryptobot_enabled', 'heleket_enabled', 'tonconnect_enabled']
             checkbox_form2_keys = ['force_subscription', 'enable_referrals', 'enable_fixed_referral_bonus']
             if (request.form.get('full_settings_form') or '').strip() == '1':
                 for checkbox_key in checkbox_form1_keys:
@@ -3110,7 +3402,7 @@ def create_webhook_app(bot_controller_instance):
             backups = []
 
         common_data = get_common_template_data()
-        return render_template('settings.html', hosts=hosts, backups=backups, pay_info=pay_info, **common_data)
+        return render_template('settings.html', hosts=hosts, backups=backups, pay_info=pay_info, client_ip_preview=security.get_client_ip(), **common_data)
 
     @flask_app.route('/tariffs')
     @login_required
@@ -3566,12 +3858,12 @@ def create_webhook_app(bot_controller_instance):
     def ban_user_route(user_id):
         ban_user(user_id)
         flash(f'Пользователь {user_id} был заблокирован.', 'success')
+        notify_value = request.form.get('notify_user')
+        notify_user = True if notify_value is None else str(notify_value).lower() in {'1', 'true', 'yes', 'on'}
 
-        try:
-            bot = _bot_controller.get_bot_instance()
-            if bot:
+        if notify_user:
+            try:
                 text = "🚫 Ваш аккаунт заблокирован администратором. Если это ошибка — напишите в поддержку."
-
                 try:
                     support = (get_setting("support_bot_username") or get_setting("support_user") or "").strip()
                 except Exception:
@@ -3596,17 +3888,10 @@ def create_webhook_app(bot_controller_instance):
                     kb.button(text="🆘 Написать в поддержку", url=url)
                 else:
                     kb.button(text="🆘 Поддержка", callback_data="show_help")
-                loop = current_app.config.get('EVENT_LOOP')
-                if loop and loop.is_running():
-                    asyncio.run_coroutine_threadsafe(
-                        bot.send_message(chat_id=user_id, text=text, reply_markup=kb.as_markup()),
-                        loop
-                    )
-                else:
-                    asyncio.run(bot.send_message(chat_id=user_id, text=text, reply_markup=kb.as_markup()))
-        except Exception as e:
-            logger.warning(f"Не удалось отправить уведомление о бане пользователю {user_id}: {e}")
-    
+                _send_admin_notification(user_id, text, kb.as_markup())
+            except Exception as e:
+                logger.warning(f"Не удалось отправить уведомление о бане пользователю {user_id}: {e}")
+
         wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         if wants_json:
             return jsonify({"ok": True, "message": f'Пользователь {user_id} был заблокирован.'})
@@ -4606,45 +4891,42 @@ def create_webhook_app(bot_controller_instance):
     @login_required
     @csrf.exempt
     def send_user_message_route(user_id):
-        """Send a message to a user via bot"""
+        payload = request.get_json(silent=True) or {}
+        message_text = str(request.form.get('message') or payload.get('message') or '').strip()
+        if not message_text:
+            return jsonify({'ok': False, 'error': 'Сообщение не может быть пустым'}), 400
+        bot = _bot_controller.get_bot_instance() if _bot_controller else None
+        if not bot:
+            return jsonify({'ok': False, 'error': 'Telegram-бот недоступен. Запустите бота и повторите попытку'}), 503
+
         try:
-            message_text = request.form.get('message', '').strip()
-            
-            if not message_text:
-                return jsonify({'ok': False, 'error': 'Сообщение не может быть пустым'}), 400
-            
-            
-            bot = _bot_controller.get_bot_instance()
-            if not bot:
-                return jsonify({'ok': False, 'error': 'Бот недоступен'}), 500
-            
-            
+            send_request = bot.send_message(chat_id=user_id, text=message_text, parse_mode='HTML')
             loop = current_app.config.get('EVENT_LOOP')
-            if not loop or not loop.is_running():
-                return jsonify({'ok': False, 'error': 'Event loop недоступен'}), 500
-            
-            
-            async def send_message():
-                try:
-                    await bot.send_message(chat_id=user_id, text=message_text)
-                    return True
-                except Exception as e:
-                    logger.error(f"Failed to send message to user {user_id}: {e}")
-                    return False
-            
-            
-            future = asyncio.run_coroutine_threadsafe(send_message(), loop)
-            success = future.result(timeout=10)
-            
-            if success:
-                logger.info(f"Message sent to user {user_id}")
-                return jsonify({'ok': True, 'message': 'Сообщение успешно отправлено'})
+            if loop and loop.is_running():
+                asyncio.run_coroutine_threadsafe(send_request, loop).result(timeout=15)
             else:
-                return jsonify({'ok': False, 'error': 'Не удалось отправить сообщение'}), 500
-                
-        except Exception as e:
-            logger.error(f"Error sending message to user {user_id}: {e}")
-            return jsonify({'ok': False, 'error': str(e)}), 500
+                asyncio.run(send_request)
+        except TelegramBadRequest as error:
+            detail = str(getattr(error, 'description', '') or error)
+            logger.warning("Telegram отклонил сообщение пользователю %s: %s", user_id, detail)
+            return jsonify({'ok': False, 'error': f'Ошибка форматирования сообщения: {detail}'}), 400
+        except TelegramForbiddenError as error:
+            detail = str(getattr(error, 'description', '') or error)
+            logger.warning("Нет доступа для отправки сообщения пользователю %s: %s", user_id, detail)
+            return jsonify({'ok': False, 'error': 'Пользователь заблокировал бота или недоступен для сообщений'}), 403
+        except TelegramAPIError as error:
+            detail = str(getattr(error, 'description', '') or error)
+            logger.warning("Ошибка Telegram при отправке сообщения пользователю %s: %s", user_id, detail)
+            return jsonify({'ok': False, 'error': f'Telegram не смог отправить сообщение: {detail}'}), 502
+        except TimeoutError:
+            logger.warning("Таймаут отправки сообщения пользователю %s", user_id)
+            return jsonify({'ok': False, 'error': 'Telegram не ответил вовремя. Повторите попытку'}), 504
+        except Exception as error:
+            logger.exception("Не удалось отправить сообщение пользователю %s: %s", user_id, type(error).__name__)
+            return jsonify({'ok': False, 'error': 'Не удалось отправить сообщение. Проверьте работу бота'}), 500
+
+        logger.info("Сообщение пользователю %s успешно отправлено", user_id)
+        return jsonify({'ok': True, 'message': 'Сообщение успешно отправлено'})
 
     @flask_app.route('/button-constructor')
     @login_required
@@ -4772,5 +5054,6 @@ def create_webhook_app(bot_controller_instance):
     register_gemini_routes(flask_app, login_required)
     register_node_routes(flask_app, login_required, get_common_template_data)
     register_premna_routes(flask_app, login_required, get_common_template_data)
+    register_notification_routes(flask_app, login_required, get_common_template_data)
 
     return flask_app

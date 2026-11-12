@@ -304,6 +304,17 @@ def _to_iso(dt: datetime) -> str:
     return dt_utc.isoformat().replace("+00:00", "Z")
 
 
+async def get_hosts(*, host_name: str | None = None) -> list[dict[str, Any]]:
+    response = await (
+        _request_for_host(host_name, "GET", "/api/hosts")
+        if host_name
+        else _request("GET", "/api/hosts")
+    )
+    payload = response.json() or {}
+    data = payload.get("response") if isinstance(payload, dict) else None
+    return data if isinstance(data, list) else []
+
+
 async def get_user_by_email(email: str, *, host_name: str | None = None) -> dict[str, Any] | None:
     if not email:
         return None
@@ -439,6 +450,10 @@ async def ensure_user(
     force_expiry: bool = False,
     hwid_limit: int | None = None,
     external_squad_uuid: str | None = None,
+    reset_hwid_limit: bool = False,
+    set_external_squad: bool = False,
+    status: str = "ACTIVE",
+    allow_create: bool = True,
 ) -> dict[str, Any]:
     if not email:
         raise RemnawaveAPIError("email is required for ensure_user")
@@ -455,6 +470,8 @@ async def ensure_user(
 
     email = _normalize_email_for_remnawave(email, telegram_id=telegram_id)
     current = await get_user_by_email(email, host_name=host_name)
+    if not current and not allow_create:
+        raise RemnawaveAPIError(f"Remnawave user {email} was not found; creating a replacement is forbidden")
     expire_iso = _to_iso(expire_at)
     traffic_limit_strategy = traffic_limit_strategy or "NO_RESET"
 
@@ -484,19 +501,21 @@ async def ensure_user(
 
         payload = {
             "id": current.get("id"),
-            "status": "ACTIVE",
+            "status": status,
             "expireAt": expire_iso,
             "activeInternalSquads": [squad_uuid],
             "email": email,
         }
         
         # Добавляем внешний сквад для seller
-        if external_squad_uuid:
+        if set_external_squad or external_squad_uuid:
             payload["externalSquadUuid"] = external_squad_uuid
 
         # Apply HWID limit if enabled globally OR if we have a specific non-zero limit?
         # Usually checking host_hwid_enabled is safer to avoid sending unsupported fields.
-        if effective_hwid_limit is not None:
+        if reset_hwid_limit:
+            payload["hwidDeviceLimit"] = None
+        elif effective_hwid_limit is not None:
              payload["hwidDeviceLimit"] = effective_hwid_limit
 
         # Добавляем Telegram ID в контактную информацию
@@ -529,18 +548,20 @@ async def ensure_user(
         generated_username = _normalize_username_for_remnawave(username or email.split("@")[0])
         payload = {
             "username": generated_username,
-            "status": "ACTIVE",
+            "status": status,
             "expireAt": expire_iso,
             "activeInternalSquads": [squad_uuid],
             "email": email,
         }
         
         # Добавляем внешний сквад для seller
-        if external_squad_uuid:
+        if set_external_squad or external_squad_uuid:
             payload["externalSquadUuid"] = external_squad_uuid
 
         # Apply HWID limit
-        if effective_hwid_limit is not None:
+        if reset_hwid_limit:
+            payload["hwidDeviceLimit"] = None
+        elif effective_hwid_limit is not None:
             payload["hwidDeviceLimit"] = effective_hwid_limit
 
         # Добавляем Telegram ID в контактную информацию
@@ -817,9 +838,14 @@ async def create_or_update_key_on_host(
     telegram_id: int | str | None = None,
     force_expiry: bool = False,
     hwid_limit: int | None = None,
-    traffic_limit_gb: int | None = None,
+    traffic_limit_gb: float | None = None,
     traffic_limit_strategy: str | None = None,
     external_squad_uuid: str | None = None,
+    squad_uuid: str | None = None,
+    reset_hwid_limit: bool = False,
+    set_external_squad: bool = False,
+    status: str = "ACTIVE",
+    allow_create: bool = True,
 ) -> dict | None:
     """Legacy совместимость: создаёт/обновляет пользователя Remnawave и возвращает данные по ключу."""
     # -------------------------------------------------------------------------
@@ -838,7 +864,7 @@ async def create_or_update_key_on_host(
         if not squad:
             logger.error("Remnawave: не найден сквад/хост '%s'", host_name)
             return None
-        squad_uuid = (squad.get('squad_uuid') or '').strip()
+        squad_uuid = (squad_uuid or squad.get('squad_uuid') or '').strip()
         if not squad_uuid:
             logger.error("Remnawave: сквад '%s' не имеет squad_uuid", host_name)
             return None
@@ -889,7 +915,7 @@ async def create_or_update_key_on_host(
         # 1. if traffic_limit_gb is passed (from plan), convert to bytes
         # 2. else no limit override
         if traffic_limit_gb is not None:
-             effective_traffic_bytes = traffic_limit_gb * 1024 * 1024 * 1024
+             effective_traffic_bytes = int(round(traffic_limit_gb * 1024 * 1024 * 1024))
         else:
              effective_traffic_bytes = None
 
@@ -907,6 +933,10 @@ async def create_or_update_key_on_host(
             force_expiry=force_expiry,  
             hwid_limit=hwid_limit,
             external_squad_uuid=external_squad_uuid,
+            reset_hwid_limit=reset_hwid_limit,
+            set_external_squad=set_external_squad,
+            status=status,
+            allow_create=allow_create,
         )
 
         subscription_url = extract_subscription_url(user_payload) or ''
@@ -915,7 +945,11 @@ async def create_or_update_key_on_host(
             expire_dt = datetime.fromisoformat(expire_at_str.replace('Z', '+00:00')) if expire_at_str else target_dt
         except Exception:
             expire_dt = target_dt
-        expiry_ts_ms = int(expire_dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
+        if expire_dt.tzinfo is None:
+            expire_dt = expire_dt.replace(tzinfo=timezone.utc)
+        else:
+            expire_dt = expire_dt.astimezone(timezone.utc)
+        expiry_ts_ms = int(expire_dt.timestamp() * 1000)
 
         return {
             'client_uuid': user_payload.get('id'),

@@ -95,6 +95,11 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 transition duration-150 hover:border-white/20" title="Показать или скрыть сообщение текущего меню">
+                            <span class="text-[11px] font-medium text-white/60">Сообщение</span>
+                            <input type="checkbox" id="menu-message-toggle" class="peer sr-only" aria-label="Показать сообщение меню" aria-controls="menu-message-panel" aria-expanded="false" />
+                            <span class="relative block h-4 w-7 rounded-full bg-white/10 transition-colors duration-150 after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white/60 after:transition-transform after:content-[''] peer-checked:bg-emerald-400/40 peer-checked:after:translate-x-3 peer-checked:after:bg-emerald-300 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60"></span>
+                        </label>
                         <button type="button" id="add-button-btn" class="flex items-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-xs font-medium text-emerald-300 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 whitespace-nowrap">
                             <i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i>
                             Добавить
@@ -123,7 +128,44 @@
                             </select>
                         </div>
                     </div>
-                    <div id="button-grid" class="grid min-h-[300px] grid-cols-2 gap-3 rounded-xl border-2 border-dashed border-white/[0.08] bg-white/[0.02] p-4">
+                    <div id="menu-message-panel" class="mb-3 hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <label for="menu-message-input" class="text-xs font-medium text-white/70">Сообщение меню</label>
+                            <label class="flex cursor-pointer items-center gap-2 text-[11px] font-medium text-white/60" title="Переключить между визуальным редактором и текстом с тегами">
+                                <input type="checkbox" id="menu-message-preview-toggle" checked class="h-3.5 w-3.5 rounded border-white/20 bg-white/10 text-emerald-400 focus:ring-emerald-300/40" />
+                                <span>Предпросмотр</span>
+                            </label>
+                        </div>
+                        <div id="menu-message-content" class="mt-3">
+                            <p id="menu-message-empty" class="hidden text-xs leading-relaxed text-white/50">Для этого меню нет сообщения в разделе «Сообщения».</p>
+                            <div id="menu-message-editor" class="overflow-hidden rounded-xl border border-white/[0.08] bg-black/30">
+                                <div class="flex flex-wrap items-center gap-1 border-b border-white/[0.06] px-2.5 py-2">
+                                    <span class="mr-1 text-[9px] font-bold uppercase tracking-widest text-white/30">Форматирование:</span>
+                                    <button type="button" onclick="menuMsgInsertTag('b')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Жирный">B</button>
+                                    <button type="button" onclick="menuMsgInsertTag('i')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs italic font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Курсив">I</button>
+                                    <button type="button" onclick="menuMsgInsertTag('u')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 underline transition hover:border-white/20 hover:bg-white/[0.06]" title="Подчёркнутый">U</button>
+                                    <button type="button" onclick="menuMsgInsertTag('s')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs font-bold text-white/70 line-through transition hover:border-white/20 hover:bg-white/[0.06]" title="Зачёркнутый">S</button>
+                                    <span class="mx-0.5 h-4 w-px bg-white/[0.08]"></span>
+                                    <button type="button" onclick="menuMsgInsertTag('tg-spoiler')" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Спойлер">Spoiler</button>
+                                    <button type="button" onclick="menuMsgInsertTag('code')" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 font-mono text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Моноширинный">Code</button>
+                                    <button type="button" onclick="menuMsgInsertTag('pre')" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 font-mono text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Блок кода">Pre</button>
+                                    <button type="button" onclick="menuMsgInsertTag('blockquote')" class="flex h-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 text-[11px] font-bold text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Цитата">Quote</button>
+                                    <span class="mx-0.5 h-4 w-px bg-white/[0.08]"></span>
+                                    <button type="button" onclick="menuMsgInsertTag('a')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Ссылка"><i data-lucide="link" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+                                    <button type="button" onclick="menuMsgInsertTag('tg-emoji')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Premium Emoji"><i data-lucide="smile-plus" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+                                </div>
+                                <textarea id="menu-message-input" rows="4" placeholder="Введите текст сообщения меню..." class="hidden max-h-[320px] min-h-[96px] w-full resize-y border-0 bg-transparent px-3 py-2.5 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none focus:outline-none focus:ring-0"></textarea>
+                                <div id="menu-message-visual-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Визуальный редактор сообщения" class="max-h-[320px] min-h-[96px] w-full overflow-y-auto whitespace-pre-wrap break-words px-3 py-2.5 text-xs leading-relaxed text-white outline-none focus:outline-none focus:ring-0"></div>
+                            </div>
+                            <div class="mt-3 flex justify-end">
+                                <button type="button" id="menu-message-save-btn" class="flex items-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-1.5 text-xs font-semibold text-emerald-300 transition duration-150 hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-50">
+                                    <i data-lucide="save" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    Сохранить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="button-grid" class="telegram-grid grid min-h-[120px] grid-cols-2 content-start gap-[3px] rounded-[14px] border border-dashed border-white/[0.08] bg-white/[0.02] p-[4px] pb-[7px]">
                     </div>
                 </div>
             </div>
@@ -138,9 +180,12 @@
                             <p class="text-xs text-white/60">Перетащите сюда для скрытия</p>
                         </div>
                     </div>
+                    <button type="button" id="hidden-buttons-toggle" class="flex h-8 w-8 shrink-0 items-center justify-center self-start rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/60 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 sm:self-auto" aria-expanded="true" aria-controls="hidden-buttons-content" aria-label="Свернуть скрытые кнопки" title="Свернуть">
+                        <i data-lucide="chevron-up" class="h-4 w-4 transition-transform duration-150" aria-hidden="true"></i>
+                    </button>
                 </div>
-                <div class="p-3 sm:p-4">
-                    <div id="hidden-button-grid" class="grid min-h-[100px] grid-cols-2 gap-3 rounded-xl border-2 border-dashed border-white/[0.06] bg-white/[0.01] p-4">
+                <div id="hidden-buttons-content" class="p-3 sm:p-4">
+                    <div id="hidden-button-grid" class="telegram-grid grid min-h-[100px] grid-cols-2 content-start gap-[3px] rounded-[14px] border border-dashed border-white/[0.06] bg-white/[0.01] p-[4px] pb-[7px]">
                     </div>
                 </div>
             </div>
@@ -330,6 +375,12 @@
                             </div>
                         </div>
 
+                        <div class="mb-2 flex justify-end">
+                            <label class="flex cursor-pointer items-center gap-2 text-[11px] font-medium text-white/60" title="Переключить между визуальным редактором и текстом с тегами">
+                                <input type="checkbox" id="message-preview-toggle" checked class="h-3.5 w-3.5 rounded border-white/20 bg-white/10 text-emerald-400 focus:ring-emerald-300/40" />
+                                <span>Предпросмотр</span>
+                            </label>
+                        </div>
                         <div class="rounded-xl border border-white/[0.08] bg-black/30 overflow-hidden">
                             <div class="flex flex-wrap items-center gap-1 border-b border-white/[0.06] px-2.5 py-2">
                                 <span class="mr-1 text-[9px] font-bold uppercase tracking-widest text-white/30">Форматирование:</span>
@@ -346,7 +397,8 @@
                                 <button type="button" onclick="msgInsertTag('a')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Ссылка"><i data-lucide="link" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
                                 <button type="button" onclick="msgInsertTag('tg-emoji')" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06]" title="Premium Emoji"><i data-lucide="smile-plus" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
                             </div>
-                            <textarea id="message-text-input" name="" rows="10" placeholder="Введите текст сообщения..." class="w-full resize-none overflow-hidden border-0 bg-transparent px-3 py-2.5 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none focus:outline-none focus:ring-0"></textarea>
+                            <textarea id="message-text-input" name="" rows="10" placeholder="Введите текст сообщения..." class="hidden w-full resize-none overflow-hidden border-0 bg-transparent px-3 py-2.5 text-xs leading-relaxed text-white placeholder:text-white/30 outline-none focus:outline-none focus:ring-0"></textarea>
+                            <div id="message-visual-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Визуальный редактор сообщения" class="max-h-[480px] min-h-[200px] w-full overflow-y-auto whitespace-pre-wrap break-words px-3 py-2.5 text-xs leading-relaxed text-white outline-none focus:outline-none focus:ring-0"></div>
                         </div>
                     </div>
                 </form>
@@ -392,6 +444,9 @@
                                 <button type="button" class="var-chip-row" data-var="{has_ref = Текст бонуса +{s_ref}% or }"><code>{has_ref = ... or }</code> <span class="var-desc">— Реферальный бонус (показывается если > 0%)</span></button>
                                 <button type="button" class="var-chip-row" data-var="{has_sale = Текст скидки -{s_sale}% or }"><code>{has_sale = ... or }</code> <span class="var-desc">— Персональная скидка (показывается если > 0%)</span></button>
                                 <button type="button" class="var-chip-row" data-var="{has_squad = Текст сквада ✅ or }"><code>{has_squad = ... or }</code> <span class="var-desc">— Индивидуальный сквад (показывается если задан)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{has_partner_trial = 🎁 Доступно сегодня: {partner_trial_remaining} из {partner_trial_daily_limit} or }"><code>{has_partner_trial = ... or }</code> <span class="var-desc">— Лимит тестовых ключей (показывается только при доступе)</span></button>
+                                <button type="button" class="var-chip-row" data-var="{partner_trial_remaining}"><code>{partner_trial_remaining}</code> <span class="var-desc">— Осталось тестовых ключей сегодня</span></button>
+                                <button type="button" class="var-chip-row" data-var="{partner_trial_daily_limit}"><code>{partner_trial_daily_limit}</code> <span class="var-desc">— Дневной лимит выпуска тестовых ключей</span></button>
                                 <button type="button" class="var-chip-row" data-var="{payment_header}"><code>{payment_header}</code> <span class="var-desc">— Заголовок оплаты (пополнение / допы)</span></button>
                                 <button type="button" class="var-chip-row" data-var="{payment_summary}"><code>{payment_summary}</code> <span class="var-desc">— Итог покупки с деталями</span></button>
                                 <button type="button" class="var-chip-row" data-var="{payment_price}"><code>{payment_price}</code> <span class="var-desc">— Цена к оплате</span></button>
@@ -829,6 +884,131 @@
         opacity: 1;
     }
 
+    .telegram-grid {
+        width: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+
+    .telegram-grid .button-item {
+        min-height: 36px;
+        padding: 0 9px;
+        border: 0;
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.06);
+        flex-direction: row;
+        gap: 7px;
+        overflow: hidden;
+        transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .telegram-grid .button-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: transparent;
+    }
+
+    .telegram-grid .button-item:hover:not(.sortable-chosen) {
+        transform: none;
+    }
+
+    .telegram-grid .button-item:active:not(.sortable-chosen) {
+        transform: scale(0.992);
+    }
+
+    .telegram-grid .button-item.selected {
+        background: rgba(139, 92, 246, 0.15);
+        border-color: transparent;
+        box-shadow: inset 0 0 0 1.5px rgb(167, 139, 250);
+    }
+
+    .telegram-grid .button-item.selected:hover {
+        background: rgba(139, 92, 246, 0.22);
+    }
+
+    .telegram-grid .button-item .button-text {
+        margin: 0;
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 14px;
+        line-height: 1.25;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .telegram-grid .button-item .button-id,
+    .telegram-grid .button-item .button-meta {
+        display: none;
+    }
+
+    .telegram-grid .button-item .button-actions {
+        top: 50%;
+        right: 3px;
+        transform: translateY(-50%);
+        gap: 2px;
+    }
+
+    .telegram-grid .button-item .button-actions button {
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+    }
+
+    .telegram-grid .button-item .button-actions button svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .telegram-grid .button-item.selected .button-actions,
+    .telegram-grid .button-item:focus-within .button-actions {
+        opacity: 1;
+    }
+
+    @media (max-width: 350px) {
+        .telegram-grid .button-item {
+            padding-left: 4px;
+            padding-right: 4px;
+        }
+
+        .telegram-grid .button-item .button-text {
+            font-size: 12px;
+        }
+    }
+
+    .button-emoji {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 17px;
+        height: 17px;
+        flex: 0 0 17px;
+        margin-right: 4px;
+        vertical-align: -3px;
+        pointer-events: none;
+    }
+
+    .button-emoji img,
+    .button-emoji video,
+    .button-emoji svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    #menu-message-visual-editor .button-emoji,
+    #message-visual-editor .button-emoji {
+        pointer-events: auto;
+        cursor: default;
+    }
+
     .var-chip {
         display: inline-flex;
         align-items: center;
@@ -1112,7 +1292,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
     const AVAILABLE_BUTTONS_HELP = [
@@ -1153,6 +1332,7 @@
         { m: 'profile_menu', id: 'referral', t: '🤝 Реферальная программа', c: 'show_referral_program', u: '' },
         { m: 'profile_menu', id: 'howto', t: '🛠 Подключиться', c: 'howto_vless', u: '' },
         { m: 'profile_menu', id: 'promo_uni', t: '🎁 Ввести промокод', c: 'promo_uni', u: '' },
+        { m: 'profile_menu', id: 'partner_trial', t: '🎁 Выпустить тестовый ключ', c: 'partner_trial_issue', u: '' },
         { m: 'profile_menu', id: 'back_to_menu', t: '⬅️ Назад в меню', c: 'back_to_main_menu', u: '' },
         { m: 'support_menu', id: 'new_ticket', t: '✍️ Новое обращение', c: 'support_new_ticket', u: '' },
         { m: 'support_menu', id: 'my_tickets', t: '📨 Мои обращения', c: 'support_my_tickets', u: '' },
@@ -1169,9 +1349,6 @@
         'support_menu': 'Меню поддержки'
     };
 
-    function refreshLucideIcons() {
-        if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
-    }
 
     function initHelpModal() {
         const tbody = document.getElementById('help-table-body');
@@ -1208,7 +1385,7 @@
 
             const addedRow = tbody.querySelector('tr[data-added="1"]');
             if (addedRow) addedRow.scrollIntoView({ block: 'nearest' });
-            if (tbody.querySelector('i[data-lucide]')) refreshLucideIcons();
+            if (tbody.querySelector('i[data-lucide]')) window.refreshUiIcons();
         }
 
         searchInput.addEventListener('input', (e) => render(e.target.value));
@@ -1229,7 +1406,8 @@
 
         const menuType = menuSelect.value;
         const buttonId = btn.dataset.id;
-        if (btn.dataset.menu === menuType) { showToast('warning', 'Эта кнопка уже есть в текущем меню'); return; }
+        const existingButton = buttonConstructor.buttons.some(item => item.button_id === buttonId);
+        if (existingButton) { showToast('warning', 'Эта кнопка уже есть в текущем меню'); return; }
 
         btn.disabled = true;
         try {
@@ -1278,7 +1456,7 @@
             content.classList.toggle('hidden', content.id !== 'tab-' + tabId);
         });
         history.replaceState(null, '', '#' + tabId);
-        refreshLucideIcons();
+        window.refreshUiIcons();
     }
 
     document.querySelectorAll('.constructor-tab-btn').forEach(btn => {
@@ -1287,7 +1465,7 @@
 
     // ===== Message Editor =====
     const _msgDefaults = {
-        "msg_profile_text": "<b>👤 ПРОФИЛЬ:</b> {username} / <b>iD:</b> <code>{user_id}</code>\n\n<b>💎 ПОДПИСКА</b>\n{vpn_status = 🛡 Статус VPN: Активен ✅ or ❌ Неактивен (срок истек)}\n<b>⏳ Осталось:</b> {vpn_remaining = {days_left} д. {hours_left} ч. or -}\n<b>💲 Потрачено всего:</b> {total_spent} RUB\n<b>📅 Приобретено месяцев:</b> {total_months}\n\n<b>💼 ФИНАНСЫ</b>\n<b>💳 Основной баланс:</b> {main_balance} RUB\n<b>🤝 Рефералов:</b> {referral_count}\n<b>💰 Заработано:</b> {total_ref_earned} RUB\n\n{has_partner = <b>👑 ПАРТНЕРСКАЯ ПРОГРАММА</b>\n or }{has_ref = <b>👥 Реферальный бонус:</b> +{s_ref}%\n or }{has_sale = <b>🛍 Персональная скидка:</b> -{s_sale}%\n or }{has_squad = <b>🛰 Индивидуальный Сквад:</b> ✅\n or }",
+        "msg_profile_text": "<b>👤 ПРОФИЛЬ:</b> {username} / <b>iD:</b> <code>{user_id}</code>\n\n<b>💎 ПОДПИСКА</b>\n{vpn_status = 🛡 Статус VPN: Активен ✅ or ❌ Неактивен (срок истек)}\n<b>⏳ Осталось:</b> {vpn_remaining = {days_left} д. {hours_left} ч. or -}\n<b>💲 Потрачено всего:</b> {total_spent} RUB\n<b>📅 Приобретено месяцев:</b> {total_months}\n\n<b>💼 ФИНАНСЫ</b>\n<b>💳 Основной баланс:</b> {main_balance} RUB\n<b>🤝 Рефералов:</b> {referral_count}\n<b>💰 Заработано:</b> {total_ref_earned} RUB\n\n{has_partner = <b>👑 ПАРТНЕРСКАЯ ПРОГРАММА</b>\n or }{has_ref = <b>👥 Реферальный бонус:</b> +{s_ref}%\n or }{has_sale = <b>🛍 Персональная скидка:</b> -{s_sale}%\n or }{has_squad = <b>🛰 Индивидуальный Сквад:</b> ✅\n or }{has_partner_trial = <b>🎁 Тестовые ключи</b>\n<b>Доступно сегодня:</b> {partner_trial_remaining} из {partner_trial_daily_limit}\n or }",
         "msg_referral_text": "🌟 <b>Реферальная программа</b>\n\nПриглашайте друзей и получайте бонусы! 💸\n\n💎 <b>Ваша награда:</b>\n• {reward_desc}\n\n🎁 <b>Бонус другу:</b>\n• Скидка <b>{referral_discount}%</b> на первую покупку\n\n📊 <b>Статистика:</b>\n👤 Приглашено: <b>{count}</b>\n💰 Заработано: <b>{balance_total} RUB</b>\n\n🔗 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>",
         "msg_promo_success_text": "\u2705 <b>\u041f\u0440\u043e\u043c\u043e\u043a\u043e\u0434 \u0430\u043a\u0442\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u043d!</b>\n\u0412\u0430\u043c \u043d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u043e {reward} \u20bd",
         "msg_promo_select_key_text": "\ud83c\udf81 <b>\u0410\u043a\u0442\u0438\u0432\u0430\u0446\u0438\u044f \u043f\u0440\u043e\u043c\u043e\u043a\u043e\u0434\u0430</b>\n\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0443 (\u043a\u043b\u044e\u0447):",
@@ -1321,6 +1499,337 @@
         if (!messageTexts[k]) messageTexts[k] = _msgDefaults[k];
     });
 
+    const menuMessageKeys = {
+        main_menu: 'main_menu_text',
+        profile_menu: 'msg_profile_text',
+        support_menu: 'support_text',
+        key_info_menu: 'msg_key_info_text',
+        subscription_addons_menu: 'msg_choose_payment_text'
+    };
+
+    function getCurrentMenuMessageKey() {
+        const menuSelect = document.getElementById('menu-type-select');
+        return menuMessageKeys[menuSelect ? menuSelect.value : 'main_menu'] || null;
+    }
+
+    function appendMenuMessagePreviewNode(source, target) {
+        if (source.nodeType === Node.TEXT_NODE) {
+            target.appendChild(document.createTextNode(source.nodeValue || ''));
+            return;
+        }
+        if (source.nodeType !== Node.ELEMENT_NODE) return;
+        if (source.tagName === 'BR') {
+            target.appendChild(document.createElement('br'));
+            return;
+        }
+        if (source.tagName === 'TG-EMOJI') {
+            const emojiId = String(source.getAttribute('emoji-id') || '').replace(/\D/g, '');
+            if (emojiId) {
+                const emoji = document.createElement('span');
+                emoji.className = 'button-emoji';
+                emoji.dataset.emojiId = emojiId;
+                emoji.dataset.emojiFallback = source.textContent || '✨';
+                emoji.contentEditable = 'false';
+                emoji.textContent = emoji.dataset.emojiFallback;
+                target.appendChild(emoji);
+                return;
+            }
+        }
+        const tagMap = { STRONG: 'b', EM: 'i', STRIKE: 's', P: 'div', DIV: 'div' };
+        const allowedTags = new Set(['B', 'I', 'U', 'S', 'CODE', 'PRE', 'BLOCKQUOTE', 'A', 'STRONG', 'EM', 'STRIKE', 'P', 'DIV']);
+        let destination = target;
+        if (allowedTags.has(source.tagName)) {
+            const element = document.createElement(tagMap[source.tagName] || source.tagName.toLowerCase());
+            if (source.tagName === 'A') {
+                const href = source.getAttribute('href') || '';
+                if (/^(https?:\/\/|tg:\/\/)/i.test(href)) element.href = href;
+                element.rel = 'noopener noreferrer';
+            }
+            target.appendChild(element);
+            destination = element;
+        } else if (source.tagName === 'TG-SPOILER') {
+            const spoiler = document.createElement('span');
+            spoiler.className = 'rounded bg-white/10 px-0.5';
+            spoiler.dataset.telegramTag = 'tg-spoiler';
+            target.appendChild(spoiler);
+            destination = spoiler;
+        }
+        source.childNodes.forEach(child => appendMenuMessagePreviewNode(child, destination));
+    }
+
+    function escapeMenuMessageText(value) {
+        return String(value || '').replace(/\u200b/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function serializeMenuMessageNode(source) {
+        if (source.nodeType === Node.TEXT_NODE) return escapeMenuMessageText(source.nodeValue);
+        if (source.nodeType !== Node.ELEMENT_NODE) return '';
+        if (source.tagName === 'BR') return '\n';
+        if (source.tagName === 'IMG' && source.classList.contains('emoji')) return escapeMenuMessageText(source.getAttribute('alt') || '');
+        if (source.dataset.emojiId) {
+            const emojiId = String(source.dataset.emojiId).replace(/\D/g, '');
+            const fallback = escapeMenuMessageText(source.dataset.emojiFallback || '✨');
+            return emojiId ? `<tg-emoji emoji-id="${emojiId}">${fallback}</tg-emoji>` : fallback;
+        }
+        const content = Array.from(source.childNodes).map(serializeMenuMessageNode).join('');
+        if (!content) return '';
+        const tag = source.tagName;
+        if (tag === 'B' || tag === 'STRONG') return `<b>${content}</b>`;
+        if (tag === 'I' || tag === 'EM') return `<i>${content}</i>`;
+        if (tag === 'U') return `<u>${content}</u>`;
+        if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL') return `<s>${content}</s>`;
+        if (tag === 'CODE') return `<code>${content}</code>`;
+        if (tag === 'PRE') return `<pre>${content}</pre>`;
+        if (tag === 'BLOCKQUOTE') return `<blockquote>${content}</blockquote>`;
+        if (tag === 'A') {
+            const href = source.getAttribute('href') || '';
+            if (!/^(https?:\/\/|tg:\/\/)/i.test(href)) return content;
+            return `<a href="${escapeMenuMessageText(href).replace(/"/g, '&quot;')}">${content}</a>`;
+        }
+        if (source.dataset.telegramTag === 'tg-spoiler') return `<tg-spoiler>${content}</tg-spoiler>`;
+        if (tag === 'DIV' || tag === 'P') return `${content}\n`;
+        return content;
+    }
+
+    function getMenuMessageEditorElements(textareaId = 'menu-message-input') {
+        const isMainEditor = textareaId === 'message-text-input';
+        return {
+            input: document.getElementById(textareaId),
+            editor: document.getElementById(isMainEditor ? 'message-visual-editor' : 'menu-message-visual-editor'),
+            toggle: document.getElementById(isMainEditor ? 'message-preview-toggle' : 'menu-message-preview-toggle')
+        };
+    }
+
+    function syncMenuMessageRawFromVisual(textareaId = 'menu-message-input') {
+        const { input, editor } = getMenuMessageEditorElements(textareaId);
+        input.value = Array.from(editor.childNodes).map(serializeMenuMessageNode).join('').replace(/\n$/, '');
+    }
+
+    function renderMenuMessagePreview(textareaId = 'menu-message-input') {
+        const { input, editor } = getMenuMessageEditorElements(textareaId);
+        editor.innerHTML = '';
+        if (input.value) {
+            const documentFragment = new DOMParser().parseFromString(input.value, 'text/html');
+            documentFragment.body.childNodes.forEach(node => appendMenuMessagePreviewNode(node, editor));
+        }
+        hydrateCustomEmojis(editor);
+    }
+
+    function setMenuMessageEditorMode(textareaId = 'menu-message-input') {
+        const { input, editor, toggle } = getMenuMessageEditorElements(textareaId);
+        const visualMode = toggle.checked;
+        if (!visualMode) syncMenuMessageRawFromVisual(textareaId);
+        input.classList.toggle('hidden', visualMode);
+        editor.classList.toggle('hidden', !visualMode);
+        if (!visualMode && textareaId === 'message-text-input') autoResizeTextarea(input);
+        if (visualMode) renderMenuMessagePreview(textareaId);
+    }
+
+    function getMenuMessageVisualRange(textareaId = 'menu-message-input') {
+        const { editor } = getMenuMessageEditorElements(textareaId);
+        editor.focus();
+        const selection = window.getSelection();
+        if (selection.rangeCount) {
+            const range = selection.getRangeAt(0);
+            if (editor.contains(range.commonAncestorContainer)) return range;
+        }
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        return range;
+    }
+
+    function setMenuMessageVisualRange(range, textareaId = 'menu-message-input') {
+        const { editor } = getMenuMessageEditorElements(textareaId);
+        editor.focus();
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
+    function wrapMenuMessageVisualRange(range, tag, href = '') {
+        const element = document.createElement(tag === 'tg-spoiler' ? 'span' : tag);
+        if (tag === 'tg-spoiler') {
+            element.dataset.telegramTag = 'tg-spoiler';
+            element.className = 'rounded bg-white/10 px-0.5';
+        }
+        if (tag === 'a') element.href = href;
+        const content = range.extractContents();
+        if (content.textContent) element.appendChild(content);
+        else element.textContent = tag === 'a' && href ? href : '\u200b';
+        range.insertNode(element);
+        const selection = window.getSelection();
+        const selectedRange = document.createRange();
+        selectedRange.selectNodeContents(element);
+        selection.removeAllRanges();
+        selection.addRange(selectedRange);
+    }
+
+    function applyMenuMessageVisualFormatting(tag, textareaId = 'menu-message-input') {
+        const { editor } = getMenuMessageEditorElements(textareaId);
+        editor.focus();
+        document.execCommand('styleWithCSS', false, false);
+        const commands = { b: 'bold', i: 'italic', u: 'underline', s: 'strikeThrough' };
+        if (commands[tag]) {
+            document.execCommand(commands[tag], false, null);
+        } else if (tag === 'pre' || tag === 'blockquote') {
+            document.execCommand('formatBlock', false, tag);
+        } else {
+            wrapMenuMessageVisualRange(getMenuMessageVisualRange(textareaId), tag);
+        }
+        syncMenuMessageRawFromVisual(textareaId);
+    }
+
+    function insertMenuMessageVisualLink(url, textareaId = 'menu-message-input') {
+        if (!window._msgSelection?.range) return;
+        setMenuMessageVisualRange(window._msgSelection.range, textareaId);
+        wrapMenuMessageVisualRange(window._msgSelection.range, 'a', url);
+        syncMenuMessageRawFromVisual(textareaId);
+    }
+
+    function insertMenuMessageVisualEmoji(emojiId, textareaId = 'menu-message-input') {
+        if (!window._msgSelection?.range) return;
+        setMenuMessageVisualRange(window._msgSelection.range, textareaId);
+        const range = window._msgSelection.range;
+        const fallback = range.toString() || '🚀';
+        range.deleteContents();
+        const normalizedId = String(emojiId || '').replace(/\D/g, '');
+        let insertedNode;
+        if (normalizedId) {
+            const emoji = document.createElement('span');
+            emoji.className = 'button-emoji';
+            emoji.dataset.emojiId = normalizedId;
+            emoji.dataset.emojiFallback = fallback;
+            emoji.contentEditable = 'false';
+            emoji.textContent = fallback;
+            range.insertNode(emoji);
+            hydrateCustomEmojis(getMenuMessageEditorElements(textareaId).editor);
+            insertedNode = emoji;
+        } else {
+            insertedNode = document.createTextNode(fallback);
+            range.insertNode(insertedNode);
+        }
+        const selection = window.getSelection();
+        const nextRange = document.createRange();
+        nextRange.setStartAfter(insertedNode);
+        nextRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(nextRange);
+        syncMenuMessageRawFromVisual(textareaId);
+    }
+
+    function syncMenuMessageEditor() {
+        const key = getCurrentMenuMessageKey();
+        const input = document.getElementById('menu-message-input');
+        const empty = document.getElementById('menu-message-empty');
+        const saveButton = document.getElementById('menu-message-save-btn');
+        document.getElementById('menu-message-editor').classList.toggle('hidden', !key);
+        saveButton.classList.toggle('hidden', !key);
+        empty.classList.toggle('hidden', Boolean(key));
+        input.value = key ? (messageTexts[key] || '') : '';
+        renderMenuMessagePreview();
+    }
+
+    const menuMessageToggle = document.getElementById('menu-message-toggle');
+    const menuMessagePanel = document.getElementById('menu-message-panel');
+    const menuMessageToggleStorageKey = 'buttonConstructor.menuMessageVisible';
+
+    let menuMessageVisible = false;
+    try {
+        menuMessageVisible = localStorage.getItem(menuMessageToggleStorageKey) === '1';
+    } catch (error) {
+        menuMessageVisible = false;
+    }
+
+    function applyMenuMessageToggleState(visible) {
+        menuMessageToggle.checked = visible;
+        menuMessagePanel.classList.toggle('hidden', !visible);
+        menuMessageToggle.setAttribute('aria-expanded', String(visible));
+        if (visible) {
+            syncMenuMessageEditor();
+            setMenuMessageEditorMode();
+        }
+    }
+
+    menuMessageToggle.addEventListener('change', function() {
+        const visible = this.checked;
+        menuMessagePanel.classList.toggle('hidden', !visible);
+        this.setAttribute('aria-expanded', String(visible));
+        try {
+            localStorage.setItem(menuMessageToggleStorageKey, visible ? '1' : '0');
+        } catch (error) {
+        }
+        if (visible) {
+            syncMenuMessageEditor();
+            setMenuMessageEditorMode();
+        }
+    });
+
+    function bindMenuMessageEditor(textareaId = 'menu-message-input') {
+        const { input, editor, toggle } = getMenuMessageEditorElements(textareaId);
+        toggle.addEventListener('change', () => setMenuMessageEditorMode(textareaId));
+        input.addEventListener('input', () => {
+            if (textareaId === 'message-text-input') autoResizeTextarea(input);
+            else renderMenuMessagePreview(textareaId);
+        });
+        editor.addEventListener('input', () => syncMenuMessageRawFromVisual(textareaId));
+        editor.addEventListener('paste', function(event) {
+            event.preventDefault();
+            const text = event.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+            syncMenuMessageRawFromVisual(textareaId);
+        });
+    }
+
+    bindMenuMessageEditor();
+    bindMenuMessageEditor('message-text-input');
+
+    document.getElementById('menu-type-select').addEventListener('change', syncMenuMessageEditor);
+
+    document.getElementById('menu-message-save-btn').addEventListener('click', async function() {
+        const key = getCurrentMenuMessageKey();
+        if (!key) return;
+        if (document.getElementById('menu-message-preview-toggle').checked) syncMenuMessageRawFromVisual();
+        const input = document.getElementById('menu-message-input');
+        const formData = new FormData();
+        formData.append('csrf_token', getCsrfToken());
+        formData.append('redirect_to', 'button-constructor');
+        formData.append(key, input.value);
+        this.disabled = true;
+        try {
+            const response = await fetch("{{ url_for('settings_page') }}", {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+                redirect: 'manual'
+            });
+            if (!response.ok && response.type !== 'opaqueredirect') {
+                showToast('danger', 'Ошибка сохранения сообщения');
+                return;
+            }
+            messageTexts[key] = input.value;
+            if (activeMessageKey === key) {
+                const messageInput = document.getElementById('message-text-input');
+                messageInput.value = input.value;
+                autoResizeTextarea(messageInput);
+                if (document.getElementById('message-preview-toggle').checked) renderMenuMessagePreview('message-text-input');
+            }
+            showToast('success', 'Сообщение меню сохранено');
+        } catch (error) {
+            showToast('danger', 'Ошибка сети при сохранении сообщения');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    document.getElementById('message-editor-form').addEventListener('submit', function() {
+        if (document.getElementById('message-preview-toggle').checked) syncMenuMessageRawFromVisual('message-text-input');
+        if (activeMessageKey && activeMessageKey === getCurrentMenuMessageKey()) {
+            document.getElementById('menu-message-input').value = document.getElementById('message-text-input').value;
+            renderMenuMessagePreview();
+        }
+    });
+
     let activeMessageKey = null;
 
     function autoResizeTextarea(textarea) {
@@ -1341,7 +1850,8 @@
         textarea.name = key;
         textarea.value = messageTexts[key] || '';
         autoResizeTextarea(textarea);
-        refreshLucideIcons();
+        if (document.getElementById('message-preview-toggle').checked) renderMenuMessagePreview('message-text-input');
+        window.refreshUiIcons();
     }
 
     document.getElementById('msg-reset-btn').addEventListener('click', function() {
@@ -1355,12 +1865,8 @@
         textarea.value = def;
         messageTexts[activeMessageKey] = def;
         autoResizeTextarea(textarea);
+        if (document.getElementById('message-preview-toggle').checked) renderMenuMessagePreview('message-text-input');
         showToast('success', 'Текст сброшен к значению по умолчанию');
-    });
-
-    // Auto-resize on input
-    document.getElementById('message-text-input').addEventListener('input', function() {
-        autoResizeTextarea(this);
     });
 
     document.querySelectorAll('.message-item').forEach(item => {
@@ -1427,6 +1933,14 @@
             showToast('warning', 'Сначала выберите сообщение');
             return;
         }
+        const { toggle } = getMenuMessageEditorElements('message-text-input');
+        if (toggle.checked) {
+            const range = getMenuMessageVisualRange('message-text-input');
+            setMenuMessageVisualRange(range, 'message-text-input');
+            document.execCommand('insertText', false, varText);
+            syncMenuMessageRawFromVisual('message-text-input');
+            return;
+        }
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const text = textarea.value;
@@ -1443,15 +1957,21 @@
     });
 
     // ===== Message Editor Formatting =====
-    window.msgInsertTag = function(tag) {
-        const textarea = document.getElementById('message-text-input');
-        if (!textarea || document.getElementById('message-editor-body').classList.contains('hidden')) {
+    window.msgInsertTag = function(tag, textareaId = 'message-text-input') {
+        const textarea = document.getElementById(textareaId);
+        if (!textarea || (textareaId === 'message-text-input' && document.getElementById('message-editor-body').classList.contains('hidden'))) {
             showToast('warning', 'Сначала выберите сообщение');
             return;
         }
 
+        const { toggle } = getMenuMessageEditorElements(textareaId);
+        if (toggle.checked) {
+            window.menuMsgInsertTag(tag, textareaId);
+            return;
+        }
+
         if (tag === 'a') {
-            window._msgSelection = { start: textarea.selectionStart, end: textarea.selectionEnd };
+            window._msgSelection = { start: textarea.selectionStart, end: textarea.selectionEnd, textareaId };
             const linkInput = document.getElementById('msg-link-url-input');
             if (linkInput) {
                 linkInput.value = 'https://';
@@ -1462,7 +1982,7 @@
         }
 
         if (tag === 'tg-emoji') {
-            window._msgSelection = { start: textarea.selectionStart, end: textarea.selectionEnd };
+            window._msgSelection = { start: textarea.selectionStart, end: textarea.selectionEnd, textareaId };
             const emojiInput = document.getElementById('msg-emoji-id-input');
             if (emojiInput) {
                 emojiInput.value = '';
@@ -1478,19 +1998,55 @@
         const end = textarea.selectionEnd;
         const selected = textarea.value.substring(start, end);
         textarea.setRangeText(startTag + selected + endTag, start, end, 'select');
-        autoResizeTextarea(textarea);
+        if (textareaId === 'message-text-input') autoResizeTextarea(textarea);
+        else renderMenuMessagePreview();
         textarea.focus();
     };
+
+    window.menuMsgInsertTag = function(tag, textareaId = 'menu-message-input') {
+        const { toggle } = getMenuMessageEditorElements(textareaId);
+        if (!toggle.checked) {
+            window.msgInsertTag(tag, textareaId);
+            return;
+        }
+        if (tag === 'a') {
+            window._msgSelection = { visual: true, textareaId, range: getMenuMessageVisualRange(textareaId).cloneRange() };
+            const linkInput = document.getElementById('msg-link-url-input');
+            linkInput.value = 'https://';
+            openModal('msgLinkModal');
+            setTimeout(() => linkInput.focus(), 100);
+            return;
+        }
+        if (tag === 'tg-emoji') {
+            window._msgSelection = { visual: true, textareaId, range: getMenuMessageVisualRange(textareaId).cloneRange() };
+            const emojiInput = document.getElementById('msg-emoji-id-input');
+            emojiInput.value = '';
+            openModal('msgEmojiModal');
+            setTimeout(() => emojiInput.focus(), 100);
+            return;
+        }
+        applyMenuMessageVisualFormatting(tag, textareaId);
+    };
+
+    document.querySelectorAll('#menu-message-editor button[onclick], #message-editor-body button[onclick]').forEach(button => {
+        button.addEventListener('mousedown', event => event.preventDefault());
+    });
 
     // Link modal insert
     document.getElementById('msg-btn-insert-link').addEventListener('click', () => {
         const url = document.getElementById('msg-link-url-input').value;
-        const textarea = document.getElementById('message-text-input');
+        if (window._msgSelection?.visual) {
+            if (url) insertMenuMessageVisualLink(url, window._msgSelection.textareaId);
+            closeModal('msgLinkModal');
+            return;
+        }
+        const textarea = document.getElementById(window._msgSelection?.textareaId || 'message-text-input');
         if (url && textarea && window._msgSelection) {
             const { start, end } = window._msgSelection;
             const selected = textarea.value.substring(start, end);
             textarea.setRangeText(`<a href="${url}">${selected}</a>`, start, end, 'select');
-            autoResizeTextarea(textarea);
+            if (textarea.id === 'message-text-input') autoResizeTextarea(textarea);
+            else renderMenuMessagePreview();
             textarea.focus();
         }
         closeModal('msgLinkModal');
@@ -1499,14 +2055,20 @@
     // Emoji modal insert
     document.getElementById('msg-btn-insert-emoji').addEventListener('click', () => {
         const emojiId = document.getElementById('msg-emoji-id-input').value.trim();
-        const textarea = document.getElementById('message-text-input');
+        if (window._msgSelection?.visual) {
+            insertMenuMessageVisualEmoji(emojiId, window._msgSelection.textareaId);
+            closeModal('msgEmojiModal');
+            return;
+        }
+        const textarea = document.getElementById(window._msgSelection?.textareaId || 'message-text-input');
         if (textarea && window._msgSelection) {
             const { start, end } = window._msgSelection;
             const selected = textarea.value.substring(start, end);
             const inner = selected || '🚀';
             const replacement = emojiId ? `<tg-emoji emoji-id="${emojiId}">${inner}</tg-emoji>` : inner;
             textarea.setRangeText(replacement, start, end, 'select');
-            autoResizeTextarea(textarea);
+            if (textarea.id === 'message-text-input') autoResizeTextarea(textarea);
+            else renderMenuMessagePreview();
             textarea.focus();
         }
         closeModal('msgEmojiModal');
@@ -1553,7 +2115,7 @@
     });
 
     document.addEventListener('DOMContentLoaded', () => {
-        refreshLucideIcons();
+        window.refreshUiIcons();
         initHelpModal();
         const hash = window.location.hash.replace('#', '');
         if (hash === 'messages') switchConstructorTab('messages');
@@ -1754,7 +2316,9 @@
             }
 
             this.initSortable();
-            refreshLucideIcons();
+            window.refreshUiIcons();
+            hydrateCustomEmojis(grid);
+            hydrateCustomEmojis(hiddenGrid);
         }
 
         isProtectedButton(btn) {
@@ -1766,13 +2330,15 @@
             const div = document.createElement('div');
             div.className = 'button-item';
             div.dataset.buttonId = btn.id;
+            div.title = btn.button_id;
 
             const width = btn.button_width || 1;
             div.classList.add(`width-${width}`);
             if (this.selectedButton && this.selectedButton.id === btn.id) div.classList.add('selected');
 
             const colorBadge = btn.button_color ? `<span class="inline-block w-3 h-3 rounded-full mr-1 pointer-events-none" style="background:${this.getColorHex(btn.button_color)}"></span>` : '';
-            const emojiTag = btn.emoji_id ? `<span class="text-[9px] text-amber-300/70 pointer-events-none">✨ emoji</span>` : '';
+            const emojiId = String(btn.emoji_id || '').replace(/\D/g, '');
+            const emojiIcon = emojiId ? `<span class="button-emoji" data-emoji-id="${emojiId}"></span>` : '';
             const deleteAction = this.isProtectedButton(btn) ? '' : `
                     <button type="button" class="text-red-300/70 hover:text-red-300 hover:bg-red-400/[0.08]" onclick="buttonConstructor.deleteButton(${btn.id})" title="Удалить">
                         <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
@@ -1780,11 +2346,10 @@
                 `;
 
             div.innerHTML = `
-            <div class="button-text pointer-events-none mb-1">${colorBadge}${btn.text || btn.button_id}</div>
+            <div class="button-text pointer-events-none mb-1">${emojiIcon}${colorBadge}${btn.text || btn.button_id}</div>
             <div class="button-id pointer-events-none">${btn.button_id}</div>
-            <div class="flex items-center gap-1 mt-1 pointer-events-none">
+            <div class="button-meta flex items-center gap-1 mt-1 pointer-events-none">
                 <span class="button-width-indicator">${width}×</span>
-                ${emojiTag}
             </div>
             <div class="button-actions">
                 <button type="button" class="text-white/70 hover:text-white hover:bg-white/[0.08]" onclick="buttonConstructor.editButton(${btn.id})" title="Редактировать">
@@ -2167,7 +2732,8 @@
                         const colorHex = btn.button_color ? this.getColorHex(btn.button_color) : null;
                         const bgStyle = colorHex ? `background: ${colorHex}; border-color: ${colorHex};` : '';
                         const textColor = (btn.button_color === 'white') ? 'color: #1a1a1a;' : '';
-                        const emojiHtml = btn.emoji_id ? `<span style="font-size:11px;opacity:0.7;">✨</span>` : '';
+                        const previewEmojiId = String(btn.emoji_id || '').replace(/\D/g, '');
+                        const emojiHtml = previewEmojiId ? `<span class="button-emoji" data-emoji-id="${previewEmojiId}"></span>` : '';
 
                         html += `
                             <div class="telegram-button" style="${flexStyle} min-width: 0; ${bgStyle}" 
@@ -2186,6 +2752,7 @@
 
                 html += '</div>';
                 area.innerHTML = html;
+                hydrateCustomEmojis(area);
                 this.isPreviewLoading = false;
             }, 300);
         }
@@ -2252,6 +2819,130 @@
         }
     }
 
+    const customEmojiCache = new Map();
+    const customEmojiScriptPromises = new Map();
+
+    function loadCustomEmojiScript(src, globalName) {
+        if (window[globalName]) return Promise.resolve();
+        if (customEmojiScriptPromises.has(src)) return customEmojiScriptPromises.get(src);
+        const promise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load ' + src));
+            document.head.appendChild(script);
+        });
+        customEmojiScriptPromises.set(src, promise);
+        return promise;
+    }
+
+    function fetchCustomEmoji(emojiId) {
+        if (!customEmojiCache.has(emojiId)) {
+            const promise = fetch(`/api/custom-emoji/${encodeURIComponent(emojiId)}/file`, { credentials: 'same-origin' })
+                .then(async response => {
+                    if (!response.ok) return null;
+                    const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+                    if (contentType.includes('image/webp')) {
+                        const blob = await response.blob();
+                        return { kind: 'webp', url: URL.createObjectURL(blob) };
+                    }
+                    if (contentType.includes('video/webm')) {
+                        const blob = await response.blob();
+                        return { kind: 'webm', url: URL.createObjectURL(blob) };
+                    }
+                    if (contentType.includes('gzip')) {
+                        const buffer = await response.arrayBuffer();
+                        await loadCustomEmojiScript('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js', 'fflate');
+                        const jsonBytes = window.fflate.gunzipSync(new Uint8Array(buffer));
+                        const json = new TextDecoder().decode(jsonBytes);
+                        await loadCustomEmojiScript('https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js', 'lottie');
+                        return { kind: 'tgs', json };
+                    }
+                    return null;
+                })
+                .catch(() => null);
+            customEmojiCache.set(emojiId, promise);
+        }
+        return customEmojiCache.get(emojiId);
+    }
+
+    function renderCustomEmoji(target, emojiData) {
+        target.innerHTML = '';
+        if (!emojiData) {
+            target.textContent = '✨';
+            return;
+        }
+        if (emojiData.kind === 'webp') {
+            const img = document.createElement('img');
+            img.src = emojiData.url;
+            img.alt = '';
+            target.appendChild(img);
+        } else if (emojiData.kind === 'webm') {
+            const video = document.createElement('video');
+            video.src = emojiData.url;
+            video.muted = true;
+            video.autoplay = true;
+            video.loop = true;
+            video.playsInline = true;
+            target.appendChild(video);
+        } else if (emojiData.kind === 'tgs') {
+            window.lottie.loadAnimation({
+                container: target,
+                renderer: 'svg',
+                loop: true,
+                autoplay: true,
+                animationData: JSON.parse(emojiData.json)
+            });
+        }
+    }
+
+    function hydrateCustomEmojis(root) {
+        if (!root) return;
+        root.querySelectorAll('[data-emoji-id]').forEach(target => {
+            if (target.dataset.emojiLoaded) return;
+            target.dataset.emojiLoaded = '1';
+            const emojiId = target.dataset.emojiId;
+            if (!emojiId) return;
+            fetchCustomEmoji(emojiId).then(emojiData => {
+                if (target.isConnected) renderCustomEmoji(target, emojiData);
+            });
+        });
+    }
+
+    const hiddenButtonsToggle = document.getElementById('hidden-buttons-toggle');
+    const hiddenButtonsContent = document.getElementById('hidden-buttons-content');
+    const hiddenButtonsStorageKey = 'buttonConstructor.hiddenButtonsCollapsed';
+
+    function setHiddenButtonsCollapsed(collapsed) {
+        if (!hiddenButtonsToggle || !hiddenButtonsContent) return;
+        hiddenButtonsContent.classList.toggle('hidden', collapsed);
+        hiddenButtonsToggle.setAttribute('aria-expanded', String(!collapsed));
+        hiddenButtonsToggle.setAttribute('aria-label', collapsed ? 'Развернуть скрытые кнопки' : 'Свернуть скрытые кнопки');
+        hiddenButtonsToggle.title = collapsed ? 'Развернуть' : 'Свернуть';
+        const icon = hiddenButtonsToggle.querySelector('[data-lucide]');
+        if (icon) icon.classList.toggle('rotate-180', collapsed);
+    }
+
+    let hiddenButtonsCollapsed = false;
+    try {
+        hiddenButtonsCollapsed = localStorage.getItem(hiddenButtonsStorageKey) === '1';
+    } catch (error) {
+        hiddenButtonsCollapsed = false;
+    }
+    setHiddenButtonsCollapsed(hiddenButtonsCollapsed);
+
+    if (hiddenButtonsToggle) {
+        hiddenButtonsToggle.addEventListener('click', () => {
+            hiddenButtonsCollapsed = !hiddenButtonsCollapsed;
+            setHiddenButtonsCollapsed(hiddenButtonsCollapsed);
+            try {
+                localStorage.setItem(hiddenButtonsStorageKey, hiddenButtonsCollapsed ? '1' : '0');
+            } catch (error) {
+            }
+        });
+    }
+
     const buttonConstructor = new ButtonConstructor();
+    applyMenuMessageToggleState(menuMessageVisible);
 </script>
 {% endblock %}

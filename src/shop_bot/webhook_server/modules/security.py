@@ -3,6 +3,7 @@ import asyncio
 import logging
 import re
 import hashlib
+import ipaddress
 from flask import request
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
@@ -38,6 +39,45 @@ def block_access(ip, ua_hash, duration_sec=300):
     BANNED_DATA['ips'][ip] = expire
     BANNED_DATA['ua_hashes'][ua_hash] = expire
     logger.info(f"Blocked IP {ip} and UA hash {ua_hash} for {duration_sec}s")
+
+def get_client_ip():
+    remote_addr = (request.remote_addr or '').strip()
+    try:
+        remote_ip = ipaddress.ip_address(remote_addr)
+        trusted_proxy = remote_ip.is_loopback or remote_ip.is_private
+    except ValueError:
+        trusted_proxy = False
+    if not trusted_proxy:
+        return remote_addr
+    cf_ip = (request.headers.get('CF-Connecting-IP') or '').strip()
+    if cf_ip:
+        return cf_ip
+    forwarded = request.headers.get('X-Forwarded-For') or ''
+    if forwarded:
+        first = forwarded.split(',')[0].strip()
+        if first:
+            return first
+    return remote_addr
+
+def parse_ip_list(raw_value):
+    networks = []
+    for chunk in re.split(r'[,;\s]+', str(raw_value or '')):
+        if not chunk:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(chunk, strict=False))
+        except ValueError:
+            logger.warning(f"IP list: invalid entry skipped: {chunk}")
+    return networks
+
+def is_ip_allowed(ip, networks):
+    try:
+        addr = ipaddress.ip_address(str(ip).strip())
+    except ValueError:
+        return False
+    if addr.version == 6 and addr.ipv4_mapped:
+        addr = addr.ipv4_mapped
+    return any(addr in network for network in networks)
 
 def parse_ua(ua):
     os_info = "Unknown OS"

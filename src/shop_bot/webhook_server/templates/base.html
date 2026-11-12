@@ -36,7 +36,8 @@
     <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="{{ url_for('static', filename='js/icons.js') }}"></script>
 
 
 
@@ -383,6 +384,10 @@
             display: none !important;
         }
 
+        #main-sidebar.w-\[80px\] .sidebar-today-stats {
+            display: none;
+        }
+
         #main-sidebar.w-\[80px\] .sidebar-header-actions {
             opacity: 0;
             position: absolute;
@@ -660,6 +665,7 @@
                         </div>
                         <div class="space-y-1">
                             {{ nav_link('settings_page', 'Настройки', 'settings') }}
+                            {{ nav_link('notification_page', 'Уведомления', 'bell-ring') }}
                             {{ nav_link('monitor_page', 'Мониторинг', 'activity') }}
                             {{ nav_link('node_page', 'Ноды', 'server') }}
                             {{ nav_link('premna_page', 'Remnawave', 'waves') }}
@@ -746,7 +752,7 @@
                 </nav>
 
                 <div class="mt-auto space-y-3 border-t border-white/[0.08] p-3">
-                    <div class="flex h-9 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3" title="Статистика за сегодня">
+                    <div class="sidebar-today-stats flex h-9 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3" title="Статистика за сегодня">
                         <span class="text-[10px] font-medium text-white/50 whitespace-nowrap">Сегодня:</span>
                         <span class="flex items-center gap-1 text-[10px] font-mono tabular-nums text-white/70" title="Новые пользователи">
                             +{{ sidebar_today_stats.get('today_new_users', 0) }}<i data-lucide="user-round" class="h-3 w-3 text-sky-300" aria-hidden="true"></i>
@@ -845,6 +851,9 @@
                     </div>
                 </div>
             </aside>
+            <script>
+                window.refreshUiIcons(document.getElementById('main-sidebar'));
+            </script>
             {% endif %}
 
             <div
@@ -958,6 +967,7 @@
                                     {{ nav_link_header('support_list_page', 'Поддержка', 'messages-square',
                                     ['support_ticket_page']) }}
                                      {{ nav_link_header('settings_page', 'Настройки', 'settings') }}
+                                     {{ nav_link_header('notification_page', 'Уведомления', 'bell-ring') }}
                                      {{ nav_link_header('node_page', 'Ноды', 'server') }}
                                      {{ nav_link_header('premna_page', 'Remnawave', 'waves') }}
                                 </div>
@@ -1044,6 +1054,9 @@
                         </div>
                     </div>
                 </header>
+                <script>
+                    window.refreshUiIcons(document.currentScript.previousElementSibling);
+                </script>
                 {% endif %}
 
                 <main
@@ -1224,7 +1237,11 @@
                         <p id="confirm-modal-text" class="mt-1 max-w-xl text-xs leading-relaxed text-white/50">Это действие необратимо. Пожалуйста, подтвердите выполнение.</p>
                     </div>
                 </div>
-                <div class="relative z-10 flex justify-end gap-2 p-4 sm:p-5">
+                <div class="relative z-10 flex flex-wrap items-center justify-end gap-2 p-4 sm:p-5">
+                    <label id="confirm-notify-user-wrap" class="mr-auto hidden cursor-pointer items-center gap-2 text-xs text-white/60">
+                        <input type="checkbox" id="confirm-notify-user" class="h-4 w-4 rounded border-white/20 bg-white/5 text-amber-400 focus:ring-amber-400/50" />
+                        <span>Уведомить пользователя?</span>
+                    </label>
                     <button type="button" onclick="closeConfirmModal(false)" class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold tracking-wide text-white/65 transition-all duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">Отмена</button>
                     <button type="button" onclick="closeConfirmModal(true)" class="rounded-lg border border-rose-400/20 bg-rose-400/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-rose-200 transition-all duration-150 hover:bg-rose-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">Да, выполнить</button>
                 </div>
@@ -1464,13 +1481,20 @@
 
             // ===== ДИАЛОГ ПОДТВЕРЖДЕНИЯ (MODAL) =====
             let confirmResolver = null;
-            window.showCustomConfirm = function (message, title = 'Вы уверены?') {
+            window.showCustomConfirm = function (message, title = 'Вы уверены?', showNotify = false) {
                 return new Promise((resolve) => {
                     const modal = document.getElementById('custom-confirm-modal');
                     const titleEl = document.getElementById('confirm-modal-title');
                     const textEl = document.getElementById('confirm-modal-text');
+                    const notifyWrap = document.getElementById('confirm-notify-user-wrap');
+                    const notifyInput = document.getElementById('confirm-notify-user');
                     if (titleEl) titleEl.textContent = title;
                     if (textEl) textEl.textContent = message;
+                    if (notifyWrap) {
+                        notifyWrap.classList.toggle('hidden', !showNotify);
+                        notifyWrap.classList.toggle('flex', showNotify);
+                    }
+                    if (notifyInput) notifyInput.checked = false;
                     modal.classList.add('open');
                     confirmResolver = resolve;
                 });
@@ -2012,8 +2036,13 @@
                 if (confirmMsg && !form.__confirmed) {
                     e.preventDefault();
                     (async () => {
-                        const confirmed = await showCustomConfirm(confirmMsg);
+                        const confirmed = await showCustomConfirm(confirmMsg, 'Вы уверены?', form.hasAttribute('data-notify-option'));
                         if (confirmed) {
+                            if (form.hasAttribute('data-notify-option')) {
+                                const notifyInput = form.querySelector('[data-notify-user-value]');
+                                const notifyCheckbox = document.getElementById('confirm-notify-user');
+                                if (notifyInput) notifyInput.value = notifyCheckbox?.checked ? '1' : '0';
+                            }
                             form.__confirmed = true;
                             form.dispatchEvent(new Event('submit', { bubbles: true }));
                             form.__confirmed = false;
@@ -2029,7 +2058,7 @@
                 if (btn) {
                     btn.disabled = true;
                     btn.innerHTML = '<i data-lucide="loader-circle" class="h-4 w-4 animate-spin" aria-hidden="true"></i>';
-                    window.lucide?.createIcons({ root: btn, attrs: { 'stroke-width': 1.75 } });
+                    window.refreshUiIcons(btn);
                 }
 
                 try {
@@ -2153,13 +2182,13 @@
                     sidebar.classList.remove('w-[80px]');
                     sidebar.classList.add('w-72');
                     icon.setAttribute('data-lucide', 'panel-left-close');
-                    window.lucide?.createIcons({ root: icon.parentElement, attrs: { 'stroke-width': 1.75 } });
+                    window.refreshUiIcons(icon.parentElement);
                     localStorage.setItem('sidebar-collapsed', 'false');
                 } else {
                     sidebar.classList.add('w-[80px]');
                     sidebar.classList.remove('w-72');
                     icon.setAttribute('data-lucide', 'panel-left-open');
-                    window.lucide?.createIcons({ root: icon.parentElement, attrs: { 'stroke-width': 1.75 } });
+                    window.refreshUiIcons(icon.parentElement);
                     localStorage.setItem('sidebar-collapsed', 'true');
                 }
             }
@@ -2222,22 +2251,6 @@
                     try { localStorage.setItem(emojiCacheKey, JSON.stringify(emojiPack)); } catch (_) { }
                 }
 
-                window.renderSvgEmoji = function (container = document.body) {
-                    if (!window.twemoji || !container) return;
-                    twemoji.parse(container, {
-                        folder: 'svg',
-                        ext: '.svg',
-                        base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
-                    });
-                };
-
-                window.refreshUiIcons = function (root = document) {
-                    if (!root) return;
-                    window.renderSvgEmoji(root);
-                    window.lucide?.createIcons({ root, attrs: { 'stroke-width': 1.75 } });
-                };
-
-                window.refreshLucideIcons = window.refreshUiIcons;
                 window.cacheEmojiPack = function (container = document) {
                     if (!container || !window.twemoji) return;
                     const emojis = Array.from(container.querySelectorAll('img.emoji')).map(image => image.alt).filter(Boolean);
@@ -2246,7 +2259,7 @@
                     emojiPack.expiresAt = Date.now() + emojiCacheTtl;
                     try { localStorage.setItem(emojiCacheKey, JSON.stringify(emojiPack)); } catch (_) { }
                 };
-                document.addEventListener('DOMContentLoaded', () => window.refreshUiIcons());
+                window.refreshUiIcons();
             })();
         </script>
 

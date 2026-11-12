@@ -172,12 +172,10 @@
     </div>
 </div>
 
-<script src="https://unpkg.com/lucide@latest"></script>
 <script>
-    const refreshTicketIcons = (root = document) => window.lucide?.createIcons({ root, attrs: { 'stroke-width': 1.75 } });
 
     document.addEventListener('DOMContentLoaded', () => {
-        refreshTicketIcons();
+        window.refreshUiIcons();
         loadMessages();
         setInterval(loadMessages, 10000);
 
@@ -202,7 +200,7 @@
 
                 const wasAtBottom = (box.scrollHeight - box.scrollTop <= box.clientHeight + 100) || !box.querySelector('.flex');
                 box.innerHTML = html;
-                refreshTicketIcons(box);
+                window.refreshUiIcons(box);
                 
                 if (wasAtBottom) {
                     box.scrollTop = box.scrollHeight;
@@ -258,7 +256,7 @@
         if (icon) {
             icon.setAttribute('data-lucide', 'loader-2');
             icon.classList.add('animate-spin');
-            refreshTicketIcons(btn);
+            window.refreshUiIcons(btn);
         }
 
         try {
@@ -283,7 +281,7 @@
             if (resetIcon) {
                 resetIcon.setAttribute('data-lucide', 'sparkles');
                 resetIcon.classList.remove('animate-spin');
-                refreshTicketIcons(btn);
+                window.refreshUiIcons(btn);
             }
         }
     }
@@ -313,7 +311,7 @@
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         });
-        refreshTicketIcons();
+        window.refreshUiIcons();
     }
 
     function closeMobileTicketMenu() {

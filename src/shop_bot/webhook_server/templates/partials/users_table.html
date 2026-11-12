@@ -99,8 +99,9 @@
             {% else %}
             <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post"
                 class="inline ajax-form" data-confirm="Вы уверены, что хотите забанить этого пользователя?"
-                data-refresh="users-tbody" data-success-msg="Пользователь забанен">
+                data-notify-option data-refresh="users-tbody" data-success-msg="Пользователь забанен">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="notify_user" value="0" data-notify-user-value />
                 <button type="submit"
                     class="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-amber-400/15 bg-amber-400/[0.06] text-amber-300 hover:bg-amber-400/15 transition-all"
                     title="Забанить">
