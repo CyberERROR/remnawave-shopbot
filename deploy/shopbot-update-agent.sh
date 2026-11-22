@@ -10,7 +10,7 @@ HEARTBEAT_FILE="$UPDATE_DIR/agent.seen"
 LOG_FILE="$UPDATE_DIR/agent.log"
 LOCK_FILE="$UPDATE_DIR/agent.lock"
 HEALTH_URL="${SHOPBOT_HEALTH_URL:-http://127.0.0.1:1488/login}"
-HEALTH_ATTEMPTS="${SHOPBOT_HEALTH_ATTEMPTS:-120}"
+HEALTH_ATTEMPTS="${SHOPBOT_HEALTH_ATTEMPTS:-300}"
 CONTAINER_NAME="${SHOPBOT_CONTAINER_NAME:-remnawave-shopbot}"
 GIT_BRANCH="${SHOPBOT_GIT_BRANCH:-main}"
 
@@ -25,7 +25,7 @@ log_line() {
 }
 
 write_status() {
-    printf 'state=%s\nmessage=%s\nupdated_at=%s\n' "$1" "$2" "$(date +%s)" > "$STATUS_FILE"
+    printf 'state=%s\nmessage=%s\nstage=%s\nupdated_at=%s\n' "$1" "$2" "${3:-}" "$(date +%s)" > "$STATUS_FILE"
 }
 
 compose_cmd() {
@@ -119,7 +119,7 @@ cd "$PROJECT_DIR"
 PREVIOUS_COMMIT="$(git rev-parse HEAD)"
 PREVIOUS_CONTAINER_ID="$(docker inspect -f '{{.Id}}' "$CONTAINER_NAME" 2>/dev/null || true)"
 log_line "update started from $PREVIOUS_COMMIT"
-write_status running "Идёт обновление"
+write_status running "Идёт обновление" fetch
 
 if [ -f "$DATA_DIR/users.db" ]; then
     cp -f "$DATA_DIR/users.db" "$DATA_DIR/backups/pre-update-$(date +%Y%m%d-%H%M%S).db" 2>/dev/null || true
@@ -139,9 +139,11 @@ if ! git reset --hard "origin/$GIT_BRANCH" >> "$LOG_FILE" 2>&1; then
     exit 0
 fi
 
+write_status running "Пересборка контейнеров" build
 compose_cmd up -d --build >> "$LOG_FILE" 2>&1 || log_line "compose вернул ошибку, проверяю панель"
 force_recreate "$PREVIOUS_CONTAINER_ID"
 container_recover
+write_status running "Запуск панели" health
 
 if wait_health "$HEALTH_ATTEMPTS"; then
     refresh_self
@@ -151,7 +153,7 @@ if wait_health "$HEALTH_ATTEMPTS"; then
 fi
 
 log_line "health check failed, rolling back"
-write_status rolled_back "Панель не поднялась, выполняется откат"
+write_status rolled_back "Панель не поднялась, выполняется откат" rollback
 git reset --hard "$PREVIOUS_COMMIT" >> "$LOG_FILE" 2>&1 || true
 compose_cmd up -d --build --force-recreate >> "$LOG_FILE" 2>&1 || log_line "compose вернул ошибку при откате, проверяю панель"
 container_recover
