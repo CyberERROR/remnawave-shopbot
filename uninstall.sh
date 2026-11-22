@@ -33,16 +33,17 @@ REMOVE_CERTBOT=false
 
 UI_KIND="uninstall"
 # Shared terminal UI, embedded so each script remains standalone.
-UI_KIND="${UI_KIND:-install}"
 UI_TTY=0 UI_ANIMATE=1 UI_COLOR=1 UI_DEMO=0 UI_WARNINGS=0 UI_ERRORS=0
-UI_PID="" UI_LOG="" UI_STARTED=$SECONDS UI_COLS=80
-RED='' GREEN='' YELLOW='' BLUE='' CYAN='' MAGENTA='' WHITE='' BOLD='' DIM='' NC=''
-ACCENT='' RAIL='' MARK_OK='✓' MARK_FAIL='×' MARK_WARN='!' BAR_ON='━' BAR_OFF='─'
+UI_PID="" UI_LOG="" UI_STARTED=$SECONDS UI_COLS=72 UI_STEP=0 UI_TOTAL=0 UI_WIDE_COLOR=0
+RED='' GREEN='' YELLOW='' CYAN='' WHITE='' BOLD='' DIM='' NC=''
+ACCENT='' SOFT='' RAIL='' PANEL='' CHIP=''
+GUTTER='│' JOIN='├' END='└' TILE_ON='■' TILE_OFF='▪' MARK_OK='✓' MARK_FAIL='×' BAR_ON='━' BAR_OFF='─'
+UI_GRADIENT=()
 
 ui_width() {
-    UI_COLS="$(tput cols 2>/dev/null || printf '80')"
-    [[ "$UI_COLS" =~ ^[0-9]+$ ]] || UI_COLS=80
-    (( UI_COLS > 88 )) && UI_COLS=88
+    UI_COLS="$(tput cols 2>/dev/null || printf '72')"
+    [[ "$UI_COLS" =~ ^[0-9]+$ ]] || UI_COLS=72
+    (( UI_COLS > 76 )) && UI_COLS=76
     (( UI_COLS < 20 )) && UI_COLS=20
     return 0
 }
@@ -69,18 +70,28 @@ ui_init() {
     if (( ! UI_TTY )); then UI_ANIMATE=0; UI_COLOR=0; fi
     if (( UI_COLOR )); then
         RED='\033[91m' GREEN='\033[92m' YELLOW='\033[93m'
-        BLUE='\033[96m' CYAN='\033[96m' MAGENTA='\033[97m'
-        WHITE='\033[97m' BOLD='\033[1m' DIM='\033[90m' NC='\033[0m'
-        if [[ "${COLORTERM:-}" == truecolor || "${TERM:-}" == *256color* ]]; then
-            RED='\033[38;5;203m' GREEN='\033[38;5;121m' YELLOW='\033[38;5;222m'
-            CYAN='\033[38;5;87m' BLUE="$CYAN" DIM='\033[38;5;245m'
+        CYAN='\033[96m' WHITE='\033[97m' BOLD='\033[1m' DIM='\033[90m' NC='\033[0m'
+        RAIL='\033[90m' PANEL='\033[40m' CHIP='\033[30;106m'
+        ACCENT="$CYAN"; SOFT="$GREEN"
+        if [[ "$UI_KIND" == uninstall ]]; then
+            ACCENT="$YELLOW"; SOFT="$RED"; CHIP='\033[30;103m'
+        fi
+        if [[ "${COLORTERM:-}" == truecolor || "${COLORTERM:-}" == 24bit || "${TERM:-}" == *256color* ]]; then
+            UI_WIDE_COLOR=1
+            RED='\033[38;5;210m' GREEN='\033[38;5;120m' YELLOW='\033[38;5;222m'
+            WHITE='\033[38;5;255m' DIM='\033[38;5;249m' RAIL='\033[38;5;60m' PANEL='\033[48;5;235m'
+            ACCENT='\033[38;5;87m' SOFT='\033[38;5;123m' CHIP='\033[38;5;232;48;5;87m'
+            UI_GRADIENT=(24 25 31 37 43 44 45 51 87 123 159)
+            if [[ "$UI_KIND" == uninstall ]]; then
+                ACCENT='\033[38;5;215m' SOFT='\033[38;5;222m' CHIP='\033[38;5;232;48;5;215m'
+                UI_GRADIENT=(88 124 160 166 172 208 214 215 221 222 229)
+            fi
+            CYAN="$ACCENT"
         fi
     fi
-    ACCENT="$CYAN"; [[ "$UI_KIND" == uninstall ]] && ACCENT="$YELLOW"
-    RAIL="$DIM"
     case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
         *[Uu][Tt][Ff]*8*) ;;
-        *) MARK_OK='+'; MARK_FAIL='x'; BAR_ON='='; BAR_OFF='-' ;;
+        *) GUTTER='|'; JOIN='+'; END='+'; TILE_ON='#'; TILE_OFF='.'; MARK_OK='+'; MARK_FAIL='x'; BAR_ON='='; BAR_OFF='-' ;;
     esac
     ui_width
     trap 'ui_cleanup' EXIT
@@ -118,64 +129,103 @@ on_error() {
     exit "$code"
 }
 
-pause() {
-    if (( UI_ANIMATE )); then sleep "${1:-0.04}"; fi
-    return 0
-}
-
-rule() {
-    local i
-    printf '  %b' "$RAIL"
-    for ((i=0; i<UI_COLS-4; i++)); do printf '%s' "$BAR_OFF"; done
-    printf '%b\n' "$NC"
-}
-
-ui_bar() {
-    local done="$1" total="$2" width=$((UI_COLS-26)) i filled
-    (( width > 32 )) && width=32
-    (( width < 8 )) && width=8
-    filled=$((done * width / total))
-    printf '  %b' "$ACCENT"
+# The header animates on a single row and then leaves a static gradient.
+ui_spectrum() {
+    local width="$1" head="$2" i band distance
+    if (( ! UI_WIDE_COLOR )); then printf '%b' "$ACCENT"; fi
     for ((i=0; i<width; i++)); do
-        if (( i < filled )); then printf '%s' "$BAR_ON";
-        else printf '%b%s' "$DIM" "$BAR_OFF"; fi
+        if (( UI_WIDE_COLOR )); then
+            band=$(( i * (${#UI_GRADIENT[@]} - 1) / (width - 1) ))
+            if (( head >= 0 )); then
+                distance=$((i-head)); (( distance < 0 )) && distance=$((-distance))
+                band=$((10-distance))
+                (( band < 1 )) && band=1
+            fi
+            printf '\033[38;5;%sm' "${UI_GRADIENT[band]}"
+        fi
+        printf '%s' "$BAR_ON"
     done
-    printf '%b  %b%02d / %02d этапов%b\n' "$NC" "$DIM" "$done" "$total" "$NC"
+    printf '%b' "$NC"
 }
 
 print_banner() {
-    local label="${1:-УДАЛЕНИЕ ПРОЕКТА}" version="${2:-}"
-    printf '\n'
-    rule
-    printf '\n  %bR E M N A W A V E%b\n' "$BOLD$WHITE" "$NC"
-    printf '  %bSHOPBOT%b  %b/  CyberERROR%b\n\n' "$BOLD$ACCENT" "$NC" "$DIM" "$NC"
-    printf '  %b●  %s%b\n' "$ACCENT" "$label" "$NC"
-    [[ -z "$version" ]] || printf '  %bВерсия %s%b\n' "$DIM" "$version" "$NC"
-    if [[ "$UI_KIND" == uninstall ]]; then
-        printf '  %bВыбор компонентов → подтверждение → удаление%b\n' "$DIM" "$NC"
+    local label="${1:-УДАЛЕНИЕ ПРОЕКТА}" version="${2:-}" i width=$((UI_COLS-2))
+    case "$label" in
+        'НОВАЯ УСТАНОВКА') label='Установка' ;;
+        'РЕЖИМ ОБНОВЛЕНИЯ') label='Обновление' ;;
+        *) label='Удаление' ;;
+    esac
+    local meta="$label"
+    [[ -z "$version" ]] || meta+="  ·  $version"
+    if (( UI_DEMO )); then meta+='  ·  Демо'; fi
+    if (( UI_COLS >= 43 )); then
+        printf ' %b%b REMNAWAVE %b%b%b SHOPBOT%b%b%*s%b CyberERROR %b\n' \
+            "$CHIP" "$BOLD" "$NC" "$PANEL$WHITE" "$BOLD" "$NC" "$PANEL" \
+            "$((width-31))" '' "$BOLD$WHITE" "$NC"
+        if (( ${#meta} <= width-3 )); then
+            printf ' %b%b%s%b%b %s%*s%b\n' "$PANEL" "$ACCENT" "$GUTTER" "$NC" "$PANEL$DIM" \
+                "$meta" "$((width-2-${#meta}))" '' "$NC"
+        else
+            printf ' %b%s%b %s\n' "$ACCENT" "$GUTTER" "$NC" "$meta"
+        fi
     else
-        printf '  %bОкружение → настройка → запуск%b\n' "$DIM" "$NC"
+        printf ' %b%b REMNAWAVE %b %bSHOPBOT%b\n' "$CHIP" "$BOLD" "$NC" "$WHITE" "$NC"
+        printf ' %b%s%b %s\n' "$ACCENT" "$GUTTER" "$NC" "$meta"
     fi
-    if (( UI_DEMO )); then printf '  %bДЕМО · команды установки и удаления не выполняются%b\n' "$YELLOW" "$NC"; fi
+    if (( UI_ANIMATE && UI_WIDE_COLOR )); then
+        printf '\033[?25l'
+        for ((i=0; i<=12; i++)); do
+            printf '\r '
+            ui_spectrum "$width" "$((i*(width-1)/12))"
+            sleep 0.024
+        done
+        printf '\r\033[?25h'
+    fi
+    printf ' '
+    ui_spectrum "$width" -1
     printf '\n'
-    rule
-    pause 0.12
+}
+
+ui_stage_track() {
+    local done="$1" total="$2" active="$3" i
+    for ((i=1; i<=total; i++)); do
+        if (( i <= done )); then
+            printf '%b%s' "$ACCENT" "$TILE_ON"
+        elif (( i == active )); then
+            printf '%b%s' "$WHITE" "$TILE_ON"
+        else
+            printf '%b%s' "$RAIL" "$TILE_OFF"
+        fi
+    done
+    printf '%b' "$NC"
 }
 
 section() {
-    local step="${1%/*}" total="${1#*/}"
+    local title="$2" badge gap
+    UI_STEP="${1%/*}"; UI_TOTAL="${1#*/}"
     ui_width
+    printf -v badge ' %02d/%02d ' "$UI_STEP" "$UI_TOTAL"
+    printf ' %b%s%b %b%b%s%b %b%s%b' \
+        "$ACCENT" "$JOIN" "$NC" "$CHIP" "$BOLD" "$badge" "$NC" "$BOLD$WHITE" "$title" "$NC"
+    gap=$(( UI_COLS - 13 - ${#title} - UI_TOTAL ))
+    if (( gap >= 2 )); then
+        printf '%*s' "$gap" ''
+        ui_stage_track "$((UI_STEP-1))" "$UI_TOTAL" "$UI_STEP"
+    fi
     printf '\n'
-    ui_bar "$((step-1))" "$total"
-    printf '\n  %b%s%b  %b%s%b\n\n' "$BOLD$ACCENT" "$1" "$NC" "$BOLD$WHITE" "$2" "$NC"
 }
 
-ok() { printf '  %b%s%b  %s\n' "$GREEN" "$MARK_OK" "$NC" "$1"; }
-warn() { UI_WARNINGS=$((UI_WARNINGS+1)); printf '  %b%s%b  %s\n' "$YELLOW" "$MARK_WARN" "$NC" "$1"; }
-fail() { UI_ERRORS=$((UI_ERRORS+1)); printf '  %b%s%b  %s\n' "$RED" "$MARK_FAIL" "$NC" "$1" >&2; }
-info() { printf '  %b›%b  %s\n' "$ACCENT" "$NC" "$1"; }
+ui_item() {
+    local color="$1" mark="$2" message="$3"
+    printf ' %b%s%b  %b%s%b %s\n' "$RAIL" "$GUTTER" "$NC" "$color" "$mark" "$NC" "$message"
+}
+
+ok() { ui_item "$GREEN" "$MARK_OK" "$1"; }
+warn() { UI_WARNINGS=$((UI_WARNINGS+1)); ui_item "$YELLOW" '!' "$1"; }
+fail() { UI_ERRORS=$((UI_ERRORS+1)); ui_item "$RED" "$MARK_FAIL" "$1" >&2; }
+info() { ui_item "$SOFT" '›' "$1"; }
 kv() {
-    printf '  %b%s%b\n    %s\n' "$DIM" "$1" "$NC" "$2"
+    printf ' %b%s%b  %b%s%b  %s\n' "$RAIL" "$GUTTER" "$NC" "$DIM" "$1" "$NC" "$2"
 }
 
 ui_read() {
@@ -190,30 +240,37 @@ ui_read() {
 
 spinner_run() {
     local message="$1"; shift
-    local started=$SECONDS index=0 code=0 elapsed available label pulse i
+    local started=$SECONDS index=0 code=0 elapsed available label gap i pos
     local -a frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
     [[ "$MARK_OK" == '+' ]] && frames=('|' '/' '-' '\')
     UI_LOG="$(mktemp "${TMPDIR:-/tmp}/shopbot-step.XXXXXXXX")"
     if (( ! UI_ANIMATE )); then info "$message …"; fi
-    # Reset inherited UI traps inside the worker so it cannot redraw the terminal.
     ( trap - EXIT ERR INT TERM; "$@" ) >"$UI_LOG" 2>&1 &
     UI_PID=$!
     if (( UI_ANIMATE )); then
         printf '\033[?25l'
         while kill -0 "$UI_PID" 2>/dev/null; do
-            ui_width
+            if (( index % 12 == 0 )); then ui_width; fi
             elapsed=$((SECONDS-started))
-            available=$((UI_COLS-25)); (( available < 4 )) && available=4
-            label="$message"; if (( ${#label} > available )); then label="${label:0:available-1}…"; fi
-            pulse=''
-            for ((i=0; i<5; i++)); do
-                if (( i == index % 5 )); then pulse+="$BAR_ON"; else pulse+="$BAR_OFF"; fi
-            done
-            printf '\r\033[2K  %b%s%b  %s  %b%s  %02d:%02d%b' \
-                "$ACCENT" "${frames[index % ${#frames[@]}]}" "$NC" "$label" \
-                "$DIM" "$pulse" "$((elapsed/60))" "$((elapsed%60))" "$NC"
+            available=$((UI_COLS-24))
+            (( available < 5 )) && available=5
+            label="$message"
+            if (( ${#label} > available )); then label="${label:0:available-1}…"; fi
+            gap=$(( available-${#label}+2 ))
+            printf '\r\033[2K %b%s%b  %b%s%b %s%*s' \
+                "$RAIL" "$GUTTER" "$NC" "$ACCENT" "${frames[index % ${#frames[@]}]}" "$NC" "$label" "$gap" ''
+            if (( UI_COLS >= 29 )); then
+                pos=$((index % 12)); (( pos > 6 )) && pos=$((12-pos))
+                for ((i=0; i<7; i++)); do
+                    if (( i == pos )); then printf '%b%s' "$ACCENT" "$BAR_ON"
+                    elif (( i == pos-1 || i == pos+1 )); then printf '%b%s' "$SOFT" "$BAR_OFF"
+                    else printf '%b%s' "$RAIL" "$BAR_OFF"; fi
+                done
+                printf '%b  ' "$NC"
+            fi
+            printf '%b%02d:%02d%b' "$DIM" "$((elapsed/60))" "$((elapsed%60))" "$NC"
             index=$((index+1))
-            sleep 0.1
+            sleep 0.08
         done
     fi
     wait "$UI_PID" || code=$?
@@ -221,10 +278,12 @@ spinner_run() {
     if (( UI_ANIMATE )); then printf '\r\033[2K\033[?25h'; fi
     elapsed=$((SECONDS-started))
     if (( code == 0 )); then
-        printf '  %b%s%b  %s  %b%02d:%02d%b\n' "$GREEN" "$MARK_OK" "$NC" "$message" "$DIM" "$((elapsed/60))" "$((elapsed%60))" "$NC"
+        local label_done
+        printf -v label_done '%s  %b%02d:%02d%b' "$message" "$DIM" "$((elapsed/60))" "$((elapsed%60))" "$NC"
+        ok "$label_done"
     else
         UI_ERRORS=$((UI_ERRORS+1))
-        printf '  %b%s%b  %s  %b[код %s]%b\n' "$RED" "$MARK_FAIL" "$NC" "$message" "$RED" "$code" "$NC" >&2
+        ui_item "$RED" "$MARK_FAIL" "$message [код $code]" >&2
         printf '\n  %bПоследние строки вывода:%b\n' "$DIM" "$NC" >&2
         tail -n 16 "$UI_LOG" >&2 || true
         printf '\n' >&2
@@ -234,19 +293,19 @@ spinner_run() {
 }
 
 ui_finish() {
-    local title="$1" elapsed=$((SECONDS-UI_STARTED))
-    printf '\n'
-    rule
+    local title="$1" elapsed=$((SECONDS-UI_STARTED)) color="$GREEN" mark="$MARK_OK" gap
     if (( UI_ERRORS > 0 )); then
-        printf '\n  %b!  ВЫПОЛНЕНО С ОШИБКАМИ%b\n' "$BOLD$YELLOW" "$NC"
-        info 'Проверьте неуспешные операции выше.'
-    else
-        printf '\n  %b%s  %s%b\n' "$BOLD$GREEN" "$MARK_OK" "$title" "$NC"
+        title='Выполнено с ошибками'; color="$YELLOW"; mark='!'
     fi
-    printf '  %bВремя %02d:%02d · замечаний %s · ошибок %s%b\n\n' \
-        "$DIM" "$((elapsed/60))" "$((elapsed%60))" "$UI_WARNINGS" "$UI_ERRORS" "$NC"
-    rule
+    printf ' %b%s%b %b%b%s %s%b' "$color" "$END" "$NC" "$BOLD" "$color" "$mark" "$title" "$NC"
+    gap=$(( UI_COLS - 7 - ${#title} - UI_TOTAL ))
+    if (( UI_TOTAL && gap >= 2 )); then
+        printf '%*s' "$gap" ''
+        ui_stage_track "$UI_TOTAL" "$UI_TOTAL" 0
+    fi
     printf '\n'
+    printf '    %b%02d:%02d · этапов %s/%s · замечаний %s · ошибок %s%b\n' \
+        "$DIM" "$((elapsed/60))" "$((elapsed%60))" "$UI_STEP" "$UI_TOTAL" "$UI_WARNINGS" "$UI_ERRORS" "$NC"
 }
 
 ui_demo() {
@@ -254,17 +313,16 @@ ui_demo() {
         print_banner
         section '1/3' 'Выбор компонентов'
         ui_menu_cards
-        info 'Демонстрация варианта 2 · данные сохраняются'
+        info 'Выбран вариант 2'
         section '2/3' 'Удаление приложения'
         spinner_run 'Остановка контейнеров' sleep 1.2
         spinner_run 'Удаление агента обновления' sleep 0.8
         spinner_run 'Удаление файлов приложения' sleep 0.8
         section '3/3' 'Проверка результата'
         ok 'Каталог данных сохранён'
-        ui_bar 3 3
-        ui_finish 'ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА'
+        ui_finish 'Демонстрация завершена'
     else
-        print_banner 'НОВАЯ УСТАНОВКА' 'DEMO'
+        print_banner 'НОВАЯ УСТАНОВКА'
         section '1/3' 'Подготовка окружения'
         spinner_run 'Проверка системных зависимостей' sleep 1.2
         ok 'Docker · Compose · Nginx'
@@ -273,12 +331,10 @@ ui_demo() {
         spinner_run 'Настройка HTTPS и сертификата' sleep 1.2
         section '3/3' 'Запуск приложения'
         spinner_run 'Сборка и запуск контейнеров' sleep 1.4
-        ui_bar 3 3
-        ui_finish 'ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА'
-        kv 'Пример адреса панели' 'https://shop.example.com:8443/login'
+        kv 'Панель' 'https://shop.example.com:8443/login'
+        ui_finish 'Демонстрация завершена'
     fi
-    info 'Демонстрация завершена. Система не изменена.'
-    printf '\n'
+
 }
 
 
@@ -286,9 +342,8 @@ ask_yes() {
     local prompt="$1"
     local default_answer="$2"
     local reply=""
-    printf '%b  ? %b%s ' "$CYAN" "$NC" "$prompt"
+    printf ' %b%s%b  %b?%b %s ' "$RAIL" "$GUTTER" "$NC" "$ACCENT" "$NC" "$prompt"
     ui_read reply
-    printf '\n'
     if [[ -z "$reply" ]]; then
         reply="$default_answer"
     fi
@@ -298,9 +353,8 @@ ask_yes() {
 ask_confirm_word() {
     local word="$1"
     local answer=""
-    printf '%b  ? %bВведите %b%s%b для подтверждения: ' "$CYAN" "$NC" "$BOLD$RED" "$word" "$NC"
+    printf ' %b%s%b  %b?%b Введите %b%s%b для подтверждения: ' "$RAIL" "$GUTTER" "$NC" "$ACCENT" "$NC" "$BOLD$RED" "$word" "$NC"
     ui_read answer
-    printf '\n'
     [[ "$answer" == "$word" ]]
 }
 
@@ -337,24 +391,17 @@ project_present() {
 }
 
 ui_menu_cards() {
-    printf '\n  %bВЫБЕРИТЕ СЦЕНАРИЙ%b\n\n' "$BOLD$WHITE" "$NC"
-    printf '  %b01%b  %bСеть и сертификат%b\n' "$ACCENT" "$NC" "$BOLD" "$NC"
-    printf '      %bКонфигурация Nginx · SSL домена%b\n\n' "$DIM" "$NC"
-    printf '  %b02%b  %bУдалить приложение%b\n' "$ACCENT" "$NC" "$BOLD" "$NC"
-    printf '      %bСеть · контейнеры · образы · код · агент%b\n' "$DIM" "$NC"
-    printf '      %bБаза и настройки сохраняются%b\n\n' "$GREEN" "$NC"
-    printf '  %b03%b  %bПриложение и Certbot%b\n' "$ACCENT" "$NC" "$BOLD" "$NC"
-    printf '      %bВариант 02 + общий Certbot сервера%b\n\n' "$DIM" "$NC"
-    printf '  %b04%b  %bВыбрать компоненты вручную%b\n' "$ACCENT" "$NC" "$BOLD" "$NC"
-    printf '      %bОтдельное решение для каждого компонента%b\n\n' "$DIM" "$NC"
-    printf '  %b00  Выйти без изменений%b\n\n' "$DIM" "$NC"
+    printf ' %b%s%b  %b1%b  Nginx и SSL\n' "$RAIL" "$GUTTER" "$NC" "$ACCENT" "$NC"
+    printf ' %b%s%b  %b2%b  Приложение · сохранить данные\n' "$RAIL" "$GUTTER" "$NC" "$ACCENT" "$NC"
+    printf ' %b%s%b  %b3%b  Приложение и Certbot\n' "$RAIL" "$GUTTER" "$NC" "$ACCENT" "$NC"
+    printf ' %b%s%b  %b4%b  Выбрать вручную\n' "$RAIL" "$GUTTER" "$NC" "$ACCENT" "$NC"
+    printf ' %b%s%b  %b0%b  Отмена\n' "$RAIL" "$GUTTER" "$NC" "$ACCENT" "$NC"
 }
 
 show_menu() {
     ui_menu_cards
-    printf '%b  ? %bВыберите вариант [0-4] (по умолчанию 0): ' "$CYAN" "$NC"
+    printf ' %b%s%b  %b?%b Вариант [0–4, Enter = 0]  ' "$RAIL" "$GUTTER" "$NC" "$ACCENT" "$NC"
     ui_read CHOICE
-    printf '\n'
     if [[ -z "$CHOICE" ]]; then
         CHOICE=0
     fi
@@ -394,7 +441,7 @@ show_menu() {
 }
 
 show_custom_menu() {
-    printf '\n  %bДополнительные опции%b\n\n' "$YELLOW$BOLD" "$NC"
+    printf '  %bКомпоненты%b\n' "$YELLOW$BOLD" "$NC"
 
     if [[ -f "$NGINX_CONF" ]] || [[ -L "$NGINX_LINK" ]]; then
         if ask_yes "Удалить конфигурацию Nginx? (Y/n):" "y"; then
@@ -442,7 +489,7 @@ show_custom_menu() {
 }
 
 show_summary() {
-    printf '\n  %bИтоговый список%b\n\n' "$YELLOW$BOLD" "$NC"
+    printf '  %bК удалению%b\n' "$YELLOW$BOLD" "$NC"
     if [[ "$REMOVE_DOCKER" == "true" ]]; then kv "Контейнеры и образы" "удалить"; fi
     if [[ "$REMOVE_AGENT" == "true" ]]; then kv "Агент обновления" "удалить"; fi
     if [[ "$REMOVE_CONFIG" == "true" ]]; then kv "Конфигурация Nginx" "удалить"; fi
@@ -453,8 +500,6 @@ show_summary() {
         kv "Certbot" "удалить"
         warn "Certbot общий для сервера: его удаление затронет продление сертификатов других сайтов."
     fi
-    printf '\n'
-
     if [[ "$CHOICE" == "1" || "$CHOICE" == "01" ]]; then
         if ! ask_yes "Подтвердить удаление? (y/N):" "n"; then
             warn "Удаление отменено."
@@ -620,13 +665,10 @@ show_leftovers() {
 }
 
 final_card() {
-    ui_bar 5 5
-    ui_finish 'ОБРАБОТКА ВЫБРАННЫХ КОМПОНЕНТОВ ЗАВЕРШЕНА'
     if [[ -d "$DATADIR" ]]; then
         kv "Данные сохранены" "$DATADIR"
     fi
-    kv "Проект" "github.com/CyberERROR/remnawave-shopbot"
-    printf '\n'
+    ui_finish 'Обработка компонентов завершена'
 }
 
 ui_init "$@"
@@ -658,7 +700,6 @@ show_menu
 show_summary
 
 section "3/5" "Удаление"
-printf '\n'
 remove_docker_containers
 remove_update_agent
 remove_ssl_certs
