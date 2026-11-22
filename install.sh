@@ -402,8 +402,15 @@ compose_cmd() {
 }
 
 compose_rebuild() {
+    local name="remnawave-shopbot"
     compose_cmd down --remove-orphans || true
-    compose_cmd up -d --build
+    compose_cmd up -d --build || true
+    if docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null | grep -q true; then
+        return 0
+    fi
+    docker restart "$name" >/dev/null 2>&1 || docker start "$name" >/dev/null 2>&1 || true
+    sleep 3
+    docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null | grep -q true
 }
 
 ensure_packages() {

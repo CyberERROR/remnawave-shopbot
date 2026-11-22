@@ -8,4 +8,9 @@ services:
     volumes:
       - .:/app/project
       - ../remnawave-shopbot-data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
     container_name: remnawave-shopbot
