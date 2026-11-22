@@ -1,0 +1,2156 @@
+{% extends "base.html" %}
+{% block title %}Настройки{% endblock %}
+{% block chart_assets %}{% endblock %}
+
+{% block head %}
+<style>
+    .tab-content .grid > div:has(.soft-select.open),
+    .tab-content .grid > section:has(.soft-select.open) { z-index: 50; }
+    .soft-select.open { position: relative; z-index: 60; }
+    [data-target="trial_host_id"] .soft-select-menu { top: auto !important; bottom: 100% !important; margin-top: 0 !important; margin-bottom: .5rem !important; }
+    .pay-tab { transition: background-color 150ms, border-color 150ms; }
+    .pay-tab:hover { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
+    .pay-tab.is-active { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.1); }
+    .pay-tab.is-active .pay-tab-label { color: #fff; }
+    .pay-tab.is-active svg { color: rgba(255,255,255,.85); }
+    .pay-tabs-ready .pay-panel { display: none; }
+    .pay-tabs-ready .pay-panel.is-active { display: flex; }
+    .pay-tabs-ready [data-pay-panel="yoomoney"].is-active { display: block; }
+    .tab-content section { border-color: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018)); border-radius: 16px; }
+    .tab-content section > header { min-height: 42px; padding: 9px 12px; background: transparent; border-bottom-color: rgba(255,255,255,.06); }
+    .tab-content section > header h3 { font-size: 13px; letter-spacing: -.01em; }
+    .tab-content section > header span[class*="h-7 w-7"] { width: 22px; height: 22px; border-radius: 7px; background: rgba(255,255,255,.05); color: rgba(255,255,255,.6); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+    .tab-content section > header span[class*="h-7 w-7"] svg { width: 13px; height: 13px; }
+    .tab-content section > div.relative { padding: 10px 12px; }
+    .tab-content label.mb-1\.5 { margin-bottom: 4px; font-size: 11px; color: rgba(255,255,255,.5); }
+    .tab-content input[type="text"], .tab-content input[type="password"], .tab-content input[type="email"],
+    .tab-content input[type="number"], .tab-content input[type="url"], .tab-content textarea {
+        padding-top: 6px; padding-bottom: 6px; font-size: 11px; border-radius: 10px;
+        border-color: rgba(255,255,255,.06); background: rgba(0,0,0,.28);
+    }
+    .tab-content input[type="text"]:focus, .tab-content input[type="password"]:focus, .tab-content input[type="email"]:focus,
+    .tab-content input[type="number"]:focus, .tab-content input[type="url"]:focus, .tab-content textarea:focus {
+        border-color: rgba(52,211,153,.45); box-shadow: 0 0 0 3px rgba(52,211,153,.1);
+    }
+    .settings-status { --status-accent: #34d399; position: relative; overflow: hidden; border-radius: 16px; background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+    .settings-status-warning { --status-accent: #fbbf24; }
+    .settings-status::before { content: ""; position: absolute; top: 12px; bottom: 12px; left: 0; width: 2px; border-radius: 2px; background: var(--status-accent); }
+    .settings-status-content { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 12px 12px 12px 16px; }
+    .settings-status-icon { display: flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); color: var(--status-accent); }
+    .settings-status-icon svg { width: 16px; height: 16px; }
+    .settings-status-title { color: #fff; font-size: 13px; font-weight: 600; letter-spacing: -.01em; }
+    .settings-status-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+    .settings-status-badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 7px; background: rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); color: rgba(255,255,255,.65); font-size: 10px; font-weight: 500; line-height: 1; }
+    .settings-status-dot { width: 6px; height: 6px; flex: none; border-radius: 9999px; background: #f87171; }
+    .settings-status-dot.is-good { background: #34d399; }
+    .tab-content section > div.settings-section-body { padding: 12px; border-radius: 0 0 15px 15px; background: rgba(0,0,0,.12); }
+    .settings-section-body > * + * { margin-top: 12px; }
+    @media (min-width: 640px) {
+        .settings-status-content { flex-direction: row; align-items: center; }
+    }
+    .tab-content:not(.hidden) { animation: settingsTabIn 160ms ease-out; }
+    @keyframes settingsTabIn { from { opacity: 0; } to { opacity: 1; } }
+    .tab-btn[aria-selected="true"] { color: #fff; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.08); }
+    .tab-btn[aria-selected="true"]:hover { background: rgba(255,255,255,.08); }
+    .tab-btn[aria-selected="true"] svg { color: #34d399; }
+    .set-split { display: grid; gap: 12px; align-items: start; }
+    .set-nav { display: flex; gap: 2px; padding: 6px; border-radius: 16px; background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+    .set-nav-btn { display: flex; flex: none; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: 10px; font-size: 12px; font-weight: 500; line-height: 1; text-align: left; color: rgba(255,255,255,.55); transition: background-color 150ms, color 150ms, box-shadow 150ms; }
+    .set-nav-btn:hover { background: rgba(255,255,255,.04); color: rgba(255,255,255,.85); }
+    .set-nav-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(52,211,153,.35); }
+    .set-nav-btn.is-active { background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); color: #fff; }
+    .set-nav-ico { display: inline-flex; flex: none; align-items: center; justify-content: center; }
+    .set-nav-btn svg { width: 15px; height: 15px; color: rgba(255,255,255,.4); transition: color 150ms; }
+    .set-nav-btn:hover svg { color: rgba(255,255,255,.6); }
+    .set-nav-btn.is-active svg { color: #34d399; }
+    .set-nav-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .set-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .set-body > .grid { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .set-body > .grid[hidden] { display: none !important; }
+    .set-pane { min-width: 0; }
+    .tab-content [hidden] { display: none !important; }
+    .set-pane.is-entering { animation: settingsPaneIn 140ms ease-out; }
+    @keyframes settingsPaneIn { from { opacity: 0; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+        .tab-content:not(.hidden), .set-pane.is-entering { animation: none; }
+    }
+    @media (min-width: 1280px) {
+        .set-split { grid-template-columns: 232px minmax(0, 1fr); }
+        .set-nav { position: sticky; top: 76px; flex-direction: column; }
+    }
+    @media (max-width: 1279.98px) {
+        .set-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
+        .set-nav::-webkit-scrollbar { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="admin-page-head">
+    <div class="min-w-0">
+        <h2 class="flex items-center gap-3">
+            Настройки
+            <span class="rounded-full border border-primary/15 bg-primary/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-primary">Система</span>
+        </h2>
+        <p>Центр управления ботами и контентом</p>
+    </div>
+    <button type="button" id="save-all-settings-btn" class="admin-btn">
+        <i data-lucide="save" class="h-4 w-4" aria-hidden="true"></i>
+        <span>Сохранить изменения</span>
+    </button>
+</div>
+
+{% if not (all_settings_ok and support_settings_ok) %}
+<div class="settings-status settings-status-warning mb-6">
+    
+    <div class="settings-status-content">
+        <span class="settings-status-icon">
+            <i data-lucide="triangle-alert" class="h-[18px] w-[18px]" aria-hidden="true"></i>
+        </span>
+        <div class="flex-1">
+            <h4 class="settings-status-title">Требуется донастройка</h4>
+            <div class="settings-status-list">
+                <span class="settings-status-badge">
+                    <span class="settings-status-dot{{ ' is-good' if all_settings_ok else '' }}"></span>
+                    Основной бот
+                </span>
+                <span class="settings-status-badge">
+                    <span class="settings-status-dot{{ ' is-good' if support_settings_ok else '' }}"></span>
+                    Support бот
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="admin-bar">
+    <div class="admin-bar-inner">
+        <nav class="flex min-w-max items-center gap-1" id="settings-nav" role="tablist">
+            {% for item in [
+            {'id': 'panel', 'label': 'Панель', 'icon': 'layout-dashboard'},
+            {'id': 'bot', 'label': 'Настройка ботов' if not (all_settings_ok and support_settings_ok) else 'Боты', 'icon': 'bot'},
+            {'id': 'payments', 'label': 'Платежи', 'icon': 'credit-card'},
+            {'id': 'referrals', 'label': 'Рефералы', 'icon': 'users'},
+            {'id': 'content', 'label': 'Контент', 'icon': 'file-text'}
+            ] %}
+            <button type="button" data-tab="{{ item.id }}" role="tab" class="tab-btn admin-tab">
+                <i data-lucide="{{ item.icon }}" class="h-4 w-4" aria-hidden="true"></i>
+                {{ item.label }}
+            </button>
+            {% endfor %}
+        </nav>
+    </div>
+</div>
+
+<form action="{{ url_for('settings_page') }}" method="post" id="settings-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="next_hash" id="settings-next-hash" value="panel" />
+    <input type="hidden" name="full_settings_form" value="1" />
+
+    <section id="tab-panel" class="tab-content">
+        <div class="space-y-3">
+            <div class="flex flex-wrap items-end justify-between gap-3 px-1 pt-1">
+                <div class="min-w-0">
+                    <h2 class="text-xl font-semibold tracking-tight text-white">Панель</h2>
+                    <p class="mt-0.5 text-xs text-white/45">Доступ, база данных и системные функции</p>
+                </div>
+            </div>
+
+            <div class="set-split" data-sections="panel">
+                <aside class="set-nav" data-sections-nav role="tablist" aria-label="Разделы панели"></aside>
+                <div class="set-body" data-sections-panes>
+                    <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                <section class="relative rounded-2xl border border-white/[0.08] bg-white/[0.03] xl:col-span-2">
+                    
+                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                            <i data-lucide="shield" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <h3 class="text-sm font-semibold tracking-tight text-white" data-nav-label="Доступ">Доступ и глобальные настройки</h3>
+                    </header>
+                    <div class="settings-section-body relative">
+                        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Логин</label>
+                                <div class="relative">
+                                    <i data-lucide="user" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="text" name="panel_login" value="{{ settings.panel_login or '' }}" required autocomplete="off"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Новый пароль</label>
+                                <div class="relative">
+                                    <i data-lucide="lock" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="password" name="panel_password" id="panel_pass" placeholder="••••••••" autocomplete="new-password"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-10 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                    <button type="button" onclick="togglePasswordVisibility('panel_pass')" aria-label="Показать пароль"
+                                        class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-white/30 transition-colors duration-150 hover:text-white">
+                                        <i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label id="backup-interval-label" class="mb-1.5 block text-xs font-medium text-white/60">Автобэкап ({{ 'часы' if settings.backup_interval_unit=='hours' else 'дни' }})</label>
+                                <div class="relative">
+                                    <i data-lucide="history" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="number" name="backup_interval_days" value="{{ settings.backup_interval_days or '1' }}" min="0"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                    <label class="relative inline-flex cursor-pointer items-center">
+                                        <input type="hidden" name="backup_interval_unit" value="days" />
+                                        <input type="checkbox" name="backup_interval_unit" value="hours" id="backup-interval-unit-toggle" {% if settings.backup_interval_unit=='hours' %}checked{% endif %} class="peer sr-only" />
+                                        <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                        <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                    </label>
+                                    <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider">
+                                        <span id="backup-unit-days-label" class="{{ 'text-white/30' if settings.backup_interval_unit=='hours' else 'text-primary' }}">Дни</span>
+                                        <span class="text-white/20">/</span>
+                                        <span id="backup-unit-hours-label" class="{{ 'text-primary' if settings.backup_interval_unit=='hours' else 'text-white/30' }}">Часы</span>
+                                    </div>
+                                    <p class="text-[11px] text-white/40">0 — выключить автобэкап</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div class="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                        <i data-lucide="terminal" class="h-4 w-4" aria-hidden="true"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <span class="block truncate text-xs font-medium text-white">WAL режим БД</span>
+                                        <p class="text-[11px] text-white/40">ВКЛ — HDD, ВЫКЛ — SSD/NVMe</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                    <input type="hidden" name="enable_wal_mode" value="0" />
+                                    <input type="checkbox" name="enable_wal_mode" value="1" {% if settings.enable_wal_mode=='1' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                        <i data-lucide="power" class="h-4 w-4" aria-hidden="true"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <span class="block truncate text-xs font-medium text-white">Автозапуск бота</span>
+                                        <p class="text-[11px] text-white/40">Запуск после ребута сервера</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                    <input type="hidden" name="auto_start_bot" value="0" />
+                                    <input type="checkbox" name="auto_start_bot" value="1" {% if other_settings.auto_start_bot=='1' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                        <i data-lucide="layout-panel-left" class="h-4 w-4" aria-hidden="true"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <span class="block truncate text-xs font-medium text-white">Вид панели</span>
+                                        <p class="text-[11px] text-white/40">Боковое или верхнее меню</p>
+                                    </div>
+                                </div>
+                                <div class="soft-select shrink-0" data-target="dashboard_layout">
+                                    <button type="button" id="dashboard_layout_toggle"
+                                        class="soft-select-toggle flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white outline-none transition-colors duration-150 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
+                                        <span class="soft-select-text">{% if settings.dashboard_layout=='header' %}Header{% else %}Sidebar{% endif %}</span>
+                                        <i data-lucide="chevron-down" class="h-4 w-4 shrink-0 text-white/40" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="soft-select-menu" id="dashboard_layout_menu"></div>
+                                    <select name="dashboard_layout" id="dashboard_layout" class="hidden">
+                                        <option value="sidebar" {% if settings.dashboard_layout=='sidebar' %}selected{% endif %}>Sidebar</option>
+                                        <option value="header" {% if settings.dashboard_layout=='header' %}selected{% endif %}>Header</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                        <i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <span class="block truncate text-xs font-medium text-white">Демо режим</span>
+                                        <p class="text-[11px] text-white/40">Скрыть реальные данные</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                    <input type="hidden" name="demo_mode_enabled" value="0" />
+                                    <input type="checkbox" name="demo_mode_enabled" value="1" {% if settings.demo_mode_enabled=='1' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                                        <i data-lucide="eye-off" class="h-4 w-4" aria-hidden="true"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <span class="block truncate text-xs font-medium text-white">Скрытая страница входа</span>
+                                        <p class="text-[11px] text-white/40">Показывать 404 вместо формы входа</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                    <input type="hidden" name="stealth_login_enabled" value="0" />
+                                    <input type="checkbox" name="stealth_login_enabled" value="1" {% if settings.stealth_login_enabled=='1' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                            </div>
+                            <div class="mt-3 border-t border-white/[0.06] pt-3">
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Комбинация клавиш (Ctrl+буква или Shift+буква)</label>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span id="stealth-hotkey-badge" class="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-center text-xs font-semibold uppercase tracking-widest text-emerald-300 tabular-nums"></span>
+                                    <input type="text" name="stealth_login_hotkey" id="stealth-hotkey-input" value="{{ settings.stealth_login_hotkey or 'ctrl+b' }}" class="hidden" readonly />
+                                    <button type="button" id="stealth-hotkey-capture-btn"
+                                        class="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white/70 transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">Изменить</button>
+                                    <span id="stealth-hotkey-listening" class="hidden text-[11px] font-semibold uppercase tracking-widest text-emerald-300/80">Нажмите комбинацию...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="relative flex min-w-0 flex-col rounded-2xl border border-white/[0.08] bg-white/[0.03]" hidden>
+                    
+                    <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/[0.08] text-amber-300">
+                                <i data-lucide="timer" class="h-4 w-4" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="text-sm font-semibold tracking-tight text-white" data-nav-label="Триал">Пробный период</h3>
+                        </div>
+                        <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                            <input type="hidden" name="trial_enabled" value="false" />
+                            <input type="checkbox" name="trial_enabled" value="true" {% if settings.trial_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                            <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                            <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                        </label>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-4 p-3 sm:p-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <div>
+                                <label class="mb-1.5 flex items-center gap-1 text-xs font-medium text-white/60">
+                                    Дней
+                                    <span class="group relative inline-flex items-center">
+                                        <i data-lucide="info" class="h-3.5 w-3.5 cursor-help text-white/30 transition-colors duration-150 group-hover:text-white/60" aria-hidden="true"></i>
+                                        <span class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#0b0f0e] p-2.5 text-[11px] font-normal text-white/60 opacity-0 shadow-2xl transition-opacity duration-150 group-hover:opacity-100">
+                                            Укажите <span class="font-semibold text-emerald-300">0</span>, чтобы срок действия не заканчивался.
+                                        </span>
+                                    </span>
+                                </label>
+                                <div class="relative">
+                                    <i data-lucide="calendar" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="number" name="trial_duration_days" value="{{ settings.trial_duration_days or '3' }}"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Трафик (ГБ)</label>
+                                <div class="relative">
+                                    <i data-lucide="gauge" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="number" name="trial_traffic_limit_gb" value="{{ settings.trial_traffic_limit_gb or '0' }}"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Лимит HWID</label>
+                                <div class="relative">
+                                    <i data-lucide="fingerprint" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="number" name="trial_hwid_limit" value="{{ settings.trial_hwid_limit or '0' }}"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                             <div>
+                                 <label class="mb-1.5 flex items-center gap-1 text-xs font-medium text-white/60">
+                                     UUID
+                                     <span class="group relative inline-flex items-center">
+                                         <i data-lucide="info" class="h-3.5 w-3.5 cursor-help text-white/30 transition-colors duration-150 group-hover:text-white/60" aria-hidden="true"></i>
+                                         <span class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#0b0f0e] p-2.5 text-[11px] font-normal text-white/60 opacity-0 shadow-2xl transition-opacity duration-150 group-hover:opacity-100">
+                                             Укажите UUID из <span class="font-semibold text-emerald-300">внешних сквадов</span> панели <span class="font-semibold text-emerald-300">Remnawave</span>.
+                                         </span>
+                                     </span>
+                                 </label>
+                                 <input type="text" name="trial_external_squad_uuid" value="{{ settings.trial_external_squad_uuid or '' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                     class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs text-white placeholder:text-white/20 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                             </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Стратегия сброса трафика</label>
+                                <div class="soft-select" data-target="trial_traffic_strategy">
+                                    <button type="button" id="trial_traffic_strategy_toggle"
+                                        class="soft-select-toggle flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white outline-none transition-colors duration-150 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
+                                        <span class="soft-select-text min-w-0 truncate">{% set trial_strategy = settings.trial_traffic_strategy or 'NO_RESET' %}{% if trial_strategy == 'DAY' %}Раз в день{% elif trial_strategy == 'WEEK' %}Раз в неделю{% elif trial_strategy == 'MONTH' %}Раз в месяц{% elif trial_strategy == 'MONTH_ROLLING' %}Раз в месяц (от даты создания){% else %}Не сбрасывать{% endif %}</span>
+                                        <i data-lucide="chevron-down" class="h-4 w-4 shrink-0 text-white/40" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="soft-select-menu" id="trial_traffic_strategy_menu"></div>
+                                    <select name="trial_traffic_strategy" id="trial_traffic_strategy" class="hidden">
+                                        <option value="NO_RESET" {% if (settings.trial_traffic_strategy or 'NO_RESET')=='NO_RESET' %}selected{% endif %}>Не сбрасывать</option>
+                                        <option value="DAY" {% if settings.trial_traffic_strategy=='DAY' %}selected{% endif %}>Раз в день</option>
+                                        <option value="WEEK" {% if settings.trial_traffic_strategy=='WEEK' %}selected{% endif %}>Раз в неделю</option>
+                                        <option value="MONTH" {% if settings.trial_traffic_strategy=='MONTH' %}selected{% endif %}>Раз в месяц</option>
+                                        <option value="MONTH_ROLLING" {% if settings.trial_traffic_strategy=='MONTH_ROLLING' %}selected{% endif %}>Раз в месяц (от даты создания)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Сервер для триала</label>
+                                <div class="soft-select" data-target="trial_host_id">
+                                    <button type="button" id="trial_host_id_toggle"
+                                        class="soft-select-toggle flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white outline-none transition-colors duration-150 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
+                                        <span class="soft-select-text min-w-0 truncate">{% if settings.trial_host_id %}{{ settings.trial_host_id }}{% else %}Выборочно (пользователь выбирает){% endif %}</span>
+                                        <i data-lucide="chevron-down" class="h-4 w-4 shrink-0 text-white/40" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="soft-select-menu" id="trial_host_id_menu"></div>
+                                    <select name="trial_host_id" id="trial_host_id" class="hidden">
+                                        <option value="">Выборочно (пользователь выбирает)</option>
+                                        {% for host in hosts %}
+                                        <option value="{{ host.host_name }}" {% if settings.trial_host_id==host.host_name %}selected{% endif %}>{{ host.host_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div class="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/30 p-3">
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <label class="flex items-center gap-1 text-xs font-medium text-white">
+                                            Не суммировать дни триала
+                                            <span class="group relative inline-flex items-center">
+                                                <i data-lucide="info" class="h-3.5 w-3.5 cursor-help text-white/30 transition-colors duration-150 group-hover:text-white/60" aria-hidden="true"></i>
+                                                <span class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#0b0f0e] p-2.5 text-[11px] font-normal leading-relaxed text-white/60 opacity-0 shadow-2xl transition-opacity duration-150 group-hover:opacity-100">
+                                                    Работает только для подписок с логином <span class="font-semibold text-emerald-300">trial_</span>. При продлении остаток пробного срока не прибавляется — начисляются только оплаченные дни. Пример: осталось 90 дней, куплено 30 — станет 30 дней, а не 120.
+                                                </span>
+                                            </span>
+                                        </label>
+                                        <p class="text-[11px] leading-relaxed text-white/40">Остаток триала не переходит в платную подписку</p>
+                                    </div>
+                                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                        <input type="hidden" name="trial_extend_reset_days" value="false" />
+                                        <input type="checkbox" name="trial_extend_reset_days" value="true" {% if settings.trial_extend_reset_days=='true' %}checked{% endif %} data-trial-policy="reset" class="peer sr-only" />
+                                        <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                        <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/30 p-3">
+                                    <div class="flex min-w-0 flex-col gap-1">
+                                        <label class="flex items-center gap-1 text-xs font-medium text-white">
+                                            Запретить продление триала
+                                            <span class="group relative inline-flex items-center">
+                                                <i data-lucide="info" class="h-3.5 w-3.5 cursor-help text-white/30 transition-colors duration-150 group-hover:text-white/60" aria-hidden="true"></i>
+                                                <span class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#0b0f0e] p-2.5 text-[11px] font-normal leading-relaxed text-white/60 opacity-0 shadow-2xl transition-opacity duration-150 group-hover:opacity-100">
+                                                    Работает только для подписок с логином <span class="font-semibold text-emerald-300">trial_</span>. Вместо продления пользователю предлагается купить новый ключ, а сервер отклоняет оплату продления пробной подписки.
+                                                </span>
+                                            </span>
+                                        </label>
+                                        <p class="text-[11px] leading-relaxed text-white/40">Вместо продления — кнопка покупки нового ключа</p>
+                                    </div>
+                                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                        <input type="hidden" name="trial_extend_blocked" value="false" />
+                                        <input type="checkbox" name="trial_extend_blocked" value="true" {% if settings.trial_extend_blocked=='true' %}checked{% endif %} data-trial-policy="blocked" class="peer sr-only" />
+                                        <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                        <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label class="mb-1.5 flex items-center gap-1 text-xs font-medium text-white/60">
+                                    Автокомментарий пробного ключа
+                                    <span class="group relative inline-flex items-center">
+                                        <i data-lucide="info" class="h-3.5 w-3.5 cursor-help text-white/30 transition-colors duration-150 group-hover:text-white/60" aria-hidden="true"></i>
+                                        <span class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-xl border border-white/[0.08] bg-[#0b0f0e] p-2.5 text-[11px] font-normal leading-relaxed text-white/60 opacity-0 shadow-2xl transition-opacity duration-150 group-hover:opacity-100">
+                                            Подставляется в примечание каждого нового пробного ключа, чтобы такие подписки было проще найти в списке и в карточке.
+                                        </span>
+                                    </span>
+                                </label>
+                                <div class="relative">
+                                    <i data-lucide="message-square-text" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="text" name="trial_key_comment" value="{{ settings.trial_key_comment or '' }}" maxlength="120" placeholder="Например: Пробный период"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-400/[0.08] text-rose-300">
+                                        <i data-lucide="eraser" class="h-4 w-4" aria-hidden="true"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <span class="block truncate text-xs font-medium text-white">Очистка тестовых подписок</span>
+                                        <p class="text-[11px] text-white/40">Удаляет триалы, в которые так и не зашли</p>
+                                    </div>
+                                </div>
+                                <div class="flex shrink-0 items-center gap-2">
+                                    <button type="button" id="trial-cleanup-btn"
+                                        class="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white/70 transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50">
+                                        <i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i>
+                                        <span>Очистить триалы</span>
+                                    </button>
+                                    <span class="group relative inline-flex items-center">
+                                        <i data-lucide="info" class="h-3.5 w-3.5 cursor-help text-white/30 transition-colors duration-150 group-hover:text-white/60" aria-hidden="true"></i>
+                                        <span class="pointer-events-none absolute bottom-full right-0 z-50 mb-2 w-72 rounded-xl border border-white/[0.08] bg-[#0b0f0e] p-2.5 text-[11px] font-normal leading-relaxed text-white/60 opacity-0 shadow-2xl transition-opacity duration-150 group-hover:opacity-100">
+                                            Проверяет подписки <span class="font-semibold text-emerald-300">trial_</span> старше указанных дней, если у аккаунта нет купленных подписок. Когда в панели видно, что пользователь ни разу не подключался, ключ удаляется, а пробный период снова становится доступным.
+                                        </span>
+                                    </span>
+                                    <label class="relative inline-flex shrink-0 cursor-pointer items-center" title="Автоочистка по расписанию">
+                                        <input type="hidden" name="trial_cleanup_auto" value="false" />
+                                        <input type="checkbox" name="trial_cleanup_auto" value="true" {% if settings.trial_cleanup_auto=='true' %}checked{% endif %} class="peer sr-only" />
+                                        <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                        <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-medium text-white/60">Дней</label>
+                                    <div class="relative">
+                                        <i data-lucide="calendar" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                        <input type="number" name="trial_cleanup_days" value="{{ settings.trial_cleanup_days or '1' }}" min="1"
+                                            class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-medium text-white/60">Интервал автоочистки (часы)</label>
+                                    <div class="relative">
+                                        <i data-lucide="clock" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                        <input type="number" name="trial_cleanup_interval_hours" value="{{ settings.trial_cleanup_interval_hours or '24' }}" min="1"
+                                            class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="trial-cleanup-report" class="mt-3 hidden rounded-xl border border-white/[0.06] bg-black/30 p-2.5">
+                                <div class="flex items-center justify-between gap-2 px-0.5 pb-2">
+                                    <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">Отчёт очистки</span>
+                                    <span id="trial-cleanup-report-summary" class="truncate text-[10px] tabular-nums text-white/40"></span>
+                                </div>
+                                <ul id="trial-cleanup-report-list" class="max-h-56 space-y-0.5 overflow-y-auto pr-0.5"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]" hidden>
+                    <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                                <i data-lucide="activity" class="h-4 w-4" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="text-sm font-semibold tracking-tight text-white" data-nav-label="Мониторинг">Мониторинг ресурсов</h3>
+                        </div>
+                        <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                            <input type="hidden" name="monitoring_enabled" value="false" />
+                            <input type="checkbox" name="monitoring_enabled" value="true" {% if (settings.monitoring_enabled or 'true')=='true' %}checked{% endif %} class="peer sr-only" />
+                            <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                            <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                        </label>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-4 p-3 sm:p-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Интервал (сек)</label>
+                                <div class="relative">
+                                    <i data-lucide="timer" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="number" name="monitoring_interval_sec" value="{{ settings.monitoring_interval_sec or '300' }}" min="30"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Кулдаун (сек)</label>
+                                <div class="relative">
+                                    <i data-lucide="bell-off" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="number" name="monitoring_alert_cooldown_sec" value="{{ settings.monitoring_alert_cooldown_sec or '3600' }}" min="60"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                            <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Пороги уведомлений (%)</p>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-medium text-white/60">CPU</label>
+                                    <input type="number" name="monitoring_cpu_threshold" value="{{ settings.monitoring_cpu_threshold or '90' }}" min="10" max="100"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-center text-xs tabular-nums text-white outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-medium text-white/60">RAM</label>
+                                    <input type="number" name="monitoring_mem_threshold" value="{{ settings.monitoring_mem_threshold or '90' }}" min="10" max="100"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-center text-xs tabular-nums text-white outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-medium text-white/60">Disk</label>
+                                    <input type="number" name="monitoring_disk_threshold" value="{{ settings.monitoring_disk_threshold or '90' }}" min="10" max="100"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-center text-xs tabular-nums text-white outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="relative rounded-2xl border border-white/[0.08] bg-white/[0.03] xl:col-span-2" hidden>
+                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300">
+                            <i data-lucide="database" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <h3 class="text-sm font-semibold tracking-tight text-white" data-nav-label="Бэкапы">Резервное копирование</h3>
+                    </header>
+                    <div class="relative grid grid-cols-1 gap-3 p-3 sm:p-4 md:grid-cols-2">
+                        <div class="flex flex-col justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                            <div>
+                                <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Текущая база</p>
+                                <p class="text-[11px] leading-relaxed text-white/40">Скачать полный дамп базы данных прямо сейчас</p>
+                            </div>
+                            <button type="submit" formaction="{{ url_for('backup_db_route') }}"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2.5 text-xs font-medium text-emerald-300 transition-colors duration-150 hover:border-emerald-400/30 hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                                <i data-lucide="download" class="h-4 w-4" aria-hidden="true"></i>
+                                Скачать .DB
+                            </button>
+                        </div>
+
+                        <div class="flex flex-col gap-3">
+                            <div class="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                                <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Из имеющихся</p>
+                                <div class="soft-select" data-target="existing_backup">
+                                    <button type="button" id="existing_backup_toggle"
+                                        class="soft-select-toggle flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white outline-none transition-colors duration-150 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
+                                        <span class="soft-select-text min-w-0 truncate">— Выберите архив —</span>
+                                        <i data-lucide="chevron-down" class="h-4 w-4 shrink-0 text-white/40" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="soft-select-menu"></div>
+                                    <select name="existing_backup" id="existing_backup" class="hidden">
+                                        <option value="">— Выберите архив —</option>
+                                        {% for b in backups %}
+                                        <option value="{{ b.name }}" data-mtime="{{ b.mtime }}">{{ b.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <p class="mt-2 text-[11px] text-white/40">Дата архива: <span id="backup-date" class="tabular-nums text-white/60">—</span></p>
+                            </div>
+
+                            <div class="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                                <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Загрузить файл</p>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" id="btn-pick-file"
+                                        class="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white/70 transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                                        <i data-lucide="folder-open" class="h-4 w-4" aria-hidden="true"></i>
+                                        Выбрать
+                                    </button>
+                                    <span id="picked-file-name" class="min-w-0 flex-1 truncate rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2 text-[11px] text-white/40">Нет файла</span>
+                                </div>
+                                <input type="file" id="db_file" name="db_file" accept=".zip,.db" class="hidden" />
+                            </div>
+
+                            <button type="submit" formaction="{{ url_for('restore_db_route') }}" formenctype="multipart/form-data"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-xs font-medium text-red-300 transition-colors duration-150 hover:border-red-400/30 hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60"
+                                data-confirm="Все текущие данные будут заменены данными из бэкапа. Продолжить?">
+                                <i data-lucide="rotate-ccw" class="h-4 w-4" aria-hidden="true"></i>
+                                Восстановить базу
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]" hidden>
+                <header class="relative flex min-h-[52px] items-center justify-between gap-3 border-b border-white/[0.08] p-3 sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                            <i data-lucide="network" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold tracking-tight text-white" data-nav-label="IP-доступ">Белый список IP для входа</h3>
+                            <p class="text-xs text-white/60">Страница входа открывается только с разрешённых IP, остальные видят фейковую страницу 502</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                        <input type="hidden" name="stealth_ip_enabled" value="0" />
+                        <input type="checkbox" name="stealth_ip_enabled" value="1" {% if settings.stealth_ip_enabled=='1' %}checked{% endif %} class="peer sr-only" />
+                        <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                        <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                    </label>
+                </header>
+                <div class="relative p-3 sm:p-4">
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-xs font-medium text-white/60">Списки IP (через запятую, поддерживаются CIDR-подсети)</span>
+                        <span class="rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1 font-mono text-[11px] text-emerald-300">Ваш текущий IP: {{ client_ip_preview }}</span>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-emerald-300/80">Белый список</label>
+                            <textarea name="stealth_ip_whitelist" rows="3" placeholder="203.0.113.10, 198.51.100.0/24" class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings.stealth_ip_whitelist or '' }}</textarea>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-red-300/80">Чёрный список</label>
+                            <textarea name="stealth_ip_blacklist" rows="3" placeholder="45.66.77.88, 91.92.0.0/16" class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 font-mono text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">{{ settings.stealth_ip_blacklist or '' }}</textarea>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-[11px] leading-relaxed text-white/40">Если белый список задан — страница входа открывается только с его IP. Если белый список пуст — доступ разрешён всем, кроме IP из чёрного списка: они всегда видят фейковую страницу 502. Чёрный список имеет приоритет над белым. Некорректные значения игнорируются.</p>
+                </div>
+            </section>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="tab-bot" class="tab-content hidden">
+        <div class="space-y-3">
+            <div class="flex flex-wrap items-end justify-between gap-3 px-1 pt-1">
+                <div class="min-w-0">
+                    <h2 class="text-xl font-semibold tracking-tight text-white">Боты</h2>
+                    <p class="mt-0.5 text-xs text-white/45">Основной бот и служба поддержки</p>
+                </div>
+            </div>
+
+            {% if all_settings_ok and support_settings_ok %}
+            <div class="settings-status">
+                
+                <div class="settings-status-content">
+                    <span class="settings-status-icon">
+                        <i data-lucide="circle-check" class="h-[18px] w-[18px]" aria-hidden="true"></i>
+                    </span>
+                    <div class="flex-1">
+                        <h4 class="settings-status-title">Боты готовы к запуску</h4>
+                        <div class="settings-status-list">
+                            <span class="settings-status-badge">
+                                <span class="settings-status-dot is-good"></span>
+                                Основной бот
+                            </span>
+                            <span class="settings-status-badge">
+                                <span class="settings-status-dot is-good"></span>
+                                Support бот
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="set-split" data-sections="bot">
+                <aside class="set-nav" data-sections-nav role="tablist" aria-label="Разделы ботов"></aside>
+                <div class="set-body" data-sections-panes>
+                    <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                <section class="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    
+                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                            <i data-lucide="bot" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <h3 class="text-sm font-semibold tracking-tight text-white">Основной бот</h3>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-4 p-3 sm:p-4">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">Токен бота</label>
+                            <div class="relative">
+                                <i data-lucide="key-round" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                <input type="password" name="telegram_bot_token" id="bot_token_main" value="{{ settings.telegram_bot_token or '' }}" required autocomplete="new-password"
+                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-10 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <button type="button" onclick="togglePasswordVisibility('bot_token_main')" aria-label="Показать токен"
+                                    class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-white/30 transition-colors duration-150 hover:text-white">
+                                    <i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Username (без @)</label>
+                                <div class="relative">
+                                    <i data-lucide="at-sign" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="text" name="telegram_bot_username" value="{{ settings.telegram_bot_username or '' }}" required autocomplete="off"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">ID администратора</label>
+                                <div class="relative">
+                                    <i data-lucide="id-card" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="text" name="admin_telegram_id" value="{{ settings.admin_telegram_id or '' }}" required autocomplete="off"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                                <p class="mt-1.5 text-[11px] text-white/40">Укажите ID администратора: <code class="rounded bg-white/[0.04] px-1 font-mono tabular-nums text-white/60">5655651566</code></p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]" hidden>
+                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                            <i data-lucide="headset" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <h3 class="text-sm font-semibold tracking-tight text-white">Support-бот</h3>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-4 p-3 sm:p-4">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">Токен support-бота</label>
+                            <div class="relative">
+                                <i data-lucide="key-round" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                <input type="password" name="support_bot_token" id="bot_token_support" value="{{ settings.support_bot_token or '' }}" autocomplete="new-password"
+                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-10 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <button type="button" onclick="togglePasswordVisibility('bot_token_support')" aria-label="Показать токен"
+                                    class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-white/30 transition-colors duration-150 hover:text-white">
+                                    <i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">Username (без @)</label>
+                                <div class="relative">
+                                    <i data-lucide="at-sign" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="text" name="support_bot_username" value="{{ settings.support_bot_username or '' }}" autocomplete="off"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-white/60">ID саппорт-чата</label>
+                                <div class="relative">
+                                    <i data-lucide="messages-square" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+                                    <input type="text" name="support_forum_chat_id" value="{{ settings.support_forum_chat_id or '' }}" autocomplete="off"
+                                        class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                </div>
+                                <p class="mt-1.5 text-[11px] text-white/40">Укажите ID темы (forum-чата): <code class="rounded bg-white/[0.04] px-1 font-mono tabular-nums text-white/60">-1003955999510</code>. Бот должен быть администратором чата.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="tab-payments" class="tab-content hidden">
+        <div class="space-y-3">
+            <div class="flex flex-wrap items-end justify-between gap-3 px-1 pt-1">
+                <div class="min-w-0">
+                    <h2 class="text-xl font-semibold tracking-tight text-white">Платёжные системы</h2>
+                    <p class="mt-0.5 text-xs text-white/45">Методы оплаты и параметры транзакций</p>
+                </div>
+            </div>
+
+            <section class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <header class="relative flex min-h-[44px] items-center gap-2 border-b border-white/[0.08] px-3 py-2">
+                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                        <i data-lucide="sliders-horizontal" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                    </span>
+                    <h3 class="text-xs font-semibold tracking-tight text-white">Данные и общие настройки</h3>
+                    <span class="ml-auto hidden text-[10px] text-white/35 sm:block">Комментарии к платежам</span>
+                </header>
+                <div class="relative grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {% for field, label in [('id', 'ID пользователя'), ('username', 'Username'), ('first_name', 'Имя'), ('host_name', 'Хост')] %}
+                    <label class="flex h-9 cursor-pointer items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 transition-colors duration-150 hover:border-white/20">
+                        <span class="truncate text-[11px] font-medium text-white/70">{{ label }}</span>
+                        <span class="relative inline-flex shrink-0 items-center">
+                            <input type="hidden" name="pay_info_{{ field }}" value="0" />
+                            <input type="checkbox" name="pay_info_{{ field }}" value="1" data-field="{{ field }}" {% if pay_info[field]==1 %}checked{% endif %} class="peer sr-only pay-info-toggle" />
+                            <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                            <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                        </span>
+                    </label>
+                    {% endfor %}
+                    <label class="flex h-9 cursor-pointer items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 transition-colors duration-150 hover:border-white/20 sm:col-span-2 xl:col-span-4">
+                        <span class="flex min-w-0 items-center gap-2">
+                            <i data-lucide="mail-x" class="h-3.5 w-3.5 shrink-0 text-white/35" aria-hidden="true"></i>
+                            <span class="truncate text-[11px] font-medium text-white/70">Пропускать ввод email</span>
+                            <span class="hidden truncate text-[10px] text-white/35 sm:block">— пользователи сразу переходят к выбору оплаты</span>
+                        </span>
+                        <span class="relative inline-flex shrink-0 items-center">
+                            <input type="hidden" name="skip_email" value="0" />
+                            <input type="checkbox" name="skip_email" value="1" id="skip_email" {% if settings.skip_email=='1' %}checked{% endif %} class="peer sr-only" />
+                            <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                            <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                        </span>
+                    </label>
+                </div>
+            </section>
+
+            <div id="payments-layout" class="grid grid-cols-1 gap-3 xl:grid-cols-[210px_minmax(0,1fr)]">
+                <aside class="flex gap-1 overflow-x-auto rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1.5 xl:h-fit xl:flex-col xl:overflow-visible">
+                    {% set pay_systems = [
+                        {'id': 'yookassa', 'label': 'YooKassa', 'icon': 'landmark', 'on': settings.yookassa_enabled=='true' or settings.sbp_enabled=='true'},
+                        {'id': 'heleket', 'label': 'Heleket', 'icon': 'coins', 'on': settings.heleket_enabled=='true'},
+                        {'id': 'rollypay', 'label': 'RollyPay', 'icon': 'qr-code', 'on': settings.rollypay_enabled=='true'},
+                        {'id': 'platega', 'label': 'Platega', 'icon': 'credit-card', 'on': settings.platega_enabled=='true' or settings.platega_payform_enabled=='true' or settings.platega_crypto_enabled=='true'},
+                        {'id': 'tonconnect', 'label': 'TON Connect', 'icon': 'wallet', 'on': settings.tonconnect_enabled=='true'},
+                        {'id': 'stars', 'label': 'Telegram Stars', 'icon': 'star', 'on': settings.stars_enabled=='true'},
+                        {'id': 'cryptobot', 'label': 'CryptoBot', 'icon': 'bitcoin', 'on': settings.cryptobot_enabled=='true'},
+                        {'id': 'yoomoney', 'label': 'YooMoney', 'icon': 'banknote', 'on': settings.yoomoney_enabled=='true'}
+                    ] %}
+                    {% for sys in pay_systems %}
+                    <button type="button" data-pay-tab="{{ sys.id }}" class="pay-tab flex shrink-0 items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                        <i data-lucide="{{ sys.icon }}" class="h-3.5 w-3.5 shrink-0 text-white/40" aria-hidden="true"></i>
+                        <span class="pay-tab-label truncate text-[11px] font-medium text-white/55">{{ sys.label }}</span>
+                        <span data-pay-dot="{{ sys.id }}" class="ml-auto h-1.5 w-1.5 shrink-0 rounded-full {{ 'bg-emerald-400' if sys.on else 'bg-white/15' }}"></span>
+                    </button>
+                    {% endfor %}
+                </aside>
+                <div id="payments-panels" class="min-w-0 space-y-3">
+                    <section data-pay-panel="yookassa" class="pay-panel relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                        <header class="relative flex min-h-[44px] items-center justify-between gap-2 border-b border-white/[0.08] px-3 py-2">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                                    <i data-lucide="landmark" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                </span>
+                                <h3 class="truncate text-xs font-semibold tracking-tight text-white">YooKassa</h3>
+                            </div>
+                        <div class="flex shrink-0 items-center gap-3">
+                            <div class="flex items-center gap-1.5">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="yookassa_enabled" value="false" />
+                                    <input type="checkbox" name="yookassa_enabled" value="true" id="yookassa_enabled" {% if settings.yookassa_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Вкл</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="sbp_enabled" value="false" />
+                                    <input type="checkbox" name="sbp_enabled" value="true" id="sbp_enabled" {% if settings.sbp_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">СБП</span>
+                            </div>
+                        </div>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-2.5 p-3">
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">Почта для чеков</label>
+                            <input type="email" name="receipt_email" value="{{ settings.receipt_email or '' }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">Shop ID</label>
+                                <input type="text" name="yookassa_shop_id" value="{{ settings.yookassa_shop_id or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">Secret Key</label>
+                                <input type="password" name="yookassa_secret_key" value="{{ settings.yookassa_secret_key or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">Webhook URL (notification_url)</label>
+                                <input type="text" name="yookassa_webhook_url" value="{{ settings.yookassa_webhook_url or '' }}" placeholder="https://domain.com:8443/yookassa-webhook"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 font-mono text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <p class="mt-1 text-[10px] leading-relaxed text-white/35">Передаётся в API YooKassa при создании платежа. Если пусто — берётся URL из личного кабинета.</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 border-t border-white/[0.06] pt-2.5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <span class="flex min-w-0 items-center gap-1.5">
+                                    <i data-lucide="globe" class="h-3.5 w-3.5 shrink-0 text-white/35" aria-hidden="true"></i>
+                                    <span class="truncate text-[11px] font-medium text-white/70">Прокси для API</span>
+                                </span>
+                                <div class="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-white/[0.08] bg-black/30 p-0.5" role="radiogroup" aria-label="Тип добавляемого прокси">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="yk_proxy_scheme" value="auto" class="peer sr-only" checked />
+                                        <span class="block rounded-md px-2 py-1 text-[10px] font-medium text-white/50 transition-colors duration-150 hover:text-white/80 peer-checked:bg-white/10 peer-checked:text-white">Авто</span>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="yk_proxy_scheme" value="http" class="peer sr-only" />
+                                        <span class="block rounded-md px-2 py-1 text-[10px] font-medium text-white/50 transition-colors duration-150 hover:text-white/80 peer-checked:bg-white/10 peer-checked:text-white">HTTP</span>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="yk_proxy_scheme" value="socks5" class="peer sr-only" />
+                                        <span class="block rounded-md px-2 py-1 text-[10px] font-medium text-white/50 transition-colors duration-150 hover:text-white/80 peer-checked:bg-white/10 peer-checked:text-white">SOCKS5</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-1.5 sm:flex-row">
+                                <textarea id="yk-proxy-input" rows="2" placeholder="login:password@1.2.3.4:1080&#10;1.2.3.4:1080&#10;socks5://login:password@1.2.3.4:1080"
+                                    class="w-full resize-y rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 font-mono text-[10px] leading-relaxed text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"></textarea>
+                                <button type="button" id="yk-proxy-add-btn"
+                                    class="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1.5 text-[10px] font-medium text-emerald-300 transition-colors duration-150 hover:border-emerald-400/30 hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 sm:w-24 sm:self-end">
+                                    <i data-lucide="plus" class="h-3 w-3" aria-hidden="true"></i>
+                                    Добавить
+                                </button>
+                            </div>
+                            <p class="text-[10px] leading-relaxed text-white/30">Форматы: <span class="font-mono">login:pass@ip:port</span>, <span class="font-mono">ip:port</span>, <span class="font-mono">ip:port:login:pass</span>, <span class="font-mono">socks5://</span>, <span class="font-mono">http://</span>, <span class="font-mono">tg://socks?server=…</span>. Один прокси на строку.</p>
+                            <div id="yookassa-proxy-list" class="space-y-1.5"></div>
+                            <div id="yookassa-proxy-empty" class="hidden rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5 text-center">
+                                <p class="text-[10px] text-white/35">Прокси не добавлены — запросы идут напрямую</p>
+                            </div>
+                        </div>
+                        <div class="mt-auto flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5">
+                            <span class="shrink-0 text-[10px] font-medium text-white/35">Webhook</span>
+                            <span class="truncate font-mono text-[10px] text-emerald-300/80 webhook-display" data-endpoint="/yookassa-webhook"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-pay-panel="heleket" class="pay-panel relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    <header class="relative flex min-h-[44px] items-center justify-between gap-2 border-b border-white/[0.08] px-3 py-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="coins" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="truncate text-xs font-semibold tracking-tight text-white">Heleket</h3>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1.5">
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input type="hidden" name="heleket_enabled" value="false" />
+                                <input type="checkbox" name="heleket_enabled" value="true" id="heleket_enabled" {% if settings.heleket_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                            </label>
+                            <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Вкл</span>
+                        </div>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-2.5 p-3">
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">Merchant ID</label>
+                                <input type="text" name="heleket_merchant_id" value="{{ settings.heleket_merchant_id or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">API Key</label>
+                                <input type="password" name="heleket_api_key" value="{{ settings.heleket_api_key or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">Ваш домен</label>
+                            <input type="text" name="domain" value="{{ settings.domain or '' }}" placeholder="my-shop.com"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        <div class="mt-auto flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5">
+                            <span class="shrink-0 text-[10px] font-medium text-white/35">Webhook</span>
+                            <span class="truncate font-mono text-[10px] text-emerald-300/80 webhook-display" data-endpoint="/heleket-webhook"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-pay-panel="rollypay" class="pay-panel relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    <header class="relative flex min-h-[44px] flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-white/[0.08] px-3 py-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="qr-code" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="truncate text-xs font-semibold tracking-tight text-white">RollyPay</h3>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                            <div class="flex items-center gap-1.5">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="rollypay_enabled" value="false" />
+                                    <input type="checkbox" name="rollypay_enabled" value="true" id="rollypay_enabled" {% if settings.rollypay_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Вкл</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="rollypay_test_mode" value="false" />
+                                    <input type="checkbox" name="rollypay_test_mode" value="true" id="rollypay_test_mode" {% if settings.rollypay_test_mode=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-amber-300 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Тест</span>
+                            </div>
+                        </div>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-2.5 p-3">
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">API Key</label>
+                                <input type="password" name="rollypay_api_key" value="{{ settings.rollypay_api_key or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 font-mono text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">Signing Secret</label>
+                                <input type="password" name="rollypay_signing_secret" value="{{ settings.rollypay_signing_secret or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 font-mono text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                        </div>
+                        <p class="text-[10px] leading-relaxed text-white/35">Ключи выдаются при создании кассы. Signing Secret нужен для проверки подписи вебхуков — адрес для кассы указан в строке «Webhook».</p>
+                        <div class="mt-auto flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5">
+                            <span class="shrink-0 text-[10px] font-medium text-white/35">Webhook</span>
+                            <span class="truncate font-mono text-[10px] text-emerald-300/80 webhook-display" data-endpoint="/rollypay-webhook"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-pay-panel="platega" class="pay-panel relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    <header class="relative flex min-h-[44px] flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-white/[0.08] px-3 py-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="credit-card" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="truncate text-xs font-semibold tracking-tight text-white">Platega</h3>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                            <div class="flex items-center gap-1.5">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="platega_payform_enabled" value="false" />
+                                    <input type="checkbox" name="platega_payform_enabled" value="true" id="platega_payform_enabled" {% if settings.platega_payform_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Pay-form</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="platega_enabled" value="false" />
+                                    <input type="checkbox" name="platega_enabled" value="true" id="platega_enabled" {% if settings.platega_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">СБП</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <label class="relative inline-flex cursor-pointer items-center">
+                                    <input type="hidden" name="platega_crypto_enabled" value="false" />
+                                    <input type="checkbox" name="platega_crypto_enabled" value="true" id="platega_crypto_enabled" {% if settings.platega_crypto_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                                </label>
+                                <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Крипта</span>
+                            </div>
+                        </div>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-2.5 p-3">
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">Merchant ID</label>
+                                <input type="text" name="platega_merchant_id" value="{{ settings.platega_merchant_id or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">API Key</label>
+                                <input type="password" name="platega_api_key" value="{{ settings.platega_api_key or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                        </div>
+                        <div class="mt-auto flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5">
+                            <span class="shrink-0 text-[10px] font-medium text-white/35">Webhook</span>
+                            <span class="truncate font-mono text-[10px] text-emerald-300/80 webhook-display" data-endpoint="/platega-webhook"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-pay-panel="tonconnect" class="pay-panel relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    <header class="relative flex min-h-[44px] items-center justify-between gap-2 border-b border-white/[0.08] px-3 py-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="wallet" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="truncate text-xs font-semibold tracking-tight text-white">TonConnect</h3>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1.5">
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input type="hidden" name="tonconnect_enabled" value="false" />
+                                <input type="checkbox" name="tonconnect_enabled" value="true" id="tonconnect_enabled" {% if settings.tonconnect_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                            </label>
+                            <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Вкл</span>
+                        </div>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-2.5 p-3">
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">Ton Wallet Address</label>
+                                <input type="text" name="ton_wallet_address" value="{{ settings.ton_wallet_address or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 font-mono text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-[11px] font-medium text-white/55">TonAPI Key</label>
+                                <input type="password" name="tonapi_key" value="{{ settings.tonapi_key or '' }}"
+                                    class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                        </div>
+                        <div class="mt-auto flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5">
+                            <span class="shrink-0 text-[10px] font-medium text-white/35">Webhook</span>
+                            <span class="truncate font-mono text-[10px] text-emerald-300/80 webhook-display" data-endpoint="/ton-webhook"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-pay-panel="stars" class="pay-panel relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    <header class="relative flex min-h-[44px] items-center justify-between gap-2 border-b border-white/[0.08] px-3 py-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="star" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="truncate text-xs font-semibold tracking-tight text-white">Telegram Stars</h3>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1.5">
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input type="hidden" name="stars_enabled" value="false" />
+                                <input type="checkbox" name="stars_enabled" value="true" id="stars_enabled" {% if settings.stars_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                            </label>
+                            <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Вкл</span>
+                        </div>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-2.5 p-3">
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">Коэффициент (⭐ за 1 RUB)</label>
+                            <input type="number" step="0.01" name="stars_per_rub" value="{{ settings.stars_per_rub or '1' }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            <p class="mt-1 text-[10px] text-white/35">Пример: 2.5 = 2.5 звезды за 1 RUB</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section data-pay-panel="cryptobot" class="pay-panel relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    <header class="relative flex min-h-[44px] items-center justify-between gap-2 border-b border-white/[0.08] px-3 py-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                                <i data-lucide="bitcoin" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            </span>
+                            <h3 class="truncate text-xs font-semibold tracking-tight text-white">CryptoBot</h3>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1.5">
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input type="hidden" name="cryptobot_enabled" value="false" />
+                                <input type="checkbox" name="cryptobot_enabled" value="true" id="cryptobot_enabled" {% if settings.cryptobot_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                                <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                                <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                            </label>
+                            <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Вкл</span>
+                        </div>
+                    </header>
+                    <div class="relative flex flex-1 flex-col gap-2.5 p-3">
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">CryptoBot Token</label>
+                            <input type="password" name="cryptobot_token" value="{{ settings.cryptobot_token or '' }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        <div class="mt-auto flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5">
+                            <span class="shrink-0 text-[10px] font-medium text-white/35">Webhook</span>
+                            <span class="truncate font-mono text-[10px] text-emerald-300/80 webhook-display" data-endpoint="/cryptobot-webhook"></span>
+                        </div>
+                    </div>
+                </section>
+
+            <section data-pay-panel="yoomoney" class="pay-panel relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                <header class="relative flex min-h-[44px] items-center justify-between gap-2 border-b border-white/[0.08] px-3 py-2">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-400/[0.08] text-emerald-300">
+                            <i data-lucide="wallet" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                        </span>
+                        <h3 class="truncate text-xs font-semibold tracking-tight text-white">YooMoney (кошелёк)</h3>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1.5">
+                        <label class="relative inline-flex cursor-pointer items-center">
+                            <input type="hidden" name="yoomoney_enabled" value="false" />
+                            <input type="checkbox" name="yoomoney_enabled" value="true" id="yoomoney_enabled" {% if settings.yoomoney_enabled=='true' %}checked{% endif %} class="peer sr-only" />
+                            <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                            <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                        </label>
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Вкл</span>
+                    </div>
+                </header>
+                <div class="relative space-y-2.5 p-3">
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">Номер кошелька</label>
+                            <input type="text" name="yoomoney_wallet" value="{{ settings.yoomoney_wallet or '' }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">Секрет HTTP-уведомлений</label>
+                            <input type="password" name="yoomoney_secret" value="{{ settings.yoomoney_secret or '' }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">API Token (OAuth)</label>
+                            <input type="password" name="yoomoney_api_token" value="{{ settings.yoomoney_api_token or '' }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">Client ID</label>
+                            <input type="text" name="yoomoney_client_id" value="{{ settings.yoomoney_client_id or '' }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">Client Secret</label>
+                            <input type="password" name="yoomoney_client_secret" value="{{ settings.yoomoney_client_secret or '' }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-[11px] font-medium text-white/55">Redirect URI</label>
+                            <input type="url" name="yoomoney_redirect_uri" value="{{ settings.yoomoney_redirect_uri or '' }}" placeholder="https://..."
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1.5 border-t border-white/[0.06] pt-2.5">
+                        <a href="{{ url_for('yoomoney_connect_route') }}"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-300 transition-colors duration-150 hover:border-emerald-400/30 hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">
+                            <i data-lucide="link" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            Подключить OAuth
+                        </a>
+                        <button type="submit" formmethod="post" formaction="{{ url_for('yoomoney_check_route') }}"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-white/70 transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                            <i data-lucide="shield-check" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                            Проверить токен
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                        <div class="flex min-w-0 items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5">
+                            <span class="shrink-0 text-[10px] font-medium text-white/35">Webhook</span>
+                            <span class="truncate font-mono text-[10px] text-emerald-300/80">{{ base_url }}/yoomoney-webhook</span>
+                        </div>
+                        <div class="flex min-w-0 items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5">
+                            <span class="shrink-0 text-[10px] font-medium text-white/35">Callback</span>
+                            <span class="truncate font-mono text-[10px] text-emerald-300/80">{{ base_url }}/yoomoney/callback</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</form>
+
+<form action="{{ url_for('settings_page') }}" method="post" id="settings-form-part2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="next_hash" id="settings-next-hash-part2" value="referrals" />
+    <input type="hidden" name="full_settings_form2" value="1" />
+
+    <section id="tab-referrals" class="tab-content hidden">
+        <div class="space-y-3">
+            <div class="flex flex-wrap items-end justify-between gap-3 px-1 pt-1">
+                <div class="min-w-0">
+                    <h2 class="text-xl font-semibold tracking-tight text-white">Реферальная система</h2>
+                    <p class="mt-0.5 text-xs text-white/45">Условия партнёрской программы</p>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                    <span class="text-[10px] font-medium uppercase tracking-wider text-white/40">Статус</span>
+                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                        <input type="hidden" name="enable_referrals" value="false" />
+                        <input type="checkbox" name="enable_referrals" value="true" id="enable_referrals" {% if settings.enable_referrals=='true' %}checked{% endif %} class="peer sr-only" />
+                        <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                        <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <section class="relative min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    
+                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                            <i data-lucide="coins" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <h3 class="text-sm font-semibold tracking-tight text-white">Логика вознаграждения</h3>
+                    </header>
+                    <div class="settings-section-body relative">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">Тип начисления</label>
+                            <div class="soft-select" data-target="referral_reward_type">
+                                <button type="button" id="referral_reward_type_toggle"
+                                    class="soft-select-toggle flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-left text-xs font-medium text-white outline-none transition-colors duration-150 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-white/40">
+                                    <span class="soft-select-text min-w-0 truncate">{% set ref_type = settings.referral_reward_type or 'percent_purchase' %}{% if ref_type == 'percent_purchase' %}Процент с покупки{% elif ref_type == 'fixed_purchase' %}Фиксированная сумма{% elif ref_type == 'fixed_start_referrer' %}Бонус за старт{% endif %}</span>
+                                    <i data-lucide="chevron-down" class="h-4 w-4 shrink-0 text-white/40" aria-hidden="true"></i>
+                                </button>
+                                <div class="soft-select-menu" id="referral_reward_type_menu"></div>
+                                <select name="referral_reward_type" id="referral_reward_type" class="hidden">
+                                    <option value="percent_purchase" {% if (settings.referral_reward_type or 'percent_purchase')=='percent_purchase' %}selected{% endif %}>Процент с покупки реферала</option>
+                                    <option value="fixed_purchase" {% if settings.referral_reward_type=='fixed_purchase' %}selected{% endif %}>Фиксированная сумма за покупку</option>
+                                    <option value="fixed_start_referrer" {% if settings.referral_reward_type=='fixed_start_referrer' %}selected{% endif %}>Бонус пригласившему при старте</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">Мин. сумма вывода</label>
+                            <div class="relative">
+                                <input type="number" name="minimum_withdrawal" value="{{ settings.minimum_withdrawal or '10' }}"
+                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-3 pr-12 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-wider text-white/40">RUB</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="relative min-w-0 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                    
+                    <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                            <i data-lucide="trending-up" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <h3 class="text-sm font-semibold tracking-tight text-white">Параметры и бонусы</h3>
+                    </header>
+                    <div class="settings-section-body relative">
+                        <div data-ref-section="percent_purchase">
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">Процент рефереру</label>
+                            <div class="relative">
+                                <input type="number" name="referral_percentage" value="{{ settings.referral_percentage or '10' }}"
+                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-3 pr-9 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-white/40">%</span>
+                            </div>
+                        </div>
+                        <div data-ref-section="fixed_purchase">
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">Бонус за оплату</label>
+                            <div class="relative">
+                                <input type="number" step="0.01" name="fixed_referral_bonus_amount" value="{{ settings.fixed_referral_bonus_amount or '50' }}"
+                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-3 pr-12 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-wider text-white/40">RUB</span>
+                            </div>
+                        </div>
+                        <div data-ref-section="fixed_start_referrer">
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">Бонус за запуск</label>
+                            <div class="relative">
+                                <input type="number" step="0.01" name="referral_on_start_referrer_amount" value="{{ settings.referral_on_start_referrer_amount or '20' }}"
+                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-3 pr-12 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-wider text-white/40">RUB</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">Скидка рефералу</label>
+                            <div class="relative">
+                                <input type="number" name="referral_discount" value="{{ settings.referral_discount or '5' }}"
+                                    class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-3 pr-9 text-xs tabular-nums text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-white/40">%</span>
+                            </div>
+                            <p class="mt-1.5 text-[11px] text-white/40">Скидка новому пользователю на первую покупку</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <input type="hidden" id="enable_fixed_referral_bonus" name="enable_fixed_referral_bonus"
+                value="{% if settings.enable_fixed_referral_bonus == 'true' %}true{% else %}false{% endif %}" />
+        </div>
+    </section>
+
+    <section id="tab-content" class="tab-content hidden">
+        <div class="space-y-3">
+            <div class="flex flex-wrap items-end justify-between gap-3 px-1 pt-1">
+                <div class="min-w-0">
+                    <h2 class="text-xl font-semibold tracking-tight text-white">Контент</h2>
+                    <p class="mt-0.5 text-xs text-white/45">Ссылки, кнопки и названия способов оплаты</p>
+                </div>
+            </div>
+            <div class="set-split" data-sections="content">
+                <aside class="set-nav" data-sections-nav role="tablist" aria-label="Разделы контента"></aside>
+                <div class="set-body" data-sections-panes>
+            <section class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+                
+                <header class="relative flex min-h-[52px] flex-col gap-2 border-b border-white/[0.08] p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300">
+                            <i data-lucide="link" class="h-4 w-4" aria-hidden="true"></i>
+                        </span>
+                        <h3 class="text-sm font-semibold tracking-tight text-white" data-nav-label="Ссылки">Внешние ссылки и доступ</h3>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <span class="text-[11px] font-medium uppercase tracking-wider text-white/50">Обязательная подписка</span>
+                        <label class="relative inline-flex cursor-pointer items-center">
+                            <input type="hidden" name="force_subscription" value="false" />
+                            <input type="checkbox" name="force_subscription" value="true" id="force_subscription" {% if settings.force_subscription=='true' %}checked{% endif %} class="peer sr-only" />
+                            <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                            <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                        </label>
+                    </div>
+                </header>
+                <div class="relative p-3 sm:p-4">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        {% for field in [
+                        {'n': 'support_user', 'l': 'URL поддержки', 'p': 'https://t.me/support'},
+                        {'n': 'channel_url', 'l': 'Телеграм канал', 'p': 'https://t.me/channel'},
+                        {'n': 'terms_url', 'l': 'Условия (Terms)', 'p': ''},
+                        {'n': 'privacy_url', 'l': 'Приватность', 'p': ''}
+                        ] %}
+                        <div>
+                            <label class="mb-1.5 block text-xs font-medium text-white/60">{{ field.l }}</label>
+                            <input type="text" name="{{ field.n }}" value="{{ settings[field.n] or '' }}" placeholder="{{ field.p }}"
+                                class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]" hidden>
+                <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/[0.08] text-emerald-300">
+                        <i data-lucide="wallet" class="h-4 w-4" aria-hidden="true"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-semibold tracking-tight text-white" data-nav-label="Кнопки оплаты">Названия кнопок оплаты</h3>
+                        <p class="text-xs text-white/60">Как способы оплаты подписаны в боте</p>
+                    </div>
+                </header>
+                <div class="relative p-3 sm:p-4">
+                    <div class="grid grid-cols-1 gap-2 xl:grid-cols-2">
+                        {% for pm in [
+                        {'m': 'balance', 'l': 'Баланс', 'p': '💼 Оплатить с баланса'},
+                        {'m': 'yookassa', 'l': 'YooKassa', 'p': '🏦 СБП / Банковская карта'},
+                        {'m': 'platega_payform', 'l': 'Platega Pay-form', 'p': '💳 Platega'},
+                        {'m': 'platega', 'l': 'Platega СБП', 'p': '💳 СБП / Platega'},
+                        {'m': 'platega_crypto', 'l': 'Platega Crypto', 'p': '🪙 Crypto / Platega'},
+                        {'m': 'rollypay', 'l': 'RollyPay', 'p': '🏦 СБП / RollyPay'},
+                        {'m': 'cryptobot', 'l': 'CryptoBot', 'p': '💎 Криптовалюта'},
+                        {'m': 'heleket', 'l': 'Heleket', 'p': '💎 Криптовалюта'},
+                        {'m': 'tonconnect', 'l': 'TON Connect', 'p': '🪙 TON Connect'},
+                        {'m': 'stars', 'l': 'Telegram Stars', 'p': '⭐ Telegram Stars'},
+                        {'m': 'yoomoney', 'l': 'YooMoney', 'p': '💜 ЮMoney (кошелёк)'}
+                        ] %}
+                        <div class="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-2.5 py-2">
+                            <span class="w-28 shrink-0 truncate text-[11px] font-medium text-white/60" title="{{ pm.l }}">{{ pm.l }}</span>
+                            <input type="text" name="payment_button_{{ pm.m }}_text" value="{{ settings['payment_button_' ~ pm.m ~ '_text'] or '' }}" placeholder="{{ pm.p }}"
+                                class="min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            <input type="text" name="payment_button_{{ pm.m }}_icon_emoji_id" value="{{ settings['payment_button_' ~ pm.m ~ '_icon_emoji_id'] or '' }}" placeholder="Emoji ID"
+                                class="w-32 shrink-0 rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 font-mono text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <p class="mt-2 text-[10px] leading-relaxed text-white/40">Пустое поле — стандартное название кнопки. Emoji ID — премиум-эмодзи для иконки.</p>
+                </div>
+            </section>
+
+            <section class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]" hidden>
+                <header class="relative flex min-h-[52px] items-center gap-2 border-b border-white/[0.08] p-3 sm:p-4">
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-400/[0.08] text-violet-300">
+                        <i data-lucide="circle-dot" class="h-4 w-4" aria-hidden="true"></i>
+                    </span>
+                    <h3 class="text-sm font-semibold tracking-tight text-white" data-nav-label="Кнопки меню">Тексты кнопок меню</h3>
+                </header>
+                <div class="relative p-3 sm:p-4">
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                        {% for f in [
+                        {'n': 'btn_trial_text', 'b': 'btn_trial', 'l': 'Пробный', 'p': '🎁 Пробный'},
+                        {'n': 'btn_profile_text', 'b': 'btn_profile', 'l': 'Профиль', 'p': '👤 Профиль'},
+                        {'n': 'btn_my_keys_text', 'b': 'btn_my_keys', 'l': 'Ключи', 'p': '🔑 Ключи'},
+                        {'n': 'btn_buy_key_text', 'b': 'btn_buy_key', 'l': 'Купить', 'p': '🛒 Купить'},
+                        {'n': 'btn_topup_text', 'b': 'btn_topup', 'l': 'Баланс', 'p': '💳 Баланс'},
+                        {'n': 'btn_referral_text', 'b': 'btn_referral', 'l': 'Рефералы', 'p': '🤝 Рефералы'},
+                        {'n': 'btn_support_text', 'b': 'btn_support', 'l': 'Помощь', 'p': '🆘 Помощь'},
+                        {'n': 'btn_about_text', 'b': 'btn_about', 'l': 'О боте', 'p': 'ℹ️ О боте'},
+                        {'n': 'btn_howto_text', 'b': 'btn_howto', 'l': 'FAQ', 'p': '❓ Помощь'},
+                        {'n': 'btn_speed_text', 'b': 'btn_speed', 'l': 'Скорость', 'p': '⚡ Скорость'},
+                        {'n': 'btn_admin_text', 'b': 'btn_admin', 'l': 'Админ', 'p': '⚙️ Админ'},
+                        {'n': 'btn_back_to_menu_text', 'b': 'btn_back_to_menu', 'l': 'Назад в меню', 'p': '⬅️ Назад в меню'},
+                        {'n': 'btn_main_menu_text', 'b': 'btn_main_menu', 'l': 'Главное меню', 'p': '🏠 Главное меню'}
+                        ] %}
+                        <div class="space-y-1.5 rounded-xl border border-white/[0.06] bg-black/20 p-2">
+                            <label class="block truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40" title="{{ f.l }}">{{ f.l }}</label>
+                            <input type="text" name="{{ f.n }}" value="{{ settings[f.n] or '' }}" placeholder="{{ f.p }}"
+                                class="w-full rounded-lg border border-white/[0.08] bg-black/30 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            {% if f.b == 'btn_main_menu' %}
+                            <p class="text-[10px] leading-tight text-white/40">Кнопка под полем ввода</p>
+                            {% else %}
+                            <div class="flex items-center gap-2">
+                                <div class="flex shrink-0 items-center gap-0.5">
+                                    {% set cur_style = settings[f.b ~ '_button_style'] or '' %}
+                                    {% for val, name, dot in [('', 'Без цвета', ''), ('danger', 'Красный', 'bg-[#f87171]'), ('success', 'Зелёный', 'bg-[#34d399]'), ('primary', 'Синий', 'bg-[#7dd3fc]')] %}
+                                    <label class="flex cursor-pointer">
+                                        <input type="radio" name="{{ f.b }}_button_style" value="{{ val }}" class="peer sr-only" aria-label="{{ name }}" {% if cur_style == val %}checked{% endif %} />
+                                        <span title="{{ name }}" class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 transition-colors duration-150 hover:border-white/30 peer-checked:border-emerald-400 peer-checked:bg-emerald-400/[0.12]">
+                                            {% if val == '' %}
+                                            <span class="block h-[2px] w-2.5 rounded-full bg-white/40"></span>
+                                            {% else %}
+                                            <span class="block h-3.5 w-3.5 rounded-full {{ dot }}"></span>
+                                            {% endif %}
+                                        </span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <input type="text" name="{{ f.b }}_icon_emoji_id" value="{{ settings[f.b ~ '_icon_emoji_id'] or '' }}" placeholder="Emoji ID" title="Emoji ID"
+                                    class="h-6 min-w-0 flex-1 rounded-md border border-white/[0.08] bg-black/30 px-2 font-mono text-[10px] text-white placeholder:text-white/30 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+                </div>
+            </div>
+
+        </div>
+    </section>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    const initializedSettingsTabs = new Set();
+    const settingsCsrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+
+    document.addEventListener('DOMContentLoaded', () => { initGlobalLogic(); initInteractiveElements(); });
+
+    function initSettingsTab(tabId) {
+        if (initializedSettingsTabs.has(tabId)) return;
+        initializedSettingsTabs.add(tabId);
+
+        if (window.initSoftSelect) {
+            if (tabId === 'panel') {
+                window.initSoftSelect('existing_backup', '— Выберите архив —');
+                window.initSoftSelect('trial_host_id', 'Выборочно (пользователь выбирает)');
+                window.initSoftSelect('trial_traffic_strategy', 'Не сбрасывать');
+                window.initSoftSelect('dashboard_layout', 'Sidebar');
+            } else if (tabId === 'referrals') {
+                window.initSoftSelect('referral_reward_type', 'Выберите тип начисления...');
+            }
+        }
+
+        if (tabId === 'payments') {
+            initPaymentTabs();
+            initYookassaProxies();
+            return;
+        }
+
+        const root = document.querySelector('#tab-' + tabId + ' [data-sections]');
+        if (root) initSettingsSections(root);
+    }
+
+    function initGlobalLogic() {
+        const tabs = document.querySelectorAll('.tab-btn'), contents = document.querySelectorAll('.tab-content');
+        const hashInput = document.getElementById('settings-next-hash'), hashInput2 = document.getElementById('settings-next-hash-part2');
+
+        function switchTab(tabId) {
+            initSettingsTab(tabId);
+            tabs.forEach(btn => btn.setAttribute('aria-selected', String(btn.dataset.tab === tabId)));
+            contents.forEach(content => content.classList.toggle('hidden', content.id !== 'tab-' + tabId));
+            if (hashInput) hashInput.value = tabId;
+            if (hashInput2) hashInput2.value = tabId;
+            history.replaceState(null, '', '#' + tabId);
+        }
+
+        tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+        switchTab(location.hash.slice(1) || 'panel');
+    }
+
+    function initSettingsSections(root) {
+        const nav = root.querySelector('[data-sections-nav]');
+        const body = root.querySelector('[data-sections-panes]');
+        if (!nav || !body) return;
+
+        const panes = Array.from(body.querySelectorAll('section')).filter(pane => pane.querySelector(':scope > header h3'));
+        if (panes.length < 2) return;
+
+        const grids = Array.from(body.children).filter(child => child.classList.contains('grid'));
+        const navFragment = document.createDocumentFragment();
+        let activeId = '';
+        let needsIconRefresh = false;
+
+        const buttons = panes.map((pane, index) => {
+            const header = pane.querySelector(':scope > header');
+            const heading = header.querySelector('h3');
+            const label = (heading.dataset.navLabel || heading.textContent || '').trim();
+
+            pane.classList.add('set-pane');
+            pane.id = 'set-pane-' + root.dataset.sections + '-' + index;
+            pane.setAttribute('role', 'tabpanel');
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'set-nav-btn';
+            btn.setAttribute('role', 'tab');
+            btn.setAttribute('aria-controls', pane.id);
+            btn.dataset.pane = pane.id;
+
+            const iconBox = document.createElement('span');
+            iconBox.className = 'set-nav-ico';
+            const svgSource = header.querySelector('span svg');
+            if (svgSource) {
+                iconBox.appendChild(svgSource.cloneNode(true));
+            } else {
+                const iconHolder = header.querySelector('span [data-lucide]');
+                const iconName = iconHolder ? iconHolder.getAttribute('data-lucide') : '';
+                if (iconName) {
+                    const icon = document.createElement('i');
+                    icon.setAttribute('data-lucide', iconName);
+                    iconBox.appendChild(icon);
+                    needsIconRefresh = true;
+                }
+            }
+
+            const text = document.createElement('span');
+            text.className = 'set-nav-text';
+            text.textContent = label;
+
+            btn.append(iconBox, text);
+            btn.addEventListener('click', () => activate(pane.id));
+            navFragment.appendChild(btn);
+            return btn;
+        });
+
+        function activate(id) {
+            if (activeId === id) return;
+            activeId = id;
+            panes.forEach(pane => {
+                const isActive = pane.id === id;
+                pane.hidden = !isActive;
+                pane.classList.toggle('is-entering', isActive);
+            });
+            grids.forEach(grid => {
+                grid.hidden = !Array.from(grid.children).some(pane => pane.classList.contains('set-pane') && !pane.hidden);
+            });
+            buttons.forEach(btn => {
+                const isActive = btn.dataset.pane === id;
+                btn.classList.toggle('is-active', isActive);
+                btn.setAttribute('aria-selected', String(isActive));
+            });
+        }
+
+        nav.appendChild(navFragment);
+        if (needsIconRefresh) window.refreshUiIcons?.(nav);
+        activate(panes[0].id);
+    }
+
+    function initPaymentTabs() {
+        const layout = document.getElementById('payments-layout');
+        const panels = document.getElementById('payments-panels');
+        if (!layout || !panels) return;
+
+        const tabs = Array.from(layout.querySelectorAll('[data-pay-tab]'));
+        const items = Array.from(panels.querySelectorAll('[data-pay-panel]'));
+
+        const activate = (id) => {
+            tabs.forEach(tab => {
+                const isActive = tab.dataset.payTab === id;
+                tab.classList.toggle('is-active', isActive);
+                tab.setAttribute('aria-selected', String(isActive));
+            });
+            items.forEach(panel => panel.classList.toggle('is-active', panel.dataset.payPanel === id));
+        };
+
+        const syncDot = (panel) => {
+            const dot = layout.querySelector('[data-pay-dot="' + panel.dataset.payPanel + '"]');
+            if (!dot) return;
+            const isOn = Boolean(panel.querySelector('input[type="checkbox"]:checked[id]'));
+            dot.classList.toggle('bg-emerald-400', isOn);
+            dot.classList.toggle('bg-white/15', !isOn);
+        };
+
+        tabs.forEach(tab => tab.addEventListener('click', () => activate(tab.dataset.payTab)));
+        panels.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const panel = cb.closest('[data-pay-panel]');
+                if (panel) syncDot(panel);
+            });
+        });
+
+        layout.classList.add('pay-tabs-ready');
+        activate(tabs.length ? tabs[0].dataset.payTab : 'yookassa');
+    }
+
+    function renderTrialCleanupReport(result) {
+        const box = document.getElementById('trial-cleanup-report');
+        const list = document.getElementById('trial-cleanup-report-list');
+        const summary = document.getElementById('trial-cleanup-report-summary');
+        if (!box || !list || !summary) return;
+        const items = Array.isArray(result.items) ? result.items : [];
+        summary.textContent = `Проверено ${result.checked} · удалено ${result.removed} · подключались ${result.connected} · ошибок ${result.errors}`;
+        list.innerHTML = '';
+        if (!items.length) {
+            const empty = document.createElement('li');
+            empty.className = 'px-2 py-1.5 text-[11px] text-white/40';
+            empty.textContent = 'Подходящих тестовых подписок нет';
+            list.appendChild(empty);
+        }
+        items.forEach(item => {
+            const state = item.status === 'removed' ? 'removed' : (item.status === 'error' ? 'error' : 'kept');
+            const styles = {
+                removed: { icon: 'trash-2', tone: 'bg-rose-400/[0.08] text-rose-300' },
+                error: { icon: 'triangle-alert', tone: 'bg-amber-400/[0.08] text-amber-300' },
+                kept: { icon: 'user-check', tone: 'bg-white/[0.04] text-white/40' }
+            }[state];
+            const row = document.createElement('li');
+            row.className = 'flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-white/[0.03]';
+            const badge = document.createElement('span');
+            badge.className = 'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ' + styles.tone;
+            const icon = document.createElement('i');
+            icon.setAttribute('data-lucide', styles.icon);
+            icon.setAttribute('aria-hidden', 'true');
+            icon.className = 'h-3.5 w-3.5';
+            badge.appendChild(icon);
+            const body = document.createElement('div');
+            body.className = 'min-w-0 flex-1';
+            const emailEl = document.createElement('p');
+            emailEl.className = 'truncate font-mono text-[11px] leading-snug text-white/80';
+            emailEl.textContent = item.email || `ключ #${item.key_id}`;
+            const reasonEl = document.createElement('p');
+            reasonEl.className = 'text-[10px] leading-snug text-white/40';
+            reasonEl.textContent = item.reason || '';
+            body.append(emailEl, reasonEl);
+            row.append(badge, body);
+            list.appendChild(row);
+        });
+        box.classList.remove('hidden');
+        window.refreshUiIcons?.(box);
+    }
+
+    function initInteractiveElements() {
+        initForms();
+
+        const refTypeSelect = document.getElementById('referral_reward_type');
+        if (refTypeSelect) {
+            const refSections = document.querySelectorAll('[data-ref-section]');
+            const updateRefSections = () => {
+                const val = refTypeSelect.value || 'percent_purchase';
+                refSections.forEach(section => { section.hidden = section.dataset.refSection !== val; });
+            };
+            refTypeSelect.addEventListener('change', updateRefSections);
+            updateRefSections();
+        }
+
+        const backupSelect = document.getElementById('existing_backup');
+        const backupDate = document.getElementById('backup-date');
+        if (backupSelect && backupDate) {
+            backupSelect.addEventListener('change', () => {
+                backupDate.textContent = backupSelect.options[backupSelect.selectedIndex]?.getAttribute('data-mtime') || '—';
+            });
+        }
+
+        const backupUnitToggle = document.getElementById('backup-interval-unit-toggle');
+        const backupIntervalLabel = document.getElementById('backup-interval-label');
+        const backupDaysLabel = document.getElementById('backup-unit-days-label');
+        const backupHoursLabel = document.getElementById('backup-unit-hours-label');
+        if (backupUnitToggle && backupIntervalLabel && backupDaysLabel && backupHoursLabel) {
+            const syncBackupUnitUi = () => {
+                const isHours = backupUnitToggle.checked;
+                backupIntervalLabel.textContent = `Автобэкап (${isHours ? 'часы' : 'дни'})`;
+                backupDaysLabel.className = isHours ? 'text-white/30' : 'text-primary';
+                backupHoursLabel.className = isHours ? 'text-primary' : 'text-white/30';
+            };
+            backupUnitToggle.addEventListener('change', syncBackupUnitUi);
+            syncBackupUnitUi();
+        }
+
+        const dbFileBtn = document.getElementById('btn-pick-file'), dbFileInput = document.getElementById('db_file');
+        const pickedFileName = document.getElementById('picked-file-name');
+        if (dbFileBtn && dbFileInput && pickedFileName) {
+            dbFileBtn.onclick = () => dbFileInput.click();
+            dbFileInput.onchange = () => { pickedFileName.textContent = dbFileInput.files[0]?.name || 'Файл не выбран'; };
+        }
+
+        document.querySelectorAll('.pay-info-toggle').forEach(t => {
+            t.onchange = async function () {
+                const res = await sendRequest('/api/settings/update-pay-info', 'POST', { field: this.dataset.field, value: this.checked }, true);
+                if (res.status === 'success') showToast('success', 'Настройки обновлены');
+                else { showToast('danger', res.message || 'Ошибка'); this.checked = !this.checked; }
+            };
+        });
+
+        window.togglePasswordVisibility = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isPass = el.type === 'password';
+            el.type = isPass ? 'text' : 'password';
+            const btn = el.nextElementSibling;
+            if (btn && btn.tagName === 'BUTTON') {
+                const icon = btn.querySelector('[data-lucide]');
+                if (icon) {
+                    icon.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+                    window.refreshUiIcons?.(btn);
+                }
+            }
+        };
+
+        const trialCleanupBtn = document.getElementById('trial-cleanup-btn');
+        if (trialCleanupBtn) {
+            trialCleanupBtn.onclick = async () => {
+                if (trialCleanupBtn.disabled) return;
+                trialCleanupBtn.disabled = true;
+                trialCleanupBtn.setAttribute('aria-busy', 'true');
+                try {
+                    const daysInput = document.querySelector('input[name="trial_cleanup_days"]');
+                    const days = Math.max(1, parseInt(daysInput?.value || '1', 10) || 1);
+                    const payload = new FormData();
+                    payload.set('days', String(days));
+                    const result = await sendRequest('/api/settings/trial-cleanup', 'POST', payload);
+                    if (!result.ok) { showToast('danger', result.error || 'Ошибка очистки'); return; }
+                    renderTrialCleanupReport(result);
+                    if (!result.checked) { showToast('success', 'Подходящих тестовых подписок нет'); return; }
+                    if (!result.removed) { showToast('success', `Проверено ${result.checked}: все тестовые подписки уже подключались`); return; }
+                    const suffix = result.errors ? `, ошибок ${result.errors}` : '';
+                    showToast('success', `Удалено ${result.removed} из ${result.checked}, пробный период освобождён у ${result.reset}${suffix}`);
+                } finally {
+                    trialCleanupBtn.disabled = false;
+                    trialCleanupBtn.removeAttribute('aria-busy');
+                }
+            };
+        }
+
+        const saveAllBtn = document.getElementById('save-all-settings-btn');
+        if (saveAllBtn) {
+            saveAllBtn.onclick = async (e) => {
+                e.preventDefault();
+                if (saveAllBtn.disabled) return;
+                saveAllBtn.disabled = true;
+                saveAllBtn.setAttribute('aria-busy', 'true');
+                try {
+                    const formData = new FormData();
+                    [document.getElementById('settings-form'), document.getElementById('settings-form-part2')].forEach(form => {
+                        if (form) new FormData(form).forEach((value, key) => { if (key !== 'csrf_token') formData.append(key, value); });
+                    });
+                    formData.append('csrf_token', settingsCsrfToken);
+                    formData.set('next_hash', location.hash.slice(1) || 'panel');
+                    formData.set('full_settings_form', '1');
+                    formData.set('full_settings_form2', '1');
+                    const result = await sendRequest(document.getElementById('settings-form').action, 'POST', formData);
+                    if (result.ok) showToast('success', 'Все настройки сохранены');
+                    else showToast('danger', result.error || 'Ошибка сохранения');
+                } finally {
+                    saveAllBtn.disabled = false;
+                    saveAllBtn.removeAttribute('aria-busy');
+                }
+            };
+        }
+    }
+
+    function initForms() {
+        document.querySelectorAll('form').forEach(form => {
+            if (form.getAttribute('data-processed')) return; form.setAttribute('data-processed', 'true');
+            if (['settings-form', 'settings-form-part2'].includes(form.id)) return;
+
+            form.onsubmit = async function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const confirmMsg = this.getAttribute('data-confirm');
+
+                if (confirmMsg) {
+                    const confirmed = await showCustomConfirm(confirmMsg);
+                    if (!confirmed) return;
+                }
+
+                if (form.querySelector('[formaction]')) return;
+
+                handleFormSubmit(this, 'Сохранено');
+            };
+        });
+
+        document.querySelectorAll('button[formaction]').forEach(btn => {
+            if (btn.getAttribute('data-processed')) return; btn.setAttribute('data-processed', 'true');
+            if (btn.getAttribute('formaction').match(/backup|restore/)) return;
+            btn.onclick = function (e) {
+                e.preventDefault(); const form = this.closest('form'), originalAction = form.action;
+                form.action = this.getAttribute('formaction');
+                handleFormSubmit(form, 'Выполнено').then(() => form.action = originalAction);
+            };
+        });
+    }
+
+    async function sendRequest(url, method = 'POST', body = null, isJson = false) {
+        try {
+            const headers = { 'X-CSRFToken': settingsCsrfToken, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+            if (isJson) headers['Content-Type'] = 'application/json';
+            const options = { method, headers }; if (body) options.body = isJson ? JSON.stringify(body) : body;
+            const res = await fetch(url, options);
+            if (res.redirected) return { ok: true, redirected: true, url: res.url };
+            try { return await res.json(); } catch { return { ok: res.ok }; }
+        } catch (e) { console.error(e); return { ok: false, error: e.message }; }
+    }
+
+    async function handleFormSubmit(form, successMsg) {
+        const formData = new FormData(form); if (form.id === 'settings-form' || form.id === 'settings-form-part2') formData.set('next_hash', location.hash.slice(1) || 'panel');
+        const result = await sendRequest(form.action, 'POST', formData);
+        if (result.ok) { showToast('success', result.message || successMsg); }
+        else showToast('danger', result.error || 'Ошибка');
+    }
+
+    let ykProxies = [];
+    let ykProxiesInitialized = false;
+
+    function ykEscapeHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function requestYookassaProxy(action, payload = {}) {
+        return sendRequest('/api/settings/yookassa-proxy', 'POST', { action, ...payload }, true);
+    }
+
+    function syncYookassaProxies(res) {
+        if (res.status !== 'success') return false;
+        ykProxies = Array.isArray(res.proxies) ? res.proxies : [];
+        renderYookassaProxies();
+        return true;
+    }
+
+    function initYookassaProxies() {
+        if (ykProxiesInitialized) return;
+        ykProxiesInitialized = true;
+        try { ykProxies = JSON.parse({{ (settings.yookassa_proxies or '[]') | tojson }}) || []; } catch (e) { ykProxies = []; }
+        if (!Array.isArray(ykProxies)) ykProxies = [];
+        renderYookassaProxies();
+
+        const addBtn = document.getElementById('yk-proxy-add-btn');
+        const input = document.getElementById('yk-proxy-input');
+        if (addBtn) {
+            addBtn.onclick = async () => {
+                const lines = (input?.value || '').split('\n').map(line => line.trim()).filter(Boolean);
+                if (!lines.length) { showToast('warning', 'Введите прокси'); return; }
+                const scheme = document.querySelector('input[name="yk_proxy_scheme"]:checked')?.value || 'auto';
+                addBtn.disabled = true;
+                try {
+                    const res = await requestYookassaProxy('add', { items: lines, scheme });
+                    if (syncYookassaProxies(res)) {
+                        if (input) input.value = '';
+                        showToast('success', res.message || 'Прокси добавлены');
+                        if (res.invalid?.length) showToast('danger', 'Неверный формат: ' + res.invalid.map(value => ykEscapeHtml(value)).join(', '));
+                    } else showToast('danger', res.message || 'Ошибка');
+                } finally {
+                    addBtn.disabled = false;
+                }
+            };
+        }
+    }
+
+    function renderYookassaProxies() {
+        const list = document.getElementById('yookassa-proxy-list');
+        const empty = document.getElementById('yookassa-proxy-empty');
+        if (!list || !empty) return;
+        empty.classList.toggle('hidden', ykProxies.length > 0);
+        list.innerHTML = ykProxies.map((item, index) => `
+            <div class="flex flex-wrap items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
+                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                    <input type="checkbox" class="peer sr-only" ${item.enabled ? 'checked' : ''} onchange="toggleYookassaProxy(${index})" aria-label="Включить или выключить прокси" />
+                    <span class="h-5 w-9 rounded-full bg-white/10 transition-colors duration-150 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-white/40"></span>
+                    <span class="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white/60 transition-transform duration-150 peer-checked:translate-x-4 peer-checked:bg-white"></span>
+                </label>
+                <span class="min-w-0 flex-1 truncate font-mono text-[11px] ${item.enabled ? 'text-white/80' : 'text-white/40'}" title="${ykEscapeHtml(item.raw)}">${ykEscapeHtml(item.raw)}</span>
+                ${item.scheme ? `<span class="shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/40">${ykEscapeHtml(item.scheme)}</span>` : ''}
+                <span id="yk-proxy-status-${index}" class="shrink-0 text-[10px] font-medium text-white/30"></span>
+                <button type="button" onclick="pingYookassaProxy(${index}, this)"
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-white/70 transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                    <i data-lucide="activity" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                    Пинг
+                </button>
+                <button type="button" onclick="deleteYookassaProxy(${index})"
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-medium text-red-300 transition-colors duration-150 hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60">
+                    <i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                    Удалить
+                </button>
+            </div>`).join('');
+        if (ykProxies.length) window.refreshUiIcons?.(list);
+    }
+
+    async function toggleYookassaProxy(index) {
+        const res = await requestYookassaProxy('toggle', { index });
+        if (syncYookassaProxies(res)) showToast('success', res.message || 'Состояние обновлено');
+        else {
+            showToast('danger', res.message || 'Ошибка');
+            renderYookassaProxies();
+        }
+    }
+
+    async function deleteYookassaProxy(index) {
+        if (!await showCustomConfirm('Удалить прокси?')) return;
+        const res = await requestYookassaProxy('delete', { index });
+        if (syncYookassaProxies(res)) showToast('success', res.message || 'Прокси удалён');
+        else showToast('danger', res.message || 'Ошибка');
+    }
+
+    async function pingYookassaProxy(index, btn) {
+        const item = ykProxies[index];
+        if (!item) return;
+        const status = document.getElementById('yk-proxy-status-' + index);
+        if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'pointer-events-none'); }
+        if (status) { status.textContent = 'проверка...'; status.className = 'shrink-0 text-[10px] font-medium text-white/40'; }
+        const res = await requestYookassaProxy('ping', { raw: item.raw });
+        if (btn) { btn.disabled = false; btn.classList.remove('opacity-50', 'pointer-events-none'); }
+        if (res.status !== 'success' || !res.result) { showToast('danger', res.message || 'Ошибка пинга'); return; }
+        const result = res.result;
+        if (status) {
+            status.textContent = String(result.message || '').slice(0, 48);
+            status.className = 'shrink-0 text-[10px] font-medium ' + (result.ok ? 'text-emerald-300' : 'text-red-300');
+        }
+        if (!result.ok) showToast('danger', String(result.message || 'Прокси недоступен').slice(0, 120));
+    }
+
+</script>
+
+<script>
+    (function () {
+        var inp = document.getElementById('stealth-hotkey-input');
+        var badge = document.getElementById('stealth-hotkey-badge');
+        var captureBtn = document.getElementById('stealth-hotkey-capture-btn');
+        var listeningSpan = document.getElementById('stealth-hotkey-listening');
+
+        if (!inp || !badge || !captureBtn) return;
+
+        function formatHotkey(v) {
+            return (v || 'ctrl+b').split('+').map(function (p) {
+                return p.charAt(0).toUpperCase() + p.slice(1);
+            }).join('+');
+        }
+
+        badge.textContent = formatHotkey(inp.value);
+
+        captureBtn.addEventListener('click', function () {
+            captureBtn.classList.add('hidden');
+            listeningSpan.classList.remove('hidden');
+
+            function onKey(e) {
+                var mods = [];
+                if (e.ctrlKey) mods.push('ctrl');
+                if (e.shiftKey) mods.push('shift');
+                if (e.altKey) mods.push('alt');
+                var key = e.key.toLowerCase();
+                if (['control', 'shift', 'alt', 'meta'].indexOf(key) !== -1) return;
+                if (mods.length === 0) return;
+                e.preventDefault();
+                var combo = mods.concat([key]).join('+');
+                inp.value = combo;
+                badge.textContent = formatHotkey(combo);
+                captureBtn.classList.remove('hidden');
+                listeningSpan.classList.add('hidden');
+                document.removeEventListener('keydown', onKey, true);
+            }
+            document.addEventListener('keydown', onKey, true);
+        });
+    })();
+    (function () {
+        const domainSetting = "{{ settings.domain or '' }}";
+        const baseWebhookUrl = domainSetting ? "https://" + domainSetting : window.location.protocol + "//" + window.location.host;
+
+        document.querySelectorAll('.webhook-display').forEach(function (el) {
+            const endpoint = el.getAttribute('data-endpoint');
+            if (endpoint) {
+                el.textContent = baseWebhookUrl + endpoint;
+            }
+        });
+    })();
+    (function () {
+        const policyInputs = Array.from(document.querySelectorAll('[data-trial-policy]'));
+        if (!policyInputs.length) return;
+        policyInputs.forEach(function (input) {
+            input.addEventListener('change', function () {
+                if (!input.checked) return;
+                policyInputs.forEach(function (other) {
+                    if (other !== input) other.checked = false;
+                });
+            });
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% if keys %}
+<div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-white/5">
+            <tr>
+                <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/40">ID</th>
+                <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/40">Хост</th>
+                <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/40">Email</th>
+                <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/40">UUID</th>
+                <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/40">Истекает
+                </th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-white/10">
+            {% for k in keys %}
+            <tr class="hover:bg-white/5">
+                <td class="px-3 py-2 text-white">#{{ k.key_id }}</td>
+                <td class="px-3 py-2 text-white">{{ k.host_name }}</td>
+                <td class="px-3 py-2 text-white">{{ k.key_email or k.email }}</td>
+                <td class="px-3 py-2 text-white/70 max-w-[200px] truncate" title="{{ k.remnawave_user_uuid }}">{{
+                    k.remnawave_user_uuid }}</td>
+                <td class="px-3 py-2 text-white/70">{{ k.expiry_date or k.expire_at or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-white/50 text-center py-4">Ключей нет</div>
+{% endif %}

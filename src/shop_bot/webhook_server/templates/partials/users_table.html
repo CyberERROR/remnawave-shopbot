@@ -1,0 +1,149 @@
+{% for user in users %}
+<tr class="group user-list-row transition-colors hover:bg-white/[0.015]" data-user-details-row data-uid="{{ user.telegram_id }}">
+    <td class="user-id user-name px-3 py-3">
+        <div class="flex min-w-0 items-center gap-3">
+            <div class="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
+                <img class="user-avatar absolute inset-0 h-full w-full object-cover" src="{{ url_for('user_avatar', user_id=user.telegram_id) }}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">
+                <div class="flex h-full w-full items-center justify-center text-xs font-bold text-white/40">{{ (user.first_name or user.username or 'U')[0]|upper }}</div>
+            </div>
+            <div class="min-w-0 flex-1">
+                {% if user.first_name %}<div class="truncate text-sm font-semibold text-white">{{ user.first_name }}</div>{% endif %}
+                <div class="flex items-center gap-2">
+                    {% if user.username %}<span class="truncate text-xs text-sky-300/80 demo-blur-username">@{{ user.username }}</span>{% endif %}
+                    {% if user.is_pinned %}<i data-lucide="pin" class="h-3 w-3 shrink-0 text-primary" title="Закреплён"></i>{% endif %}
+                </div>
+                <button type="button" onclick="copyToClipboard('{{ user.telegram_id }}', this)" class="mt-1 flex items-center gap-1.5 rounded-md px-1.5 py-0.5 font-mono text-[10px] text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/60" title="Скопировать Telegram ID">
+                    <i data-lucide="hash" class="h-3 w-3"></i>
+                    <span>{{ user.telegram_id }}</span>
+                </button>
+            </div>
+        </div>
+    </td>
+    <td class="px-3 py-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-0.5">
+                <i data-lucide="wallet" class="h-3 w-3 text-emerald-300"></i>
+                <span class="text-xs font-semibold tabular-nums text-emerald-300">{{ '%.2f'|format(user.balance or 0) }} ₽</span>
+            </div>
+            <div class="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5">
+                <i data-lucide="trending-up" class="h-3 w-3 text-white/40"></i>
+                <span class="text-xs font-medium tabular-nums text-white/60">{{ '%.2f'|format(user.total_spent or 0) }} ₽</span>
+            </div>
+        </div>
+    </td>
+<td class="px-3 py-3">
+        {% set has_months = (user.total_months or 0) > 0 %}
+        {% set has_refs = (user.referral_count or 0) > 0 %}
+        {% set item_count = 1 + (1 if has_months else 0) + (1 if has_refs else 0) %}
+        <div class="grid grid-cols-2 items-center gap-1.5">
+            {% if (user.keys_count or 0) > 0 %}
+            <span class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-1 text-[10px] font-semibold text-emerald-300 {{ 'col-span-2' if item_count == 1 else '' }}">
+                <i data-lucide="key-round" class="h-3 w-3"></i>
+                {{ user.keys_count }} ключ{{ 'ей' if user.keys_count > 4 or user.keys_count == 0 else ('а' if user.keys_count > 1 else '') }}
+            </span>
+            {% else %}
+            <span class="inline-flex items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] font-medium text-white/35 {{ 'col-span-2' if item_count == 1 else '' }}">Нет ключей</span>
+            {% endif %}
+            {% if has_months %}
+            <span class="inline-flex items-center justify-center gap-1 rounded-lg border border-sky-400/15 bg-sky-400/[0.06] px-2 py-0.5 text-[10px] font-medium text-sky-300">
+                <i data-lucide="calendar" class="h-3 w-3"></i>
+                {{ user.total_months }} мес.
+            </span>
+            {% endif %}
+            {% if has_refs %}
+            <span class="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-400/15 bg-amber-400/[0.06] px-2 py-0.5 text-[10px] font-medium text-amber-300 {{ 'col-span-2' if item_count == 3 else '' }}">
+                <i data-lucide="users-round" class="h-3 w-3"></i>
+                {{ user.referral_count }} реф.
+            </span>
+            {% endif %}
+        </div>
+    </td>
+    <td class="px-3 py-3">
+        <time class="text-xs text-white/60" data-registration-date="{{ user.registration_date or '' }}">{{ user.registration_date or 'N/A' }}</time>
+    </td>
+    <td class="px-3 py-3">
+        <div class="flex items-center justify-end gap-1.5 flex-nowrap">
+            <button type="button"
+                class="btn-user-balance-sign inline-flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300 transition-all hover:bg-emerald-400/15"
+                data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
+                data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="+" title="Начислить баланс">
+                <i data-lucide="plus" class="h-4 w-4"></i>
+            </button>
+            <button type="button"
+                class="btn-user-balance-sign inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-400/15 bg-rose-400/[0.06] text-rose-300 transition-all hover:bg-rose-400/15"
+                data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
+                data-balance="{{ '%.2f'|format(user.balance or 0) }}" data-sign="-" title="Списать баланс">
+                <i data-lucide="minus" class="h-4 w-4"></i>
+            </button>
+            <button type="button"
+                class="btn-user-message inline-flex h-8 w-8 items-center justify-center rounded-xl border border-sky-400/15 bg-sky-400/[0.06] text-sky-300 transition-all hover:bg-sky-400/15"
+                data-uid="{{ user.telegram_id }}" data-username="{{ user.username or 'N/A' }}"
+                title="Отправить сообщение">
+                <i data-lucide="mail" class="h-4 w-4"></i>
+            </button>
+            <button type="button" data-toggle="keys" data-user="{{ user.telegram_id }}"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-white/60 transition-all hover:bg-white/10 hover:text-white"
+                title="Показать ключи пользователя">
+                <i data-lucide="key-round" class="h-4 w-4"></i>
+            </button>
+            {% if user.is_banned %}
+            <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post"
+                class="inline ajax-form" data-refresh="users-tbody" data-success-msg="Пользователь разбанен">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300 hover:bg-emerald-400/15 transition-all"
+                    title="Разбанить">
+                    <i data-lucide="user-check" class="h-4 w-4"></i>
+                </button>
+            </form>
+            {% else %}
+            <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post"
+                class="inline ajax-form" data-confirm="Вы уверены, что хотите забанить этого пользователя?"
+                data-notify-option data-refresh="users-tbody" data-success-msg="Пользователь забанен">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="notify_user" value="0" data-notify-user-value />
+                <button type="submit"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-amber-400/15 bg-amber-400/[0.06] text-amber-300 hover:bg-amber-400/15 transition-all"
+                    title="Забанить">
+                    <i data-lucide="ban" class="h-4 w-4"></i>
+                </button>
+            </form>
+            {% endif %}
+            {% if (user.keys_count or 0) > 0 %}
+            <form action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post"
+                class="inline ajax-form"
+                data-confirm="ВНИМАНИЕ! Это действие удалит ВСЕ ключи пользователя. Вы уверены?"
+                data-refresh="users-tbody" data-success-msg="Ключи отозваны">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-xl border border-rose-400/15 bg-rose-400/[0.06] text-rose-300 hover:bg-rose-400/15 transition-all"
+                    title="Отозвать все ключи">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                </button>
+            </form>
+            {% endif %}
+            <form action="{{ url_for('toggle_pin_user_route', user_id=user.telegram_id) }}" method="post"
+                class="inline ajax-form" data-refresh="users-tbody">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-xl {{ 'border border-primary/20 bg-primary/10 text-primary shadow-lg shadow-primary/5' if user.is_pinned else 'border border-white/[0.08] bg-white/[0.03] text-white/40' }} hover:bg-primary/20 transition-all"
+                    title="{{ 'Открепить' if user.is_pinned else 'Закрепить' }}">
+                    <i data-lucide="pin" class="h-4 w-4 {{ 'rotate-45' if user.is_pinned else '' }} transition-transform"></i>
+                </button>
+            </form>
+        </div>
+    </td>
+</tr>
+<tr class="keys-row hidden" id="keys-{{ user.telegram_id }}"
+    data-src="{{ url_for('user_keys_partial', user_id=user.telegram_id) }}">
+    <td colspan="5" class="p-0">
+        <div class="m-4 rounded-xl border border-white/[0.08] bg-white/[0.03]">
+            <div class="flex items-center gap-2 border-b border-white/[0.08] p-3">
+                <i data-lucide="key-round" class="h-4 w-4 text-sky-300"></i>
+                <span class="text-sm font-semibold text-white">Ключи пользователя</span>
+            </div>
+            <div class="p-3" data-lazy="keys"></div>
+        </div>
+    </td>
+</tr>
+{% endfor %}

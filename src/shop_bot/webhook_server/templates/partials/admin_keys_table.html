@@ -1,0 +1,54 @@
+{% if current_filter == 'suspicious' and suspicious and suspicious.running %}
+<tr class="keys-scan-row pointer-events-none" data-suspicious-scanning="1">
+    <td colspan="8" class="px-4 py-3">
+        <div class="flex items-center gap-2 text-[11px] text-white/45">
+            <i data-lucide="loader-circle" class="h-3.5 w-3.5 animate-spin text-white/40" aria-hidden="true"></i>
+            <span>Проверяем подключения: {{ suspicious.checked }} из {{ suspicious.total }}</span>
+            <span class="text-white/25">Список обновится автоматически</span>
+        </div>
+    </td>
+</tr>
+{% endif %}
+{% for k in keys %}<tr class="keys-record-row {{ 'keys-record-row-alt' if loop.index is even else '' }} group border-b border-white/[0.04] transition-colors duration-150 hover:bg-white/[0.035]" data-key-id="{{ k.key_id }}">
+    <td class="whitespace-nowrap px-4 py-2 font-mono text-[11px] text-white/55 transition-colors group-hover:text-white"><label class="gift-keys-selection hidden cursor-pointer items-center gap-2"><input type="checkbox" class="gift-key-select peer sr-only" data-key="{{ k.subscription_url or k.access_url or '' }}" aria-label="Выбрать подписку #{{ k.key_id }}"><span class="gift-toggle-track relative block h-4 w-7 rounded-full bg-white/10 transition-colors after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white/60 after:transition-transform after:content-[''] peer-checked:bg-emerald-400 peer-checked:after:translate-x-full peer-checked:after:bg-white peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/60"></span><span class="inline-flex items-center gap-1 rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-1.5 py-0.5 text-[11px] text-sky-200/80"><i data-lucide="key-round" class="h-3 w-3" aria-hidden="true"></i>#{{ k.key_id }}</span></label><span class="gift-keys-selection-label"><span class="inline-flex items-center gap-1 rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-1.5 py-0.5 text-[11px] text-sky-200/80"><i data-lucide="key-round" class="h-3 w-3" aria-hidden="true"></i>#{{ k.key_id }}</span></span>{% if k.suspicion %}<span class="keys-risk" title="{{ (k.suspicion.details or []) | join(' · ') | e }}"><i data-lucide="shield-alert" aria-hidden="true"></i>{{ k.suspicion.label }}</span>{% endif %}</td>
+    <td class="whitespace-nowrap px-4 py-2 text-[12px] font-medium text-white"><span class="inline-block max-w-[150px] truncate align-bottom">{% if k.username %}<span class="demo-blur-username">@{{ k.username }}</span>{% else %}{{ k.user_id or '—' }}{% endif %}</span></td>
+    <td class="whitespace-nowrap px-4 py-2 text-[11px] text-white/70"><span class="inline-flex max-w-[160px] items-center gap-1 rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-1.5 py-0.5 text-sky-200/80"><i data-lucide="globe" class="h-3 w-3 shrink-0" aria-hidden="true"></i><span class="min-w-0 truncate">{{ k.host_name }}</span></span></td>
+    <td class="px-4 py-2"><div class="flex min-w-0 flex-col gap-0.5"><span class="truncate font-mono text-[11px] text-white/55 demo-blur-sensitive" title="{{ k.key_email or '' }}">{{ k.key_email }}</span><span class="truncate font-mono text-[10px] text-white/25 transition-colors hover:text-white/50 select-all demo-blur-sensitive" title="{{ k.remnawave_user_uuid or '' }}">{{ k.remnawave_user_uuid }}</span></div></td>
+    <td class="whitespace-nowrap px-4 py-2">{% if k.expiry_date %}<div class="flex flex-col leading-tight"><span class="text-[12px] font-medium text-white">{{ k.expiry_date }}</span><span class="text-[10px] font-medium text-emerald-300/80">{{ k.expiry_date | relative_time(is_future=True) }}</span></div>{% else %}<span class="text-[11px] text-white/40">—</span>{% endif %}</td>
+    <td class="whitespace-nowrap px-4 py-2">
+        <div class="keys-usage" data-usage-key="{{ k.key_id }}">
+            <div class="keys-usage-main">
+                <span class="keys-usage-bar" aria-hidden="true"><span class="keys-usage-fill" data-usage-fill></span></span>
+                <span class="keys-usage-traffic" data-usage-traffic>—</span>
+            </div>
+            <div class="keys-usage-meta">
+                <span class="keys-usage-item" data-usage-devices title="Устройства"><i data-lucide="monitor-smartphone" aria-hidden="true"></i><span data-usage-devices-text>—</span></span>
+                <span class="keys-usage-sep" aria-hidden="true"></span>
+                <span class="keys-usage-item" data-usage-online title="Последний вход"><i data-lucide="activity" aria-hidden="true"></i><span data-usage-online-text>—</span></span>
+            </div>
+        </div>
+    </td>
+    <td class="whitespace-nowrap px-4 py-2 text-[11px] text-white/40"><div class="flex flex-col leading-tight"><span>{{ k.created_date or '—' }}</span>{% if k.created_date %}<span class="text-[10px] text-white/25">{{ k.created_date | relative_time(is_future=False) }}</span>{% endif %}</div></td>
+    <td class="whitespace-nowrap px-4 py-2 text-right"><div class="flex items-center justify-end gap-1 opacity-70 transition-opacity group-hover:opacity-100">
+        <button type="button" class="btn-open-key-details flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.03] text-white/55 transition-colors hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-200" data-key-id="{{ k.key_id }}" title="Карточка подписки"><i data-lucide="panel-right-open" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+        {% if k.user_id %}<a href="{{ url_for('users_page', q=k.user_id) }}" class="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.03] text-white/55 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white" title="Профиль"><i data-lucide="user-round" class="h-3.5 w-3.5" aria-hidden="true"></i></a>{% endif %}
+        <button type="button" class="btn-edit-comment flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.03] text-white/55 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white" data-key-id="{{ k.key_id }}" data-current-comment="{{ (k.comment or k.description or '')|e }}" title="Добавить комментарий"><i data-lucide="message-square" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+        <button type="button" class="btn-open-expiry flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.03] text-white/55 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white" data-key-id="{{ k.key_id }}" title="Продлить"><i data-lucide="calendar-plus" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+        <button type="button" class="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.03] text-white/55 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white" onclick="copyKey(this)" data-key="{{ k.subscription_url or k.access_url or '' }}" title="Скопировать ссылку подписки"><i data-lucide="copy" class="h-3.5 w-3.5" aria-hidden="true"></i></button>
+        <form action="{{ url_for('delete_key_route', key_id=k.key_id) }}" method="post" class="inline ajax-form" data-confirm="Удалить подписку #{{ k.key_id }}?" data-callback="refreshKeysTable"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /><button type="submit" class="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.03] text-white/45 transition-colors hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-300" title="Удалить"><i data-lucide="trash-2" class="h-3.5 w-3.5" aria-hidden="true"></i></button></form>
+    </div></td>
+</tr>
+{% if k.comment or k.description %}<tr class="keys-note-row pointer-events-none"><td colspan="8" class="px-4 pb-2 pt-0 text-[11px] text-white/40"><div class="flex items-center gap-1.5"><i data-lucide="sticky-note" class="h-3.5 w-3.5 shrink-0" aria-hidden="true"></i>{{ k.comment or k.description }}</div></td></tr>{% endif %}
+{% endfor %}
+{% if not keys and not (current_filter == 'suspicious' and suspicious and suspicious.running) %}
+{% set suspicious_idle = current_filter == 'suspicious' and (not suspicious or (suspicious.checked | default(0)) == 0) %}
+<tr class="keys-empty-row pointer-events-none">
+    <td colspan="8" class="px-4 py-10">
+        <div class="flex flex-col items-center justify-center gap-1.5 text-center">
+            <i data-lucide="{{ 'shield-alert' if suspicious_idle else ('shield-check' if current_filter == 'suspicious' else 'search-x') }}" class="h-4 w-4 text-white/25" aria-hidden="true"></i>
+            <p class="text-[12px] font-medium text-white/45">{{ 'Проверка не выполнена' if suspicious_idle else ('Подозрений нет' if current_filter == 'suspicious' else 'Подписок не найдено') }}</p>
+            {% if suspicious_idle %}<p class="text-[10px] text-white/25">{{ suspicious.failed if suspicious and suspicious.failed else 'Обновите список, чтобы проверить подписки снова' }}</p>{% elif current_filter != 'suspicious' %}<p class="text-[10px] text-white/25">Измените запрос или выберите другой фильтр</p>{% endif %}
+        </div>
+    </td>
+</tr>
+{% endif %}

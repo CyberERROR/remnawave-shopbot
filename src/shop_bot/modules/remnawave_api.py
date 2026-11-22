@@ -1,0 +1,1416 @@
+import json
+import logging
+import time
+from datetime import datetime, timezone, timedelta
+from typing import Any
+from urllib.parse import quote
+import re
+import httpx
+import asyncio
+
+from shop_bot.data_manager import remnawave_repository as rw_repo
+from shop_bot.config import get_trial_extend_policy, is_trial_key_email, TRIAL_EXTEND_POLICY_RESET
+
+logger = logging.getLogger(__name__)
+
+try:
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+except Exception:
+    pass
+
+
+class RemnawaveAPIError(RuntimeError):
+    """Base error for Remnawave API interactions."""
+
+
+def get_msk_time() -> datetime:
+    return datetime.now(timezone(timedelta(hours=3)))
+
+
+def _normalize_email_for_remnawave(email: str, telegram_id: int | str | None = None) -> str:
+    """Normalize and validate email for Remnawave API.
+    
+    - Lowercases the email
+    - Sanitizes local-part: only [a-z0-9._+-] allowed
+    - Ensures it doesn't start with invalid chars
+    - Collapses multiple dots and cleans leading/trailing dots/dashes
+    """
+    if not email:
+        raise RemnawaveAPIError("email is required")
+    e = (email or "").strip().lower()
+
+    if "@" not in e:
+        local, domain = e, "bot.local"
+    else:
+        local, domain = e.rsplit("@", 1)
+
+    local = re.sub(r"[^a-z0-9._+\-]", "_", local)
+    local = re.sub(r"\.+", ".", local)
+    local = local.strip("._-")
+
+    if not local or not re.match(r"^[a-z0-9]", local):
+        if telegram_id:
+            local = f"user{telegram_id}"
+        else:
+            local = f"u{local}" if local else f"user{int(get_msk_time().timestamp())}"
+    e_sanitized = f"{local}@{domain}"
+    
+    pattern = re.compile(r"^[a-z0-9](?:[a-z0-9._+\-]*[a-z0-9])?@[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)+$")
+
+    if ".." in e_sanitized or not pattern.match(e_sanitized):
+        if "@" not in e_sanitized:
+             e_sanitized = f"{local}@bot.local"
+        
+        if not pattern.match(e_sanitized):
+             if telegram_id:
+                 local = f"user{telegram_id}"
+             else:
+                 safe_local = re.sub(r"[^a-z0-9]", "", local)
+                 local = safe_local if safe_local else f"user{int(get_msk_time().timestamp())}"
+             e_sanitized = f"{local}@{domain if '.' in domain else 'bot.local'}"
+
+    return e_sanitized
+
+
+def _normalize_username_for_remnawave(name: str | None) -> str:
+    """Normalize username to only letters, numbers, underscores and dashes.
+
+    - Lowercase
+    - Replace invalid characters with '_'
+    - Trim leading/trailing '_' and '-'
+    - Ensure starts with alnum; if not, prefix with 'u'
+    - Limit length to 32 characters
+    - Fallback to 'user<timestamp>' if empty
+    """
+    base = (name or "").strip().lower()
+    base = re.sub(r"[^a-z0-9_\-]", "_", base)
+    base = base.strip("_-")
+    if not base or not re.match(r"^[a-z0-9]", base):
+        base = f"u{base}" if base else f"user{int(get_msk_time().timestamp())}"
+    if len(base) > 32:
+        base = base[:32].rstrip("_-") or base[:32]
+
+    if len(base) < 3:
+
+        suffix = str(int(get_msk_time().timestamp()))
+        base = (base + suffix)[:3]
+
+        if len(base) < 3:
+            base = (base + "usr")[:3]
+    return base
+
+
+async def _username_in_use(username: str, host_name: str | None = None) -> bool:
+    if not username:
+        return False
+    path = f"/api/users/by-username/{quote(username)}"
+    try:
+        response = await _request_maybe_host(host_name, "GET", path, expected_status=(200, 404))
+    except Exception:
+        return False
+    return response.status_code == 200
+
+
+async def _pick_available_username(base: str, host_name: str | None = None) -> str:
+    candidate = base
+    attempt = 0
+    while await _username_in_use(candidate, host_name):
+        attempt += 1
+        if attempt > 100:
+            break
+        suffix = f"-{attempt}"
+        candidate = f"{base[:max(1, 36 - len(suffix))]}{suffix}"
+    return candidate
+
+
+def _load_config() -> dict[str, Any]:
+    """Backward-compatible global config loader (deprecated)."""
+    base_url = (rw_repo.get_setting("remnawave_base_url") or "").strip().rstrip("/")
+    token = (rw_repo.get_setting("remnawave_api_token") or "").strip()
+    cookies = {}
+    is_local = False
+    if not base_url or not token:
+        raise RemnawaveAPIError("Remnawave API settings are not configured")
+    return {"base_url": base_url, "token": token, "cookies": cookies, "is_local": is_local}
+
+
+def _load_config_for_host(host_name: str) -> dict[str, Any]:
+    """Load Remnawave API config for a specific host from xui_hosts."""
+    if not host_name:
+        raise RemnawaveAPIError("host_name is required")
+    squad = rw_repo.get_squad(host_name)
+    if not squad:
+        raise RemnawaveAPIError(f"Host '{host_name}' not found")
+    base_url = (squad.get("remnawave_base_url") or "").strip().rstrip("/")
+    token = (squad.get("remnawave_api_token") or "").strip()
+    if not base_url or not token:
+
+        try:
+            return _load_config()
+        except RemnawaveAPIError:
+            raise RemnawaveAPIError(f"Remnawave API settings are not configured for host '{host_name}'")
+    return {"base_url": base_url, "token": token, "cookies": {}, "is_local": False}
+
+
+def _build_headers(config: dict[str, Any]) -> dict[str, str]:
+    headers = {
+        "Authorization": f"Bearer {config['token']}",
+        "Content-Type": "application/json",
+    }
+    if config.get("is_local"):
+        headers["X-Forwarded-Proto"] = "https"
+        headers["X-Forwarded-For"] = "127.0.0.1"
+    return headers
+
+
+async def _request(
+    method: str,
+    path: str,
+    *,
+    json_payload: dict[str, Any] | None = None,
+    params: dict[str, Any] | None = None,
+    expected_status: tuple[int, ...] = (200,),
+) -> httpx.Response:
+
+    config = _load_config()
+    url = f"{config['base_url']}{path}"
+    headers = _build_headers(config)
+
+    async with httpx.AsyncClient(cookies=config["cookies"], timeout=30.0) as client:
+        max_retries = 3
+        last_exception = None
+        for attempt in range(max_retries):
+            try:
+                full_url = httpx.URL(url).copy_merge_params(params or {})
+                if attempt == 0:
+                    logger.info("➡️ Remnawave: %s %s", method.upper(), str(full_url))
+                else:
+                    logger.info("➡️ Remnawave (Attempt %d/%d): %s %s", attempt + 1, max_retries, method.upper(), str(full_url))
+            except Exception:
+                pass
+            
+            t0 = time.perf_counter()
+            try:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=json_payload,
+                    params=params,
+                )
+                dt_ms = int((time.perf_counter() - t0) * 1000)
+                try:
+                    status = response.status_code
+                    ok = "OK" if status in expected_status else "ERROR"
+                    logger.info("⬅️ Remnawave: %s %s — %s (%d мс)", method.upper(), path, f"{status} {ok}", dt_ms)
+                except Exception:
+                    pass
+
+                # Успешный запрос или серверный ответ, выходим из цикла retry
+                break
+                
+            except httpx.ConnectError as e:
+                last_exception = e
+                logger.warning("Remnawave: ошибка соединения %s. Попытка %d из %d...", e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2) # Пауза перед следующей попыткой
+                continue
+            except httpx.TimeoutException as e:
+                last_exception = e
+                logger.warning("Remnawave: таймаут %s. Попытка %d из %d...", e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
+            except httpx.RemoteProtocolError as e:
+                last_exception = e
+                logger.warning("Remnawave: разрыв соединения %s. Попытка %d из %d...", e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
+
+        if last_exception and 'response' not in locals():
+            logger.error("Remnawave API: исчерпаны попытки подключения: %s", last_exception)
+            raise RemnawaveAPIError(f"Connection failed after {max_retries} attempts: {last_exception}")
+
+    if response.status_code >= 400 and response.status_code not in expected_status:
+        try:
+            detail = response.json()
+        except json.JSONDecodeError:
+            detail = response.text
+        logger.warning("Remnawave API %s %s завершился ошибкой: %s", method, path, detail)
+        raise RemnawaveAPIError(f"Remnawave API request failed: {response.status_code} {detail}")
+
+    return response
+
+
+async def _request_for_host(
+    host_name: str,
+    method: str,
+    path: str,
+    *,
+    json_payload: dict[str, Any] | None = None,
+    params: dict[str, Any] | None = None,
+    expected_status: tuple[int, ...] = (200,),
+) -> httpx.Response:
+    config = _load_config_for_host(host_name)
+    url = f"{config['base_url']}{path}"
+    headers = _build_headers(config)
+
+    async with httpx.AsyncClient(cookies=config["cookies"], timeout=30.0) as client:
+        max_retries = 3
+        last_exception = None
+        for attempt in range(max_retries):
+            try:
+                full_url = httpx.URL(url).copy_merge_params(params or {})
+                if attempt == 0:
+                    logger.info("➡️ Remnawave[%s]: %s %s", host_name, method.upper(), str(full_url))
+                else:
+                    logger.info("➡️ Remnawave[%s] (Attempt %d/%d): %s %s", host_name, attempt + 1, max_retries, method.upper(), str(full_url))
+            except Exception:
+                pass
+            
+            t0 = time.perf_counter()
+            try:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=json_payload,
+                    params=params,
+                )
+                dt_ms = int((time.perf_counter() - t0) * 1000)
+                try:
+                    status = response.status_code
+                    ok = "OK" if status in expected_status else "ERROR"
+                    logger.info("⬅️ Remnawave[%s]: %s %s — %s (%d мс)", host_name, method.upper(), path, f"{status} {ok}", dt_ms)
+                except Exception:
+                    pass
+
+                break
+                
+            except httpx.ConnectError as e:
+                last_exception = e
+                logger.warning("Remnawave[%s]: ошибка соединения %s. Попытка %d из %d...", host_name, e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
+            except httpx.TimeoutException as e:
+                last_exception = e
+                logger.warning("Remnawave[%s]: таймаут %s. Попытка %d из %d...", host_name, e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
+            except httpx.RemoteProtocolError as e:
+                last_exception = e
+                logger.warning("Remnawave[%s]: разрыв соединения %s. Попытка %d из %d...", host_name, e, attempt + 1, max_retries)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                continue
+
+        if last_exception and 'response' not in locals():
+            logger.error("Remnawave[%s] API: исчерпаны попытки подключения: %s", host_name, last_exception)
+            raise RemnawaveAPIError(f"Connection failed after {max_retries} attempts: {last_exception}")
+
+    if response.status_code >= 400 and response.status_code not in expected_status:
+        try:
+            detail = response.json()
+        except json.JSONDecodeError:
+            detail = response.text
+        logger.warning("Remnawave[%s] API %s %s завершился ошибкой: %s", host_name, method, path, detail)
+        raise RemnawaveAPIError(f"Remnawave API request failed: {response.status_code} {detail}")
+
+    return response
+
+
+def _to_iso(dt: datetime) -> str:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt_utc = dt.astimezone(timezone.utc)
+    return dt_utc.isoformat().replace("+00:00", "Z")
+
+
+async def get_hosts(*, host_name: str | None = None) -> list[dict[str, Any]]:
+    response = await (
+        _request_for_host(host_name, "GET", "/api/hosts")
+        if host_name
+        else _request("GET", "/api/hosts")
+    )
+    payload = response.json() or {}
+    data = payload.get("response") if isinstance(payload, dict) else None
+    return data if isinstance(data, list) else []
+
+
+async def get_user_by_email(email: str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    if not email:
+        return None
+    params = {"email": email.strip(), "size": 1}
+    if host_name:
+        response = await _request_for_host(host_name, "GET", "/api/users/stream", params=params)
+    else:
+        response = await _request("GET", "/api/users/stream", params=params)
+    payload = response.json()
+
+    data: Any
+    if isinstance(payload, dict):
+        inner = payload.get("response")
+        data = inner if inner is not None else payload
+    else:
+        data = payload
+
+    if isinstance(data, dict):
+        data = data.get("users") or data.get("data") or []
+    if isinstance(data, list):
+
+        for item in data:
+            if isinstance(item, dict):
+                return item
+        return None
+    return data if isinstance(data, dict) else None
+
+
+async def _resolve_user_id(user_id: int | str | None, *, host_name: str | None = None) -> int | None:
+    """Return a Remnawave v3 numeric user ID, repairing legacy UUID records by email."""
+    if user_id is None:
+        return None
+
+    value = str(user_id).strip()
+    if value.isdigit():
+        return int(value)
+
+    legacy_key = rw_repo.get_key_by_remnawave_uuid(value)
+    email = (legacy_key or {}).get("key_email") or (legacy_key or {}).get("email")
+    if not email:
+        logger.warning("Remnawave: UUID %s cannot be resolved to a numeric user ID without an email", value)
+        return None
+
+    user = await get_user_by_email(email, host_name=host_name)
+    remote_id = user.get("id") if isinstance(user, dict) else None
+    if remote_id is None or not str(remote_id).isdigit():
+        logger.warning("Remnawave: user %s has no numeric ID", email)
+        return None
+
+    resolved_id = int(remote_id)
+    if legacy_key and str(legacy_key.get("remnawave_user_uuid")) != str(resolved_id):
+        rw_repo.update_key(legacy_key["key_id"], remnawave_user_uuid=str(resolved_id))
+        logger.info("Remnawave: migrated legacy UUID for key %s to user ID %s", legacy_key["key_id"], resolved_id)
+    return resolved_id
+
+
+async def get_user_by_id(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return None
+    encoded_user_id = quote(str(resolved_id))
+    if host_name:
+        response = await _request_for_host(host_name, "GET", f"/api/users/{encoded_user_id}", expected_status=(200, 404))
+    else:
+        response = await _request("GET", f"/api/users/{encoded_user_id}", expected_status=(200, 404))
+    if response.status_code == 404:
+        return None
+    payload = response.json()
+    return payload.get("response") if isinstance(payload, dict) else None
+
+
+# Kept while callers migrate away from the legacy name.
+get_user_by_uuid = get_user_by_id
+
+
+async def get_connected_devices_count(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return None
+    encoded_user_id = quote(str(resolved_id))
+    path = f"/api/hwid/devices/{encoded_user_id}"
+    
+    if host_name:
+        response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
+    else:
+        response = await _request("GET", path, expected_status=(200, 404))
+        
+    if response.status_code == 404:
+        return None
+        
+    payload = response.json()
+    if isinstance(payload, dict):
+        # API returns: {"response": {"total": 2, "devices": [...]}}
+        return payload.get("response")
+    return None
+
+
+async def get_subscription_info(user_id: int | str, *, host_name: str | None = None) -> dict[str, Any] | None:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return None
+    encoded_user_id = quote(str(resolved_id))
+    path = f"/api/subscriptions/by-id/{encoded_user_id}"
+    
+    if host_name:
+        response = await _request_for_host(host_name, "GET", path, expected_status=(200, 404))
+    else:
+        response = await _request("GET", path, expected_status=(200, 404))
+        
+    if response.status_code == 404:
+        return None
+        
+    payload = response.json()
+    if isinstance(payload, dict):
+        response_data = payload.get("response")
+        if isinstance(response_data, dict):
+             return response_data.get("user")
+    return None
+
+
+_USER_UUID_PATTERN = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+def _is_user_uuid(value: Any) -> bool:
+    return bool(_USER_UUID_PATTERN.match(str(value or "").strip()))
+
+
+async def _resolve_user_identifiers(
+    user_id: int | str | None,
+    *,
+    host_name: str | None = None,
+    user_uuid: str | None = None,
+) -> list[str]:
+    resolved_uuid = str(user_uuid or "").strip()
+    if not _is_user_uuid(resolved_uuid):
+        resolved_uuid = ""
+    resolved_id = str(user_id or "").strip()
+    if not resolved_id.isdigit():
+        resolved_id = ""
+    if not resolved_uuid or not resolved_id:
+        user = await get_user_by_id(user_id, host_name=host_name)
+        if isinstance(user, dict):
+            if not resolved_uuid:
+                candidate_uuid = str(user.get("uuid") or "").strip()
+                resolved_uuid = candidate_uuid if _is_user_uuid(candidate_uuid) else ""
+            if not resolved_id:
+                candidate_id = str(user.get("id") or "").strip()
+                resolved_id = candidate_id if candidate_id.isdigit() else ""
+    identifiers: list[str] = []
+    for value in (resolved_uuid, resolved_id):
+        if value and value not in identifiers:
+            identifiers.append(value)
+    return identifiers
+
+
+async def _request_maybe_host(
+    host_name: str | None,
+    method: str,
+    path: str,
+    *,
+    json_payload: dict[str, Any] | None = None,
+    params: dict[str, Any] | None = None,
+    expected_status: tuple[int, ...] = (200,),
+) -> httpx.Response:
+    if host_name:
+        return await _request_for_host(
+            host_name,
+            method,
+            path,
+            json_payload=json_payload,
+            params=params,
+            expected_status=expected_status,
+        )
+    return await _request(method, path, json_payload=json_payload, params=params, expected_status=expected_status)
+
+
+async def get_user_ips(
+    user_id: int | str,
+    *,
+    host_name: str | None = None,
+    user_uuid: str | None = None,
+    timeout_seconds: float = 12.0,
+    poll_interval: float = 0.4,
+) -> dict[str, Any] | None:
+    identifiers = await _resolve_user_identifiers(user_id, host_name=host_name, user_uuid=user_uuid)
+    numeric_ids = [value for value in identifiers if value.isdigit()]
+    uuid_values = [value for value in identifiers if _is_user_uuid(value)]
+    if not numeric_ids and not uuid_values:
+        return {"isCompleted": False, "isFailed": True, "result": None, "diagnostic": {"attempts": ["no-identifier"]}}
+
+    deadline = time.monotonic() + max(float(timeout_seconds or 0), 1.0)
+
+    async def poll_job(result_path: str) -> dict[str, Any]:
+        latest: dict[str, Any] = {}
+        while True:
+            response = await _request_maybe_host(host_name, "GET", result_path, expected_status=(200, 404))
+            if response.status_code == 404:
+                return latest
+            payload = response.json() if response.content else {}
+            latest = (payload.get("response") or {}) if isinstance(payload, dict) else {}
+            if latest.get("isCompleted") or latest.get("isFailed"):
+                return latest
+            if time.monotonic() >= deadline:
+                return latest
+            await asyncio.sleep(poll_interval)
+
+    async def start_job(start_path: str) -> str:
+        response = await _request_maybe_host(
+            host_name,
+            "POST",
+            start_path,
+            json_payload={},
+            expected_status=(200, 201, 202, 400, 404),
+        )
+        if response.status_code in (400, 404):
+            return ""
+        payload = response.json() if response.content else {}
+        job_id = (payload.get("response") or {}).get("jobId") if isinstance(payload, dict) else None
+        return str(job_id) if job_id else ""
+
+    attempts: list[str] = []
+    last_failed: dict[str, Any] | None = None
+    routes: list[tuple[str, list[str]]] = [
+        ("/api/connections/by-user", numeric_ids),
+        ("/api/ip-control/fetch-ips", uuid_values + numeric_ids),
+    ]
+    for base_path, candidates in routes:
+        label = base_path.rsplit('/', 1)[-1]
+        for candidate in candidates:
+            tag = f"{label}/{candidate[:12]}"
+            job_id = await start_job(f"{base_path}/{quote(candidate)}")
+            if not job_id:
+                attempts.append(f"{tag}:no-job")
+                continue
+            result = await poll_job(f"{base_path}/{quote(job_id)}")
+            if result and not result.get("isFailed"):
+                return result
+            if result:
+                last_failed = result
+            attempts.append(f"{tag}:failed" if result else f"{tag}:empty")
+    if last_failed:
+        last_failed["diagnostic"] = {"attempts": attempts}
+        return last_failed
+    return {"isCompleted": False, "isFailed": True, "result": None, "diagnostic": {"attempts": attempts}}
+
+
+async def get_user_bandwidth_stats(
+    user_id: int | str,
+    *,
+    start_date: str,
+    end_date: str,
+    host_name: str | None = None,
+    user_uuid: str | None = None,
+) -> dict[str, Any] | None:
+    if not start_date or not end_date:
+        return None
+    identifiers = await _resolve_user_identifiers(user_id, host_name=host_name, user_uuid=user_uuid)
+    if not identifiers:
+        return None
+    numeric_ids = [value for value in identifiers if value.isdigit()]
+    uuid_values = [value for value in identifiers if _is_user_uuid(value)]
+    params = {"start": start_date, "end": end_date}
+    for candidate in numeric_ids + uuid_values:
+        path = f"/api/bandwidth-stats/users/{quote(candidate)}"
+        response = await _request_maybe_host(
+            host_name,
+            "GET",
+            path,
+            params=params,
+            expected_status=(200, 400, 404),
+        )
+        if response.status_code in (400, 404):
+            continue
+        payload = response.json() if response.content else {}
+        if isinstance(payload, dict):
+            data = payload.get("response")
+            if isinstance(data, dict):
+                return data
+    return None
+
+
+async def ensure_user(
+    *,
+    host_name: str,
+    email: str,
+    squad_uuid: str,
+    expire_at: datetime,
+    traffic_limit_bytes: int | None = None,
+    traffic_limit_strategy: str | None = None,
+    description: str | None = None,
+    tag: str | None = None,
+    username: str | None = None,
+    telegram_id: int | str | None = None,
+    force_expiry: bool = False,
+    hwid_limit: int | None = None,
+    external_squad_uuid: str | None = None,
+    reset_hwid_limit: bool = False,
+    set_external_squad: bool = False,
+    status: str = "ACTIVE",
+    allow_create: bool = True,
+) -> dict[str, Any]:
+    if not email:
+        raise RemnawaveAPIError("email is required for ensure_user")
+    if not squad_uuid:
+        raise RemnawaveAPIError("squad_uuid is required for ensure_user")
+
+    # Получаем настройки хоста из БД
+    squad = rw_repo.get_squad(host_name)
+    
+    # Determine effective HWID limit
+    effective_hwid_limit = hwid_limit
+
+    effective_hwid_limit = hwid_limit
+
+    email = _normalize_email_for_remnawave(email, telegram_id=telegram_id)
+    current = await get_user_by_email(email, host_name=host_name)
+    if not current and not allow_create:
+        raise RemnawaveAPIError(f"Remnawave user {email} was not found; creating a replacement is forbidden")
+    expire_iso = _to_iso(expire_at)
+    traffic_limit_strategy = traffic_limit_strategy or "NO_RESET"
+
+    payload: dict[str, Any]
+    method: str
+    path: str
+
+    if current:
+        # ... existing expiry logic ...
+        if not force_expiry:
+            current_expire = current.get("expireAt")
+            if current_expire:
+                try:
+                    current_dt = datetime.fromisoformat(current_expire.replace("Z", "+00:00"))
+                    if current_dt > expire_at:
+                        expire_iso = _to_iso(current_dt)
+                except ValueError:
+                    pass
+        
+        logger.info(
+            "Remnawave: найден пользователь %s (%s) на '%s' — обновляю срок до %s",
+            email,
+            current.get("id"),
+            host_name,
+            expire_iso,
+        )
+
+        payload = {
+            "id": current.get("id"),
+            "status": status,
+            "expireAt": expire_iso,
+            "activeInternalSquads": [squad_uuid],
+            "email": email,
+        }
+        
+        # Добавляем внешний сквад для seller
+        if set_external_squad or external_squad_uuid:
+            payload["externalSquadUuid"] = external_squad_uuid
+
+        # Apply HWID limit if enabled globally OR if we have a specific non-zero limit?
+        # Usually checking host_hwid_enabled is safer to avoid sending unsupported fields.
+        if reset_hwid_limit:
+            payload["hwidDeviceLimit"] = None
+        elif effective_hwid_limit is not None:
+             payload["hwidDeviceLimit"] = effective_hwid_limit
+
+        # Добавляем Telegram ID в контактную информацию
+        if telegram_id:
+            payload["telegramId"] = int(telegram_id)
+
+        if traffic_limit_bytes is not None:
+            payload["trafficLimitBytes"] = traffic_limit_bytes
+        if traffic_limit_strategy is not None:
+            payload["trafficLimitStrategy"] = traffic_limit_strategy
+        if description:
+            payload["description"] = description
+
+
+        if tag:
+            payload["tag"] = tag
+        method = "PATCH"
+        user_id = current.get("id")
+        if user_id is None or not str(user_id).isdigit():
+            raise RemnawaveAPIError(f"Remnawave user {email} has no numeric ID")
+        path = "/api/users"
+    else:
+        logger.info(
+            "Remnawave: пользователь %s не найден на '%s' — создаю нового (сквад %s, срок до %s)",
+            email,
+            host_name,
+            squad_uuid,
+            expire_iso,
+        )
+        generated_username = _normalize_username_for_remnawave(username or email.split("@")[0])
+        generated_username = await _pick_available_username(generated_username, host_name)
+        payload = {
+            "username": generated_username,
+            "status": status,
+            "expireAt": expire_iso,
+            "activeInternalSquads": [squad_uuid],
+            "email": email,
+        }
+        
+        # Добавляем внешний сквад для seller
+        if set_external_squad or external_squad_uuid:
+            payload["externalSquadUuid"] = external_squad_uuid
+
+        # Apply HWID limit
+        if reset_hwid_limit:
+            payload["hwidDeviceLimit"] = None
+        elif effective_hwid_limit is not None:
+            payload["hwidDeviceLimit"] = effective_hwid_limit
+
+        # Добавляем Telegram ID в контактную информацию
+        if telegram_id:
+            payload["telegramId"] = int(telegram_id)
+
+        if traffic_limit_bytes is not None:
+            payload["trafficLimitBytes"] = traffic_limit_bytes
+        if traffic_limit_strategy is not None:
+            payload["trafficLimitStrategy"] = traffic_limit_strategy
+        if description:
+            payload["description"] = description
+
+
+        if tag:
+            payload["tag"] = tag
+        method = "POST"
+        path = "/api/users"
+
+    if method == "POST":
+        attempt = 0
+        while True:
+            try:
+                response = await _request_for_host(host_name, method, path, json_payload=payload, expected_status=(200, 201))
+                break
+            except RemnawaveAPIError as exc:
+                if "already exists" not in str(exc).lower() or attempt >= 5:
+                    raise
+                attempt += 1
+                suffix = f"-{attempt}"
+                current_username = str(payload.get("username") or "user")
+                payload["username"] = f"{current_username[:max(1, 36 - len(suffix))]}{suffix}"
+    else:
+        response = await _request_for_host(host_name, method, path, json_payload=payload, expected_status=(200, 201))
+    data = response.json() or {}
+    result = data.get("response") if isinstance(data, dict) else None
+    if not result:
+        raise RemnawaveAPIError("Remnawave API returned unexpected payload")
+
+    action = "создан" if method == "POST" else "обновлён"
+    logger.info(
+        "Remnawave: пользователь %s (%s) на '%s' успешно %s. Истекает: %s",
+        email,
+        result.get("id"),
+        host_name,
+        action,
+        result.get("expireAt"),
+    )
+    
+    return result
+
+
+
+
+async def list_users(host_name: str, squad_uuid: str | None = None, size: int | None = 1000) -> list[dict[str, Any]]:
+    all_users = []
+    page = 0
+    actual_size = size or 100
+    
+    while True:
+        params: dict[str, Any] = {"page": page, "size": actual_size}
+        if squad_uuid:
+            params["squadUuid"] = squad_uuid
+            
+        try:
+            response = await _request_for_host(host_name, "GET", "/api/users", params=params, expected_status=(200,))
+        except Exception:
+            if page == 0:
+                raise
+            break
+            
+        payload = response.json() or {}
+        raw_users = []
+        if isinstance(payload, dict):
+            body = payload.get("response") if isinstance(payload.get("response"), dict) else payload
+            raw_users = body.get("users") or body.get("data") or []
+            
+        if not isinstance(raw_users, list):
+            raw_users = []
+            
+        if not raw_users:
+            break
+            
+        all_users.extend(raw_users)
+        
+        if len(raw_users) < actual_size:
+            break
+            
+        page += 1
+
+    if squad_uuid:
+        filtered: list[dict[str, Any]] = []
+        for user in all_users:
+            squads = user.get("activeInternalSquads") or user.get("internalSquads") or []
+            if isinstance(squads, list):
+                for item in squads:
+                    if isinstance(item, dict):
+                        if item.get("uuid") == squad_uuid:
+                            filtered.append(user)
+                            break
+                    elif isinstance(item, str) and item == squad_uuid:
+                        filtered.append(user)
+                        break
+            elif isinstance(squads, str) and squads == squad_uuid:
+                filtered.append(user)
+        return filtered
+        
+    return all_users
+async def delete_user(user_id: int | str) -> bool:
+    """Глобальный вариант (устарел): удаление без привязки к хосту.
+    Сохраняется для обратной совместимости, но предпочтительно использовать host-specific путь ниже.
+    """
+    if not user_id:
+        return False
+    encoded_user_id = quote(str(user_id))
+    response = await _request("DELETE", f"/api/users/{encoded_user_id}", expected_status=(204, 404))
+    if response.status_code == 404:
+        logger.info("Remnawave: пользователь %s не найден при удалении (возможно, уже удалён)", user_id)
+    elif response.status_code == 204:
+        logger.info("Remnawave: пользователь %s успешно удалён (HTTP %s)", user_id, response.status_code)
+    return True
+
+
+async def delete_user_on_host(host_name: str, user_id: int | str) -> bool:
+    """Удаление пользователя на конкретном хосте, используя конфиг хоста."""
+    if not user_id:
+        return False
+    encoded_user_id = quote(str(user_id))
+    response = await _request_for_host(host_name, "DELETE", f"/api/users/{encoded_user_id}", expected_status=(204, 404))
+    if response.status_code == 404:
+        logger.info("Remnawave[%s]: пользователь %s не найден при удалении (возможно, уже удалён)", host_name, user_id)
+    elif response.status_code == 204:
+        logger.info("Remnawave[%s]: пользователь %s успешно удалён (HTTP %s)", host_name, user_id, response.status_code)
+    return True
+
+
+async def reset_user_traffic(user_id: int | str) -> bool:
+    if not user_id:
+        return False
+    encoded_user_id = quote(str(user_id))
+    await _request("POST", f"/api/users/{encoded_user_id}/actions/reset-traffic")
+    return True
+
+
+async def reset_user_traffic_on_host(user_id: int | str, host_name: str | None = None) -> bool:
+    if not user_id:
+        return False
+    encoded_user_id = quote(str(user_id))
+    path = f"/api/users/{encoded_user_id}/actions/reset-traffic"
+    if host_name:
+        await _request_for_host(host_name, "POST", path)
+    else:
+        await _request("POST", path)
+    return True
+
+
+async def update_user_traffic_limit_on_host(
+    user_id: int | str,
+    traffic_limit_gb: int | None,
+    host_name: str | None = None,
+) -> bool:
+    if not user_id:
+        return False
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return False
+    traffic_limit_bytes = int(traffic_limit_gb * (1024 ** 3)) if traffic_limit_gb and traffic_limit_gb > 0 else 0
+    payload = {
+        "id": resolved_id,
+        "trafficLimitBytes": traffic_limit_bytes,
+    }
+    path = "/api/users"
+    if host_name:
+        await _request_for_host(host_name, "PATCH", path, json_payload=payload, expected_status=(200, 201))
+    else:
+        await _request("PATCH", path, json_payload=payload, expected_status=(200, 201))
+    return True
+
+
+async def update_user_hwid_limit_on_host(
+    user_id: int | str,
+    hwid_limit: int,
+    host_name: str | None = None,
+) -> bool:
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return False
+    payload = {"id": resolved_id, "hwidDeviceLimit": hwid_limit}
+    if host_name:
+        await _request_for_host(host_name, "PATCH", "/api/users", json_payload=payload, expected_status=(200, 201))
+    else:
+        await _request("PATCH", "/api/users", json_payload=payload, expected_status=(200, 201))
+    return True
+
+
+async def get_user_traffic_stats_on_host(
+    user_id: int | str,
+    host_name: str | None = None,
+) -> dict[str, Any] | None:
+    if not user_id:
+        return None
+    user = await get_user_by_id(user_id, host_name=host_name)
+    if not user or not isinstance(user, dict):
+        return None
+    limit_bytes = user.get("trafficLimitBytes") or user.get("trafficLimit") or 0
+    used_bytes = user.get("usedTrafficBytes") or user.get("trafficUsed") or 0
+    limit_gb = float(limit_bytes) / (1024 ** 3) if limit_bytes else 0.0
+    used_gb = float(used_bytes) / (1024 ** 3) if used_bytes else 0.0
+    return {
+        "user_id": user_id,
+        "traffic_limit_bytes": limit_bytes,
+        "used_traffic_bytes": used_bytes,
+        "traffic_limit_gb": limit_gb,
+        "used_traffic_gb": used_gb,
+    }
+
+
+async def set_user_status(user_id: int | str, active: bool) -> bool:
+    if not user_id:
+        return False
+    encoded_user_id = quote(str(user_id))
+    action = "enable" if active else "disable"
+    await _request("POST", f"/api/users/{encoded_user_id}/actions/{action}")
+    return True
+
+
+async def revoke_user_subscription(
+    user_id: int | str,
+    *,
+    host_name: str | None = None,
+    short_uuid: str | None = None,
+) -> dict[str, Any] | None:
+    if not user_id:
+        return None
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return None
+    path = f"/api/users/{quote(str(resolved_id))}/actions/revoke"
+    payload: dict[str, Any] = {}
+    if short_uuid:
+        payload.update({"revokeOnlyPasswords": False, "shortUuid": short_uuid})
+    response = await (
+        _request_for_host(host_name, "POST", path, json_payload=payload)
+        if host_name
+        else _request("POST", path, json_payload=payload)
+    )
+    response_payload = response.json() if response.content else {}
+    response_data = response_payload.get("response", response_payload) if isinstance(response_payload, dict) else None
+    if isinstance(response_data, dict) and isinstance(response_data.get("user"), dict):
+        return response_data["user"]
+    return response_data if isinstance(response_data, dict) else None
+
+
+async def add_users_to_external_squad(host_name: str, squad_uuid: str, user_ids: list[int]) -> bool:
+    if not squad_uuid or not user_ids:
+        return False
+    
+    try:
+        path = f"/api/external-squads/{quote(squad_uuid)}/bulk-actions/add-users"
+        payload = {
+            "userIds": user_ids
+        }
+        
+        await _request_for_host(host_name, "POST", path, json_payload=payload, expected_status=(202,))
+        logger.info(f"Remnawave[{host_name}]: добавлено {len(user_ids)} пользователей в external squad {squad_uuid}")
+        return True
+    except RemnawaveAPIError as e:
+        logger.error(f"Remnawave[{host_name}]: ошибка добавления во external squad {squad_uuid}: {e}")
+        return False
+
+
+def extract_subscription_url(user_payload: dict[str, Any] | None) -> str | None:
+    if not user_payload:
+        return None
+    return user_payload.get("subscriptionUrl")
+
+
+
+
+async def create_or_update_key_on_host(
+    host_name: str,
+    email: str,
+    days_to_add: int | None = None,
+    expiry_timestamp_ms: int | None = None,
+    *,
+    description: str | None = None,
+    tag: str | None = None,
+    telegram_id: int | str | None = None,
+    force_expiry: bool = False,
+    hwid_limit: int | None = None,
+    traffic_limit_gb: float | None = None,
+    traffic_limit_strategy: str | None = None,
+    external_squad_uuid: str | None = None,
+    squad_uuid: str | None = None,
+    reset_hwid_limit: bool = False,
+    set_external_squad: bool = False,
+    status: str = "ACTIVE",
+    allow_create: bool = True,
+) -> dict | None:
+    """Legacy совместимость: создаёт/обновляет пользователя Remnawave и возвращает данные по ключу."""
+    # -------------------------------------------------------------------------
+    # FIX: Принудительная нормализация email перед любыми действиями.
+    # Это предотвращает ошибки вида "Invalid email" (400) для email типа ".__.@bot.local".
+    if email:
+        try:
+            email = _normalize_email_for_remnawave(email, telegram_id=telegram_id)
+        except Exception as e:
+            logger.warning(f"Remnawave: ошибка нормализации email '{email}': {e}")
+            # Если не удалось нормализовать, оставляем как есть, но это риск 400 ошибки.
+    # -------------------------------------------------------------------------
+
+    try:
+        squad = rw_repo.get_squad(host_name)
+        if not squad:
+            logger.error("Remnawave: не найден сквад/хост '%s'", host_name)
+            return None
+        squad_uuid = (squad_uuid or squad.get('squad_uuid') or '').strip()
+        if not squad_uuid:
+            logger.error("Remnawave: сквад '%s' не имеет squad_uuid", host_name)
+            return None
+
+        if expiry_timestamp_ms is not None:
+            msk_tz = timezone(timedelta(hours=3))
+            target_dt = datetime.fromtimestamp(expiry_timestamp_ms / 1000, tz=msk_tz)
+        else:
+            days = days_to_add if days_to_add is not None else int(rw_repo.get_setting('default_extension_days') or 30)
+            if days <= 0:
+                days = 1
+            
+            
+            current_user = await get_user_by_email(email, host_name=host_name)
+            
+            # Локальные данные как fallback для надежности
+            local_key = rw_repo.get_key_by_email(email)
+            target_dt_base = None
+
+            if current_user:
+                current_expire = current_user.get("expireAt")
+                if current_expire:
+                    try:
+                        target_dt_base = datetime.fromisoformat(current_expire.replace("Z", "+00:00"))
+                    except Exception:
+                        pass
+                        
+            # Если с сервера дата не пришла, берем из локальной БД
+            if not target_dt_base and local_key and local_key.get("expire_at_ms"):
+                try:
+                     msk_tz = timezone(timedelta(hours=3))
+                     target_dt_base = datetime.fromtimestamp(local_key["expire_at_ms"] / 1000, tz=msk_tz)
+                except Exception:
+                     pass
+
+            if target_dt_base and is_trial_key_email(email) and get_trial_extend_policy() == TRIAL_EXTEND_POLICY_RESET:
+                target_dt_base = None
+                force_expiry = True
+
+            now_msk = get_msk_time()
+            if target_dt_base and target_dt_base > now_msk:
+                # Если подписка еще активна, прибавляем дни к дате окончания
+                target_dt = target_dt_base + timedelta(days=days)
+            else:
+                # Если подписки нет или она уже истекла, отсчет идет с текущего момента
+                target_dt = now_msk + timedelta(days=days)
+
+        # Default traffic strategy from host
+        traffic_limit_strategy = traffic_limit_strategy or squad.get('default_traffic_strategy') or 'NO_RESET'
+
+        # Resolve traffic limit:
+        # 1. if traffic_limit_gb is passed (from plan), convert to bytes
+        # 2. else no limit override
+        if traffic_limit_gb is not None:
+             effective_traffic_bytes = int(round(traffic_limit_gb * 1024 * 1024 * 1024))
+        else:
+             effective_traffic_bytes = None
+
+        user_payload = await ensure_user(
+            host_name=host_name,
+            email=email,
+            squad_uuid=squad_uuid,
+            expire_at=target_dt,
+            traffic_limit_bytes=effective_traffic_bytes,
+            traffic_limit_strategy=traffic_limit_strategy,
+            description=description,
+            tag=tag,
+            username=email.split('@')[0] if email else None,
+            telegram_id=telegram_id,
+            force_expiry=force_expiry,  
+            hwid_limit=hwid_limit,
+            external_squad_uuid=external_squad_uuid,
+            reset_hwid_limit=reset_hwid_limit,
+            set_external_squad=set_external_squad,
+            status=status,
+            allow_create=allow_create,
+        )
+
+        subscription_url = extract_subscription_url(user_payload) or ''
+        expire_at_str = user_payload.get('expireAt')
+        try:
+            expire_dt = datetime.fromisoformat(expire_at_str.replace('Z', '+00:00')) if expire_at_str else target_dt
+        except Exception:
+            expire_dt = target_dt
+        if expire_dt.tzinfo is None:
+            expire_dt = expire_dt.replace(tzinfo=timezone.utc)
+        else:
+            expire_dt = expire_dt.astimezone(timezone.utc)
+        expiry_ts_ms = int(expire_dt.timestamp() * 1000)
+
+        return {
+            'client_uuid': user_payload.get('id'),
+            'short_uuid': user_payload.get('shortUuid'),
+            'email': email,
+            'host_name': squad.get('host_name') or host_name,
+            'squad_uuid': squad_uuid,
+            'subscription_url': subscription_url,
+            'traffic_limit_bytes': user_payload.get('trafficLimitBytes'),
+            'traffic_limit_strategy': user_payload.get('trafficLimitStrategy'),
+            'expiry_timestamp_ms': expiry_ts_ms,
+            'connection_string': subscription_url,
+        }
+    except RemnawaveAPIError as exc:
+        logger.error("Remnawave: ошибка create_or_update_key_on_host %s/%s: %s", host_name, email, exc)
+    except Exception:
+        logger.exception("Remnawave: непредвиденная ошибка create_or_update_key_on_host для %s/%s", host_name, email)
+    return None
+
+
+async def promote_trial_key_email(
+    key: dict[str, Any] | None,
+    *,
+    telegram_id: int | str | None = None,
+    username: str | None = None,
+) -> dict[str, Any] | None:
+    if not isinstance(key, dict):
+        return None
+    current_email = str(key.get('key_email') or key.get('email') or '').strip()
+    if not current_email:
+        return None
+    lowered = current_email.lower()
+    if not lowered.startswith('trial_') and not lowered.startswith('ptrial_'):
+        return None
+    key_id = key.get('key_id')
+    if key_id is None:
+        return None
+    host_name = key.get('host_name')
+    try:
+        remote = await get_user_by_email(current_email, host_name=host_name)
+        if not isinstance(remote, dict):
+            remote = await get_user_by_id(key.get('remnawave_user_uuid'), host_name=host_name)
+        if not isinstance(remote, dict) or remote.get('id') is None:
+            return None
+
+        owner_id = telegram_id or key.get('user_id') or 0
+        base_local = _normalize_email_for_remnawave(
+            f"{(username or f'user{owner_id}').lower()}@bot.local",
+            telegram_id=owner_id,
+        ).split('@')[0]
+        candidate_email = f"{base_local}@bot.local"
+        attempt = 0
+        while True:
+            taken = rw_repo.get_key_by_email(candidate_email) is not None
+            if not taken:
+                try:
+                    taken = isinstance(await get_user_by_email(candidate_email, host_name=host_name), dict)
+                except Exception:
+                    taken = False
+            if not taken:
+                break
+            attempt += 1
+            if attempt > 100:
+                return None
+            candidate_email = f"{base_local}-{attempt}@bot.local"
+
+        new_username = _normalize_username_for_remnawave(candidate_email.split('@')[0])
+        response = await _request_maybe_host(
+            host_name,
+            "PATCH",
+            "/api/users",
+            json_payload={
+                "id": remote.get('id'),
+                "email": candidate_email,
+                "username": new_username,
+            },
+            expected_status=(200, 201),
+        )
+        payload = response.json() if response.content else {}
+        updated = payload.get('response') if isinstance(payload, dict) else None
+        if not isinstance(updated, dict):
+            return None
+        if not rw_repo.update_key(key_id, email=candidate_email):
+            return None
+        logger.info("Remnawave: ключ #%s переименован с %s на %s", key_id, current_email, candidate_email)
+        return {
+            "key_id": key_id,
+            "email": candidate_email,
+            "username": new_username,
+            "user_id": updated.get('id'),
+        }
+    except Exception as exc:
+        logger.warning("Remnawave: не удалось переименовать ключ #%s (%s): %s", key_id, current_email, exc)
+        return None
+
+
+async def get_key_details_from_host(key_data: dict) -> dict | None:
+    email = key_data.get('key_email') or key_data.get('email')
+    user_uuid = key_data.get('remnawave_user_uuid') or key_data.get('xui_client_uuid')
+    try:
+        user_payload = None
+        host_name = (key_data.get('host_name') or '').strip() or None
+        if host_name:
+            if email:
+                user_payload = await get_user_by_email(email, host_name=host_name)
+            if not user_payload and user_uuid:
+                user_payload = await get_user_by_uuid(user_uuid, host_name=host_name)
+        else:
+            sq = (key_data.get('squad_uuid') or key_data.get('squadUuid') or '').strip()
+            candidates = rw_repo.list_squads_by_uuid(sq)
+            if not candidates and sq:
+                squad = rw_repo.get_squad(sq)
+                if squad:
+                    candidates = [squad]
+            for candidate in candidates:
+                candidate_host = (candidate.get('host_name') or '').strip() or None
+                if not candidate_host:
+                    continue
+                try:
+                    if email:
+                        user_payload = await get_user_by_email(email, host_name=candidate_host)
+                    if not user_payload and user_uuid:
+                        user_payload = await get_user_by_uuid(user_uuid, host_name=candidate_host)
+                except Exception:
+                    user_payload = None
+                if user_payload:
+                    host_name = candidate_host
+                    break
+        if not user_payload:
+            logger.warning("Remnawave: не найден пользователь для ключа %s", key_data.get('key_id'))
+            return None
+        subscription_url = extract_subscription_url(user_payload)
+        return {
+            'connection_string': subscription_url or '',
+            'subscription_url': subscription_url,
+            'user': user_payload,
+        }
+    except RemnawaveAPIError as exc:
+        logger.error("Remnawave: ошибка получения деталей ключа %s: %s", key_data.get('key_id'), exc)
+    except Exception:
+        logger.exception("Remnawave: непредвиденная ошибка получения деталей ключа %s", key_data.get('key_id'))
+    return None
+
+
+async def delete_client_on_host(host_name: str, client_email: str) -> bool:
+    try:
+        # -------------------------------------------------------------------------
+        # FIX: Нормализация email перед удалением.
+        # Если в базе старый "кривой" email, его нужно привести к виду, который поймет API (или хотя бы попытаться).
+        if client_email:
+             # Пробуем нормализовать, если это возможно, чтобы найти user по правильному email
+             # Однако, если в базе записан "кривой" email, то get_user_by_email может не найти его по нормализованному.
+             # Но API точно не примет кривой email.
+             # В данном случае лучше попробовать найти "как есть", а если нет - по нормализованному.
+             pass
+             
+        # Сначала ищем как есть (вдруг в базе уже нормальный, или API научился принимать)
+        user_payload = await get_user_by_email(client_email, host_name=host_name)
+        
+        # Если не нашли, пробуем нормализованную версию (актуально для кейса .__. -> u____)
+        if not user_payload:
+             try:
+                 norm_email = _normalize_email_for_remnawave(client_email)
+                 if norm_email != client_email:
+                     user_payload = await get_user_by_email(norm_email, host_name=host_name)
+             except Exception:
+                 pass
+
+        if not user_payload:
+            logger.info("Remnawave: пользователь %s уже отсутствует", client_email)
+            return True
+        if isinstance(user_payload, list):
+
+            user_payload = next((u for u in user_payload if isinstance(u, dict)), None)
+        user_id = user_payload.get('id') if isinstance(user_payload, dict) else None
+        if not user_id:
+            logger.warning("Remnawave: нет id для пользователя %s", client_email)
+            return False
+        logger.info("Remnawave: удаляю пользователя %s (%s) на '%s'...", client_email, user_id, host_name)
+        await delete_user_on_host(host_name, user_id)
+        logger.info("Remnawave: пользователь %s (%s) успешно удалён на '%s'", client_email, user_id, host_name)
+        return True
+    except RemnawaveAPIError as exc:
+        logger.error("Remnawave: ошибка удаления пользователя %s: %s", client_email, exc)
+    except Exception:
+        logger.exception("Remnawave: непредвиденная ошибка удаления пользователя %s", client_email)
+    return False
+
+
+async def get_user_devices(user_id: int | str, host_name: str | None = None) -> list[dict[str, Any]]:
+    """Получает список подключенных устройств для пользователя (ключа)."""
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None:
+        return []
+        
+    try:
+        if host_name:
+            response = await _request_for_host(host_name, "GET", f"/api/hwid/devices/{quote(str(resolved_id))}", expected_status=(200, 404))
+        else:
+            response = await _request("GET", f"/api/hwid/devices/{quote(str(resolved_id))}", expected_status=(200, 404))
+
+        if response.status_code == 404:
+            return []
+
+        payload = response.json() or {}
+        data = payload.get("response") if isinstance(payload.get("response"), dict) else payload
+        devices = data.get("devices") if isinstance(data, dict) else []
+        
+        return devices if isinstance(devices, list) else []
+    except Exception as e:
+        logger.error(f"Remnawave: ошибка получения устройств для {user_id}: {e}")
+        return []
+
+
+async def delete_user_device(user_id: int | str, hwid: str, host_name: str | None = None) -> bool:
+    """Удаляет устройство по HWID и ID пользователя."""
+    resolved_id = await _resolve_user_id(user_id, host_name=host_name)
+    if resolved_id is None or not hwid:
+        return False
+        
+    try:
+        # Эндпоинт: POST /api/hwid/devices/delete
+        # Body: { "userId": 123, "hwid": "..." }
+        payload = {
+            "userId": resolved_id,
+            "hwid": hwid
+        }
+        
+        path = "/api/hwid/devices/delete"
+        
+        if host_name:
+            response = await _request_for_host(host_name, "POST", path, json_payload=payload, expected_status=(200, 204))
+        else:
+            response = await _request("POST", path, json_payload=payload, expected_status=(200, 204))
+            
+        if response.status_code in (200, 201, 204):
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Remnawave: ошибка удаления устройства {hwid} (user {user_id}): {e}")
+        return False
+
+
+async def delete_all_user_devices(user_id: int | str, host_name: str | None = None) -> dict[str, int]:
+    devices = await get_user_devices(user_id, host_name=host_name)
+    deleted = 0
+    failed = 0
+    for device in devices:
+        hwid = device.get("hwid") if isinstance(device, dict) else None
+        if not hwid:
+            failed += 1
+            continue
+        if await delete_user_device(user_id, str(hwid), host_name=host_name):
+            deleted += 1
+        else:
+            failed += 1
+    return {"deleted": deleted, "failed": failed}

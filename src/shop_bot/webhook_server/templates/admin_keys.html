@@ -1,0 +1,3079 @@
+{% extends "base.html" %}
+{% block title %}Управление подписками{% endblock %}
+
+{% block content %}
+<header class="admin-page-head">
+    <div class="min-w-0">
+        <h1 class="flex items-center gap-2">
+            Подписки
+            <span class="rounded-full border border-sky-400/20 bg-sky-400/[0.08] px-2 py-0.5 text-[10px] font-semibold text-sky-300">Доступ</span>
+        </h1>
+        <p>Управление подписками и доступом</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <button type="button" onclick="openCreateBlock()" class="admin-btn">
+            <i data-lucide="plus" aria-hidden="true"></i>
+            Выпустить подписку
+        </button>
+        <button type="button" onclick="window.location.reload()" class="admin-btn-ghost">
+            <i data-lucide="refresh-cw" aria-hidden="true"></i>
+            <span class="hidden sm:inline">Синхронизировать</span>
+        </button>
+    </div>
+</header>
+
+<details id="keys-create-block" class="keys-create-shell relative mb-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-2 sm:p-2.5">
+    <summary class="create-key-summary">
+        <span class="create-key-summary-icon"><i data-lucide="plus" class="h-3.5 w-3.5" aria-hidden="true"></i></span>
+        <span class="create-key-summary-title">Новая подписка</span>
+        <span class="create-key-summary-hint">Пользователь, тариф, план и срок</span>
+        <span class="create-key-summary-meta" id="create-key-summary-meta"></span>
+        <i data-lucide="chevron-right" class="create-key-summary-chevron h-4 w-4" aria-hidden="true"></i>
+    </summary>
+    <form action="{{ url_for('create_key_ajax_route') }}" method="post" id="create-key-form" autocomplete="off" class="relative ajax-form" data-success-msg="Подписка создана">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="mode" id="create_mode" value="personal" />
+        <div class="create-key-topbar">
+            <div class="create-key-mode-switch relative grid w-full shrink-0 grid-cols-2 rounded-lg border border-white/[0.06] bg-black/25 sm:w-[264px]" id="mode_switch">
+                <div class="create-key-mode-indicator absolute inset-y-0 left-0 w-1/2 border border-emerald-500/25 bg-emerald-500/[0.12] transition-transform duration-200" id="mode_indicator"></div>
+                <button type="button" data-mode="personal" class="relative z-10 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors"><i data-lucide="user-round" class="h-3.5 w-3.5" aria-hidden="true"></i>Персональный</button>
+                <button type="button" data-mode="gift" class="relative z-10 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-white/50 transition-colors hover:text-white"><i data-lucide="gift" class="h-3.5 w-3.5" aria-hidden="true"></i>Подарочный</button>
+            </div>
+            <div class="create-key-brief">
+                <span class="create-key-brief-item"><i data-lucide="globe" class="create-key-brief-icon" aria-hidden="true"></i><span id="create-preview-host" class="create-key-brief-value">Выберите тариф</span></span>
+                <span class="create-key-brief-sep" aria-hidden="true"></span>
+                <span class="create-key-brief-item"><i data-lucide="credit-card" class="create-key-brief-icon" aria-hidden="true"></i><span id="create-preview-plan" class="create-key-brief-value">План не выбран</span></span>
+                <span class="create-key-brief-sep" aria-hidden="true"></span>
+                <span class="create-key-brief-item"><i data-lucide="calendar-days" class="create-key-brief-icon" aria-hidden="true"></i><span id="create-preview-days" class="create-key-brief-value">30 дней</span></span>
+                <span id="create-preview-price" class="create-key-brief-price"></span>
+                <span id="create-preview-mode" class="sr-only">Персональный доступ</span>
+            </div>
+        </div>
+        <div class="create-key-fields grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-12">
+            <div class="create-key-field mode-section mode-personal mode-gift relative sm:col-span-1 lg:col-span-3" id="user_id_container">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Пользователь</label>
+                <div class="relative"><i data-lucide="user-round" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><input id="user_id" name="user_id" placeholder="ID или @username" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20" /></div>
+            </div>
+            <div class="create-key-field relative min-w-0 sm:col-span-1 lg:col-span-3" id="host_container">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Тариф</label>
+                <div class="soft-select min-w-0" data-target="host_name">
+                    <button type="button" class="soft-select-toggle relative w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-left text-xs text-white outline-none transition hover:border-white/20 focus:ring-1 focus:ring-emerald-500/20" id="host_name_toggle"><i data-lucide="globe" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><span class="ml-1 text-white/70">Выберите тариф...</span></button>
+                    <div class="soft-select-menu" id="host_name_menu"></div>
+                    <select id="host_name" name="host_name" required style="width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;position:absolute;left:0;bottom:0;"><option value="" disabled selected>Выберите тариф...</option>{% for h in hosts %}<option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}" data-traffic-strategy="{{ h.default_traffic_strategy or 'NO_RESET' }}" data-traffic-limit-gb="{% if h.default_traffic_limit_bytes is not none %}{{ (h.default_traffic_limit_bytes / 1024 / 1024 / 1024)|round(2) }}{% else %}0{% endif %}">{{ h.host_name }}</option>{% endfor %}</select>
+                </div>
+            </div>
+            <div class="create-key-field relative min-w-0 sm:col-span-1 lg:col-span-4">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">План</label>
+                <div class="flex gap-2"><div class="soft-select min-w-0 flex-1" data-target="plan_select"><button type="button" class="soft-select-toggle relative w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-left text-xs text-white outline-none transition hover:border-white/20 focus:ring-1 focus:ring-emerald-500/20" id="plan_select_toggle"><i data-lucide="credit-card" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><span class="ml-1">—</span></button><div class="soft-select-menu" id="plan_select_menu"></div><select id="plan_select" name="plan_id" class="hidden"><option value="">Выберите план...</option></select></div><div class="hidden shrink-0" id="plan_price_wrapper"><span id="plan_price" class="flex h-full items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-300">0₽</span></div></div>
+            </div>
+            <div class="create-key-field relative sm:col-span-1 lg:col-span-2">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Дней</label>
+                <input id="custom_days" name="custom_days" type="number" min="1" value="30" placeholder="30" class="w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-center font-mono text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20" />
+            </div>
+            <div class="create-key-field mode-section mode-personal sm:col-span-1 lg:col-span-6" id="expiry_date_container">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Дата истечения <span id="expiry_days_label" class="ml-1 text-[10px] font-normal lowercase text-white/50"></span></label>
+                <div class="flex flex-wrap items-center gap-2 rounded-xl border border-white/[0.08] bg-black/30 p-1 sm:flex-nowrap"><div class="relative min-w-[140px] flex-1"><i data-lucide="calendar-days" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><input id="expiry_date" name="expiry_date" type="text" placeholder="Укажите дату" class="w-full rounded-lg border-0 bg-transparent py-1.5 pl-9 pr-2 text-xs text-white placeholder:text-white/30 focus:ring-0" /></div><div class="flex items-center gap-1 overflow-x-auto px-1 py-1">{% for preset in [30, 90, 180, 365] %}<button type="button" data-preset="{{ preset }}" class="whitespace-nowrap rounded-lg border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-[10px] font-medium text-white/60 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white">+{{ preset }}</button>{% endfor %}</div></div>
+            </div>
+            <div class="create-key-field mode-section mode-gift relative sm:col-span-2 lg:col-span-4">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Лимит устройств</label>
+                <div class="relative"><i data-lucide="monitor-smartphone" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><input id="gift_hwid_limit" name="gift_hwid_limit" type="number" min="1" step="1" placeholder="Из тарифа" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 font-mono text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20" /></div>
+            </div>
+            <div class="create-key-field mode-section mode-gift relative sm:col-span-2 lg:col-span-4">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Лимит трафика, ГБ</label>
+                <div class="relative"><i data-lucide="gauge" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><input id="gift_traffic_gb" name="gift_traffic_gb" type="number" min="0" step="0.01" placeholder="Из тарифа" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 font-mono text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20" /></div>
+            </div>
+            <div class="create-key-field mode-section mode-gift relative sm:col-span-2 lg:col-span-4">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Сброс трафика</label>
+                <div class="soft-select min-w-0" data-target="gift_traffic_strategy">
+                    <button type="button" class="soft-select-toggle relative w-full rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-left text-xs text-white outline-none transition hover:border-white/20 focus:ring-1 focus:ring-emerald-500/20" id="gift_traffic_strategy_toggle"><i data-lucide="rotate-ccw" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i><span class="soft-select-text ml-1">Из тарифа</span></button>
+                    <div class="soft-select-menu" id="gift_traffic_strategy_menu"></div>
+                    <select id="gift_traffic_strategy" name="gift_traffic_strategy" class="hidden"><option value="">Из тарифа</option><option value="NO_RESET">Никогда</option><option value="DAY">Ежедневно</option><option value="WEEK">Еженедельно</option><option value="MONTH">Ежемесячно</option></select>
+                </div>
+            </div>
+            <div class="create-key-field mode-section mode-personal sm:col-span-1 lg:col-span-6" id="comment_container">
+                <label class="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">Комментарий</label>
+                <div class="relative"><i data-lucide="message-square" class="absolute left-3 top-3 h-4 w-4 text-white/30" aria-hidden="true"></i><textarea id="comment" name="comment" rows="1" placeholder="Заметка или комментарий к подписке..." class="min-h-[36px] w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 py-2 pl-9 pr-3 text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"></textarea></div>
+            </div>
+        </div>
+        <details class="create-key-technical mt-1.5 group/details"><summary class="flex w-max cursor-pointer select-none items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-[10px] font-medium text-white/45 transition-colors hover:text-white/75"><i data-lucide="chevron-right" class="h-3 w-3 transition-transform duration-200 group-open/details:rotate-90" aria-hidden="true"></i>Технические детали<span class="text-white/25">из тарифа и плана</span></summary><div class="create-key-tech-grid"><div><label class="create-key-tech-label" title="Идентификатор подключения в панели">Логин подключения</label><input id="inbound_id" type="text" placeholder="—" readonly class="create-key-tech-value" /></div><div class="mode-section mode-personal mode-gift"><label class="create-key-tech-label" title="Уникальный логин подписки в панели">Email подписки</label><input id="key_email" name="key_email" type="email" placeholder="—" readonly class="create-key-tech-value" /></div><div><label class="create-key-tech-label" title="Лимит трафика в гигабайтах">Лимит трафика</label><input id="host_traffic_gb" type="text" placeholder="—" readonly class="create-key-tech-value" /></div><div><label class="create-key-tech-label" title="Как часто обнуляется счётчик трафика">Сброс трафика</label><input id="host_traffic_strategy" type="text" placeholder="—" readonly class="create-key-tech-value" /></div><div><label class="create-key-tech-label" title="Сколько устройств можно подключить">Лимит устройств</label><input id="host_hwid_limit" type="text" placeholder="—" readonly class="create-key-tech-value" /></div><div><label class="create-key-tech-label" title="Срок действия подписки в днях">Период, дней</label><input id="key_period_days" type="text" placeholder="0" readonly class="create-key-tech-value" /></div><p class="create-key-tech-note">Значения подтягиваются из выбранного тарифа и плана и применяются к подписке автоматически</p><div id="email_correction_warning" class="col-span-1 mt-2 hidden text-[10px] font-bold text-yellow-500 sm:col-span-2 lg:col-span-3"></div></div></details>
+        <div class="mode-section mode-gift hidden mt-2"><div class="flex items-center gap-2 rounded-lg border border-sky-400/15 bg-sky-400/[0.05] px-2.5 py-1.5"><i data-lucide="gift" class="h-3.5 w-3.5 shrink-0 text-sky-300" aria-hidden="true"></i><p class="text-[10px] text-sky-100/60">Подарочная подписка — ссылка будет сгенерирована автоматически</p></div></div>
+        <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p class="text-[10px] text-white/30">Подписка создаётся сразу</p>
+            <button type="submit" id="btn-submit-create" class="create-key-submit flex h-8 items-center justify-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/15 px-3.5 text-[11px] font-medium text-emerald-300 transition-colors hover:bg-emerald-500/25"><i data-lucide="plus" class="h-3.5 w-3.5" aria-hidden="true"></i><span>Создать подписку</span></button>
+        </div>
+    </form>
+</details>
+
+<!-- ===== ФИЛЬТРЫ И ПОИСК ===== -->
+<!-- Инструменты фильтрации списка ключей и массового удаления истёкших -->
+<!-- ===== ФИЛЬТРЫ И ПОИСК ===== -->
+<div class="keys-toolbar mb-5 flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div class="relative min-w-0 flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" aria-hidden="true"></i>
+            <input id="keys-search" type="text" value="{{ q or '' }}" class="w-full rounded-xl border border-white/[0.08] bg-black/30 py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-white/30 outline-none transition duration-150 focus:border-white/20 focus:ring-1 focus:ring-primary/30" placeholder="Поиск по ID подписки, username, Telegram ID..." />
+        </div>
+        <div class="inline-flex max-w-full flex-wrap items-center gap-1 rounded-xl border border-white/[0.06] bg-black/30 p-1" id="filter_switch" role="group" aria-label="Фильтр подписок">
+            <div class="hidden" id="filter_indicator"></div>
+            <a href="{{ url_for('admin_keys_page', filter='all') }}" data-filter-value="all" class="ajax-nav rounded-lg px-3 py-1.5 text-xs font-medium transition-all {% if current_filter == 'all' %}bg-white/10 text-white shadow-sm font-semibold{% else %}text-white/50 hover:bg-white/[0.04] hover:text-white{% endif %}">Все</a>
+            <a href="{{ url_for('admin_keys_page', filter='gift') }}" data-filter-value="gift" class="ajax-nav rounded-lg px-3 py-1.5 text-xs font-medium transition-all {% if current_filter == 'gift' %}bg-white/10 text-white shadow-sm font-semibold{% else %}text-white/50 hover:bg-white/[0.04] hover:text-white{% endif %}">Подарочные</a>
+            <a href="{{ url_for('admin_keys_page', filter='trial') }}" data-filter-value="trial" class="ajax-nav rounded-lg px-3 py-1.5 text-xs font-medium transition-all {% if current_filter == 'trial' %}bg-white/10 text-white shadow-sm font-semibold{% else %}text-white/50 hover:bg-white/[0.04] hover:text-white{% endif %}">Триал</a>
+            <a href="{{ url_for('admin_keys_page', filter='suspicious') }}" data-filter-value="suspicious" class="ajax-nav rounded-lg px-3 py-1.5 text-xs font-medium transition-all {% if current_filter == 'suspicious' %}bg-white/10 text-white shadow-sm font-semibold{% else %}text-white/50 hover:bg-white/[0.04] hover:text-white{% endif %}">Подозрительные</a>
+            </div>
+            <div id="gift-selected-actions" class="relative hidden shrink-0">
+                <button type="button" id="gift-selected-actions-toggle" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-xs font-medium text-white/70 transition duration-150 hover:border-white/20 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:w-auto" aria-haspopup="menu" aria-expanded="false" aria-label="Действия с выбранными подарочными подписками"><i data-lucide="list-checks" class="h-4 w-4" aria-hidden="true"></i><span>Выбранные</span><span id="selected-gift-keys-count" class="rounded-full bg-emerald-400/10 px-1.5 py-0.5 text-[10px] tabular-nums text-emerald-300">0</span><i data-lucide="chevron-down" class="gift-actions-chevron h-3.5 w-3.5 text-white/40 transition-transform duration-150" aria-hidden="true"></i></button>
+                <div id="gift-selected-actions-menu" class="absolute right-0 top-full z-50 mt-2 hidden w-44 rounded-xl border border-white/[0.08] bg-[#0b0f0e]/95 p-1.5 shadow-2xl backdrop-blur-xl" role="menu">
+                    <button type="button" data-gift-action="copy" role="menuitem" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"><i data-lucide="copy" class="h-4 w-4 text-white/40" aria-hidden="true"></i>Скопировать</button>
+                    <button type="button" data-gift-action="comment" role="menuitem" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"><i data-lucide="message-square" class="h-4 w-4 text-white/40" aria-hidden="true"></i>Комментарии</button>
+                    <button type="button" data-gift-action="expiry" role="menuitem" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"><i data-lucide="calendar-plus" class="h-4 w-4 text-white/40" aria-hidden="true"></i>Продлить</button>
+                    <button type="button" data-gift-action="delete" role="menuitem" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-300/70 transition hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60"><i data-lucide="trash-2" class="h-4 w-4 text-red-300/50" aria-hidden="true"></i>Удалить</button>
+                </div>
+            </div>
+        <form action="{{ url_for('sweep_expired_keys_route') }}" method="post" class="ajax-form shrink-0" data-confirm="Удалить все истёкшие подписки? Это действие необратимо." data-success-msg="Истёкшие подписки удалены" data-callback="refreshKeysTable">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-400/[0.06] px-3 py-2.5 text-xs font-medium text-red-300 transition duration-150 hover:border-red-300/40 hover:bg-red-400/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60 sm:w-auto">
+                <i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i>
+                Удалить истёкшие{% if expired_count and expired_count > 0 %}<span class="rounded-full bg-red-400/10 px-1.5 py-0.5 text-[10px] tabular-nums">{{ expired_count }}</span>{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+<!-- ===== окончание фильтров ===== -->
+
+<!-- ===== ТАБЛИЦА КЛЮЧЕЙ ===== -->
+<!-- Основной реестр ключей с пагинацией и действиями -->
+<!-- ===== ТАБЛИЦА КЛЮЧЕЙ ===== -->
+<div class="keys-table-shell relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
+    <div class="relative overflow-x-auto">
+        <table class="w-full min-w-[1120px] border-collapse text-left">
+            <thead class="sticky top-0 z-10 border-b border-white/[0.06] bg-white/[0.03] backdrop-blur-sm">
+                <tr>
+                    <th class="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-white/45"><label id="gift-keys-selection-header" class="gift-keys-selection hidden cursor-pointer items-center gap-2"><input type="checkbox" id="select-all-gift-keys" class="gift-key-select-all h-3.5 w-3.5 rounded border-white/20 bg-black/30 text-emerald-400 accent-emerald-400" aria-label="Выбрать все видимые подарочные подписки"><span>Подписка</span></label><span id="gift-keys-selection-header-label" class="gift-keys-selection-label">Подписка</span></th>
+                    <th class="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-white/45">Пользователь</th>
+                    <th class="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-white/45">Тариф</th>
+                    <th class="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-white/45">Email / UUID</th>
+                    <th class="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-white/45">Срок действия</th>
+                    <th class="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-white/45">Использование</th>
+                    <th class="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-white/45">Создан</th>
+                    <th class="px-4 py-2.5 text-right text-[10px] font-medium uppercase tracking-wider text-white/45">Действия</th>
+                </tr>
+            </thead>
+            <tbody id="keys-tbody" class="divide-y divide-white/5"
+                data-fetch-url="{{ url_for('admin_keys_table_partial', filter=current_filter, q=q, page=current_page) }}"
+                data-fetch-interval="120000">
+                <tr>
+                    <td colspan="8" class="p-8 text-center">
+                        <div class="flex flex-col items-center justify-center gap-2 text-white/30">
+                            <span class="h-3 w-full max-w-sm animate-pulse rounded bg-white/[0.08]"></span>
+                            <span class="h-3 w-2/3 max-w-xs animate-pulse rounded bg-white/[0.08]"></span>
+                            <span class="text-xs">Загрузка подписок...</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- ===== окончание таблицы ===== -->
+
+<style>
+    .keys-create-shell {
+        background-color: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.08);
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .create-key-summary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 28px;
+        padding: 0 4px;
+        cursor: pointer;
+        list-style: none;
+        border-radius: 8px;
+    }
+
+    .create-key-summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .create-key-summary:focus-visible {
+        outline: 2px solid rgba(19, 236, 128, 0.5);
+        outline-offset: 2px;
+    }
+
+    .create-key-summary-icon {
+        display: flex;
+        height: 24px;
+        width: 24px;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 7px;
+        background: rgba(19, 236, 128, 0.1);
+        color: #13ec80;
+    }
+
+    .create-key-summary-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(233, 240, 236, 0.92);
+        white-space: nowrap;
+    }
+
+    .create-key-summary-hint {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.3);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .create-key-summary-meta {
+        margin-left: auto;
+        flex-shrink: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+        color: rgba(19, 236, 128, 0.7);
+        white-space: nowrap;
+    }
+
+    .create-key-summary-chevron {
+        flex-shrink: 0;
+        color: rgba(255, 255, 255, 0.35);
+        transition: transform 200ms ease;
+    }
+
+    .keys-create-shell[open] .create-key-summary-chevron {
+        transform: rotate(90deg);
+    }
+
+    .keys-create-shell > form {
+        margin-top: 10px;
+    }
+
+    .create-key-topbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+        padding: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.055);
+        border-radius: 12px;
+        background-color: rgba(255, 255, 255, 0.02);
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    .create-key-topbar .create-key-mode-switch {
+        min-height: 28px;
+        border-color: transparent;
+        background-color: rgba(3, 18, 11, 0.32);
+    }
+
+    .create-key-topbar .create-key-mode-switch button {
+        border-radius: 7px;
+        line-height: 16px;
+    }
+
+    .create-key-mode-indicator {
+        border-radius: 7px;
+        pointer-events: none;
+    }
+
+    .create-key-brief {
+        display: flex;
+        min-width: 0;
+        min-height: 28px;
+        flex: 0 1 auto;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+        padding: 4px 8px;
+        border: 1px solid rgba(19, 236, 128, 0.14);
+        border-radius: 8px;
+        background-color: rgba(19, 236, 128, 0.05);
+        font-size: 11px;
+        line-height: 1;
+    }
+
+    .create-key-brief-item {
+        display: inline-flex;
+        min-width: 0;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .create-key-brief-icon {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+        color: rgba(255, 255, 255, 0.34);
+    }
+
+    .create-key-brief-value {
+        min-width: 0;
+        overflow: hidden;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.78);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .create-key-brief-sep {
+        width: 1px;
+        height: 10px;
+        flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .create-key-brief-price {
+        margin-left: 2px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: rgba(19, 236, 128, 0.95);
+        white-space: nowrap;
+    }
+
+    .create-key-brief-price:empty {
+        display: none;
+    }
+
+    @media (max-width: 767px) {
+        .create-key-brief {
+            width: 100%;
+            margin-left: 0;
+            padding: 6px 8px;
+        }
+
+        .create-key-brief-sep {
+            display: none;
+        }
+    }
+
+    .create-key-tech-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px 16px;
+        margin-top: 8px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.015);
+    }
+
+    .create-key-tech-label {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 10px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .create-key-tech-value {
+        width: 100%;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: rgba(233, 240, 236, 0.82);
+        text-overflow: ellipsis;
+    }
+
+    .create-key-tech-value::placeholder {
+        color: rgba(255, 255, 255, 0.22);
+    }
+
+    .create-key-tech-note {
+        grid-column: 1 / -1;
+        margin-top: 2px;
+        font-size: 10px;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.26);
+    }
+
+    @media (min-width: 640px) {
+        .create-key-tech-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .create-key-tech-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .create-key-summary-hint {
+            display: none;
+        }
+    }
+
+    .keys-create-shell > form > .absolute {
+        display: none;
+    }
+
+    .create-key-hero {
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
+    }
+
+
+    .create-key-field {
+        min-width: 0;
+        padding: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        transition: background-color 150ms ease, border-color 150ms ease;
+    }
+
+    .create-key-field:focus-within {
+        border-color: rgba(16, 185, 129, 0.35);
+        background: rgba(16, 185, 129, 0.025);
+    }
+
+    .create-key-field input,
+    .create-key-field textarea,
+    .create-key-field .soft-select-toggle {
+        min-height: 32px;
+        border-color: rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        background-color: rgba(0, 0, 0, 0.3);
+        font-size: 12px;
+    }
+
+    .create-key-field input:focus,
+    .create-key-field textarea:focus,
+    .create-key-field .soft-select-toggle:focus-visible {
+        border-color: rgba(16, 185, 129, 0.4);
+        outline: 1px solid rgba(16, 185, 129, 0.2);
+        outline-offset: 0;
+        box-shadow: none;
+    }
+
+    .create-key-field .soft-select-menu {
+        z-index: 30;
+    }
+
+    .keys-create-shell .soft-select-menu {
+        margin-top: 6px;
+        max-height: 264px;
+        padding: 4px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 10px !important;
+        background: #0b0f0e !important;
+        box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.7) !important;
+    }
+
+    .keys-create-shell .soft-select-item {
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 16px;
+        color: rgba(255, 255, 255, 0.62);
+    }
+
+    .keys-create-shell .soft-select-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #ffffff;
+    }
+
+    .keys-create-shell .soft-select-item.is-active {
+        background: rgba(19, 236, 128, 0.1);
+        color: #8ff0bd;
+    }
+
+    .create-key-technical > summary {
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 4px 8px;
+    }
+
+    .create-key-submit {
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+    }
+
+    .create-key-submit:hover {
+        border-color: rgba(16, 185, 129, 0.4);
+        background: rgba(16, 185, 129, 0.25);
+        color: #a7f3d0;
+    }
+
+    .create-key-submit:focus-visible,
+    .create-key-mode-switch button:focus-visible,
+    .create-key-field [data-preset]:focus-visible {
+        outline: 2px solid rgba(110, 231, 183, 0.8);
+        outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .create-key-field,
+        .create-key-submit,
+        #mode_indicator {
+            transition: none;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .create-key-field {
+            padding: 6px;
+        }
+    }
+
+    .keys-table-shell #keys-tbody > tr.keys-record-row,
+    .keys-table-shell #keys-tbody > tr.keys-record-row-alt,
+    .keys-table-shell #keys-tbody > tr.keys-note-row,
+    .keys-table-shell #keys-tbody > tr.keys-record-row-alt + tr.keys-note-row {
+        background: transparent;
+        transition: background-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .keys-table-shell #keys-tbody > tr.keys-record-row,
+    .keys-table-shell #keys-tbody > tr.keys-record-row-alt {
+        cursor: pointer;
+    }
+
+    .keys-table-shell #keys-tbody > tr.keys-record-row:hover,
+    .keys-table-shell #keys-tbody > tr.keys-record-row-alt:hover {
+        background: rgba(255, 255, 255, 0.035);
+        box-shadow: inset 2px 0 rgba(56, 189, 248, 0.72);
+    }
+
+    .keys-table-shell #keys-tbody > tr.keys-row-new,
+    .keys-table-shell #keys-tbody > tr.keys-row-new:hover {
+        background: rgba(52, 211, 153, 0.08);
+        box-shadow: inset 2px 0 rgba(52, 211, 153, 0.85);
+    }
+
+    @media (max-width: 767px) {
+        .keys-table-shell > div.overflow-x-auto {
+            overflow-x: auto;
+        }
+
+        .keys-table-shell table {
+            min-width: 720px;
+        }
+
+        .keys-table-shell thead th:nth-child(4),
+        .keys-table-shell tbody td:nth-child(4) {
+            display: none;
+        }
+
+        .keys-table-shell tbody td,
+        .keys-table-shell thead th {
+            padding-left: 12px;
+            padding-right: 12px;
+        }
+    }
+
+    .keys-table-shell #keys-tbody > tr > td {
+        border-bottom-color: rgba(255, 255, 255, 0.055);
+    }
+
+    .keys-usage {
+        display: flex;
+        min-width: 0;
+        max-width: 190px;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .keys-risk {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        margin-left: 6px;
+        padding: 1px 6px;
+        border: 1px solid rgba(251, 146, 60, 0.3);
+        border-radius: 5px;
+        background: rgba(251, 146, 60, 0.1);
+        font-size: 9.5px;
+        font-weight: 600;
+        color: #fdba74;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .keys-risk svg {
+        width: 10px;
+        height: 10px;
+        flex: 0 0 auto;
+    }
+
+    .keys-usage-main {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .keys-usage-bar {
+        display: block;
+        width: 44px;
+        height: 3px;
+        flex: 0 0 auto;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .keys-usage-fill {
+        display: block;
+        width: 0;
+        height: 100%;
+        border-radius: 999px;
+        background: rgba(19, 236, 128, 0.85);
+        transition: width 400ms ease;
+    }
+
+    .keys-usage.is-unlimited .keys-usage-bar {
+        display: none;
+    }
+
+    .keys-usage.is-warning .keys-usage-fill {
+        background: rgba(251, 191, 36, 0.85);
+    }
+
+    .keys-usage.is-danger .keys-usage-fill {
+        background: rgba(248, 113, 113, 0.85);
+    }
+
+    .keys-usage-traffic {
+        min-width: 0;
+        overflow: hidden;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums;
+        color: rgba(255, 255, 255, 0.72);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .keys-usage-meta {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.34);
+    }
+
+    .keys-usage-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .keys-usage-item svg {
+        width: 11px;
+        height: 11px;
+        flex: 0 0 auto;
+        opacity: 0.7;
+    }
+
+    .keys-usage-item.is-online {
+        color: #8ff0bd;
+    }
+
+    .keys-usage-item.is-online svg {
+        opacity: 1;
+    }
+
+    .keys-usage-sep {
+        width: 1px;
+        height: 8px;
+        flex: 0 0 auto;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .keys-usage.is-loading .keys-usage-traffic,
+    .keys-usage.is-loading .keys-usage-meta {
+        opacity: 0.45;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .keys-usage-fill {
+            transition: none;
+        }
+    }
+
+    .keys-create-shell input:focus,
+    .keys-create-shell textarea:focus,
+    .keys-toolbar input:focus {
+        border-color: rgba(19, 236, 128, 0.35);
+        box-shadow: 0 0 0 3px rgba(19, 236, 128, 0.07);
+    }
+
+    @media (max-width: 640px) {
+        .keys-create-shell {
+            padding: 8px;
+        }
+
+        .keys-toolbar {
+            align-items: stretch;
+        }
+    }
+
+    #keyDetailsModal {
+        z-index: 1150;
+    }
+
+    #commentModal,
+    #expiryModal {
+        z-index: 1160;
+    }
+
+    #custom-confirm-modal {
+        z-index: 1200;
+    }
+
+    .kdc-modal {
+        display: flex;
+        max-width: 960px;
+        max-height: min(88vh, 780px);
+        flex-direction: column;
+        overflow: hidden;
+        background: rgba(9, 14, 11, 0.97);
+    }
+
+    .kdc-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .kdc-head-main {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .kdc-head-icon {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(19, 236, 128, 0.18);
+        border-radius: 9px;
+        background: rgba(19, 236, 128, 0.09);
+        color: #13ec80;
+    }
+
+    .kdc-head-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .kdc-head-text {
+        min-width: 0;
+    }
+
+    .kdc-title-row {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .kdc-title {
+        overflow: hidden;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.94);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .kdc-state {
+        flex: 0 0 auto;
+        padding: 1px 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.04);
+        font-size: 9.5px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.5);
+        white-space: nowrap;
+    }
+
+    .kdc-state.is-active {
+        border-color: rgba(19, 236, 128, 0.24);
+        background: rgba(19, 236, 128, 0.1);
+        color: #8ff0bd;
+    }
+
+    .kdc-state.is-expired {
+        border-color: rgba(248, 113, 113, 0.24);
+        background: rgba(248, 113, 113, 0.1);
+        color: #f0a2a2;
+    }
+
+    .kdc-sub {
+        margin-top: 2px;
+        overflow: hidden;
+        font-size: 10.5px;
+        color: rgba(255, 255, 255, 0.4);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .kdc-close {
+        display: flex;
+        width: 26px;
+        height: 26px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.03);
+        color: rgba(255, 255, 255, 0.55);
+        transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+    }
+
+    .kdc-close:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.07);
+        color: #ffffff;
+    }
+
+    .kdc-close svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .kdc-body {
+        display: flex;
+        flex: 1 1 auto;
+        min-height: 0;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 14px;
+        overflow-y: auto;
+    }
+
+    .kdc-content {
+        min-width: 0;
+    }
+
+    .kdc-content:not(.hidden) {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .kdc-loading:not(.hidden) {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .kdc-skeleton {
+        display: block;
+        height: 10px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        animation: kdcPulse 1.4s ease-in-out infinite;
+    }
+
+    .kdc-skeleton.is-short {
+        width: 58%;
+    }
+
+    @keyframes kdcPulse {
+        0%, 100% {
+            opacity: 0.55;
+        }
+
+        50% {
+            opacity: 1;
+        }
+    }
+
+    .kdc-error {
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid rgba(248, 113, 113, 0.2);
+        border-radius: 10px;
+        background: rgba(248, 113, 113, 0.07);
+        font-size: 11px;
+        color: rgba(252, 165, 165, 0.9);
+    }
+
+    .kdc-error:not(.hidden) {
+        display: flex;
+    }
+
+    .kdc-error svg {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+    }
+
+    .kdc-quotas {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .kdc-quota {
+        display: flex;
+        min-width: 0;
+        min-height: 48px;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .kdc-quota-value {
+        flex: 0 0 auto;
+        font-size: 15px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.1;
+        color: rgba(255, 255, 255, 0.9);
+        white-space: nowrap;
+    }
+
+    .kdc-quota-days .kdc-quota-value {
+        color: #13ec80;
+    }
+
+    .kdc-quota-days.is-warning .kdc-quota-value {
+        color: #fbbf24;
+    }
+
+    .kdc-quota-days.is-expired .kdc-quota-value {
+        color: #f0a2a2;
+    }
+
+    .kdc-quota-info {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .kdc-quota-label {
+        overflow: hidden;
+        font-size: 9px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        color: rgba(255, 255, 255, 0.32);
+        white-space: nowrap;
+        text-transform: uppercase;
+        text-overflow: ellipsis;
+    }
+
+    .kdc-quota-sub {
+        overflow: hidden;
+        font-size: 10.5px;
+        color: rgba(255, 255, 255, 0.62);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .kdc-quota-sub.is-dim {
+        color: rgba(255, 255, 255, 0.34);
+    }
+
+    .kdc-ring {
+        position: relative;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+    }
+
+    .kdc-ring svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    .kdc-ring-track,
+    .kdc-ring-value {
+        fill: none;
+        stroke-width: 3.2;
+    }
+
+    .kdc-ring-track {
+        stroke: rgba(255, 255, 255, 0.09);
+    }
+
+    .kdc-ring-value {
+        stroke: #13ec80;
+        stroke-linecap: round;
+        stroke-dasharray: 97.4;
+        transition: stroke-dashoffset 700ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .kdc-ring.is-unlimited .kdc-ring-value {
+        stroke: rgba(255, 255, 255, 0.22);
+    }
+
+    .kdc-ring.is-expired .kdc-ring-value {
+        stroke: #f0a2a2;
+    }
+
+    .kdc-ring-label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8.5px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .kdc-panels {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .kdc-panel {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .kdc-panel-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        color: rgba(255, 255, 255, 0.55);
+        text-transform: uppercase;
+    }
+
+    .kdc-panel-head svg {
+        width: 12px;
+        height: 12px;
+        flex: 0 0 auto;
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .kdc-panel-badge {
+        margin-left: auto;
+        padding: 1px 6px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 9.5px;
+        font-weight: 500;
+        letter-spacing: 0;
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: none;
+    }
+
+    .kdc-traffic-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .kdc-traffic-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px;
+    }
+
+    .kdc-traffic-label {
+        overflow: hidden;
+        color: rgba(255, 255, 255, 0.42);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .kdc-traffic-value {
+        flex: 0 0 auto;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: rgba(255, 255, 255, 0.85);
+        white-space: nowrap;
+    }
+
+    .kdc-bar {
+        height: 4px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .kdc-bar-fill {
+        display: block;
+        width: 0;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(19, 236, 128, 0.55), rgba(19, 236, 128, 0.95));
+        transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .kdc-net-summary {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 6px;
+    }
+
+    .kdc-net-cell {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .kdc-net-cell strong {
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .kdc-ips {
+        display: flex;
+        max-height: 76px;
+        flex-wrap: wrap;
+        gap: 4px;
+        overflow-y: auto;
+    }
+
+    .kdc-ip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.03);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.62);
+    }
+
+    .kdc-ip-dot {
+        width: 4px;
+        height: 4px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    .kdc-ip.is-active {
+        border-color: rgba(19, 236, 128, 0.24);
+        background: rgba(19, 236, 128, 0.08);
+        color: #a5f3c8;
+    }
+
+    .kdc-ip.is-active .kdc-ip-dot {
+        background: #13ec80;
+    }
+
+    .kdc-ips-empty {
+        font-size: 10.5px;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .kdc-risk {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 12px;
+        border: 1px solid rgba(251, 146, 60, 0.24);
+        border-radius: 10px;
+        background: rgba(251, 146, 60, 0.06);
+    }
+
+    .kdc-risk[hidden] {
+        display: none;
+    }
+
+    .kdc-risk-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        color: #fdba74;
+        text-transform: uppercase;
+    }
+
+    .kdc-risk-head svg {
+        width: 12px;
+        height: 12px;
+        flex: 0 0 auto;
+    }
+
+    .kdc-risk-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .kdc-risk-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        font-size: 11px;
+        line-height: 1.4;
+        color: rgba(255, 255, 255, 0.72);
+    }
+
+    .kdc-risk-dot {
+        width: 4px;
+        height: 4px;
+        flex: 0 0 auto;
+        margin-top: 5px;
+        border-radius: 999px;
+        background: rgba(251, 146, 60, 0.8);
+    }
+
+    .kdc-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .kdc-meta {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 2px;
+        padding: 7px 9px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .kdc-meta span {
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        color: rgba(255, 255, 255, 0.3);
+        text-transform: uppercase;
+    }
+
+    .kdc-meta strong {
+        overflow: hidden;
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.85);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .kdc-link {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 9px;
+        background: rgba(0, 0, 0, 0.25);
+    }
+
+    .kdc-link > svg {
+        width: 12px;
+        height: 12px;
+        flex: 0 0 auto;
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .kdc-link-url {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.55);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .kdc-icon-btn {
+        display: flex;
+        width: 24px;
+        height: 24px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.03);
+        color: rgba(255, 255, 255, 0.55);
+        transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+    }
+
+    .kdc-icon-btn:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.07);
+        color: #ffffff;
+    }
+
+    .kdc-icon-btn svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .kdc-foot {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 14px 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .kdc-foot-note {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.3);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .kdc-foot-note:empty {
+        display: none;
+    }
+
+    .kdc-foot-actions {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 2px;
+        border: 1px solid rgba(255, 255, 255, 0.075);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.028);
+        padding: 4px;
+    }
+
+    .kdc-btn {
+        display: flex;
+        min-height: 52px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 6px 4px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        background: transparent;
+        font-size: 10px;
+        font-weight: 500;
+        line-height: 1.15;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.62);
+        transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+    }
+
+    .kdc-btn:hover {
+        border-color: rgba(255, 255, 255, 0.075);
+        background: rgba(255, 255, 255, 0.045);
+        color: #ffffff;
+    }
+
+    .kdc-btn svg {
+        width: 17px;
+        height: 17px;
+        flex: 0 0 auto;
+        transition: color 150ms ease;
+    }
+
+    .kdc-btn.is-danger:hover {
+        border-color: rgba(248, 113, 113, 0.28);
+        background: rgba(248, 113, 113, 0.08);
+        color: #fca5a5;
+    }
+
+    .kdc-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+    }
+
+    .kdc-btn:focus-visible,
+    .kdc-icon-btn:focus-visible,
+    .kdc-close:focus-visible {
+        outline: 2px solid rgba(110, 231, 183, 0.75);
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 860px) {
+        .kdc-quotas {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .kdc-panels {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .kdc-meta-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .kdc-foot-actions {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 520px) {
+        .kdc-meta-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .kdc-foot-actions {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .kdc-ring-value,
+        .kdc-bar-fill,
+        .kdc-skeleton {
+            animation: none;
+            transition: none;
+        }
+    }
+</style>
+
+<!-- ===== ПАГИНАЦИЯ ===== -->
+<!-- Блок навигации по страницам -->
+<!-- ===== ПАГИНАЦИЯ ===== -->
+<div class="flex justify-center mt-6 gap-2" id="keys-pagination"
+    data-src="{{ url_for('admin_keys_pagination_partial', page=current_page, q=q, filter=current_filter) }}">{% include
+    'partials/admin_keys_pagination.html' %}</div>
+<!-- ===== окончание пагинации ===== -->
+
+<!-- ===== МОДАЛЬНОЕ ОКНО КОММЕНТАРИЯ ===== -->
+<!-- Окно быстрого редактирования заметки к выбранному ключу -->
+<div id="commentModal" class="modal-overlay">
+    <div class="modal-content rounded-2xl border border-white/10 bg-[#0b0f0e]/95 shadow-2xl backdrop-blur-2xl">
+        <div class="flex items-center justify-between border-b border-white/[0.08] p-4">
+            <div class="flex items-center gap-2.5"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-sky-400/[0.08] text-sky-300"><i data-lucide="message-square" class="h-4 w-4" aria-hidden="true"></i></span><h5 class="text-sm font-semibold text-white">Комментарий к подписке</h5></div>
+            <button onclick="closeModal('commentModal')" class="rounded-full p-1.5 text-white/40 transition duration-150 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"><i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i></button>
+        </div>
+        <div class="p-4"><textarea id="commentInput" rows="3" placeholder="Заметка или комментарий к подписке..." class="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 p-3 text-xs text-white placeholder:text-white/30 outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"></textarea></div>
+        <div class="flex justify-end gap-2 border-t border-white/[0.08] p-4">
+            <button onclick="closeModal('commentModal')" class="admin-btn-ghost">Отмена</button>
+            <button id="commentSaveBtn" class="admin-btn"><i data-lucide="save" aria-hidden="true"></i><span>Сохранить</span></button>
+        </div>
+    </div>
+</div>
+<!-- ===== окончание окна комментария ===== -->
+
+<!-- ===== МОДАЛЬНОЕ ОКНО СРОКА ===== -->
+<div id="expiryModal" class="modal-overlay">
+    <div class="modal-content bg-black/95 border border-white/[0.08] rounded-2xl shadow-2xl backdrop-blur-2xl">
+        <div class="p-4 border-b border-white/[0.08] flex items-center justify-between">
+            <h5 class="text-white font-bold text-lg">Изменить срок действия</h5>
+            <button onclick="closeModal('expiryModal')" class="text-white/40 hover:text-white transition-colors">
+                <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-white/40 text-[10px] uppercase font-bold tracking-wider mb-2">Прибавить /
+                    Убавить дней</label>
+                <input type="number" id="expiryDelta" placeholder="Например: 7 или -7"
+                    class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/40" />
+            </div>
+            <p class="text-white/40 text-xs bg-white/5 p-3 rounded-lg border border-white/5">
+                <span class="text-primary font-bold">Совет:</span> Введите положительное число для продления,
+                отрицательное — для сокращения срока.
+            </p>
+        </div>
+        <div class="p-4 border-t border-white/[0.08] flex justify-end gap-2">
+            <button onclick="closeModal('expiryModal')" class="admin-btn-ghost">
+                Отмена
+            </button>
+            <button id="expirySaveBtn" class="admin-btn">
+                <i data-lucide="save" aria-hidden="true"></i>
+                <span>Сохранить</span>
+            </button>
+        </div>
+    </div>
+</div>
+<!-- ===== окончание окна срока ===== -->
+
+<!-- ===== КАРТОЧКА ПОДПИСКИ ===== -->
+<div id="keyDetailsModal" class="modal-overlay modal-xl">
+    <div class="modal-content kdc-modal">
+        <header class="kdc-head">
+            <div class="kdc-head-main">
+                <span class="kdc-head-icon"><i data-lucide="key-round" aria-hidden="true"></i></span>
+                <div class="kdc-head-text">
+                    <div class="kdc-title-row">
+                        <h5 class="kdc-title" id="kdc-title">Подписка</h5>
+                        <span class="kdc-state" id="kdc-state">—</span>
+                    </div>
+                    <p class="kdc-sub" id="kdc-sub">Загрузка данных…</p>
+                </div>
+            </div>
+            <button type="button" class="kdc-close" onclick="closeModal('keyDetailsModal')" aria-label="Закрыть карточку подписки"><i data-lucide="x" aria-hidden="true"></i></button>
+        </header>
+        <div class="kdc-body">
+            <div class="kdc-loading" id="kdc-loading">
+                <span class="kdc-skeleton"></span>
+                <span class="kdc-skeleton"></span>
+                <span class="kdc-skeleton is-short"></span>
+            </div>
+            <div class="kdc-error hidden" id="kdc-error">
+                <i data-lucide="circle-alert" aria-hidden="true"></i>
+                <span id="kdc-error-text">Не удалось загрузить данные подписки</span>
+            </div>
+            <div class="kdc-content hidden" id="kdc-content">
+                <div class="kdc-quotas">
+                    <div class="kdc-quota kdc-quota-days" id="kdc-quota-days">
+                        <div class="kdc-quota-value" id="kdc-days">—</div>
+                        <div class="kdc-quota-info">
+                            <span class="kdc-quota-label">Осталось дней</span>
+                            <span class="kdc-quota-sub" id="kdc-days-sub">—</span>
+                        </div>
+                    </div>
+                    <div class="kdc-quota kdc-quota-traffic">
+                        <div class="kdc-ring" id="kdc-ring">
+                            <svg viewBox="0 0 36 36" aria-hidden="true">
+                                <circle class="kdc-ring-track" cx="18" cy="18" r="15.5"></circle>
+                                <circle class="kdc-ring-value" id="kdc-ring-value" cx="18" cy="18" r="15.5" style="stroke-dashoffset: 97.4"></circle>
+                            </svg>
+                            <span class="kdc-ring-label" id="kdc-traffic-percent">—</span>
+                        </div>
+                        <div class="kdc-quota-info">
+                            <span class="kdc-quota-label">Трафик</span>
+                            <span class="kdc-quota-sub" id="kdc-traffic-value">—</span>
+                            <span class="kdc-quota-sub is-dim" id="kdc-traffic-remaining">—</span>
+                        </div>
+                    </div>
+                    <div class="kdc-quota kdc-quota-devices">
+                        <div class="kdc-quota-value" id="kdc-devices">—</div>
+                        <div class="kdc-quota-info">
+                            <span class="kdc-quota-label">Устройства</span>
+                            <span class="kdc-quota-sub" id="kdc-devices-sub">—</span>
+                        </div>
+                    </div>
+                    <div class="kdc-quota kdc-quota-online">
+                        <div class="kdc-quota-value" id="kdc-online">—</div>
+                        <div class="kdc-quota-info">
+                            <span class="kdc-quota-label">Онлайн</span>
+                            <span class="kdc-quota-sub" id="kdc-online-sub">—</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="kdc-panels">
+                    <section class="kdc-panel">
+                        <header class="kdc-panel-head"><i data-lucide="chart-no-axes-column" aria-hidden="true"></i><span>Трафик</span></header>
+                        <div class="kdc-traffic-list">
+                            <div class="kdc-traffic-row"><span class="kdc-traffic-label">Сегодня</span><strong class="kdc-traffic-value" id="kdc-traffic-today">—</strong></div>
+                            <div class="kdc-traffic-row"><span class="kdc-traffic-label">С последнего сброса</span><strong class="kdc-traffic-value" id="kdc-traffic-used">—</strong></div>
+                            <div class="kdc-bar" aria-hidden="true"><span class="kdc-bar-fill" id="kdc-traffic-bar"></span></div>
+                            <div class="kdc-traffic-row"><span class="kdc-traffic-label">За всё время</span><strong class="kdc-traffic-value" id="kdc-traffic-lifetime">—</strong></div>
+                            <div class="kdc-traffic-row"><span class="kdc-traffic-label">Сброс трафика</span><strong class="kdc-traffic-value" id="kdc-traffic-strategy">—</strong></div>
+                        </div>
+                    </section>
+                    <section class="kdc-panel">
+                        <header class="kdc-panel-head"><i data-lucide="network" aria-hidden="true"></i><span>Сеть</span><span class="kdc-panel-badge" id="kdc-ips-badge">—</span></header>
+                        <div class="kdc-net-summary">
+                            <div class="kdc-net-cell"><span>IP-адреса</span><strong id="kdc-ips-count">—</strong></div>
+                            <div class="kdc-net-cell"><span>Активные сессии</span><strong id="kdc-ips-active">—</strong></div>
+                        </div>
+                        <div class="kdc-ips" id="kdc-ips-list"><p class="kdc-ips-empty">Сбор данных о подключениях…</p></div>
+                    </section>
+                </div>
+                <div class="kdc-risk" id="kdc-risk" hidden>
+                    <div class="kdc-risk-head"><i data-lucide="shield-alert" aria-hidden="true"></i><span>Подозрительная активность</span></div>
+                    <ul class="kdc-risk-list" id="kdc-risk-list"></ul>
+                </div>
+                <div class="kdc-meta-grid">
+                    <div class="kdc-meta"><span>Тариф</span><strong id="kdc-meta-host">—</strong></div>
+                    <div class="kdc-meta"><span>План</span><strong id="kdc-meta-plan">—</strong></div>
+                    <div class="kdc-meta"><span>Email</span><strong id="kdc-meta-email">—</strong></div>
+                    <div class="kdc-meta"><span>Лимит трафика</span><strong id="kdc-meta-limit">—</strong></div>
+                    <div class="kdc-meta"><span>UUID</span><strong id="kdc-meta-uuid">—</strong></div>
+                    <div class="kdc-meta"><span>Создана</span><strong id="kdc-meta-created">—</strong></div>
+                </div>
+                <div class="kdc-link">
+                    <i data-lucide="link" aria-hidden="true"></i>
+                    <span class="kdc-link-url select-all" id="kdc-link">—</span>
+                    <button type="button" class="kdc-icon-btn" data-kdc-action="copy" title="Скопировать ссылку" aria-label="Скопировать ссылку"><i data-lucide="copy" aria-hidden="true"></i></button>
+                    <button type="button" class="kdc-icon-btn" data-kdc-action="open" title="Открыть ссылку" aria-label="Открыть ссылку"><i data-lucide="external-link" aria-hidden="true"></i></button>
+                    <button type="button" class="kdc-icon-btn" data-kdc-action="reset-link" title="Выпустить новую ссылку" aria-label="Выпустить новую ссылку"><i data-lucide="refresh-cw" aria-hidden="true"></i></button>
+                </div>
+            </div>
+        </div>
+        <footer class="kdc-foot">
+            <div class="kdc-foot-note" id="kdc-foot-note"></div>
+            <div class="kdc-foot-actions">
+                <button type="button" class="kdc-btn" data-kdc-action="profile" id="kdc-profile-btn"><i data-lucide="user-round" aria-hidden="true"></i><span>Профиль</span></button>
+                <button type="button" class="kdc-btn" data-kdc-action="comment"><i data-lucide="message-square" aria-hidden="true"></i><span>Комментарий</span></button>
+                <button type="button" class="kdc-btn" data-kdc-action="expiry"><i data-lucide="calendar-plus" aria-hidden="true"></i><span>Продлить</span></button>
+                <button type="button" class="kdc-btn" data-kdc-action="reset-hwid"><i data-lucide="monitor-smartphone" aria-hidden="true"></i><span>Сбросить устройства</span></button>
+                <button type="button" class="kdc-btn is-danger" data-kdc-action="delete"><i data-lucide="trash-2" aria-hidden="true"></i><span>Удалить</span></button>
+            </div>
+        </footer>
+    </div>
+</div>
+<!-- ===== окончание карточки подписки ===== -->
+{% endblock %}
+
+{% block scripts %}
+<!-- ===== СТИЛИ И СКРИПТЫ FLATPICKR ===== -->
+<!-- Подключение необходимых библиотек для работы календаря -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
+<!-- ===== окончание внешних библиотек ===== -->
+
+<script id="users-data" type="application/json">
+{{ users | tojson | safe }}
+</script>
+<script>
+    (function () {
+        window.refreshUiIcons();
+        // ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЕЙ =====
+        // Загрузка и маппинг пользователей для автодополнения
+        const USERS = JSON.parse(document.getElementById('users-data').textContent || '[]');
+        const USER_MAP = {};
+        try { (USERS || []).forEach(u => { if (u && u.username) USER_MAP['@' + String(u.username).toLowerCase()] = u.telegram_id; }); } catch (_) { }
+        // ===== окончание функции пользователей =====
+
+        // ===== УПРАВЛЕНИЕ СОСТОЯНИЕМ =====
+        const STORAGE_KEY = 'admin_keys_form';
+        const form = document.getElementById('create-key-form');
+
+        const CREATE_BLOCK_KEY = 'admin_keys_create_open';
+        const createBlockEl = document.getElementById('keys-create-block');
+        const createSummaryMeta = document.getElementById('create-key-summary-meta');
+
+        function updateCreateSummary() {
+            if (!createSummaryMeta) return;
+            const draft = restoreState();
+            createSummaryMeta.textContent = (draft && (draft.user_id || draft.host_name)) ? 'черновик' : '';
+        }
+
+        let skipCreatePersist = false;
+
+        function setCreateBlockOpen(open, remember) {
+            if (!createBlockEl) return;
+            const willChange = createBlockEl.open !== open;
+            skipCreatePersist = !remember && willChange;
+            createBlockEl.open = open;
+            if (remember) {
+                try { localStorage.setItem(CREATE_BLOCK_KEY, open ? '1' : '0'); } catch (_) { }
+            }
+        }
+
+        window.openCreateBlock = () => setCreateBlockOpen(true, true);
+
+        (() => {
+            if (!createBlockEl) return;
+            let savedOpen = null;
+            try { savedOpen = localStorage.getItem(CREATE_BLOCK_KEY); } catch (_) { }
+            createBlockEl.open = savedOpen === '1';
+            createBlockEl.addEventListener('toggle', () => {
+                if (skipCreatePersist) {
+                    skipCreatePersist = false;
+                    return;
+                }
+                try { localStorage.setItem(CREATE_BLOCK_KEY, createBlockEl.open ? '1' : '0'); } catch (_) { }
+            });
+            updateCreateSummary();
+        })();
+
+        // Элементы формы
+        const els = {
+            mode: document.getElementById('create_mode'),
+            user: document.getElementById('user_id'),
+            host: document.getElementById('host_name'),
+            plan: document.getElementById('plan_select'),
+            days: document.getElementById('custom_days'),
+            expiry: document.getElementById('expiry_date'),
+            comment: document.getElementById('comment'),
+            email: document.getElementById('key_email')
+        };
+
+        function saveState() {
+            const state = {};
+            if (els.mode) state.mode = els.mode.value;
+            if (els.user) state.user_id = els.user.value;
+            if (els.host) state.host_name = els.host.value;
+            if (els.plan) state.plan_select = els.plan.value;
+            if (els.days) state.custom_days = els.days.value;
+            if (els.expiry) state.expiry_date = els.expiry.value;
+            if (els.comment) state.comment = els.comment.value;
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) { }
+            updateCreateSummary();
+        }
+
+        function restoreState() {
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch (_) { return {}; }
+        }
+
+        function updateCreatePreview() {
+            const hostPreview = document.getElementById('create-preview-host');
+            const selectedHost = els.host?.selectedOptions?.[0];
+            if (hostPreview) hostPreview.textContent = selectedHost?.value || 'Выберите тариф';
+            updateCreateDaysPreview();
+            updatePlanPreview();
+        }
+
+        function updateCreateDaysPreview() {
+            const preview = document.getElementById('create-preview-days');
+            if (!preview) return;
+            const days = Number(els.days?.value || 0);
+            preview.textContent = days > 0 ? `${days} ${days === 1 ? 'день' : days >= 2 && days <= 4 ? 'дня' : 'дней'}` : 'Не указан';
+        }
+
+        function updatePlanPreview() {
+            const planPreview = document.getElementById('create-preview-plan');
+            const pricePreview = document.getElementById('create-preview-price');
+            const selectedPlan = els.plan?.selectedOptions?.[0];
+            if (planPreview) planPreview.textContent = selectedPlan?.value ? selectedPlan.textContent.split(' — ')[0] : 'План не выбран';
+            if (pricePreview) pricePreview.textContent = selectedPlan?.value ? `${Number(selectedPlan.dataset.price || 0).toFixed(0)} ₽` : '';
+        }
+
+        function applyGiftDefaults() {
+            const planOption = els.plan?.selectedOptions?.[0];
+            const hostOption = els.host?.selectedOptions?.[0];
+            const hwidInput = document.getElementById('gift_hwid_limit');
+            const trafficInput = document.getElementById('gift_traffic_gb');
+            const strategySelect = document.getElementById('gift_traffic_strategy');
+            const planHwid = Number(planOption?.dataset.hwid || 0);
+            const planTraffic = Number(planOption?.dataset.trafficGb || 0);
+            if (hwidInput) {
+                hwidInput.value = planHwid > 0 ? String(planHwid) : '';
+                hwidInput.placeholder = planHwid > 0 ? String(planHwid) : 'Из тарифа';
+            }
+            if (trafficInput) {
+                trafficInput.value = planTraffic > 0 ? String(planTraffic) : '';
+                trafficInput.placeholder = planTraffic > 0 ? String(planTraffic) : 'Из тарифа';
+            }
+            if (strategySelect) {
+                const hostStrategy = hostOption?.dataset.trafficStrategy || 'NO_RESET';
+                const hasOption = Array.from(strategySelect.options).some(o => o.value === hostStrategy);
+                strategySelect.value = hasOption ? hostStrategy : '';
+                strategySelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        const restored = restoreState();
+
+        // Переменные для режима (нужны для applyMode)
+        const modeSwitch = document.getElementById('mode_switch'), modeSections = document.querySelectorAll('.mode-section');
+
+        function applyMode(mode) {
+            if (els.mode) els.mode.value = mode;
+            window.refreshUiIcons();
+            modeSections.forEach(s => s.classList.toggle('hidden', !s.classList.contains(`mode-${mode}`)));
+            const modePreview = document.getElementById('create-preview-mode');
+            if (modePreview) modePreview.textContent = mode === 'gift' ? 'Подарочный доступ' : 'Персональный доступ';
+            updatePlanPreview();
+            if (modeSwitch) {
+                const indicator = document.getElementById('mode_indicator'), commentContainer = document.getElementById('comment_container'), userIdContainer = document.getElementById('user_id_container');
+
+                const btns = modeSwitch.querySelectorAll('button');
+                btns.forEach(b => {
+                    const active = b.dataset.mode === mode;
+                    b.classList.toggle('text-white', active);
+                    b.classList.toggle('text-white/50', !active);
+                    b.classList.toggle('font-semibold', active);
+                });
+
+                if (mode === 'personal') {
+                    if (indicator) {
+                        indicator.classList.remove('hidden');
+                        indicator.style.transform = 'translateX(0)';
+                    }
+                } else {
+                    if (indicator) indicator.style.transform = 'translateX(100%)';
+                }
+            }
+            const userIdContainer = document.getElementById('user_id_container');
+            const commentContainer = document.getElementById('comment_container');
+            if (userIdContainer) userIdContainer.classList.remove('lg:col-span-5');
+            if (commentContainer) commentContainer.classList.toggle('lg:col-span-12', mode === 'gift');
+            if (commentContainer) commentContainer.classList.toggle('lg:col-span-6', mode === 'personal');
+            if (els.user) els.user.required = (mode === 'personal');
+            saveState();
+            updateCreatePreview();
+            if (typeof maybeGenEmail === 'function') maybeGenEmail();
+        }
+        if (modeSwitch) modeSwitch.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => applyMode(btn.getAttribute('data-mode') || 'personal')));
+
+        // 1. Настройка Flatpickr
+        if (els.expiry && window.flatpickr) {
+            flatpickr(els.expiry, {
+                enableTime: true,
+                time_24hr: true,
+                dateFormat: 'Y-m-d H:i',
+                minuteIncrement: 5,
+                locale: flatpickr.l10ns.ru || 'ru',
+                onChange: function (selectedDates, dateStr) {
+                    updateExpiryLabel(dateStr);
+                    updateCreateDaysPreview();
+                    saveState();
+                }
+            });
+        }
+
+        // 2. Восстановление базовых полей
+        const COMMENT_KEY = 'admin_keys_comment';
+        if (els.comment) {
+            let savedComment = null;
+            try { savedComment = localStorage.getItem(COMMENT_KEY); } catch (_) { }
+            if (savedComment !== null) {
+                els.comment.value = savedComment;
+                restored.comment = savedComment;
+            } else if (restored.comment !== undefined) {
+                els.comment.value = restored.comment;
+            }
+            els.comment.addEventListener('input', () => {
+                try { localStorage.setItem(COMMENT_KEY, els.comment.value); } catch (_) { }
+            });
+        }
+
+        // Пользователь: приоритет URL -> сохраненное -> пусто
+        const urlParams = new URLSearchParams(location.search);
+        if (urlParams.get('user_id')) {
+            if (els.user) els.user.value = urlParams.get('user_id');
+        } else if (restored.user_id && els.user) {
+            els.user.value = restored.user_id;
+        }
+        if (urlParams.get('user_id')) setCreateBlockOpen(true, false);
+
+        // 3. Хост и планы
+        // Функция загрузки планов с учетом восстановленного состояния
+        async function loadPlansAndRestore() {
+            if (!els.host || !els.plan) return;
+
+            const host = els.host.value;
+            // Обновляем связанные поля хоста
+            updateInbound();
+            updateHostSettings();
+
+            if (!host) {
+                els.plan.innerHTML = '<option value="">Выберите план...</option>';
+                updatePlanDetails();
+                return;
+            }
+
+            els.plan.innerHTML = '<option value="">Загрузка...</option>';
+            try {
+                const res = await fetch(`{{ url_for('admin_get_plans_for_host_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(host)));
+                const d = await res.json();
+                const items = (d && d.ok && d.items) ? d.items : [];
+
+                // Рендерим опции
+                els.plan.innerHTML = '<option value="">Выберите план...</option>' + items.map(p =>
+                    `<option value="${p.plan_id}" data-months="${p.months}" data-price="${p.price || 0}" data-hwid="${p.hwid_limit || 0}" data-traffic-gb="${p.traffic_limit_gb || 0}">${p.plan_name} (${p.months} мес.) — ${Number(p.price || 0).toFixed(0)} ₽</option>`
+                ).join('');
+
+                // План не восстанавливаем: при открытии страницы всегда «Выберите план»
+                els.plan.selectedIndex = 0;
+
+                // Применяем детали плана (цену, лимиты)
+                updatePlanDetails();
+                updatePlanPreview();
+                applyGiftDefaults();
+
+                applyPlanDefaults();
+                updateCreatePreview();
+
+            } catch (_) {
+                els.plan.innerHTML = '<option value="">Ошибка</option>';
+            }
+            initSoftSelect('plan_select', 'Выберите план...');
+        }
+
+        function updatePlanDetails() {
+            const opt = els.plan.options[els.plan.selectedIndex];
+            const priceEl = document.getElementById('plan_price');
+            const hwidInput = document.getElementById('host_hwid_limit');
+            const gbInput = document.getElementById('host_traffic_gb');
+
+            if (priceEl) priceEl.textContent = (opt && opt.value) ? `${Number(opt.getAttribute('data-price') || 0).toFixed(0)} ₽` : '— ₽';
+            if (hwidInput) hwidInput.value = (opt && opt.getAttribute('data-hwid') && opt.getAttribute('data-hwid') !== '0') ? opt.getAttribute('data-hwid') : '—';
+            if (gbInput) gbInput.value = (opt && opt.getAttribute('data-traffic-gb') && opt.getAttribute('data-traffic-gb') !== '0') ? Number(opt.getAttribute('data-traffic-gb')).toFixed(2) : '—';
+        }
+
+        function applyPlanDefaults() {
+            const opt = els.plan.options[els.plan.selectedIndex];
+            if (!opt || !opt.value) return;
+            const months = Number(opt.getAttribute('data-months') || 0);
+            if (months > 0) setExpiryDays(months * 30);
+        }
+
+        // Инициализация Хоста
+        if (els.host) {
+            els.host.selectedIndex = 0;
+            // Загружаем планы (при пустом тарифе список планов остаётся пустым)
+            loadPlansAndRestore();
+
+            // Слушатель
+            els.host.addEventListener('change', () => {
+                updateInbound();
+                updateHostSettings();
+                // При смене хоста сбрасываем план и загружаем новые
+                // Тут мы НЕ хотим восстанавливать старый план (так как хост другой), но можем сохранить дату?
+                // Проще перезагрузить список.
+                restored.plan_select = null; // Сбрасываем сохраненный план для нового хоста
+                loadPlansAndRestore();
+                saveState();
+            });
+            els.host.addEventListener('change', updateCreatePreview);
+        }
+
+        // Слушатель Плана
+        if (els.plan) {
+            els.plan.addEventListener('change', () => {
+                updatePlanDetails();
+                applyPlanDefaults(); // При явном выборе плана пользователем - применяем его дефолты
+                applyGiftDefaults();
+                saveState();
+                updateCreatePreview();
+            });
+        }
+
+        initSoftSelect('host_name', 'Выберите тариф...');
+        initSoftSelect('plan_select', 'Выберите план...');
+        initSoftSelect('gift_traffic_strategy', 'Из тарифа');
+
+        // 4. Режим (Personal/Gift)
+        applyMode(restored.mode || (els.mode ? els.mode.value : 'personal') || 'personal');
+
+        // 5. Обработчики сохранения
+        form?.addEventListener('input', saveState);
+        form?.addEventListener('change', saveState);
+        els.days?.addEventListener('input', updateCreatePreview);
+        els.host?.addEventListener('change', updateCreatePreview);
+        updateCreatePreview();
+
+        // 6. Генерация email (если пользователь восстановлен)
+        if (els.user && els.user.value) {
+            (async () => {
+                // Если есть сохраненный email, можно восстановить его?
+                // Логика maybeGenEmail сама проверит и сгенерирует/исправит.
+                if (typeof normalizeUserId === 'function') await normalizeUserId();
+                if (typeof maybeGenEmail === 'function') await maybeGenEmail();
+            })();
+        }
+
+        // ===== Вспомогательные функции =====
+
+        // Обновление ID входящего подключения
+        function updateInbound() {
+            if (!els.host || !document.getElementById('inbound_id')) return;
+            const inboundEl = document.getElementById('inbound_id');
+            let opt = els.host.options[els.host.selectedIndex];
+            if ((!opt || !opt.getAttribute) && els.host.value) opt = Array.from(els.host.options || []).find(o => String(o.value) === String(els.host.value));
+            inboundEl.value = (opt && opt.getAttribute('data-inbound')) ? opt.getAttribute('data-inbound') : '—';
+        }
+
+        // Обновление настроек хоста
+        function updateHostSettings() {
+            if (!els.host) return;
+            let opt = els.host.options[els.host.selectedIndex];
+            if ((!opt || !opt.getAttribute) && els.host.value) opt = Array.from(els.host.options || []).find(o => String(o.value) === String(els.host.value));
+            if (opt) {
+                const trafficStrategy = opt.getAttribute('data-traffic-strategy') || 'NO_RESET';
+                const strategyInput = document.getElementById('host_traffic_strategy');
+                if (strategyInput) {
+                    const labels = { 'NO_RESET': 'Никогда', 'DAY': 'Ежедневно', 'WEEK': 'Еженедельно', 'MONTH': 'Ежемесячно' };
+                    strategyInput.value = labels[trafficStrategy] || trafficStrategy;
+                }
+            }
+        }
+
+        // Метка истечения
+        function updateExpiryLabel(dateStr) {
+            const lbl = document.getElementById('expiry_days_label');
+            if (!lbl || !dateStr) { if (lbl) lbl.textContent = ''; return; }
+            const diffDays = Math.ceil((new Date(dateStr).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+            lbl.textContent = diffDays > 0 ? `(на ${diffDays} дн.)` : '';
+        }
+
+        // Установка срока (базовая функция)
+        function setExpiryDays(days) {
+            if (!els.expiry) return;
+            const d = new Date(); d.setDate(d.getDate() + Number(days || 0));
+            const pad = n => String(n).padStart(2, '0');
+            const val = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            els.expiry.value = val;
+            if (els.days && els.days.value != days) els.days.value = days;
+            const periodInput = document.getElementById('key_period_days'); if (periodInput) periodInput.value = days;
+            if (window.flatpickr && els.expiry._flatpickr) els.expiry._flatpickr.setDate(val, true, 'Y-m-d H:i');
+            updateExpiryLabel(val);
+        }
+
+        // Переопределяем setExpiryDays чтобы сохранял состояние
+        const originalSetExpiry = setExpiryDays;
+        setExpiryDays = function (days) {
+            originalSetExpiry(days);
+            updateCreateDaysPreview();
+            saveState(); // Сохраняем при изменении
+        };
+
+        // Слушатели дней и пресетов
+        if (els.days) els.days.addEventListener('input', () => {
+            const days = Number(els.days.value || 0);
+            if (days > 0) originalSetExpiry(days); // Используем original чтобы не зациклить, хотя saveState безопасно
+            updateCreateDaysPreview();
+            saveState();
+        });
+        document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => {
+            setExpiryDays(Number(btn.getAttribute('data-preset') || 0));
+        }));
+
+        // ===== окончание управления состоянием =====
+        // ===== окончание выбора тарифа =====
+
+        // ===== ПРЕДЛОЖЕНИЯ ПОЛЬЗОВАТЕЛЕЙ =====
+        // Автодополнение при вводе ID или username
+        function initUserSuggest() {
+            if (!els.user) return;
+            let menu = document.createElement('div'); menu.className = 'soft-select-menu'; menu.style.position = 'fixed'; menu.style.display = 'none'; document.body.appendChild(menu);
+            const place = () => { const r = els.user.getBoundingClientRect(); menu.style.left = `${Math.round(r.left)}px`; menu.style.top = `${Math.round(r.bottom + 6)}px`; menu.style.width = `${Math.round(r.width)}px`; menu.style.zIndex = '1065'; };
+            const close = () => menu.style.display = 'none';
+            const open = () => { place(); menu.style.display = 'block'; };
+            const render = (list) => {
+                menu.innerHTML = '';
+                list.slice(0, 8).forEach(u => {
+                    const item = document.createElement('div'); item.className = 'soft-select-item';
+                    item.innerHTML = `<div style="font-weight:600">${u.telegram_id}</div><div style="opacity:.75">${u.username ? '@' + u.username : '—'}</div>`;
+                    item.onclick = async () => { els.user.value = String(u.telegram_id); close(); await normalizeUserId(); await maybeGenEmail(); };
+                    menu.appendChild(item);
+                });
+                if (list.length === 0) { const none = document.createElement('div'); none.className = 'soft-select-item'; none.style.opacity = '.7'; none.textContent = 'Ничего не найдено'; menu.appendChild(none); }
+            };
+            const applyFilter = () => {
+                const q = String(els.user.value || '').trim().toLowerCase();
+                if (!q) { close(); return; }
+                render((USERS || []).filter(u => String(u.telegram_id || '').includes(q) || (u.username ? ('@' + u.username.toLowerCase()) : '').includes(q)));
+                open();
+            };
+            els.user.addEventListener('focus', applyFilter); els.user.addEventListener('input', applyFilter);
+            window.addEventListener('scroll', place, true); window.addEventListener('resize', place, true);
+            document.addEventListener('click', e => { if (!menu.contains(e.target) && e.target !== els.user) close(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+        }
+        initUserSuggest();
+        // ===== окончание предложений =====
+
+        // ===== НОРМАЛИЗАЦИЯ ID =====
+        // Преобразование @username в цифровой ID
+        async function normalizeUserId() {
+            if (!els.user) return;
+            const raw = String(els.user.value || '').trim(); if (!raw || /^[0-9]+$/.test(raw)) return;
+            const key = raw.startsWith('@') ? raw.toLowerCase() : ('@' + raw.toLowerCase());
+            if (USER_MAP[key]) { els.user.value = String(USER_MAP[key]); try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'), user_id: els.user.value })); } catch (_) { } }
+        }
+        // ===== окончание нормализации id =====
+
+        // ===== ГЕНЕРАЦИЯ EMAIL =====
+        // Создание почтового адреса для ключа
+        async function maybeGenEmail() {
+            if (!els.email) return;
+            const mode = els.mode?.value || 'personal', userId = String(els.user?.value || '').trim();
+            const warningEl = document.getElementById('email_correction_warning');
+
+            if (warningEl) {
+                warningEl.textContent = '';
+                warningEl.classList.add('hidden');
+                els.email.classList.remove('text-yellow-400');
+            }
+
+            if (mode === 'personal' && (!userId || !/^\d+$/.test(userId))) return;
+
+            try {
+                let url = `{{ url_for('generate_key_email_route') }}?mode=${mode}`;
+                if (userId && /^\d+$/.test(userId)) {
+                    url += `&user_id=${encodeURIComponent(userId)}`;
+                }
+                const data = await (await fetch(url)).json();
+                if (data?.ok && data.email) {
+                    els.email.value = data.email;
+
+                    // Обновляем поле "User Login" (бывший Inbound ID) именем пользователя из email
+                    const inboundEl = document.getElementById('inbound_id');
+                    if (inboundEl) {
+                        const login = data.email.split('@')[0];
+                        inboundEl.value = login;
+                    }
+
+                    if (data.was_corrected && warningEl) {
+                        const original = data.original_username ? `@${data.original_username}` : 'оригинального имени';
+                        warningEl.textContent = `Email скорректирован: ${original} содержит недопустимые символы. Используется безопасный формат.`;
+                        warningEl.classList.remove('hidden');
+                        els.email.classList.add('text-yellow-400');
+                    }
+                }
+            } catch (_) { }
+        }
+        if (els.user) {
+            els.user.addEventListener('blur', async () => { await normalizeUserId(); await maybeGenEmail(); });
+            els.user.addEventListener('change', async () => { await normalizeUserId(); await maybeGenEmail(); });
+            // Initial load
+            (async () => {
+                if (els.user.value) {
+                    await normalizeUserId();
+                    await maybeGenEmail();
+                }
+            })();
+        }
+        // ===== окончание генерации email =====
+
+        // ===== УНИВЕРСАЛЬНЫЙ ЗАПРОС =====
+        // Вспомогательная функция для API запросов
+        async function apiRequest(url, method, body, successMsg) {
+            try {
+                const fd = body instanceof FormData ? body : new FormData();
+                if (!(body instanceof FormData) && typeof body === 'object') Object.entries(body).forEach(([k, v]) => fd.append(k, v));
+                fd.append('csrf_token', getCsrfToken());
+                const resp = await fetch(url, { method, body: fd, credentials: 'same-origin' });
+                const data = await resp.json().catch(() => ({ ok: resp.ok }));
+                if (data.ok) { if (successMsg) showToast('success', successMsg); return data; }
+                showToast('danger', 'Ошибка операции'); return null;
+            } catch (_) { showToast('danger', 'Ошибка сети'); return null; }
+        }
+        // ===== окончание универсального запроса =====
+
+        // ===== СОЗДАНИЕ КЛЮЧА =====
+        // Отправка формы создания нового ключа
+        // ===== УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК ФОРМ =====
+        // Обработка AJAX форм (создание, удаление, очистка)
+        const handleAjaxSubmit = async (e) => {
+            const form = e.target.closest('.ajax-form');
+            if (!form) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const performSubmit = async () => {
+                const btn = form.querySelector('button[type="submit"]') || form.querySelector('button:not([type="button"])');
+                let originalContent = '';
+
+                if (btn) {
+                    btn.disabled = true;
+                    originalContent = btn.innerHTML;
+                    btn.innerHTML = '<i data-lucide="loader-circle" class="h-4 w-4 animate-spin" aria-hidden="true"></i>';
+                    window.refreshUiIcons(btn);
+                }
+
+                try {
+                    const fd = new FormData(form);
+                    // Специальная логика для формы создания ключа
+                    if (form.id === 'create-key-form' && els.mode) {
+                        fd.set('mode', els.mode.value || 'personal');
+                        await maybeGenEmail(); // Обновляем email перед отправкой если нужно
+                    }
+
+                    const successMsg = form.getAttribute('data-success-msg') || 'Успешно';
+                    const data = await apiRequest(form.action, form.method || 'POST', fd, successMsg);
+
+                    if (data) {
+                        const refreshTarget = form.getAttribute('data-refresh-target') || 'keys-tbody';
+                        if (form.id === 'create-key-form') {
+                            if (data.key_id) newKeyIds.add(String(data.key_id));
+                            await loadKeysTable();
+                            applyNewKeysHighlight();
+                            await maybeGenEmail();
+                        } else {
+                            await refreshContainerById(refreshTarget);
+                        }
+                    }
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalContent;
+                    }
+                }
+            };
+
+            const confirmMsg = form.getAttribute('data-confirm');
+            if (confirmMsg) {
+                showConfirmModal(confirmMsg, performSubmit);
+            } else {
+                await performSubmit();
+            }
+        };
+
+        // Делегирование событий submit для всех ajax-форм
+        document.addEventListener('submit', (e) => {
+            if (e.target.matches('.ajax-form')) {
+                handleAjaxSubmit(e);
+            }
+        });
+
+        // Форма создания ключа: слушатель на самой форме срабатывает раньше глобального
+        // обработчика из base.html (handleGlobalAjax) и не даёт ему перехватить отправку
+        form?.addEventListener('submit', handleAjaxSubmit);
+
+        // Удаляем старый обработчик кнопки создания, так как теперь используем событийную модель формы
+        // submitBtn?.addEventListener('click', doSubmit);
+        form?.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+        // ===== окончание универсального обработчика =====
+
+        // ===== МОДАЛЬНЫЕ ОКНА =====
+        // Обработка сохранения комментария и срока действия
+        let currentKeyId = null;
+        let massSelectionIds = null;
+
+        // ===== ПОДСВЕТКА НОВЫХ КЛЮЧЕЙ =====
+        const newKeyIds = new Set();
+        const applyNewKeysHighlight = () => {
+            document.querySelectorAll('#keys-tbody tr[data-key-id]').forEach(row => {
+                row.classList.toggle('keys-row-new', newKeyIds.has(String(row.dataset.keyId)));
+            });
+        };
+        // ===== окончание подсветки =====
+        document.addEventListener('click', e => {
+            const commentBtn = e.target.closest('.btn-edit-comment'), expiryBtn = e.target.closest('.btn-open-expiry');
+            if (commentBtn) { currentKeyId = commentBtn.getAttribute('data-key-id'); massSelectionIds = null; document.getElementById('commentInput').value = commentBtn.getAttribute('data-current-comment') || ''; window.refreshUiIcons(document.getElementById('commentModal')); openModal('commentModal'); }
+            if (expiryBtn) { currentKeyId = expiryBtn.getAttribute('data-key-id'); massSelectionIds = null; document.getElementById('expiryDelta').value = ''; window.refreshUiIcons(document.getElementById('expiryModal')); openModal('expiryModal'); }
+        });
+        document.getElementById('commentSaveBtn')?.addEventListener('click', async () => {
+            if (massSelectionIds) {
+                const ids = massSelectionIds;
+                massSelectionIds = null;
+                let done = 0;
+                for (const id of ids) {
+                    if (await apiRequest(`{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0/', `/${id}/`), 'POST', { comment: document.getElementById('commentInput').value }, null)) done++;
+                }
+                closeModal('commentModal');
+                showToast(done === ids.length ? 'success' : 'warning', `Комментарий обновлён: ${done} из ${ids.length}`);
+                await loadKeysTable();
+                return;
+            }
+            const url = `{{ url_for('update_key_comment_route', key_id=0) }}`.replace('/0/', `/${currentKeyId}/`);
+            if (await apiRequest(url, 'POST', { comment: document.getElementById('commentInput').value }, 'Комментарий сохранён')) { closeModal('commentModal'); await loadKeysTable(); refreshKeyDetailsIfOpen(); }
+        });
+        document.getElementById('expirySaveBtn')?.addEventListener('click', async () => {
+            const delta = document.getElementById('expiryDelta').value; if (!delta) return showToast('warning', 'Введите количество дней');
+            if (massSelectionIds) {
+                const ids = massSelectionIds;
+                massSelectionIds = null;
+                let done = 0;
+                for (const id of ids) {
+                    if (await apiRequest(`{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0/', `/${id}/`), 'POST', { delta_days: delta }, null)) done++;
+                }
+                closeModal('expiryModal');
+                showToast(done === ids.length ? 'success' : 'warning', `Срок обновлён: ${done} из ${ids.length}`);
+                await loadKeysTable();
+                return;
+            }
+            const url = `{{ url_for('adjust_key_expiry_route', key_id=0) }}`.replace('/0/', `/${currentKeyId}/`);
+            if (await apiRequest(url, 'POST', { delta_days: delta }, 'Срок обновлён')) { closeModal('expiryModal'); await loadKeysTable(); refreshKeyDetailsIfOpen(); }
+        });
+        // ===== окончание модальных окон =====
+
+        const KDC_STRATEGY_LABELS = { NO_RESET: 'Никогда', DAY: 'Ежедневно', WEEK: 'Еженедельно', MONTH: 'Ежемесячно', MONTH_ROLLING: 'Скользящий месяц' };
+        const KDC_RING_LENGTH = 97.4;
+        const KDC_STATE = { keyId: null, data: null };
+
+        function kdcEscape(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+        }
+
+        function kdcBytes(value) {
+            const bytes = Number(value || 0);
+            if (!Number.isFinite(bytes) || bytes <= 0) return '0 Б';
+            const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ', 'ПБ'];
+            let size = bytes;
+            let index = 0;
+            while (size >= 1024 && index < units.length - 1) { size /= 1024; index += 1; }
+            const digits = size >= 100 || index <= 1 ? 0 : size >= 10 ? 1 : 2;
+            return `${size.toFixed(digits)} ${units[index]}`;
+        }
+
+        function kdcToDate(value) {
+            if (!value) return null;
+            const raw = String(value);
+            const parsed = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function kdcDate(value, withTime) {
+            if (!value) return '—';
+            const parsed = kdcToDate(value);
+            if (!parsed) return String(value);
+            const date = parsed.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            if (!withTime) return date;
+            return `${date} ${parsed.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        function kdcAgo(value) {
+            if (!value) return { text: 'не подключался', title: '' };
+            const parsed = kdcToDate(value);
+            if (!parsed) return { text: '—', title: String(value) };
+            const title = parsed.toLocaleString('ru-RU');
+            const diff = Math.floor((Date.now() - parsed.getTime()) / 1000);
+            if (!Number.isFinite(diff) || diff < 10) return { text: 'только что', title };
+            if (diff < 60) return { text: `${diff} сек`, title };
+            if (diff < 3600) return { text: `${Math.floor(diff / 60)} мин`, title };
+            if (diff < 86400) return { text: `${Math.floor(diff / 3600)} ч`, title };
+            if (diff < 2592000) return { text: `${Math.floor(diff / 86400)} дн`, title };
+            return { text: kdcDate(value, false), title };
+        }
+
+        function kdcDaysLeft(value) {
+            const parsed = kdcToDate(value);
+            if (!parsed) return null;
+            const days = Math.ceil((parsed.getTime() - Date.now()) / 86400000);
+            return days > 36500 ? null : days;
+        }
+
+        function kdcSetText(id, value) {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        }
+
+        function kdcSetState(text, kind) {
+            const element = document.getElementById('kdc-state');
+            if (!element) return;
+            element.textContent = text;
+            element.classList.toggle('is-active', kind === 'active');
+            element.classList.toggle('is-expired', kind === 'expired');
+        }
+
+        function kdcAnimate(ringOffset, barPercent) {
+            const ring = document.getElementById('kdc-ring-value');
+            if (ring) {
+                ring.style.transition = 'none';
+                ring.style.strokeDashoffset = String(KDC_RING_LENGTH);
+                void ring.getBoundingClientRect();
+                ring.style.transition = '';
+                requestAnimationFrame(() => { ring.style.strokeDashoffset = String(ringOffset); });
+            }
+            const bar = document.getElementById('kdc-traffic-bar');
+            if (bar) {
+                bar.style.transition = 'none';
+                bar.style.width = '0%';
+                void bar.getBoundingClientRect();
+                bar.style.transition = '';
+                requestAnimationFrame(() => { bar.style.width = `${barPercent}%`; });
+            }
+        }
+
+        function kdcRender(payload) {
+            const key = payload.key || {};
+            const remote = payload.remote || {};
+            const plan = payload.plan || {};
+            const expireAt = remote.expire_at || key.expire_at;
+            const daysLeft = kdcDaysLeft(expireAt);
+            const statusValue = String(remote.status || '').toUpperCase();
+            const isExpired = statusValue === 'EXPIRED' || (daysLeft !== null && daysLeft <= 0);
+            const isBlocked = statusValue === 'DISABLED' || statusValue === 'LIMITED';
+
+            kdcSetState(isExpired ? 'Истекла' : (statusValue === 'DISABLED' ? 'Отключена' : (statusValue === 'LIMITED' ? 'Лимит трафика' : 'Активна')), (isExpired || isBlocked) ? 'expired' : 'active');
+            kdcSetText('kdc-title', `Подписка #${key.key_id ?? ''}`);
+            const owner = key.username ? `@${key.username}` : (key.user_id ? `ID ${key.user_id}` : 'Без пользователя');
+            kdcSetText('kdc-sub', [owner, key.host_name, key.email].filter(Boolean).join(' · '));
+
+            const daysBox = document.getElementById('kdc-quota-days');
+            if (daysBox) {
+                daysBox.classList.toggle('is-expired', Boolean(isExpired));
+                daysBox.classList.toggle('is-warning', !isExpired && daysLeft !== null && daysLeft <= 3);
+            }
+            kdcSetText('kdc-days', daysLeft === null ? '∞' : String(Math.max(daysLeft, 0)));
+            kdcSetText('kdc-days-sub', daysLeft === null ? 'без срока' : (expireAt ? `до ${kdcDate(expireAt, false)}` : 'без срока'));
+
+            const limitBytes = Number(key.traffic_limit_bytes || 0);
+            const usedBytes = Number(remote.used_bytes || 0);
+            const hasRemote = Boolean(remote.available);
+            const unlimited = !limitBytes;
+            const percent = unlimited ? 0 : Math.min(100, Math.max(0, (usedBytes / limitBytes) * 100));
+            const ring = document.getElementById('kdc-ring');
+            if (ring) {
+                ring.classList.toggle('is-unlimited', unlimited);
+                ring.classList.toggle('is-expired', Boolean(isExpired));
+            }
+            kdcSetText('kdc-traffic-percent', hasRemote ? (unlimited ? '∞' : `${Math.round(percent)}%`) : '—');
+            kdcSetText('kdc-traffic-value', hasRemote ? (unlimited ? `${kdcBytes(usedBytes)} / ∞` : `${kdcBytes(usedBytes)} / ${kdcBytes(limitBytes)}`) : 'нет данных');
+            kdcSetText('kdc-traffic-remaining', hasRemote ? (unlimited ? 'без ограничений' : `осталось ${kdcBytes(Math.max(limitBytes - usedBytes, 0))}`) : 'нет соединения');
+
+            const deviceLimit = Number(remote.hwid_device_limit || 0);
+            const deviceUsed = Number(remote.hwid_used || 0);
+            kdcSetText('kdc-devices', hasRemote ? (deviceLimit > 0 ? `${deviceUsed} / ${deviceLimit}` : `${deviceUsed} / ∞`) : '—');
+            kdcSetText('kdc-devices-sub', hasRemote ? (deviceLimit > 0 ? 'лимит по HWID' : 'без лимита') : 'нет данных');
+
+            const online = hasRemote ? kdcAgo(remote.online_at) : { text: '—', title: '' };
+            kdcSetText('kdc-online', online.text === 'не подключался' ? '—' : online.text);
+            const onlineElement = document.getElementById('kdc-online');
+            if (onlineElement && online.title) onlineElement.title = online.title;
+            kdcSetText('kdc-online-sub', remote.online_at ? 'последний вход' : (hasRemote ? 'не подключался' : 'нет данных'));
+
+            kdcSetText('kdc-traffic-today', hasRemote ? kdcBytes(remote.today_bytes) : '—');
+            kdcSetText('kdc-traffic-used', hasRemote ? kdcBytes(usedBytes) : '—');
+            kdcSetText('kdc-traffic-lifetime', hasRemote ? kdcBytes(remote.lifetime_bytes) : '—');
+            kdcSetText('kdc-traffic-strategy', hasRemote ? (KDC_STRATEGY_LABELS[String(remote.traffic_limit_strategy || key.traffic_limit_strategy || '')] || '—') : '—');
+
+            kdcSetText('kdc-meta-host', key.host_name || '—');
+            kdcSetText('kdc-meta-plan', plan.plan_name || (key.plan_id ? `Тариф #${key.plan_id}` : '—'));
+            kdcSetText('kdc-meta-email', key.email || '—');
+            kdcSetText('kdc-meta-limit', limitBytes ? kdcBytes(limitBytes) : (hasRemote ? 'Безлимит' : '—'));
+            const uuidText = remote.uuid || remote.short_uuid || key.remnawave_user_uuid;
+            kdcSetText('kdc-meta-uuid', uuidText ? String(uuidText).slice(0, 18) : '—');
+            kdcSetText('kdc-meta-created', kdcDate(key.created_at, true));
+
+            const link = key.subscription_url || '';
+            kdcSetText('kdc-link', link || 'Ссылка отсутствует');
+            kdcSetText('kdc-foot-note', key.comment ? `Комментарий: ${key.comment}` : '');
+
+            const suspicion = payload.suspicion || null;
+            const riskBox = document.getElementById('kdc-risk');
+            const riskList = document.getElementById('kdc-risk-list');
+            const riskDetails = suspicion && Array.isArray(suspicion.details) ? suspicion.details : [];
+            if (riskBox && riskList) {
+                if (riskDetails.length) {
+                    riskList.innerHTML = riskDetails.map(item => `<li class="kdc-risk-item"><span class="kdc-risk-dot"></span><span>${kdcEscape(item)}</span></li>`).join('');
+                    riskBox.hidden = false;
+                } else {
+                    riskList.innerHTML = '';
+                    riskBox.hidden = true;
+                }
+            }
+
+            const profileBtn = document.getElementById('kdc-profile-btn');
+            if (profileBtn) profileBtn.disabled = !key.user_id;
+
+            const offset = unlimited ? KDC_RING_LENGTH : KDC_RING_LENGTH - (KDC_RING_LENGTH * percent) / 100;
+            kdcAnimate(offset, percent);
+        }
+
+        async function kdcLoadIps(keyId) {
+            const list = document.getElementById('kdc-ips-list');
+            try {
+                const response = await fetch(`/admin/keys/${encodeURIComponent(keyId)}/ips`, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload.ok) throw new Error(payload.error || 'Нет данных о подключениях');
+                const count = Number(payload.count || 0);
+                const active = Number(payload.active || 0);
+                kdcSetText('kdc-ips-count', String(count));
+                kdcSetText('kdc-ips-active', String(active));
+                kdcSetText('kdc-ips-badge', active > 0 ? `${active} онлайн` : `${count} IP`);
+                if (!list) return;
+                if (!count) {
+                    if (payload.completed || payload.failed === false) {
+                        list.innerHTML = '<p class="kdc-ips-empty">Активных подключений нет</p>';
+                    } else {
+                        const reason = payload.reason ? ` · ${kdcEscape(payload.reason)}` : '';
+                        list.innerHTML = `<p class="kdc-ips-empty">Данные о подключениях недоступны${reason}</p>`;
+                    }
+                    return;
+                }
+                const chips = [];
+                (payload.nodes || []).forEach(node => {
+                    (node.ips || []).forEach(entry => {
+                        const title = `${node.node_name || '—'} · ${entry.last_seen ? kdcDate(entry.last_seen, true) : 'без времени'}`;
+                        chips.push(`<span class="kdc-ip ${entry.active ? 'is-active' : ''}" title="${kdcEscape(title)}"><span class="kdc-ip-dot"></span>${kdcEscape(entry.ip)}</span>`);
+                    });
+                });
+                list.innerHTML = chips.slice(0, 16).join('');
+            } catch (_) {
+                kdcSetText('kdc-ips-count', '—');
+                kdcSetText('kdc-ips-active', '—');
+                kdcSetText('kdc-ips-badge', 'нет данных');
+                if (list) list.innerHTML = '<p class="kdc-ips-empty">Не удалось получить данные о подключениях</p>';
+            }
+        }
+
+        async function openKeyDetails(keyId) {
+            if (!keyId) return;
+            KDC_STATE.keyId = String(keyId);
+            KDC_STATE.data = null;
+            const loading = document.getElementById('kdc-loading');
+            const content = document.getElementById('kdc-content');
+            const errorBox = document.getElementById('kdc-error');
+            if (loading) loading.classList.remove('hidden');
+            if (content) content.classList.add('hidden');
+            if (errorBox) errorBox.classList.add('hidden');
+            kdcSetText('kdc-title', `Подписка #${keyId}`);
+            kdcSetText('kdc-sub', 'Загрузка данных…');
+            kdcSetText('kdc-ips-badge', '—');
+            kdcSetText('kdc-ips-count', '—');
+            kdcSetText('kdc-ips-active', '—');
+            kdcSetText('kdc-foot-note', '');
+            const riskBoxReset = document.getElementById('kdc-risk');
+            if (riskBoxReset) riskBoxReset.hidden = true;
+            const riskListReset = document.getElementById('kdc-risk-list');
+            if (riskListReset) riskListReset.innerHTML = '';
+            kdcSetState('—', '');
+            const ipsList = document.getElementById('kdc-ips-list');
+            if (ipsList) ipsList.innerHTML = '<p class="kdc-ips-empty">Сбор данных о подключениях…</p>';
+            window.refreshUiIcons(document.getElementById('keyDetailsModal'));
+            openModal('keyDetailsModal');
+            try {
+                const response = await fetch(`/admin/keys/${encodeURIComponent(keyId)}/details`, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload.ok) throw new Error(payload.error || 'Не удалось загрузить данные подписки');
+                KDC_STATE.data = payload;
+                kdcRender(payload);
+                if (loading) loading.classList.add('hidden');
+                if (content) content.classList.remove('hidden');
+                window.refreshUiIcons(document.getElementById('keyDetailsModal'));
+                await kdcLoadIps(keyId);
+                window.refreshUiIcons(document.getElementById('keyDetailsModal'));
+            } catch (error) {
+                if (loading) loading.classList.add('hidden');
+                if (errorBox) errorBox.classList.remove('hidden');
+                kdcSetText('kdc-error-text', error.message || 'Не удалось загрузить данные подписки');
+            }
+        }
+
+        function refreshKeyDetailsIfOpen() {
+            const modal = document.getElementById('keyDetailsModal');
+            if (!modal || !modal.classList.contains('open') || !KDC_STATE.keyId) return;
+            openKeyDetails(KDC_STATE.keyId);
+        }
+
+        function kdcTextIn(scope, selector, value) {
+            const element = scope.querySelector(selector);
+            if (element) element.textContent = value;
+        }
+
+        function kdcApplyRowSummary(row, item) {
+            const box = row.querySelector('[data-usage-key]');
+            if (!box) return;
+            box.classList.remove('is-unlimited', 'is-warning', 'is-danger', 'is-loading');
+            if (!item) {
+                kdcTextIn(box, '[data-usage-traffic]', 'нет данных');
+                kdcTextIn(box, '[data-usage-devices-text]', '—');
+                kdcTextIn(box, '[data-usage-online-text]', '—');
+                return;
+            }
+            const limitBytes = Number(item.traffic_limit_bytes || 0);
+            const usedBytes = Number(item.used_bytes || 0);
+            const unlimited = !limitBytes;
+            const percent = unlimited ? 0 : Math.min(100, Math.max(0, (usedBytes / limitBytes) * 100));
+            if (unlimited) box.classList.add('is-unlimited');
+            else if (percent >= 90) box.classList.add('is-danger');
+            else if (percent >= 70) box.classList.add('is-warning');
+            kdcTextIn(box, '[data-usage-traffic]', item.available ? (unlimited ? `${kdcBytes(usedBytes)} / ∞` : `${kdcBytes(usedBytes)} / ${kdcBytes(limitBytes)}`) : 'нет данных');
+            const fill = box.querySelector('[data-usage-fill]');
+            if (fill) fill.style.width = `${percent}%`;
+
+            const deviceLimit = Number(item.hwid_device_limit || 0);
+            const deviceUsed = Number(item.hwid_used || 0);
+            kdcTextIn(box, '[data-usage-devices-text]', item.available ? (deviceLimit > 0 ? `${deviceUsed} / ${deviceLimit}` : `${deviceUsed} / ∞`) : '—');
+
+            const online = item.available ? kdcAgo(item.online_at) : { text: '—', title: '' };
+            kdcTextIn(box, '[data-usage-online-text]', online.text);
+            const onlineItem = box.querySelector('[data-usage-online]');
+            if (onlineItem) {
+                onlineItem.classList.toggle('is-online', online.text === 'только что' || /сек$/.test(online.text));
+                onlineItem.title = online.title || 'Последний вход';
+            }
+        }
+
+        async function loadKeysSummary() {
+            const rows = Array.from(document.querySelectorAll('#keys-tbody tr[data-key-id]'));
+            if (!rows.length) return;
+            const ids = rows.map(row => row.getAttribute('data-key-id')).filter(Boolean);
+            if (!ids.length) return;
+            rows.forEach(row => row.querySelector('[data-usage-key]')?.classList.add('is-loading'));
+            try {
+                const response = await fetch(`/admin/keys/summary?ids=${encodeURIComponent(ids.join(','))}`, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload.ok) throw new Error('summary_failed');
+                const items = payload.items || {};
+                rows.forEach(row => kdcApplyRowSummary(row, items[row.getAttribute('data-key-id')]));
+            } catch (_) {
+                rows.forEach(row => kdcApplyRowSummary(row, null));
+            }
+        }
+
+        async function handleKeyDetailsAction(action) {
+            const payload = KDC_STATE.data;
+            if (!payload || !action) return;
+            const key = payload.key || {};
+            const keyId = key.key_id;
+            if (!keyId) return;
+
+            if (action === 'comment') {
+                currentKeyId = String(keyId);
+                massSelectionIds = null;
+                const input = document.getElementById('commentInput');
+                if (input) input.value = key.comment || '';
+                window.refreshUiIcons(document.getElementById('commentModal'));
+                openModal('commentModal');
+                return;
+            }
+
+            if (action === 'expiry') {
+                currentKeyId = String(keyId);
+                massSelectionIds = null;
+                const deltaInput = document.getElementById('expiryDelta');
+                if (deltaInput) deltaInput.value = '';
+                window.refreshUiIcons(document.getElementById('expiryModal'));
+                openModal('expiryModal');
+                return;
+            }
+
+            if (action === 'profile') {
+                if (!key.user_id) return;
+                window.location.href = `{{ url_for('users_page') }}?q=${encodeURIComponent(key.user_id)}`;
+                return;
+            }
+
+            if (action === 'copy' || action === 'open') {
+                const url = key.subscription_url || '';
+                if (!url) { showToast('warning', 'У подписки нет ссылки'); return; }
+                if (action === 'copy') {
+                    try { await navigator.clipboard.writeText(url); showToast('success', 'Ссылка скопирована'); }
+                    catch (_) { showToast('danger', 'Не удалось скопировать ссылку'); }
+                } else {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                }
+                return;
+            }
+
+            if (action === 'reset-link') {
+                showConfirmModal('Новая ссылка подписки', 'Старая ссылка перестанет работать. Пользователю нужно будет обновить её в клиенте.', async () => {
+                    try {
+                        const response = await fetch(`/users/subscriptions/${encodeURIComponent(keyId)}/reset-link`, { method: 'POST', headers: { 'X-CSRFToken': getCsrfToken(), 'Accept': 'application/json' }, credentials: 'same-origin' });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok || !result.ok) throw new Error(result.error || 'Не удалось обновить ссылку');
+                        showToast('success', 'Ссылка обновлена');
+                        await loadKeysTable();
+                        openKeyDetails(keyId);
+                    } catch (error) {
+                        showToast('danger', error.message || 'Ошибка обновления ссылки');
+                    }
+                });
+                return;
+            }
+
+            if (action === 'reset-hwid') {
+                showConfirmModal('Сброс устройств', 'Удалить все зарегистрированные устройства этой подписки? Пользователю придётся подключить их заново.', async () => {
+                    try {
+                        const response = await fetch(`/users/subscriptions/${encodeURIComponent(keyId)}/reset-hwid`, { method: 'POST', headers: { 'X-CSRFToken': getCsrfToken(), 'Accept': 'application/json' }, credentials: 'same-origin' });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok || !result.ok) throw new Error(result.error || 'Не удалось сбросить устройства');
+                        showToast('success', result.deleted ? `Сброшено устройств: ${result.deleted}` : 'Устройства не зарегистрированы');
+                        await loadKeysTable();
+                        openKeyDetails(keyId);
+                    } catch (error) {
+                        showToast('danger', error.message || 'Ошибка сброса устройств');
+                    }
+                });
+                return;
+            }
+
+            if (action === 'delete') {
+                showConfirmModal(`Удалить подписку #${keyId}?`, async () => {
+                    const url = `{{ url_for('delete_key_route', key_id=0) }}`.replace('/0/', `/${keyId}/`);
+                    if (await apiRequest(url, 'POST', {}, null)) {
+                        closeModal('keyDetailsModal');
+                        showToast('success', 'Подписка удалена');
+                        await loadKeysTable();
+                    }
+                });
+            }
+        }
+
+        document.addEventListener('click', (event) => {
+            const detailsButton = event.target.closest('.btn-open-key-details');
+            if (detailsButton) {
+                event.preventDefault();
+                openKeyDetails(detailsButton.getAttribute('data-key-id'));
+                return;
+            }
+            const actionButton = event.target.closest('#keyDetailsModal [data-kdc-action]');
+            if (actionButton) {
+                event.preventDefault();
+                handleKeyDetailsAction(actionButton.getAttribute('data-kdc-action'));
+                return;
+            }
+            const row = event.target.closest('#keys-tbody tr[data-key-id]');
+            if (row) {
+                if (event.target.closest('a, button, input, label, select, textarea, form')) return;
+                const selection = window.getSelection ? String(window.getSelection()).trim() : '';
+                if (selection) return;
+                openKeyDetails(row.getAttribute('data-key-id'));
+            }
+        });
+
+        const giftKeysSelection = (() => {
+            const getCheckboxes = () => Array.from(document.querySelectorAll('.gift-key-select'));
+            const update = () => {
+                const checkboxes = getCheckboxes();
+                const selectedCount = checkboxes.filter(checkbox => checkbox.checked).length;
+                const selectAll = document.getElementById('select-all-gift-keys');
+                const count = document.getElementById('selected-gift-keys-count');
+                const actionsToggle = document.getElementById('gift-selected-actions-toggle');
+                if (count) count.textContent = String(selectedCount);
+                if (actionsToggle) actionsToggle.disabled = selectedCount === 0;
+                if (selectAll) {
+                    selectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+                    selectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+                }
+            };
+            const sync = isGift => {
+                document.querySelectorAll('.gift-keys-selection').forEach(element => {
+                    element.classList.toggle('hidden', !isGift);
+                    element.classList.toggle('inline-flex', isGift);
+                });
+                document.querySelectorAll('.gift-keys-selection-label').forEach(element => {
+                    element.classList.toggle('hidden', isGift);
+                });
+                const actionsWrap = document.getElementById('gift-selected-actions');
+                if (actionsWrap) {
+                    actionsWrap.classList.toggle('hidden', !isGift);
+                    actionsWrap.classList.toggle('inline-flex', isGift);
+                }
+                if (!isGift) {
+                    massSelectionIds = null;
+                    getCheckboxes().forEach(checkbox => { checkbox.checked = false; });
+                    const selectAll = document.getElementById('select-all-gift-keys');
+                    if (selectAll) {
+                        selectAll.checked = false;
+                        selectAll.indeterminate = false;
+                    }
+                }
+                update();
+            };
+            const setAll = value => {
+                getCheckboxes().forEach(checkbox => { checkbox.checked = value; });
+                update();
+            };
+            const copy = async () => {
+                const values = getCheckboxes().filter(checkbox => checkbox.checked && checkbox.dataset.key).map(checkbox => checkbox.dataset.key);
+                if (!values.length) {
+                    if (window.showToast) showToast('warning', 'Выберите хотя бы одну подписку');
+                    return;
+                }
+                const text = values.join('\n');
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(text);
+                    } else {
+                        const textArea = document.createElement('textarea');
+                        try {
+                            textArea.value = text;
+                            textArea.style.position = 'fixed';
+                            textArea.style.opacity = '0';
+                            document.body.appendChild(textArea);
+                            textArea.focus();
+                            textArea.select();
+                            if (!document.execCommand('copy')) throw new Error('copy_failed');
+                        } finally {
+                            textArea.remove();
+                        }
+                    }
+                    if (window.showToast) showToast('success', `Скопировано подписок: ${values.length}`);
+                } catch (_) {
+                    if (window.showToast) showToast('danger', 'Ошибка копирования');
+                }
+            };
+            const getSelectedIds = () => getCheckboxes().filter(checkbox => checkbox.checked).map(checkbox => checkbox.closest('tr[data-key-id]')?.dataset.keyId).filter(Boolean).map(String);
+            return { copy, setAll, sync, update, getSelectedIds };
+        })();
+
+        document.addEventListener('change', e => {
+            if (e.target.matches('.gift-key-select-all')) giftKeysSelection.setAll(e.target.checked);
+            if (e.target.matches('.gift-key-select')) giftKeysSelection.update();
+        });
+
+        (() => {
+            const actionsWrap = document.getElementById('gift-selected-actions');
+            const actionsToggle = document.getElementById('gift-selected-actions-toggle');
+            const actionsMenu = document.getElementById('gift-selected-actions-menu');
+            if (!actionsWrap || !actionsToggle || !actionsMenu) return;
+            const isMenuOpen = () => !actionsMenu.classList.contains('hidden');
+            const setMenuOpen = open => {
+                if (open && actionsToggle.disabled) return;
+                actionsMenu.classList.toggle('hidden', !open);
+                actionsToggle.setAttribute('aria-expanded', String(open));
+                actionsToggle.querySelector('.gift-actions-chevron')?.classList.toggle('rotate-180', open);
+            };
+            actionsToggle.addEventListener('click', e => { e.stopPropagation(); setMenuOpen(!isMenuOpen()); });
+            let closeTimer = null;
+            actionsWrap.addEventListener('mouseenter', () => { clearTimeout(closeTimer); setMenuOpen(true); });
+            actionsWrap.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(() => setMenuOpen(false), 200); });
+            document.addEventListener('click', e => { if (!actionsWrap.contains(e.target)) setMenuOpen(false); });
+            actionsMenu.addEventListener('click', e => {
+                const item = e.target.closest('[data-gift-action]');
+                if (!item) return;
+                setMenuOpen(false);
+                const ids = giftKeysSelection.getSelectedIds();
+                if (!ids.length) { showToast('warning', 'Выберите хотя бы одну подписку'); return; }
+                if (item.dataset.giftAction === 'copy') { giftKeysSelection.copy(); return; }
+                if (item.dataset.giftAction === 'comment') {
+                    massSelectionIds = ids;
+                    currentKeyId = null;
+                    document.getElementById('commentInput').value = '';
+                    window.refreshUiIcons(document.getElementById('commentModal'));
+                    openModal('commentModal');
+                    return;
+                }
+                if (item.dataset.giftAction === 'expiry') {
+                    massSelectionIds = ids;
+                    currentKeyId = null;
+                    document.getElementById('expiryDelta').value = '';
+                    window.refreshUiIcons(document.getElementById('expiryModal'));
+                    openModal('expiryModal');
+                    return;
+                }
+                if (item.dataset.giftAction === 'delete') {
+                    showConfirmModal(`Удалить выбранные подписки (${ids.length})? Это действие необратимо.`, async () => {
+                        let done = 0;
+                        for (const id of ids) {
+                            if (await apiRequest(`{{ url_for('delete_key_route', key_id=0) }}`.replace('/0/', `/${id}/`), 'POST', {}, null)) done++;
+                        }
+                        showToast(done ? 'success' : 'danger', done ? `Удалено подписок: ${done}` : 'Не удалось удалить подписки');
+                        await loadKeysTable();
+                    });
+                }
+            });
+        })();
+
+        // ===== УПРАВЛЕНИЕ АКТИВАЦИЕЙ ФИЛЬТРОВ =====
+         // Обновление стилей кнопок фильтров
+        function updateFilterActiveState(urlStr) {
+            const url = new URL(urlStr, location.origin);
+            const currentFilter = url.searchParams.get('filter') || 'all';
+             document.querySelectorAll('#filter_switch [data-filter-value]').forEach(link => {
+                 const isActive = link.dataset.filterValue === currentFilter;
+                 link.classList.toggle('bg-white/10', isActive);
+                 link.classList.toggle('text-white', isActive);
+                 link.classList.toggle('shadow-sm', isActive);
+                 link.classList.toggle('font-semibold', isActive);
+                 link.classList.toggle('text-white/50', !isActive);
+                 link.classList.toggle('hover:bg-white/[0.04]', !isActive);
+             });
+             giftKeysSelection.sync(currentFilter === 'gift');
+             window.refreshUiIcons();
+        }
+
+        // ===== AJAX НАВИГАЦИЯ =====
+        // Обработка кликов по фильтрам и пагинации
+        // ===== AJAX НАВИГАЦИЯ И LAZY LOAD =====
+
+        // Основная функция загрузки таблицы
+        let suspiciousScanTimer = null;
+        const loadKeysTable = async () => {
+            const tbody = document.getElementById('keys-tbody');
+            if (!tbody) return;
+
+            const url = new URL(tbody.dataset.fetchUrl, location.origin);
+            try {
+                const resp = await fetch(url, { headers: { 'Accept': 'text/html' } });
+                if (resp.ok) {
+                    tbody.innerHTML = await resp.text();
+                    window.refreshUiIcons();
+                    applyNewKeysHighlight();
+                    updateFilterActiveState(url.toString());
+                    updatePagination(url);
+                    loadKeysSummary();
+                    if (suspiciousScanTimer) {
+                        clearTimeout(suspiciousScanTimer);
+                        suspiciousScanTimer = null;
+                    }
+                    if (tbody.querySelector('[data-suspicious-scanning]')) {
+                        suspiciousScanTimer = setTimeout(() => {
+                            suspiciousScanTimer = null;
+                            loadKeysTable();
+                        }, 8000);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load keys:", e);
+                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-red-500">Ошибка загрузки</td></tr>';
+            }
+        };
+
+        window.refreshKeysTable = () => loadKeysTable();
+
+        // Обновление пагинации
+        const updatePagination = async (currentUrl) => {
+            const pagEl = document.getElementById('keys-pagination');
+            if (pagEl) {
+                const pagUrl = new URL(pagEl.dataset.src, location.origin);
+                // Копируем параметры (q, filter, page) из URL таблицы в URL пагинации
+                currentUrl.searchParams.forEach((v, k) => pagUrl.searchParams.set(k, v));
+                try {
+                    const resp = await fetch(pagUrl, { headers: { 'Accept': 'text/html' } });
+                    if (resp.ok) {
+                        pagEl.innerHTML = await resp.text();
+                        window.refreshUiIcons();
+                        // Обновляем data-src чтобы он был актуальным (хотя мы все равно перезаписываем params)
+                        pagEl.dataset.src = pagUrl.pathname + pagUrl.search;
+                    }
+                } catch (_) { }
+            }
+        };
+
+        // Обработка кликов (Пагинация и Фильтры)
+        const navigateKeys = async (link) => {
+            const href = link?.getAttribute('href');
+            if (!href) return;
+            const targetUrl = new URL(href, location.origin);
+            const tbody = document.getElementById('keys-tbody');
+            if (!tbody) return;
+            const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+            targetUrl.searchParams.forEach((value, key) => fetchUrl.searchParams.set(key, value));
+            if (!targetUrl.searchParams.has('page')) fetchUrl.searchParams.set('page', '1');
+            history.pushState(null, '', targetUrl.pathname + targetUrl.search);
+            tbody.dataset.fetchUrl = fetchUrl.toString();
+            updateFilterActiveState(targetUrl.toString());
+            tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center"><div class="flex flex-col items-center justify-center gap-2 text-white/30"><span class="h-3 w-full max-w-sm animate-pulse rounded bg-white/[0.08]"></span><span class="h-3 w-2/3 max-w-xs animate-pulse rounded bg-white/[0.08]"></span></div></td></tr>';
+            await loadKeysTable();
+            window.refreshUiIcons();
+        };
+
+        document.querySelectorAll('#filter_switch .ajax-nav').forEach(link => {
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                navigateKeys(link);
+            });
+        });
+
+        document.addEventListener('click', async (e) => {
+            const link = e.target.closest('#keys-pagination .ajax-nav');
+            if (!link) return;
+            e.preventDefault();
+            e.stopPropagation();
+            await navigateKeys(link);
+        });
+
+        // Обработка Popstate (Назад/Вперед)
+        window.addEventListener('popstate', async () => {
+            updateFilterActiveState(location.href);
+            const tbody = document.getElementById('keys-tbody');
+            if (tbody) {
+                const currentUrl = new URL(location.href);
+                const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+                currentUrl.searchParams.forEach((v, k) => fetchUrl.searchParams.set(k, v));
+                tbody.dataset.fetchUrl = fetchUrl.toString();
+                await loadKeysTable();
+            }
+        });
+
+        // Поиск
+        const searchInput = document.getElementById('keys-search');
+        if (searchInput) {
+            let searchTimeout = null;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(async () => {
+                    const q = searchInput.value || '';
+                    const params = new URLSearchParams(location.search);
+                    params.set('q', q);
+                    params.set('page', '1');
+                    params.set('filter', new URLSearchParams(location.search).get('filter') || 'all');
+
+                    const newUrl = `${location.pathname}?${params.toString()}`;
+                    history.replaceState(null, '', newUrl);
+
+                    const tbody = document.getElementById('keys-tbody');
+                    if (tbody) {
+                        const fetchUrl = new URL(tbody.dataset.fetchUrl, location.origin);
+                        fetchUrl.searchParams.set('q', q);
+                        fetchUrl.searchParams.set('page', '1');
+                        fetchUrl.searchParams.set('filter', new URLSearchParams(location.search).get('filter') || 'all');
+                        tbody.dataset.fetchUrl = fetchUrl.toString();
+                        await loadKeysTable();
+                    }
+                }, 400);
+            });
+        }
+
+        updateFilterActiveState(location.href);
+        window.refreshUiIcons();
+        loadKeysTable();
+
+        // Автообновление
+        const tbodyAutoload = document.getElementById('keys-tbody');
+        if (tbodyAutoload && tbodyAutoload.dataset.fetchInterval) {
+            setInterval(loadKeysTable, parseInt(tbodyAutoload.dataset.fetchInterval));
+        }
+        // ===== окончание поиска ключей =====
+    })();
+
+    // Функция копирования ключа
+    window.copyKey = function (btn) {
+        const key = btn.getAttribute('data-key');
+        if (!key) {
+            if (window.showToast) showToast('warning', 'Нет подписки');
+            return;
+        }
+
+        const success = () => {
+            if (window.showToast) showToast('success', 'Подписка скопирована');
+            const icon = btn.querySelector('[data-lucide], svg');
+            if (icon) {
+                icon.setAttribute('data-lucide', 'check');
+                window.refreshUiIcons?.(btn);
+                setTimeout(() => {
+                    icon.setAttribute('data-lucide', 'copy');
+                    window.refreshUiIcons?.(btn);
+                }, 2000);
+            }
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(key).then(success).catch(err => {
+                console.error(err);
+                if (window.showToast) showToast('danger', 'Ошибка копирования');
+            });
+        } else {
+            // Fallback
+            let textArea = document.createElement("textarea");
+            textArea.value = key;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                success();
+            } catch (err) {
+                if (window.showToast) showToast('danger', 'Ошибка копирования');
+            }
+            document.body.removeChild(textArea);
+        }
+    };
+</script>
+{% endblock %}
