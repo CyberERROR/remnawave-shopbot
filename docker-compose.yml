@@ -7,4 +7,5 @@ services:
       - '8000:8000'
     volumes:
       - .:/app/project
+      - ../remnawave-shopbot-data:/app/data
     container_name: remnawave-shopbot

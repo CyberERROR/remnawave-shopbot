@@ -1,0 +1,11 @@
+[Unit]
+Description=Проверка запросов на обновление Remnawave Shopbot
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=10
+AccuracySec=1s
+Unit=shopbot-update.service
+
+[Install]
+WantedBy=timers.target

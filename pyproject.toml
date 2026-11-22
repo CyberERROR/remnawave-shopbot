@@ -41,7 +41,6 @@ Repository = "https://github.com/CyberERROR/remnawave-shopbot"
 Releases = "https://github.com/CyberERROR/remnawave-shopbot/releases"
 Telegram = "https://t.me/+gwNP6nFYuYo4MDUy"
 Developer = "https://github.com/CyberERROR"
-Update = "https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/refs/heads/main/src/shop_bot/webhook_server/modules/os.json"
 
 [tool.shopbot]
 name = "Remnawave Shopbot"

@@ -21,6 +21,8 @@ if [[ ! -d "$PROJECT_DIR" ]] && [[ -d "./$PROJECT_NAME" ]]; then
     PROJECT_DIR="$(pwd)/$PROJECT_NAME"
 fi
 
+DATADIR="$(dirname "$PROJECT_DIR")/remnawave-shopbot-data"
+
 NGINX_CONF="/etc/nginx/sites-available/${PROJECT_NAME}.conf"
 NGINX_LINK="/etc/nginx/sites-enabled/${PROJECT_NAME}.conf"
 
@@ -327,6 +329,69 @@ show_docker_images() {
     fi
 }
 
+prepare_data_dir() {
+    if [[ ! -d "$DATADIR" ]]; then
+        run_with_spinner "Создание каталога данных" mkdir -p "$DATADIR" || {
+            log_error "Не удалось создать каталог данных $DATADIR"
+            exit 1
+        }
+    fi
+    mkdir -p "$DATADIR/backups" "$DATADIR/update" 2>/dev/null || true
+
+    local moved=0
+    if [[ -f "$PROJECT_DIR/users.db" ]] && [[ ! -f "$DATADIR/users.db" ]]; then
+        run_with_animated_spinner "Перенос базы данных" mv -f "$PROJECT_DIR/users.db" "$DATADIR/users.db" || log_warn "Не удалось перенести users.db"
+        moved=1
+    fi
+    if [[ -f "$PROJECT_DIR/.env" ]] && [[ ! -f "$DATADIR/.env" ]]; then
+        run_with_animated_spinner "Перенос файла .env" mv -f "$PROJECT_DIR/.env" "$DATADIR/.env" || log_warn "Не удалось перенести .env"
+        moved=1
+    fi
+    if [[ -d "$PROJECT_DIR/backups" ]] && [[ ! -d "$DATADIR/backups" ]]; then
+        run_with_animated_spinner "Перенос резервных копий" mv -f "$PROJECT_DIR/backups" "$DATADIR/backups" || log_warn "Не удалось перенести backups"
+        moved=1
+    elif [[ -d "$PROJECT_DIR/backups" ]] && [[ -n "$(ls -A "$PROJECT_DIR/backups" 2>/dev/null)" ]]; then
+        run_with_animated_spinner "Перенос старых копий" bash -c "cp -a '$PROJECT_DIR/backups/.' '$DATADIR/backups/'" || true
+        moved=1
+    fi
+
+    if [[ "$moved" -eq 1 ]]; then
+        log_success "База данных и настройки перенесены в $DATADIR"
+    else
+        log_success "Каталог данных готов: $DATADIR"
+    fi
+}
+
+backup_data() {
+    if [[ -f "$DATADIR/users.db" ]]; then
+        local stamp
+        stamp=$(date '+%Y%m%d-%H%M%S')
+        run_with_animated_spinner "Резервная копия базы перед обновлением" \
+            cp -f "$DATADIR/users.db" "$DATADIR/backups/pre-update-$stamp.db" || log_warn "Не удалось создать резервную копию базы"
+    fi
+}
+
+install_update_agent() {
+    if [[ ! -f "$PROJECT_DIR/deploy/shopbot-update-agent.sh" ]]; then
+        log_warn "Агент обновления не найден, кнопка обновления в панели будет недоступна"
+        return 0
+    fi
+    run_with_spinner "Установка агента обновления" sudo install -m 0755 "$PROJECT_DIR/deploy/shopbot-update-agent.sh" /usr/local/bin/shopbot-update-agent || {
+        log_warn "Не удалось установить агент обновления"
+        return 0
+    }
+    sudo tee /etc/default/shopbot-update >/dev/null <<EOF
+SHOPBOT_PROJECT_DIR=$PROJECT_DIR
+SHOPBOT_DATA_DIR=$DATADIR
+SHOPBOT_GIT_BRANCH=main
+EOF
+    sudo install -m 0644 "$PROJECT_DIR/deploy/shopbot-update.service" /etc/systemd/system/shopbot-update.service || true
+    sudo install -m 0644 "$PROJECT_DIR/deploy/shopbot-update.timer" /etc/systemd/system/shopbot-update.timer || true
+    sudo systemctl daemon-reload 2>/dev/null || true
+    sudo systemctl enable --now shopbot-update.timer 2>/dev/null || log_warn "Не удалось включить таймер обновления"
+    log_success "Кнопка обновления в панели активирована"
+}
+
 show_header
 ensure_sudo_refresh
 
@@ -360,6 +425,11 @@ if [[ -f "$NGINX_CONF" ]]; then
             exit 1
         fi
         
+        run_with_spinner "Остановка контейнеров перед обновлением" sudo bash -c "docker-compose down --remove-orphans" || true
+
+        prepare_data_dir
+        backup_data
+
         run_with_animated_spinner "Обновление файлов (Hard Reset)" \
             bash -c "git fetch origin main && git reset --hard origin/main" || {
             log_error "Не удалось обновить репозиторий"
@@ -377,6 +447,8 @@ if [[ -f "$NGINX_CONF" ]]; then
             log_error "Не удалось пересобрать контейнеры"
             exit 1
         }
+
+        install_update_agent
         
         echo ""
         echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
@@ -408,6 +480,12 @@ else
     log_warn "Каталог проекта уже существует ($PROJECT_DIR), пропускаем клонирование"
 fi
 cd "$PROJECT_DIR"
+
+if [[ -f docker-compose.yml ]]; then
+    run_with_spinner "Остановка контейнеров перед обновлением" sudo bash -c "docker-compose down --remove-orphans" || true
+fi
+
+prepare_data_dir
 
 echo ""
 
@@ -515,6 +593,8 @@ run_with_animated_spinner "Сборка и запуск Docker контейне�
     log_error "Не удалось запустить Docker контейнеры"
     exit 1
 }
+
+install_update_agent
 
 echo ""
 echo -e "${GREEN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${NC}"
