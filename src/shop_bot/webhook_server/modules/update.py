@@ -150,8 +150,8 @@ def fetch_releases(limit=RELEASES_LIMIT, force=False):
     return items
 
 
-def get_latest_release_version():
-    releases = fetch_releases()
+def get_latest_release_version(force=False):
+    releases = fetch_releases(force=force)
     for release in releases:
         if release.get('prerelease'):
             continue
@@ -167,7 +167,7 @@ def check_for_updates(force=False):
         if not force and _update_cache['data'] and _update_cache['expires_at'] > now:
             return _update_cache['data']
         current_version = get_current_version()
-        latest_version = get_latest_release_version()
+        latest_version = get_latest_release_version(force=force)
         if not latest_version:
             return {
                 'update_available': False,

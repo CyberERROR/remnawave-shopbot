@@ -1812,14 +1812,14 @@
                 const aboutBtns = [document.getElementById('about-info-btn'), document.getElementById('about-info-btn-mobile')].filter(Boolean);
                 if (!aboutBtns.length) return;
 
-                async function checkForUpdates() {
-                    aboutBtns.forEach(btn => {
+                async function checkForUpdates(force = false, spin = true) {
+                    if (spin) aboutBtns.forEach(btn => {
                         const icon = btn.querySelector('.material-symbols-outlined');
                         if (icon) icon.classList.add('animate-spin-slow');
                     });
 
                     try {
-                        const data = await apiRequest('/update/check');
+                        const data = await apiRequest('/update/check' + (force ? '?fresh=1&_=' + Date.now() : ''));
                         const updateNotification = document.getElementById('update-notification');
                         const latestVersionSpan = document.getElementById('latest-version');
 
@@ -1867,18 +1867,19 @@
                     } catch (e) {
                         console.error('Update check failed:', e);
                     } finally {
-                        aboutBtns.forEach(btn => {
+                        if (spin) aboutBtns.forEach(btn => {
                             const icon = btn.querySelector('.material-symbols-outlined');
                             if (icon) setTimeout(() => icon.classList.remove('animate-spin-slow'), 500);
                         });
                     }
                 }
-                checkForUpdates();
+                checkForUpdates(true);
+                setInterval(() => checkForUpdates(true, false), 300000);
                 aboutBtns.forEach(btn => {
                     btn.addEventListener('click', async () => {
                         openModal('aboutModal');
                         window.loadReleases?.(true);
-                        await checkForUpdates();
+                        await checkForUpdates(true);
                     });
                 });
 
@@ -2104,7 +2105,7 @@
                     stateEl.textContent = 'Загрузка списка изменений...';
                     stateEl.classList.remove('hidden');
                     try {
-                        const data = await apiRequest('/update/releases?fresh=' + (force ? '1' : '0'));
+                        const data = await apiRequest('/update/releases?fresh=' + (force ? '1&_=' + Date.now() : '0'));
                         cachedReleases = (data && data.releases) || [];
                         render(cachedReleases);
                     } catch (e) {
