@@ -34,6 +34,20 @@ compose_cmd() {
     fi
 }
 
+refresh_self() {
+    local source="$PROJECT_DIR/deploy/shopbot-update-agent.sh"
+    local target="/usr/local/bin/shopbot-update-agent"
+    [ -f "$source" ] || return 0
+    if cmp -s "$source" "$target"; then
+        return 0
+    fi
+    cp -f "$source" "$target.new" 2>/dev/null || return 0
+    chmod 0755 "$target.new" 2>/dev/null || return 0
+    if mv -f "$target.new" "$target" 2>/dev/null; then
+        log_line "agent script refreshed"
+    fi
+}
+
 wait_health() {
     local attempts="${1:-60}"
     local i=0
@@ -81,27 +95,24 @@ if ! git reset --hard "origin/$GIT_BRANCH" >> "$LOG_FILE" 2>&1; then
     exit 0
 fi
 
-if compose_cmd up -d --build >> "$LOG_FILE" 2>&1; then
-    if wait_health 90; then
-        write_status done "Обновление завершено"
-        log_line "update finished"
-        exit 0
-    fi
-    log_line "health check failed, rolling back"
-    write_status rolled_back "Панель не поднялась, выполняется откат"
-    git reset --hard "$PREVIOUS_COMMIT" >> "$LOG_FILE" 2>&1 || true
-    compose_cmd up -d --build >> "$LOG_FILE" 2>&1 || true
-    if wait_health 90; then
-        write_status rolled_back "Обновление отменено, предыдущая версия восстановлена"
-        log_line "rollback finished"
-    else
-        write_status failed "Откат не помог, проверьте контейнеры вручную"
-        log_line "FAILED: rollback health check"
-    fi
+compose_cmd up -d --build >> "$LOG_FILE" 2>&1 || log_line "compose вернул ошибку, проверяю панель"
+
+if wait_health 90; then
+    refresh_self
+    write_status done "Обновление завершено"
+    log_line "update finished"
     exit 0
 fi
 
-log_line "compose build failed, rolling back"
+log_line "health check failed, rolling back"
+write_status rolled_back "Панель не поднялась, выполняется откат"
 git reset --hard "$PREVIOUS_COMMIT" >> "$LOG_FILE" 2>&1 || true
-compose_cmd up -d --build >> "$LOG_FILE" 2>&1 || true
-write_status failed "Не удалось пересобрать контейнеры, предыдущая версия восстановлена"
+compose_cmd up -d --build >> "$LOG_FILE" 2>&1 || log_line "compose вернул ошибку при откате, проверяю панель"
+if wait_health 90; then
+    write_status rolled_back "Обновление отменено, предыдущая версия восстановлена"
+    log_line "rollback finished"
+else
+    write_status failed "Откат не помог, проверьте контейнеры вручную"
+    log_line "FAILED: rollback health check"
+fi
+exit 0

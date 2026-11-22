@@ -393,11 +393,23 @@ build_ssl_email() {
     echo "admin@${domain}"
 }
 
+compose_cmd() {
+    if sudo docker compose version >/dev/null 2>&1; then
+        sudo docker compose "$@"
+    else
+        sudo docker-compose "$@"
+    fi
+}
+
+compose_rebuild() {
+    compose_cmd down --remove-orphans || true
+    compose_cmd up -d --build
+}
+
 ensure_packages() {
     declare -A packages=(
         [git]='git'
         [docker]='docker.io'
-        [docker-compose]='docker-compose'
         [nginx]='nginx'
         [curl]='curl'
         [certbot]='certbot'
@@ -412,6 +424,11 @@ ensure_packages() {
             missing_desc+=("$cmd")
         fi
     done
+
+    if ! command -v docker-compose >/dev/null 2>&1 && ! docker compose version >/dev/null 2>&1; then
+        missing+=('docker-compose')
+        missing_desc+=('docker-compose')
+    fi
 
     if ((${#missing[@]})); then
         info "Не хватает: ${missing_desc[*]}"
@@ -510,7 +527,7 @@ EOF
 show_docker_images() {
     if command -v docker >/dev/null 2>&1 && [[ -f "docker-compose.yml" ]]; then
         info "Docker контейнеры в проекте:"
-        docker-compose config --services 2>/dev/null | sed 's/^/     - /' || true
+        compose_cmd config --services 2>/dev/null | sed 's/^/     - /' || true
     fi
 }
 
@@ -574,6 +591,7 @@ EOF
     sudo install -m 0644 "$PROJECT_DIR/deploy/shopbot-update.timer" /etc/systemd/system/shopbot-update.timer || true
     sudo systemctl daemon-reload 2>/dev/null || true
     sudo systemctl enable --now shopbot-update.timer 2>/dev/null || warn "Не удалось включить таймер обновления"
+    sudo systemctl start shopbot-update.service 2>/dev/null || true
     ok "Кнопка «Обновить» в панели активирована"
 }
 
@@ -710,7 +728,7 @@ run_update_mode() {
     ok "Порт вебхуков: ${YOOKASSA_PORT}"
 
     section "3/7" "Остановка контейнеров"
-    spinner_run "Остановка контейнеров" sudo bash -c "docker-compose down --remove-orphans" || true
+    spinner_run "Остановка контейнеров" compose_cmd down --remove-orphans || true
 
     section "4/7" "Данные и резервная копия"
     prepare_data_dir
@@ -727,7 +745,7 @@ run_update_mode() {
     section "6/7" "Пересборка контейнеров"
     show_docker_images
     ensure_services
-    spinner_run "Пересборка и запуск" sudo bash -c "docker-compose down --remove-orphans && docker-compose up -d --build" || {
+    spinner_run "Пересборка и запуск" compose_rebuild || {
         fail "Не удалось пересобрать контейнеры"
         exit 1
     }
@@ -771,7 +789,7 @@ run_install_mode() {
 
     section "4/9" "Подготовка данных"
     if [[ -f docker-compose.yml ]]; then
-        spinner_run "Остановка старых контейнеров" sudo bash -c "docker-compose down --remove-orphans" || true
+        spinner_run "Остановка старых контейнеров" compose_cmd down --remove-orphans || true
     fi
     prepare_data_dir
 
@@ -789,8 +807,7 @@ run_install_mode() {
 
     section "8/9" "Сборка и запуск"
     show_docker_images
-    spinner_run "Сборка и запуск контейнеров" \
-        sudo bash -c "if [ -n \"\$(docker-compose ps -q 2>/dev/null)\" ]; then docker-compose down --remove-orphans; fi; docker-compose up -d --build" || {
+    spinner_run "Сборка и запуск контейнеров" compose_rebuild || {
         fail "Не удалось запустить Docker контейнеры"
         exit 1
     }
