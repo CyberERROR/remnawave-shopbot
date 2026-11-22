@@ -1973,12 +1973,20 @@
                     'Собираем образ и перезапускаем панель',
                     'Ждём ответ панели на порту 1488'
                 ];
+                const UPDATE_STAGE_MAP = {
+                    fetch: { percent: 25, title: 'Загрузка версии', text: 'Получаем новую версию из репозитория' },
+                    build: { percent: 62, title: 'Пересборка контейнеров', text: 'Собираем образ и перезапускаем панель' },
+                    health: { percent: 88, title: 'Запуск панели', text: 'Ждём ответ панели на порту 1488' },
+                    rollback: { percent: 70, title: 'Возврат версии', text: 'Панель не поднялась, возвращаем прежнюю версию' }
+                };
 
                 let updatePercent = 0;
                 let updateStartedAt = 0;
                 let updateStatusTimer = null;
                 let updateTickTimer = null;
                 let updateEmptyPolls = 0;
+                let updateFailPolls = 0;
+                let updateServerStage = '';
                 let updateReloading = false;
 
                 function updateSessionRead() {
@@ -2099,16 +2107,27 @@
                 function updateTickStart() {
                     if (updateTickTimer) return;
                     updateTickTimer = setInterval(() => {
-                        if (updatePercent < 92) {
-                            updatePercent = Math.min(92, updatePercent + Math.max(1, Math.round((92 - updatePercent) / 24)));
+                        const stageInfo = UPDATE_STAGE_MAP[updateServerStage];
+                        if (stageInfo) {
+                            updatePercent = Math.max(updatePercent, stageInfo.percent);
+                            updateBoardPaint({
+                                mode: 'running',
+                                percent: updatePercent,
+                                title: stageInfo.title,
+                                text: stageInfo.text
+                            });
+                        } else {
+                            if (updatePercent < 92) {
+                                updatePercent = Math.min(92, updatePercent + Math.max(1, Math.round((92 - updatePercent) / 24)));
+                            }
+                            const stage = updateStage(updatePercent);
+                            updateBoardPaint({
+                                mode: 'running',
+                                percent: updatePercent,
+                                title: UPDATE_TITLES[stage],
+                                text: UPDATE_TEXTS[stage]
+                            });
                         }
-                        const stage = updateStage(updatePercent);
-                        updateBoardPaint({
-                            mode: 'running',
-                            percent: updatePercent,
-                            title: UPDATE_TITLES[stage],
-                            text: UPDATE_TEXTS[stage]
-                        });
                         updateSessionWrite({ active: true, startedAt: updateStartedAt, percent: updatePercent });
                     }, UPDATE_TICK_INTERVAL);
                 }
@@ -2151,13 +2170,26 @@
                         }
                         if (state.state === 'running' || state.pending) {
                             updateEmptyPolls = 0;
-                            const stage = updateStage(updatePercent);
-                            updateBoardPaint({
-                                mode: 'running',
-                                percent: updatePercent,
-                                title: UPDATE_TITLES[stage],
-                                text: UPDATE_TEXTS[stage]
-                            });
+                            updateFailPolls = 0;
+                            updateServerStage = state.stage || '';
+                            const stageInfo = UPDATE_STAGE_MAP[updateServerStage];
+                            if (stageInfo) {
+                                updatePercent = Math.max(updatePercent, stageInfo.percent);
+                                updateBoardPaint({
+                                    mode: 'running',
+                                    percent: updatePercent,
+                                    title: stageInfo.title,
+                                    text: stageInfo.text
+                                });
+                            } else {
+                                const stage = updateStage(updatePercent);
+                                updateBoardPaint({
+                                    mode: 'running',
+                                    percent: updatePercent,
+                                    title: UPDATE_TITLES[stage],
+                                    text: UPDATE_TEXTS[stage]
+                                });
+                            }
                             return;
                         }
                         updateEmptyPolls += 1;
@@ -2174,6 +2206,22 @@
                             if (applyUpdateBtn) applyUpdateBtn.disabled = false;
                         }
                     } catch (e) {
+                        updateFailPolls += 1;
+                        if (updateFailPolls === 5) {
+                            updateBoardPaint({
+                                mode: 'running',
+                                percent: updatePercent,
+                                title: 'Связь с панелью прервана',
+                                text: 'Контейнер перезапускается, продолжаем ждать ответа'
+                            });
+                        } else if (updateFailPolls === 45) {
+                            updateBoardPaint({
+                                mode: 'running',
+                                percent: updatePercent,
+                                title: 'Панель пока не отвечает',
+                                text: 'Сборка образа на слабом сервере может занять до 10 минут'
+                            });
+                        }
                     }
                 }
 
@@ -2181,6 +2229,8 @@
                     updateStartedAt = startedAt || Date.now();
                     updatePercent = Math.max(8, Math.min(92, Math.round(percent || 0)));
                     updateEmptyPolls = 0;
+                    updateFailPolls = 0;
+                    updateServerStage = '';
                     updateReloading = false;
                     const stage = updateStage(updatePercent);
                     updateBoardPaint({

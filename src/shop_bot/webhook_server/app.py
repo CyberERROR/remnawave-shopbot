@@ -265,7 +265,28 @@ def create_webhook_app(bot_controller_instance):
     )
     
 
-    flask_app.config['SECRET_KEY'] = os.getenv('SHOPBOT_SECRET_KEY') or secrets.token_hex(32)
+    def _resolve_secret_key():
+        env_key = os.getenv('SHOPBOT_SECRET_KEY')
+        if env_key:
+            return env_key
+        key_file = DB_FILE.parent / 'secret_key'
+        try:
+            if key_file.exists():
+                stored = key_file.read_text(encoding='utf-8').strip()
+                if stored:
+                    return stored
+        except Exception:
+            pass
+        generated = secrets.token_hex(32)
+        try:
+            key_file.parent.mkdir(parents=True, exist_ok=True)
+            key_file.write_text(generated, encoding='utf-8')
+            os.chmod(key_file, 0o600)
+        except Exception:
+            pass
+        return generated
+
+    flask_app.config['SECRET_KEY'] = _resolve_secret_key()
     flask_app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
     flask_app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
     

@@ -1,14 +1,19 @@
+import json
+import logging
 import os
 import time
 import zipfile
 from functools import lru_cache
 from pathlib import Path
+from xml.etree import ElementTree
 
 import requests
 from flask import request
 
 from shop_bot.data_manager import backup_manager
 from shop_bot.data_manager.database import DATA_DIR
+
+logger = logging.getLogger(__name__)
 
 try:
     import tomllib
@@ -23,10 +28,15 @@ RELEASES_LIMIT = 1
 UPDATE_CHECK_TTL = 120
 PYPROJECT_FILENAME = 'pyproject.toml'
 AGENT_FRESH_SECONDS = 90
+RELEASES_CACHE_FILENAME = 'releases.json'
+RELEASES_USER_AGENT = 'remnawave-shopbot-update-checker'
+ATOM_NAMESPACE = {'atom': 'http://www.w3.org/2005/Atom'}
 
 _releases_cache = {
     'expires_at': 0,
-    'items': []
+    'items': [],
+    'etag': '',
+    'loaded': False
 }
 
 _update_cache = {
@@ -111,29 +121,62 @@ def get_releases_url():
     return f"https://api.github.com/repos/{parts[index + 1]}/{parts[index + 2]}/releases"
 
 
-def fetch_releases(limit=RELEASES_LIMIT, force=False):
-    now = time.time()
-    if not force and _releases_cache['items'] and _releases_cache['expires_at'] > now:
-        return _releases_cache['items']
+def get_releases_feed_url():
+    releases_url = get_project_info().get('links', {}).get('releases') or ''
+    if 'github.com' not in releases_url:
+        return None
+    return releases_url.rstrip('/') + '.atom'
 
-    releases_url = get_releases_url()
-    if not releases_url:
-        return []
 
-    response = requests.get(
-        releases_url,
-        params={'per_page': limit},
-        headers={
-            'Accept': 'application/vnd.github+json',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-        },
-        timeout=8
-    )
-    response.raise_for_status()
+def _releases_cache_file():
+    directory = get_update_dir()
+    if not directory:
+        return None
+    return directory / RELEASES_CACHE_FILENAME
 
+
+def _load_releases_cache():
+    if _releases_cache['loaded']:
+        return
+    _releases_cache['loaded'] = True
+    path = _releases_cache_file()
+    if not path:
+        return
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        return
+    items = payload.get('items')
+    if isinstance(items, list):
+        _releases_cache['items'] = items
+    etag = payload.get('etag')
+    if isinstance(etag, str):
+        _releases_cache['etag'] = etag
+
+
+def _save_releases_cache(items, etag):
+    path = _releases_cache_file()
+    if not path:
+        return
+    try:
+        payload = {
+            'etag': etag or '',
+            'saved_at': int(time.time()),
+            'items': items
+        }
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
+    except Exception:
+        pass
+
+
+def _cached_releases():
+    _load_releases_cache()
+    return list(_releases_cache['items'])
+
+
+def _parse_release_items(payload, limit):
     items = []
-    for release in response.json():
+    for release in payload:
         if release.get('draft'):
             continue
         items.append({
@@ -144,9 +187,108 @@ def fetch_releases(limit=RELEASES_LIMIT, force=False):
             'prerelease': bool(release.get('prerelease')),
             'body': release.get('body') or ''
         })
+        if len(items) >= limit:
+            break
+    return items
 
+
+def _fetch_atom_releases(limit):
+    feed_url = get_releases_feed_url()
+    if not feed_url:
+        return []
+    response = requests.get(
+        feed_url,
+        headers={'User-Agent': RELEASES_USER_AGENT},
+        timeout=8
+    )
+    if response.status_code != 200:
+        return []
+    root = ElementTree.fromstring(response.content)
+    items = []
+    for entry in root.findall('atom:entry', ATOM_NAMESPACE):
+        link = entry.find('atom:link', ATOM_NAMESPACE)
+        url = link.get('href') if link is not None else ''
+        tag = url.rstrip('/').split('/')[-1] if url else ''
+        name = entry.findtext('atom:title', default='', namespaces=ATOM_NAMESPACE)
+        updated = entry.findtext('atom:updated', default='', namespaces=ATOM_NAMESPACE)
+        items.append({
+            'tag': tag,
+            'name': name or tag,
+            'published_at': (updated or '')[:10],
+            'url': url,
+            'prerelease': False,
+            'body': ''
+        })
+        if len(items) >= limit:
+            break
+    return items
+
+
+def _fallback_releases(limit):
+    cached = _cached_releases()
+    if cached:
+        return cached
+    try:
+        atom_items = _fetch_atom_releases(limit)
+    except Exception:
+        return []
+    if atom_items:
+        _releases_cache['items'] = atom_items
+        _releases_cache['expires_at'] = time.time() + RELEASES_CACHE_TTL
+    return atom_items
+
+
+def fetch_releases(limit=RELEASES_LIMIT, force=False):
+    _load_releases_cache()
+    now = time.time()
+    if not force and _releases_cache['items'] and _releases_cache['expires_at'] > now:
+        return _releases_cache['items']
+
+    releases_url = get_releases_url()
+    if not releases_url:
+        return _cached_releases()
+
+    headers = {
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': RELEASES_USER_AGENT
+    }
+    if _releases_cache['etag']:
+        headers['If-None-Match'] = _releases_cache['etag']
+
+    try:
+        response = requests.get(
+            releases_url,
+            params={'per_page': limit},
+            headers=headers,
+            timeout=8
+        )
+    except Exception as error:
+        logger.warning('Список релизов GitHub недоступен: %s', error)
+        return _fallback_releases(limit)
+
+    if response.status_code == 304:
+        _releases_cache['expires_at'] = now + RELEASES_CACHE_TTL
+        return _releases_cache['items']
+
+    if response.status_code != 200:
+        logger.warning('GitHub вернул статус %s при запросе релизов', response.status_code)
+        return _fallback_releases(limit)
+
+    try:
+        payload = response.json()
+    except Exception:
+        return _fallback_releases(limit)
+
+    if not isinstance(payload, list):
+        return _fallback_releases(limit)
+
+    items = _parse_release_items(payload, limit)
+    etag = response.headers.get('ETag') or ''
     _releases_cache['items'] = items
+    _releases_cache['etag'] = etag
     _releases_cache['expires_at'] = now + RELEASES_CACHE_TTL
+    _save_releases_cache(items, etag)
     return items
 
 
