@@ -1197,6 +1197,48 @@
                 </div>
 
                 <div class="p-6 space-y-6">
+                    <div id="update-progress"
+                        class="hidden rounded-2xl border border-white/[0.08] bg-black/40 p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <span id="update-progress-icon-wrap"
+                                    class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                                    <span id="update-progress-icon"
+                                        class="material-symbols-outlined text-lg animate-spin-slow">sync</span>
+                                </span>
+                                <div class="min-w-0">
+                                    <p id="update-progress-title"
+                                        class="text-[13px] font-bold leading-tight text-white/90">
+                                        Обновление запускается</p>
+                                    <p id="update-progress-text"
+                                        class="mt-0.5 truncate text-[11px] leading-tight text-white/40">
+                                        Подготовка к обновлению</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-shrink-0 items-baseline gap-2">
+                                <span id="update-progress-percent"
+                                    class="font-mono text-sm font-black text-primary">0%</span>
+                                <span id="update-progress-elapsed"
+                                    class="font-mono text-[10px] font-semibold text-white/25">00:00</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                            <div id="update-progress-bar"
+                                class="h-full w-0 rounded-full bg-primary transition-all duration-500"></div>
+                        </div>
+                        <div id="update-progress-steps" class="mt-3 grid grid-cols-4 gap-2">
+                            {% for step_label in ['Запрос', 'Данные', 'Сборка', 'Запуск'] %}
+                            <div data-step="{{ loop.index0 }}"
+                                class="flex flex-col items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] px-2 py-2.5 text-center transition-colors duration-300">
+                                <span data-step-icon
+                                    class="material-symbols-outlined text-base text-white/25">radio_button_unchecked</span>
+                                <span data-step-label
+                                    class="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/30">{{ step_label }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
                     <div id="update-notification"
                         class="hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 p-5 shadow-[0_0_30px_-10px_rgba(19,236,128,0.3)] group transition-all duration-500 hover:shadow-[0_0_40px_-5px_rgba(19,236,128,0.4)] backdrop-blur-xl">
                         <div
@@ -1243,48 +1285,6 @@
                                 class="absolute right-3 bottom-3 text-white/20 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-white/5">
                                 <span class="material-symbols-outlined text-sm">content_copy</span>
                             </button>
-                        </div>
-
-                        <div id="update-progress"
-                            class="mt-4 hidden rounded-2xl border border-white/[0.08] bg-black/40 p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="flex min-w-0 items-center gap-3">
-                                    <span id="update-progress-icon-wrap"
-                                        class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                                        <span id="update-progress-icon"
-                                            class="material-symbols-outlined text-lg animate-spin-slow">sync</span>
-                                    </span>
-                                    <div class="min-w-0">
-                                        <p id="update-progress-title"
-                                            class="text-[13px] font-bold leading-tight text-white/90">
-                                            Обновление запускается</p>
-                                        <p id="update-progress-text"
-                                            class="mt-0.5 truncate text-[11px] leading-tight text-white/40">
-                                            Подготовка к обновлению</p>
-                                    </div>
-                                </div>
-                                <div class="flex flex-shrink-0 items-baseline gap-2">
-                                    <span id="update-progress-percent"
-                                        class="font-mono text-sm font-black text-primary">0%</span>
-                                    <span id="update-progress-elapsed"
-                                        class="font-mono text-[10px] font-semibold text-white/25">00:00</span>
-                                </div>
-                            </div>
-                            <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
-                                <div id="update-progress-bar"
-                                    class="h-full w-0 rounded-full bg-primary transition-all duration-500"></div>
-                            </div>
-                            <div id="update-progress-steps" class="mt-3 grid grid-cols-4 gap-2">
-                                {% for step_label in ['Запрос', 'Данные', 'Сборка', 'Запуск'] %}
-                                <div data-step="{{ loop.index0 }}"
-                                    class="flex flex-col items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] px-2 py-2.5 text-center transition-colors duration-300">
-                                    <span data-step-icon
-                                        class="material-symbols-outlined text-base text-white/25">radio_button_unchecked</span>
-                                    <span data-step-label
-                                        class="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/30">{{ step_label }}</span>
-                                </div>
-                                {% endfor %}
-                            </div>
                         </div>
                     </div>
 
