@@ -1,6 +1,6 @@
 [project]
 name = "remnawave-shopbot"
-version = "2.0.7"
+version = "2.0.8"
 description = "Remnawave Control Bot для автоматизации продаж VLESS VPN"
 authors = [
     { name = "GitHub @CyberERROR" },
