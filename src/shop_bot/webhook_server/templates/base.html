@@ -471,6 +471,38 @@
             animation: spin-slow 3s linear infinite;
         }
 
+        @keyframes update-bar-flow {
+            from {
+                background-position: 0% 50%;
+            }
+
+            to {
+                background-position: 200% 50%;
+            }
+        }
+
+        .update-bar-active {
+            background-image: linear-gradient(90deg, rgba(19, 236, 128, 0.45), #13ec80, rgba(19, 236, 128, 0.45), #13ec80);
+            background-size: 200% 100%;
+            animation: update-bar-flow 2.2s linear infinite;
+        }
+
+        @keyframes update-step-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.35;
+            }
+        }
+
+        .update-step-active {
+            animation: update-step-pulse 1.5s infinite ease-in-out;
+        }
+
         @keyframes bg-pulse-warning {
 
             0%,
@@ -1214,9 +1246,45 @@
                         </div>
 
                         <div id="update-progress"
-                            class="mt-3 hidden items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] font-medium text-white/60">
-                            <span class="material-symbols-outlined text-sm text-primary">sync</span>
-                            <span id="update-progress-text"></span>
+                            class="mt-4 hidden rounded-2xl border border-white/[0.08] bg-black/40 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <span id="update-progress-icon-wrap"
+                                        class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                                        <span id="update-progress-icon"
+                                            class="material-symbols-outlined text-lg animate-spin-slow">sync</span>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <p id="update-progress-title"
+                                            class="text-[13px] font-bold leading-tight text-white/90">
+                                            Обновление запускается</p>
+                                        <p id="update-progress-text"
+                                            class="mt-0.5 truncate text-[11px] leading-tight text-white/40">
+                                            Подготовка к обновлению</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-shrink-0 items-baseline gap-2">
+                                    <span id="update-progress-percent"
+                                        class="font-mono text-sm font-black text-primary">0%</span>
+                                    <span id="update-progress-elapsed"
+                                        class="font-mono text-[10px] font-semibold text-white/25">00:00</span>
+                                </div>
+                            </div>
+                            <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                                <div id="update-progress-bar"
+                                    class="h-full w-0 rounded-full bg-primary transition-all duration-500"></div>
+                            </div>
+                            <div id="update-progress-steps" class="mt-3 grid grid-cols-4 gap-2">
+                                {% for step_label in ['Запрос', 'Данные', 'Сборка', 'Запуск'] %}
+                                <div data-step="{{ loop.index0 }}"
+                                    class="flex flex-col items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] px-2 py-2.5 text-center transition-colors duration-300">
+                                    <span data-step-icon
+                                        class="material-symbols-outlined text-base text-white/25">radio_button_unchecked</span>
+                                    <span data-step-label
+                                        class="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/30">{{ step_label }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
 
@@ -1884,61 +1952,308 @@
                 });
 
                 const applyUpdateBtn = document.getElementById('btn-apply-update');
-                const updateProgress = document.getElementById('update-progress');
-                const updateProgressText = document.getElementById('update-progress-text');
-                let updateStatusTimer = null;
+                const updatePanel = document.getElementById('update-progress');
+                const updateBar = document.getElementById('update-progress-bar');
+                const updatePercentEl = document.getElementById('update-progress-percent');
+                const updateElapsedEl = document.getElementById('update-progress-elapsed');
+                const updateTitleEl = document.getElementById('update-progress-title');
+                const updateTextEl = document.getElementById('update-progress-text');
+                const updateIconEl = document.getElementById('update-progress-icon');
+                const updateIconWrap = document.getElementById('update-progress-icon-wrap');
+                const updateStepsEl = document.getElementById('update-progress-steps');
 
-                function setUpdateProgress(message, spinning) {
-                    if (!updateProgress || !updateProgressText) return;
-                    updateProgress.classList.remove('hidden');
-                    updateProgress.classList.add('flex');
-                    updateProgressText.textContent = message;
-                    const icon = updateProgress.querySelector('.material-symbols-outlined');
-                    if (icon) {
-                        if (spinning) icon.classList.add('animate-spin-slow');
-                        else icon.classList.remove('animate-spin-slow');
+                const UPDATE_STORAGE_KEY = 'shopbot_update_progress';
+                const UPDATE_POLL_INTERVAL = 3000;
+                const UPDATE_TICK_INTERVAL = 1000;
+                const UPDATE_BAR_BASE = 'h-full rounded-full transition-all duration-500';
+                const UPDATE_TITLES = ['Проверка запроса', 'Резервная копия', 'Пересборка контейнеров', 'Запуск панели'];
+                const UPDATE_TEXTS = [
+                    'Запрос на обновление передан агенту',
+                    'Сохраняем базу и загружаем новую версию',
+                    'Собираем образ и перезапускаем панель',
+                    'Ждём ответ панели на порту 1488'
+                ];
+
+                let updatePercent = 0;
+                let updateStartedAt = 0;
+                let updateStatusTimer = null;
+                let updateTickTimer = null;
+                let updateEmptyPolls = 0;
+                let updateReloading = false;
+
+                function updateSessionRead() {
+                    try {
+                        const raw = localStorage.getItem(UPDATE_STORAGE_KEY);
+                        return raw ? JSON.parse(raw) : null;
+                    } catch (e) {
+                        return null;
                     }
+                }
+
+                function updateSessionWrite(data) {
+                    try {
+                        if (data) localStorage.setItem(UPDATE_STORAGE_KEY, JSON.stringify(data));
+                        else localStorage.removeItem(UPDATE_STORAGE_KEY);
+                    } catch (e) {
+                    }
+                }
+
+                function updateStage(percent) {
+                    if (percent >= 95) return 3;
+                    if (percent >= 60) return 2;
+                    if (percent >= 25) return 1;
+                    return 0;
+                }
+
+                function updateElapsedLabel() {
+                    if (!updateStartedAt) return '00:00';
+                    const total = Math.max(0, Math.floor((Date.now() - updateStartedAt) / 1000));
+                    return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+                }
+
+                function updateStepsPaint(mode, percent) {
+                    if (!updateStepsEl) return;
+                    const index = updateStage(percent);
+                    updateStepsEl.querySelectorAll('[data-step]').forEach((item, i) => {
+                        const icon = item.querySelector('[data-step-icon]');
+                        const label = item.querySelector('[data-step-label]');
+                        let boxClass = 'flex flex-col items-center gap-1.5 rounded-xl border px-2 py-2.5 text-center transition-colors duration-300 ';
+                        let iconClass = 'material-symbols-outlined text-base ';
+                        let textClass = 'text-[10px] font-semibold uppercase tracking-[0.08em] ';
+                        let iconName = 'radio_button_unchecked';
+                        if (mode === 'failed' && i <= index) {
+                            boxClass += 'border-red-500/25 bg-red-500/[0.08]';
+                            iconClass += 'text-red-400';
+                            textClass += 'text-red-300/80';
+                            iconName = i === index ? 'error' : 'radio_button_checked';
+                        } else if (mode === 'done' || i < index) {
+                            boxClass += 'border-primary/20 bg-primary/[0.07]';
+                            iconClass += 'text-primary';
+                            textClass += 'text-white/60';
+                            iconName = 'check_circle';
+                        } else if (i === index) {
+                            boxClass += 'border-primary/30 bg-primary/10';
+                            iconClass += 'text-primary update-step-active';
+                            textClass += 'text-white/80';
+                            iconName = 'radio_button_checked';
+                        } else {
+                            boxClass += 'border-white/[0.06] bg-white/[0.02]';
+                            iconClass += 'text-white/25';
+                            textClass += 'text-white/30';
+                        }
+                        item.className = boxClass;
+                        if (icon) {
+                            icon.className = iconClass;
+                            icon.textContent = iconName;
+                        }
+                        if (label) label.className = textClass;
+                    });
+                }
+
+                function updateBoardPaint(options) {
+                    const mode = options.mode || 'running';
+                    const percent = Math.max(0, Math.min(100, Math.round(options.percent || 0)));
+                    updatePercent = percent;
+                    if (updatePanel) updatePanel.classList.remove('hidden');
+                    if (updateBar) {
+                        updateBar.style.width = percent + '%';
+                        updateBar.className = UPDATE_BAR_BASE + ' ' + (mode === 'failed' ? 'bg-red-500' : mode === 'done' ? 'bg-primary' : 'bg-primary update-bar-active');
+                    }
+                    if (updatePercentEl) {
+                        updatePercentEl.textContent = percent + '%';
+                        updatePercentEl.className = 'font-mono text-sm font-black ' + (mode === 'failed' ? 'text-red-400' : 'text-primary');
+                    }
+                    if (updateElapsedEl) updateElapsedEl.textContent = updateElapsedLabel();
+                    if (updateTitleEl) {
+                        updateTitleEl.textContent = options.title || UPDATE_TITLES[updateStage(percent)];
+                        updateTitleEl.className = 'text-[13px] font-bold leading-tight ' + (mode === 'failed' ? 'text-red-300' : 'text-white/90');
+                    }
+                    if (updateTextEl) {
+                        updateTextEl.textContent = options.text || UPDATE_TEXTS[updateStage(percent)];
+                        updateTextEl.className = 'mt-0.5 truncate text-[11px] leading-tight ' + (mode === 'failed' ? 'text-red-300/60' : 'text-white/40');
+                    }
+                    if (updateIconEl) {
+                        updateIconEl.className = 'material-symbols-outlined text-lg ' + (mode === 'running' ? 'animate-spin-slow' : '');
+                        updateIconEl.textContent = mode === 'done' ? 'check_circle' : mode === 'failed' ? 'error' : 'sync';
+                    }
+                    if (updateIconWrap) {
+                        updateIconWrap.className = 'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border ' + (mode === 'failed' ? 'border-red-500/25 bg-red-500/10 text-red-400' : 'border-primary/20 bg-primary/10 text-primary');
+                    }
+                    updateStepsPaint(mode, percent);
+                }
+
+                function updateTickStop() {
+                    if (updateTickTimer) {
+                        clearInterval(updateTickTimer);
+                        updateTickTimer = null;
+                    }
+                }
+
+                function updatePollStop() {
+                    if (updateStatusTimer) {
+                        clearInterval(updateStatusTimer);
+                        updateStatusTimer = null;
+                    }
+                }
+
+                function updateTickStart() {
+                    if (updateTickTimer) return;
+                    updateTickTimer = setInterval(() => {
+                        if (updatePercent < 92) {
+                            updatePercent = Math.min(92, updatePercent + Math.max(1, Math.round((92 - updatePercent) / 24)));
+                        }
+                        const stage = updateStage(updatePercent);
+                        updateBoardPaint({
+                            mode: 'running',
+                            percent: updatePercent,
+                            title: UPDATE_TITLES[stage],
+                            text: UPDATE_TEXTS[stage]
+                        });
+                        updateSessionWrite({ active: true, startedAt: updateStartedAt, percent: updatePercent });
+                    }, UPDATE_TICK_INTERVAL);
                 }
 
                 async function pollUpdateStatus() {
                     try {
-                        const state = await apiRequest('/update/status');
+                        const state = await apiRequest('/update/status?_=' + Date.now());
                         if (!state) return;
                         if (state.state === 'done') {
-                            setUpdateProgress('Обновление завершено. Перезагрузка страницы...', false);
-                            if (updateStatusTimer) clearInterval(updateStatusTimer);
-                            setTimeout(() => location.reload(), 2500);
+                            updateEmptyPolls = 0;
+                            updateTickStop();
+                            updatePollStop();
+                            updateBoardPaint({
+                                mode: 'done',
+                                percent: 100,
+                                title: 'Обновление завершено',
+                                text: 'Панель перезапущена, страница обновится автоматически'
+                            });
+                            if (applyUpdateBtn) applyUpdateBtn.disabled = false;
+                            if (!updateReloading) {
+                                updateReloading = true;
+                                updateSessionWrite({ active: false, done: true, finishedAt: Date.now() });
+                                setTimeout(() => location.reload(), 2500);
+                            }
                             return;
                         }
                         if (state.state === 'failed' || state.state === 'rolled_back') {
-                            setUpdateProgress(state.message || 'Обновление не удалось, версия восстановлена.', false);
-                            if (updateStatusTimer) clearInterval(updateStatusTimer);
+                            updateEmptyPolls = 0;
+                            updateTickStop();
+                            updatePollStop();
+                            updateBoardPaint({
+                                mode: 'failed',
+                                percent: updatePercent,
+                                title: 'Обновление не выполнено',
+                                text: state.message || 'Предыдущая версия восстановлена, панель работает'
+                            });
+                            updateSessionWrite(null);
                             if (applyUpdateBtn) applyUpdateBtn.disabled = false;
                             return;
                         }
-                        setUpdateProgress('Обновление выполняется. Панель перезапустится автоматически...', true);
+                        if (state.state === 'running' || state.pending) {
+                            updateEmptyPolls = 0;
+                            const stage = updateStage(updatePercent);
+                            updateBoardPaint({
+                                mode: 'running',
+                                percent: updatePercent,
+                                title: UPDATE_TITLES[stage],
+                                text: UPDATE_TEXTS[stage]
+                            });
+                            return;
+                        }
+                        updateEmptyPolls += 1;
+                        if (updateEmptyPolls >= 6) {
+                            updateTickStop();
+                            updatePollStop();
+                            updateBoardPaint({
+                                mode: 'failed',
+                                percent: updatePercent,
+                                title: 'Обновление не запустилось',
+                                text: 'Агент обновления не принял задачу. Проверьте службу shopbot-update'
+                            });
+                            updateSessionWrite(null);
+                            if (applyUpdateBtn) applyUpdateBtn.disabled = false;
+                        }
                     } catch (e) {
                     }
                 }
+
+                function updateSessionStart(startedAt, percent) {
+                    updateStartedAt = startedAt || Date.now();
+                    updatePercent = Math.max(8, Math.min(92, Math.round(percent || 0)));
+                    updateEmptyPolls = 0;
+                    updateReloading = false;
+                    const stage = updateStage(updatePercent);
+                    updateBoardPaint({
+                        mode: 'running',
+                        percent: updatePercent,
+                        title: UPDATE_TITLES[stage],
+                        text: UPDATE_TEXTS[stage]
+                    });
+                    updateSessionWrite({ active: true, startedAt: updateStartedAt, percent: updatePercent });
+                    updateTickStart();
+                    if (!updateStatusTimer) updateStatusTimer = setInterval(pollUpdateStatus, UPDATE_POLL_INTERVAL);
+                    pollUpdateStatus();
+                }
+
+                (async function initUpdateProgress() {
+                    const session = updateSessionRead();
+                    if (session && session.active) {
+                        updateSessionStart(session.startedAt, session.percent);
+                        openModal('aboutModal');
+                        window.loadReleases?.(false);
+                        return;
+                    }
+                    if (session && session.done) {
+                        updateSessionWrite(null);
+                        showToast('success', 'Обновление завершено. Панель работает.', 6000);
+                    }
+                    try {
+                        const state = await apiRequest('/update/status');
+                        if (state && (state.state === 'running' || state.pending)) {
+                            updateSessionStart(Date.now() - 10000, 20);
+                        }
+                    } catch (e) {
+                    }
+                })();
 
                 if (applyUpdateBtn) {
                     applyUpdateBtn.addEventListener('click', async () => {
                         const confirmed = await showCustomConfirm('Обновить бота до последней версии? Панель перезапустится на 1-2 минуты, данные и настройки сохранятся.');
                         if (!confirmed) return;
                         applyUpdateBtn.disabled = true;
-                        setUpdateProgress('Запуск обновления...', true);
+                        updateStartedAt = Date.now();
+                        updateBoardPaint({
+                            mode: 'running',
+                            percent: 5,
+                            title: 'Отправка запроса',
+                            text: 'Передаём задачу агенту обновления'
+                        });
                         try {
                             const result = await apiRequest('/update/apply', { method: 'POST', body: {} });
                             if (!result || !result.ok) {
-                                setUpdateProgress((result && result.error) || 'Не удалось запустить обновление.', false);
+                                updateTickStop();
+                                updatePollStop();
+                                updateBoardPaint({
+                                    mode: 'failed',
+                                    percent: updatePercent,
+                                    title: 'Не удалось запустить обновление',
+                                    text: (result && result.error) || 'Проверьте агент обновления на сервере'
+                                });
+                                updateSessionWrite(null);
                                 applyUpdateBtn.disabled = false;
                                 return;
                             }
-                            setUpdateProgress('Обновление запущено. Панель перезапустится автоматически...', true);
-                            updateStatusTimer = setInterval(pollUpdateStatus, 3000);
-                            pollUpdateStatus();
+                            updateSessionStart(Date.now(), 8);
                         } catch (e) {
-                            setUpdateProgress('Не удалось связаться с сервером обновления.', false);
+                            updateTickStop();
+                            updatePollStop();
+                            updateBoardPaint({
+                                mode: 'failed',
+                                percent: updatePercent,
+                                title: 'Нет связи с сервером',
+                                text: 'Запрос на обновление не отправлен'
+                            });
+                            updateSessionWrite(null);
                             applyUpdateBtn.disabled = false;
                         }
                     });
