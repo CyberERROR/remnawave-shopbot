@@ -413,6 +413,21 @@ compose_rebuild() {
     docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null | grep -q true
 }
 
+ensure_compose_v2() {
+    if docker compose version >/dev/null 2>&1; then
+        ok "Docker Compose v2 доступен"
+        return 0
+    fi
+    spinner_run "Установка Docker Compose v2" \
+        sudo bash -c "export DEBIAN_FRONTEND=noninteractive; apt-get install -y -qq docker-compose-v2 || (apt-get update -qq && apt-get install -y -qq docker-compose-v2) || true" || true
+    if docker compose version >/dev/null 2>&1; then
+        ok "Docker Compose v2 установлен"
+        return 0
+    fi
+    warn "Docker Compose v2 поставить не удалось, используется старый compose"
+    return 1
+}
+
 ensure_packages() {
     declare -A packages=(
         [git]='git'
@@ -719,6 +734,7 @@ run_update_mode() {
         ok "Проект найден: ${PROJECT_DIR}"
     fi
     cd "$PROJECT_DIR"
+    ensure_compose_v2 || true
 
     section "2/7" "Параметры установки"
     DOMAIN=$(get_domain_from_nginx)
@@ -778,6 +794,7 @@ run_install_mode() {
     section "2/9" "Системные зависимости"
     ensure_packages
     ensure_services
+    ensure_compose_v2 || true
     ensure_certbot_nginx
 
     section "3/9" "Развёртывание проекта"

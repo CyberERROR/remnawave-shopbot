@@ -36,6 +36,26 @@ compose_cmd() {
     fi
 }
 
+ensure_compose_v2() {
+    if docker compose version >/dev/null 2>&1; then
+        return 0
+    fi
+    if ! command -v apt-get >/dev/null 2>&1; then
+        return 1
+    fi
+    log_line "Docker Compose v2 не найден, пробую установить"
+    if ! DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker-compose-v2 >> "$LOG_FILE" 2>&1; then
+        DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "$LOG_FILE" 2>&1 || true
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker-compose-v2 >> "$LOG_FILE" 2>&1 || true
+    fi
+    if docker compose version >/dev/null 2>&1; then
+        log_line "Docker Compose v2 установлен"
+        return 0
+    fi
+    log_line "Docker Compose v2 установить не удалось"
+    return 1
+}
+
 refresh_self() {
     local source="$PROJECT_DIR/deploy/shopbot-update-agent.sh"
     local target="/usr/local/bin/shopbot-update-agent"
@@ -139,6 +159,7 @@ if ! git reset --hard "origin/$GIT_BRANCH" >> "$LOG_FILE" 2>&1; then
     exit 0
 fi
 
+ensure_compose_v2 || log_line "продолжаю со старым Docker Compose"
 write_status running "Пересборка контейнеров" build
 compose_cmd up -d --build >> "$LOG_FILE" 2>&1 || log_line "compose вернул ошибку, проверяю панель"
 force_recreate "$PREVIOUS_CONTAINER_ID"
