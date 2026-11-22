@@ -31,147 +31,275 @@ REMOVE_DATA=false
 REMOVE_AGENT=false
 REMOVE_CERTBOT=false
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-MAGENTA='\033[0;35m'
-WHITE='\033[0;37m'
-BOLD='\033[1m'
-DIM='\033[2m'
-NC='\033[0m'
+UI_KIND="uninstall"
+# Shared terminal UI, embedded so each script remains standalone.
+UI_KIND="${UI_KIND:-install}"
+UI_TTY=0 UI_ANIMATE=1 UI_COLOR=1 UI_DEMO=0 UI_WARNINGS=0 UI_ERRORS=0
+UI_PID="" UI_LOG="" UI_STARTED=$SECONDS UI_COLS=80
+RED='' GREEN='' YELLOW='' BLUE='' CYAN='' MAGENTA='' WHITE='' BOLD='' DIM='' NC=''
+ACCENT='' RAIL='' MARK_OK='✓' MARK_FAIL='×' MARK_WARN='!' BAR_ON='━' BAR_OFF='─'
 
-pause() {
-    sleep "${1:-0.05}" 2>/dev/null || true
+ui_width() {
+    UI_COLS="$(tput cols 2>/dev/null || printf '80')"
+    [[ "$UI_COLS" =~ ^[0-9]+$ ]] || UI_COLS=80
+    (( UI_COLS > 88 )) && UI_COLS=88
+    (( UI_COLS < 20 )) && UI_COLS=20
+    return 0
 }
 
-rule() {
-    printf '%b  ────────────────────────────────────────────────────────────%b\n' "$DIM" "$NC"
+ui_init() {
+    local arg
+    [[ -t 1 && "${TERM:-dumb}" != dumb ]] && UI_TTY=1
+    for arg in "$@"; do
+        case "$arg" in
+            --demo) UI_DEMO=1 ;;
+            --no-animation) UI_ANIMATE=0 ;;
+            --no-color) UI_COLOR=0 ;;
+            -h|--help)
+                printf '\n  REMNAWAVE SHOPBOT · CyberERROR\n\n'
+                printf '  bash %s [--demo] [--no-animation] [--no-color]\n\n' "${0##*/}"
+                printf '  --demo           Только показ интерфейса, без изменений системы\n'
+                printf '  --no-animation   Статичный вывод без анимации\n'
+                printf '  --no-color       Вывод без цветовых кодов\n\n'
+                exit 0 ;;
+            *) printf 'Неизвестный параметр: %s\n' "$arg" >&2; exit 2 ;;
+        esac
+    done
+    [[ ${NO_COLOR+x} ]] && UI_COLOR=0
+    if (( ! UI_TTY )); then UI_ANIMATE=0; UI_COLOR=0; fi
+    if (( UI_COLOR )); then
+        RED='\033[91m' GREEN='\033[92m' YELLOW='\033[93m'
+        BLUE='\033[96m' CYAN='\033[96m' MAGENTA='\033[97m'
+        WHITE='\033[97m' BOLD='\033[1m' DIM='\033[90m' NC='\033[0m'
+        if [[ "${COLORTERM:-}" == truecolor || "${TERM:-}" == *256color* ]]; then
+            RED='\033[38;5;203m' GREEN='\033[38;5;121m' YELLOW='\033[38;5;222m'
+            CYAN='\033[38;5;87m' BLUE="$CYAN" DIM='\033[38;5;245m'
+        fi
+    fi
+    ACCENT="$CYAN"; [[ "$UI_KIND" == uninstall ]] && ACCENT="$YELLOW"
+    RAIL="$DIM"
+    case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+        *[Uu][Tt][Ff]*8*) ;;
+        *) MARK_OK='+'; MARK_FAIL='x'; BAR_ON='='; BAR_OFF='-' ;;
+    esac
+    ui_width
+    trap 'ui_cleanup' EXIT
+    trap 'ui_interrupt 130' INT
+    trap 'ui_interrupt 143' TERM
+    trap 'on_error "$LINENO" "$?"' ERR
 }
 
-print_banner() {
-    local line="──────────────────────────────────────────────────────────"
-    local pad_title pad_author
-    pad_title="$(printf '%*s' $((58 - 3 - 17)) '')"
-    pad_author="$(printf '%*s' $((58 - 3 - 13)) '')"
-    clear 2>/dev/null || true
+ui_cleanup() {
+    # Restore the cursor even when a command fails or the user cancels.
+    if (( UI_TTY && UI_ANIMATE )); then printf '\033[?25h'; fi
+    if [[ -n "$UI_LOG" && -f "$UI_LOG" ]]; then rm -f -- "$UI_LOG"; fi
+    return 0
+}
+
+ui_interrupt() {
+    trap '' INT TERM
+    if [[ -n "$UI_PID" ]]; then
+        kill -TERM "$UI_PID" 2>/dev/null || true
+        wait "$UI_PID" 2>/dev/null || true
+        UI_PID=''
+    fi
+    (( UI_TTY && UI_ANIMATE )) && printf '\r\033[2K'
     printf '\n'
-    printf '  %b╭%s╮%b\n' "$MAGENTA" "$line" "$NC"
-    printf '  %b│%b%*s%b│%b\n' "$MAGENTA" "$NC" $((58)) '' "$MAGENTA" "$NC"
-    printf '  %b│%b   %bREMNAWAVE SHOPBOT%b%s%b│%b\n' "$MAGENTA" "$NC" "$BOLD$WHITE" "$NC" "$pad_title" "$MAGENTA" "$NC"
-    printf '  %b│%b   %bBy CyberERROR%b%s%b│%b\n' "$MAGENTA" "$NC" "$DIM" "$NC" "$pad_author" "$MAGENTA" "$NC"
-    printf '  %b│%b%*s%b│%b\n' "$MAGENTA" "$NC" $((58)) '' "$MAGENTA" "$NC"
-    printf '  %b╰%s╯%b\n' "$MAGENTA" "$line" "$NC"
-    printf '\n'
-    pause 0.08
-    printf '  %bУДАЛЕНИЕ ПРОЕКТА%b\n' "$RED$BOLD" "$NC"
-    printf '  %bВыберите, что нужно удалить — данные по умолчанию сохраняются%b\n' "$DIM" "$NC"
-    pause 0.05
-}
-
-section() {
-    printf '\n%b  ▸ %s%b  %b%s%b\n' "$CYAN" "$1" "$NC" "$BOLD" "$2" "$NC"
-    rule
-}
-
-ok() {
-    printf '%b  ✔%b %s\n' "$GREEN" "$NC" "$1"
-}
-
-warn() {
-    printf '%b  ⚠%b %s\n' "$YELLOW" "$NC" "$1"
-}
-
-fail() {
-    printf '%b  ✖%b %s\n' "$RED" "$NC" "$1" >&2
-}
-
-info() {
-    printf '%b  ›%b %s\n' "$BLUE" "$NC" "$1"
-}
-
-kv() {
-    printf '%b  %s%b  %s\n' "$DIM" "$1" "$NC" "$2"
-}
-
-spinner_run() {
-    local message="$1"
-    shift
-    local -a cmd=("$@")
-    local log_file
-    log_file="$(mktemp)"
-    local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
-    local frames_count=${#frames[@]}
-    local started
-    started="$(date +%s)"
-    local index=0
-    local interactive=0
-    if [ -t 1 ]; then interactive=1; fi
-
-    "${cmd[@]}" > "$log_file" 2>&1 &
-    local pid=$!
-
-    if [ "$interactive" -eq 1 ]; then
-        tput civis 2>/dev/null || true
-        while kill -0 "$pid" 2>/dev/null; do
-            local frame="${frames[$((index % frames_count))]}"
-            local elapsed=$(( $(date +%s) - started ))
-            printf '\r\033[K  %b%s%b %s %b%sс%b' "$CYAN" "$frame" "$NC" "$message" "$DIM" "$elapsed" "$NC"
-            index=$((index + 1))
-            sleep 0.1
-        done
-    fi
-
-    local code=0
-    wait "$pid" || code=$?
-
-    if [ "$interactive" -eq 1 ]; then
-        tput cnorm 2>/dev/null || true
-        printf '\r\033[K'
-    fi
-
-    local total=$(( $(date +%s) - started ))
-    if [ "$code" -eq 0 ]; then
-        printf '%b  ✔%b %s %b(%sс)%b\n' "$GREEN" "$NC" "$message" "$DIM" "$total" "$NC"
-        rm -f "$log_file"
-        return 0
-    fi
-
-    printf '%b  ✖%b %s\n' "$RED" "$NC" "$message"
-    printf '%b  ─── вывод команды ───%b\n' "$RED" "$NC"
-    tail -n 15 "$log_file" 2>/dev/null || true
-    printf '%b  ─────────────────────%b\n' "$RED" "$NC"
-    rm -f "$log_file"
-    return "$code"
+    warn 'Операция прервана. Уже выполненные действия не отменяются.'
+    exit "$1"
 }
 
 on_error() {
-    tput cnorm 2>/dev/null || true
+    local line="$1" code="${2:-1}"
+    (( UI_TTY && UI_ANIMATE )) && printf '\r\033[2K'
     printf '\n'
-    fail "Скрипт прерван на строке $1."
-    exit 1
+    fail "Операция остановлена · строка ${line} · код ${code}"
+    info 'Проверьте сообщение об ошибке выше перед повторным запуском.'
+    exit "$code"
 }
-trap 'on_error $LINENO' ERR
+
+pause() {
+    if (( UI_ANIMATE )); then sleep "${1:-0.04}"; fi
+    return 0
+}
+
+rule() {
+    local i
+    printf '  %b' "$RAIL"
+    for ((i=0; i<UI_COLS-4; i++)); do printf '%s' "$BAR_OFF"; done
+    printf '%b\n' "$NC"
+}
+
+ui_bar() {
+    local done="$1" total="$2" width=$((UI_COLS-26)) i filled
+    (( width > 32 )) && width=32
+    (( width < 8 )) && width=8
+    filled=$((done * width / total))
+    printf '  %b' "$ACCENT"
+    for ((i=0; i<width; i++)); do
+        if (( i < filled )); then printf '%s' "$BAR_ON";
+        else printf '%b%s' "$DIM" "$BAR_OFF"; fi
+    done
+    printf '%b  %b%02d / %02d этапов%b\n' "$NC" "$DIM" "$done" "$total" "$NC"
+}
+
+print_banner() {
+    local label="${1:-УДАЛЕНИЕ ПРОЕКТА}" version="${2:-}"
+    printf '\n'
+    rule
+    printf '\n  %bR E M N A W A V E%b\n' "$BOLD$WHITE" "$NC"
+    printf '  %bSHOPBOT%b  %b/  CyberERROR%b\n\n' "$BOLD$ACCENT" "$NC" "$DIM" "$NC"
+    printf '  %b●  %s%b\n' "$ACCENT" "$label" "$NC"
+    [[ -z "$version" ]] || printf '  %bВерсия %s%b\n' "$DIM" "$version" "$NC"
+    if [[ "$UI_KIND" == uninstall ]]; then
+        printf '  %bВыбор компонентов → подтверждение → удаление%b\n' "$DIM" "$NC"
+    else
+        printf '  %bОкружение → настройка → запуск%b\n' "$DIM" "$NC"
+    fi
+    if (( UI_DEMO )); then printf '  %bДЕМО · команды установки и удаления не выполняются%b\n' "$YELLOW" "$NC"; fi
+    printf '\n'
+    rule
+    pause 0.12
+}
+
+section() {
+    local step="${1%/*}" total="${1#*/}"
+    ui_width
+    printf '\n'
+    ui_bar "$((step-1))" "$total"
+    printf '\n  %b%s%b  %b%s%b\n\n' "$BOLD$ACCENT" "$1" "$NC" "$BOLD$WHITE" "$2" "$NC"
+}
+
+ok() { printf '  %b%s%b  %s\n' "$GREEN" "$MARK_OK" "$NC" "$1"; }
+warn() { UI_WARNINGS=$((UI_WARNINGS+1)); printf '  %b%s%b  %s\n' "$YELLOW" "$MARK_WARN" "$NC" "$1"; }
+fail() { UI_ERRORS=$((UI_ERRORS+1)); printf '  %b%s%b  %s\n' "$RED" "$MARK_FAIL" "$NC" "$1" >&2; }
+info() { printf '  %b›%b  %s\n' "$ACCENT" "$NC" "$1"; }
+kv() {
+    printf '  %b%s%b\n    %s\n' "$DIM" "$1" "$NC" "$2"
+}
+
+ui_read() {
+    # Read from the terminal, including when the script arrives through curl | bash.
+    local target="$1" value=''
+    if ! { IFS= read -r value </dev/tty; } 2>/dev/null; then
+        fail 'Нет ввода из терминала. Запустите скрипт в интерактивной SSH-сессии.'
+        exit 1
+    fi
+    printf -v "$target" '%s' "$value"
+}
+
+spinner_run() {
+    local message="$1"; shift
+    local started=$SECONDS index=0 code=0 elapsed available label pulse i
+    local -a frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    [[ "$MARK_OK" == '+' ]] && frames=('|' '/' '-' '\')
+    UI_LOG="$(mktemp "${TMPDIR:-/tmp}/shopbot-step.XXXXXXXX")"
+    if (( ! UI_ANIMATE )); then info "$message …"; fi
+    # Reset inherited UI traps inside the worker so it cannot redraw the terminal.
+    ( trap - EXIT ERR INT TERM; "$@" ) >"$UI_LOG" 2>&1 &
+    UI_PID=$!
+    if (( UI_ANIMATE )); then
+        printf '\033[?25l'
+        while kill -0 "$UI_PID" 2>/dev/null; do
+            ui_width
+            elapsed=$((SECONDS-started))
+            available=$((UI_COLS-25)); (( available < 4 )) && available=4
+            label="$message"; if (( ${#label} > available )); then label="${label:0:available-1}…"; fi
+            pulse=''
+            for ((i=0; i<5; i++)); do
+                if (( i == index % 5 )); then pulse+="$BAR_ON"; else pulse+="$BAR_OFF"; fi
+            done
+            printf '\r\033[2K  %b%s%b  %s  %b%s  %02d:%02d%b' \
+                "$ACCENT" "${frames[index % ${#frames[@]}]}" "$NC" "$label" \
+                "$DIM" "$pulse" "$((elapsed/60))" "$((elapsed%60))" "$NC"
+            index=$((index+1))
+            sleep 0.1
+        done
+    fi
+    wait "$UI_PID" || code=$?
+    UI_PID=''
+    if (( UI_ANIMATE )); then printf '\r\033[2K\033[?25h'; fi
+    elapsed=$((SECONDS-started))
+    if (( code == 0 )); then
+        printf '  %b%s%b  %s  %b%02d:%02d%b\n' "$GREEN" "$MARK_OK" "$NC" "$message" "$DIM" "$((elapsed/60))" "$((elapsed%60))" "$NC"
+    else
+        UI_ERRORS=$((UI_ERRORS+1))
+        printf '  %b%s%b  %s  %b[код %s]%b\n' "$RED" "$MARK_FAIL" "$NC" "$message" "$RED" "$code" "$NC" >&2
+        printf '\n  %bПоследние строки вывода:%b\n' "$DIM" "$NC" >&2
+        tail -n 16 "$UI_LOG" >&2 || true
+        printf '\n' >&2
+    fi
+    rm -f -- "$UI_LOG"; UI_LOG=''
+    return "$code"
+}
+
+ui_finish() {
+    local title="$1" elapsed=$((SECONDS-UI_STARTED))
+    printf '\n'
+    rule
+    if (( UI_ERRORS > 0 )); then
+        printf '\n  %b!  ВЫПОЛНЕНО С ОШИБКАМИ%b\n' "$BOLD$YELLOW" "$NC"
+        info 'Проверьте неуспешные операции выше.'
+    else
+        printf '\n  %b%s  %s%b\n' "$BOLD$GREEN" "$MARK_OK" "$title" "$NC"
+    fi
+    printf '  %bВремя %02d:%02d · замечаний %s · ошибок %s%b\n\n' \
+        "$DIM" "$((elapsed/60))" "$((elapsed%60))" "$UI_WARNINGS" "$UI_ERRORS" "$NC"
+    rule
+    printf '\n'
+}
+
+ui_demo() {
+    if [[ "$UI_KIND" == uninstall ]]; then
+        print_banner
+        section '1/3' 'Выбор компонентов'
+        ui_menu_cards
+        info 'Демонстрация варианта 2 · данные сохраняются'
+        section '2/3' 'Удаление приложения'
+        spinner_run 'Остановка контейнеров' sleep 1.2
+        spinner_run 'Удаление агента обновления' sleep 0.8
+        spinner_run 'Удаление файлов приложения' sleep 0.8
+        section '3/3' 'Проверка результата'
+        ok 'Каталог данных сохранён'
+        ui_bar 3 3
+        ui_finish 'ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА'
+    else
+        print_banner 'НОВАЯ УСТАНОВКА' 'DEMO'
+        section '1/3' 'Подготовка окружения'
+        spinner_run 'Проверка системных зависимостей' sleep 1.2
+        ok 'Docker · Compose · Nginx'
+        section '2/3' 'Настройка проекта'
+        kv 'Домен' 'shop.example.com'
+        spinner_run 'Настройка HTTPS и сертификата' sleep 1.2
+        section '3/3' 'Запуск приложения'
+        spinner_run 'Сборка и запуск контейнеров' sleep 1.4
+        ui_bar 3 3
+        ui_finish 'ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА'
+        kv 'Пример адреса панели' 'https://shop.example.com:8443/login'
+    fi
+    info 'Демонстрация завершена. Система не изменена.'
+    printf '\n'
+}
+
 
 ask_yes() {
     local prompt="$1"
     local default_answer="$2"
     local reply=""
     printf '%b  ? %b%s ' "$CYAN" "$NC" "$prompt"
-    read -r -n1 reply < /dev/tty || true
+    ui_read reply
     printf '\n'
     if [[ -z "$reply" ]]; then
         reply="$default_answer"
     fi
-    [[ "$reply" =~ [yYдД] ]]
+    [[ "$reply" =~ ^([yY]|[yY][eE][sS]|[дД]|[дД][аА])$ ]]
 }
 
 ask_confirm_word() {
     local word="$1"
     local answer=""
     printf '%b  ? %bВведите %b%s%b для подтверждения: ' "$CYAN" "$NC" "$BOLD$RED" "$word" "$NC"
-    read -r answer < /dev/tty || true
+    ui_read answer
     printf '\n'
     [[ "$answer" == "$word" ]]
 }
@@ -208,33 +336,42 @@ project_present() {
     [[ -f "$NGINX_CONF" ]] || [[ -L "$NGINX_LINK" ]] || [[ -d "$PROJECT_DIR" ]] || [[ -d "$DATADIR" ]] || [[ -f "$AGENT_BIN" ]]
 }
 
+ui_menu_cards() {
+    printf '\n  %bВЫБЕРИТЕ СЦЕНАРИЙ%b\n\n' "$BOLD$WHITE" "$NC"
+    printf '  %b01%b  %bСеть и сертификат%b\n' "$ACCENT" "$NC" "$BOLD" "$NC"
+    printf '      %bКонфигурация Nginx · SSL домена%b\n\n' "$DIM" "$NC"
+    printf '  %b02%b  %bУдалить приложение%b\n' "$ACCENT" "$NC" "$BOLD" "$NC"
+    printf '      %bСеть · контейнеры · образы · код · агент%b\n' "$DIM" "$NC"
+    printf '      %bБаза и настройки сохраняются%b\n\n' "$GREEN" "$NC"
+    printf '  %b03%b  %bПриложение и Certbot%b\n' "$ACCENT" "$NC" "$BOLD" "$NC"
+    printf '      %bВариант 02 + общий Certbot сервера%b\n\n' "$DIM" "$NC"
+    printf '  %b04%b  %bВыбрать компоненты вручную%b\n' "$ACCENT" "$NC" "$BOLD" "$NC"
+    printf '      %bОтдельное решение для каждого компонента%b\n\n' "$DIM" "$NC"
+    printf '  %b00  Выйти без изменений%b\n\n' "$DIM" "$NC"
+}
+
 show_menu() {
-    printf '\n  %bЧто удалить?%b\n\n' "$YELLOW$BOLD" "$NC"
-    printf '   %b1%b  Конфигурация Nginx и SSL-сертификат    %b(быстро)%b\n' "$CYAN" "$NC" "$DIM" "$NC"
-    printf '   %b2%b  Приложение целиком: контейнеры, код, агент\n' "$CYAN" "$NC"
-    printf '   %b3%b  Максимальное: всё выше + Certbot\n' "$CYAN" "$NC"
-    printf '   %b4%b  Настроить вручную\n' "$CYAN" "$NC"
-    printf '   %b0%b  Отмена\n\n' "$CYAN" "$NC"
+    ui_menu_cards
     printf '%b  ? %bВыберите вариант [0-4] (по умолчанию 0): ' "$CYAN" "$NC"
-    read -r -n1 CHOICE < /dev/tty || true
+    ui_read CHOICE
     printf '\n'
     if [[ -z "$CHOICE" ]]; then
         CHOICE=0
     fi
 
     case "$CHOICE" in
-        1)
+        1|01)
             REMOVE_CONFIG=true
             REMOVE_SSL=true
             ;;
-        2)
+        2|02)
             REMOVE_CONFIG=true
             REMOVE_SSL=true
             REMOVE_DOCKER=true
             REMOVE_PROJECT=true
             REMOVE_AGENT=true
             ;;
-        3)
+        3|03)
             REMOVE_CONFIG=true
             REMOVE_SSL=true
             REMOVE_DOCKER=true
@@ -242,10 +379,10 @@ show_menu() {
             REMOVE_AGENT=true
             REMOVE_CERTBOT=true
             ;;
-        4)
+        4|04)
             show_custom_menu
             ;;
-        0)
+        0|00)
             warn "Удаление отменено."
             exit 0
             ;;
@@ -312,10 +449,13 @@ show_summary() {
     if [[ "$REMOVE_SSL" == "true" ]]; then kv "SSL-сертификат" "удалить"; fi
     if [[ "$REMOVE_PROJECT" == "true" ]]; then kv "Каталог проекта" "$PROJECT_DIR"; fi
     if [[ "$REMOVE_DATA" == "true" ]]; then kv "Каталог данных" "$DATADIR"; else kv "Каталог данных" "сохранить"; fi
-    if [[ "$REMOVE_CERTBOT" == "true" ]]; then kv "Certbot" "удалить"; fi
+    if [[ "$REMOVE_CERTBOT" == "true" ]]; then
+        kv "Certbot" "удалить"
+        warn "Certbot общий для сервера: его удаление затронет продление сертификатов других сайтов."
+    fi
     printf '\n'
 
-    if [[ "$CHOICE" == "1" ]]; then
+    if [[ "$CHOICE" == "1" || "$CHOICE" == "01" ]]; then
         if ! ask_yes "Подтвердить удаление? (y/N):" "n"; then
             warn "Удаление отменено."
             exit 0
@@ -480,22 +620,17 @@ show_leftovers() {
 }
 
 final_card() {
-    local line="──────────────────────────────────────────────────────────"
-    local title="УДАЛЕНИЕ ЗАВЕРШЕНО"
-    local pad
-    pad="$(printf '%*s' $((58 - 4 - ${#title})) '')"
-    printf '\n'
-    printf '  %b╭%s╮%b\n' "$GREEN" "$line" "$NC"
-    printf '  %b│%b ✔  %b%s%b%s%b│%b\n' "$GREEN" "$NC" "$BOLD$GREEN" "$title" "$NC" "$pad" "$GREEN" "$NC"
-    printf '  %b╰%s╯%b\n' "$GREEN" "$line" "$NC"
-    printf '\n'
-    if [[ "$REMOVE_DATA" != "true" ]] && [[ -d "$DATADIR" ]]; then
+    ui_bar 5 5
+    ui_finish 'ОБРАБОТКА ВЫБРАННЫХ КОМПОНЕНТОВ ЗАВЕРШЕНА'
+    if [[ -d "$DATADIR" ]]; then
         kv "Данные сохранены" "$DATADIR"
-        kv "Вернуть позже" "запустите этот скрипт снова"
     fi
-    kv "Репозиторий" "https://github.com/CyberERROR/remnawave-shopbot"
+    kv "Проект" "github.com/CyberERROR/remnawave-shopbot"
     printf '\n'
 }
+
+ui_init "$@"
+if (( UI_DEMO )); then ui_demo; exit 0; fi
 
 print_banner
 info "Запрос прав администратора"
