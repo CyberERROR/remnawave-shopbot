@@ -2,6 +2,9 @@
 name = "remnawave-shopbot"
 version = "2.0.7"
 description = "Remnawave Control Bot для автоматизации продаж VLESS VPN"
+authors = [
+    { name = "GitHub @CyberERROR" },
+]
 dependencies = [
     "aiogram==3.27.0",
     "flask==3.1.1",
@@ -22,7 +25,8 @@ dependencies = [
 
     
     "uvicorn>=0.29.0",
-    "fastapi>=0.110.0"
+    "fastapi>=0.110.0",
+    'tomli>=2.0.1; python_version < "3.11"'
 ]
 
 [project.optional-dependencies]
@@ -31,6 +35,16 @@ dev = [
     "pylint",
     "black"
 ]
+
+[project.urls]
+Repository = "https://github.com/CyberERROR/remnawave-shopbot"
+Releases = "https://github.com/CyberERROR/remnawave-shopbot/releases"
+Telegram = "https://t.me/+gwNP6nFYuYo4MDUy"
+Developer = "https://github.com/CyberERROR"
+Update = "https://raw.githubusercontent.com/CyberERROR/remnawave-shopbot/refs/heads/main/src/shop_bot/webhook_server/modules/os.json"
+
+[tool.shopbot]
+name = "Remnawave Shopbot"
 
 [tool.setuptools.packages.find]
 where = ["src"]
